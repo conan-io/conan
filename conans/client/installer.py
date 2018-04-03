@@ -329,7 +329,7 @@ class ConanInstaller(object):
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 if local_package:
                     conanfile_path = local_package.conanfile_path
-                    self._build_project_pkg(conan_file, output, conan_ref, package_id, flat,
+                    self._build_project_pkg(conan_file, output, conan_ref, flat,
                                             deps_graph, conanfile_path, profile_build_requires)
                 else:
                     self._build_package(conan_file, conan_ref, package_id, package_ref, output,
@@ -347,8 +347,8 @@ class ConanInstaller(object):
                 self._call_package_info(conan_file, package_folder)
             else:
                 package_folder = local_package.conanfile_path
-                include_dirs = local_package._includedirs
-                lib_dirs = local_package._libdirs
+                include_dirs = local_package.includedirs(conan_file.settings)
+                lib_dirs = local_package.libdirs(conan_file.settings)
                 if not include_dirs:
                     self._call_package_info(conan_file, package_folder)
                 else:
@@ -362,7 +362,7 @@ class ConanInstaller(object):
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_conanfile, None, flat, deps_graph)
 
-    def _build_project_pkg(self, conan_file, output, conan_ref, package_id, flat, deps_graph,
+    def _build_project_pkg(self, conan_file, output, conan_ref, flat, deps_graph,
                            conanfile_path, profile_build_requires):
         source_folder = os.path.dirname(conanfile_path)
         self._build_requires.install(conan_ref, conan_file, self,
@@ -375,8 +375,8 @@ class ConanInstaller(object):
         local_package = self._conan_project[conan_ref]
         include_dirs = local_package._includedirs
 
-        build_folder = local_package.build_path
-        package_folder = local_package.package_path
+        build_folder = local_package.local_build_path(conan_file.settings)
+        package_folder = local_package.local_package_path(conan_file.settings)
         mkdir(build_folder)
         mkdir(package_folder)
         os.chdir(build_folder)

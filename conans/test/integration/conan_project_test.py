@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import load, mkdir
+from conans.util.files import load
 import re
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.project import CONAN_PROJECT
@@ -109,18 +109,25 @@ folder: ../C
 
         base_folder = client.current_folder
         project = """HelloB:
-    folder: ../B
+    folder: B
     includedirs: .
-    libdirs: build/lib
+    build: build_{build_type}_{arch}
+    libdirs: build_{build_type}_{arch}/lib
 HelloC:
-    folder: ../C
+    folder: C
     includedirs: .
-    libdirs: build/lib
+    build: build_{build_type}_{arch}
+    libdirs: build_{build_type}_{arch}/lib
+HelloA:
+    folder: A
+
+generator: cmake
+name: MyProject
 """
         a_files = cpp_hello_conan_files(name="HelloA", deps=["HelloB/0.1@lasote/stable"],
                                         settings='"os", "compiler", "arch", "build_type"')
-        a_files[CONAN_PROJECT] = project
         client.save(a_files, path=os.path.join(client.current_folder, "A"))
+        client.save({CONAN_PROJECT: project})
 
         client.current_folder = os.path.join(base_folder, "A")
         client.run("install . -g cmake --build")
@@ -135,7 +142,7 @@ HelloC:
         self.assertIn("void helloHelloC();", load(os.path.join(include_dirs_helloc, "helloHelloC.h")))
 
         # Check B
-        content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
+        content = load(os.path.join(base_folder, "B/build_Release_x86_64/conanbuildinfo.cmake"))
         include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
@@ -149,6 +156,8 @@ HelloC:
         self.assertIn("Hello HelloA", client.out)
         self.assertIn("Hello HelloB", client.out)
         self.assertIn("Hello HelloC", client.out)
+
+        print load(os.path.join(base_folder, "CMakeLists.txt"))
 
     def basic_test2(self):
         client = TestClient()

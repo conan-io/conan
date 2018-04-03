@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from conans.errors import ConanException
 import os
-from conans.util.files import load
+from conans.util.files import load, save
 import yaml
 
 
@@ -10,9 +10,9 @@ class LocalPackage(object):
         self._base_folder = base_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         self._source_folder = ""  # By default the conanfile_folder
-        self._build_folder = "build_{settings.build_type}_{settings.arch}"
+        self._build_folder = data.get("build", "build_{build_type}_{arch}")
         # package_folder can be None, then it will directly use build_folder
-        self._package_folder = "package_{settings.build_type}_{settings.arch}"
+        self._package_folder = data.get("package", "package_{build_type}_{arch}")
         includedirs = data.get("includedirs")  # To override include dirs, mainly for build_folder
         self._includedirs = [includedirs] if not isinstance(includedirs, list) else includedirs
         libdirs = data.get("libdirs")  # To override libdirs...
@@ -22,13 +22,23 @@ class LocalPackage(object):
     def conanfile_path(self):
         return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "conanfile.py"))
 
-    @property
-    def package_path(self):
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "package"))
+    def includedirs(self, settings):
+        return [self._evaluate(v, settings) for v in self._includedirs]
 
-    @property
-    def build_path(self):
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "build"))
+    def libdirs(self, settings):
+        return [self._evaluate(v, settings) for v in self._libdirs]
+
+    def _evaluate(self, value, settings):
+        return value.format(build_type=settings.get_safe("build_type"),
+                            arch=settings.get_safe("arch"))
+
+    def local_package_path(self, settings):
+        package = self._evaluate(self._package_folder, settings)
+        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, package))
+
+    def local_build_path(self, settings):
+        build = self._evaluate(self._build_folder, settings)
+        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, build))
 
 
 CONAN_PROJECT = "conan-project.yml"
@@ -47,7 +57,26 @@ class ConanProject(object):
             return ConanProject.get_conan_project(parent)
         return ConanProject(None)
 
+    def generate(self):
+        # FIXME: SHITTY I NEED THE settings
+        if self._generator == "cmake":
+            template = """# conan-project
+cmake_minimum_version(3.0)
+project({name} CXX)
+
+"""
+            cmake = template.format(name=self._name)
+            for _, local_package in self._local_packages.items():
+                build_folder = "/".join([local_package._conanfile_folder, local_package._build_folder])
+                cmake += "add_subdirectory(%s %s)\n" % (local_package._conanfile_folder, build_folder)
+            cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
+            if os.path.exists(cmake_path) and not load(cmake_path).startswith("# conan-project"):
+                raise ConanException("Can't generate CMakeLists.txt, will overwrite existingone")
+            save(cmake_path, cmake)
+
     def __init__(self, path):
+        self._generator = None
+        self._name = "conan-project"
         self._local_packages = OrderedDict()  # {reference: LocalPackage}
         if not path:
             return
@@ -61,6 +90,8 @@ class ConanProject(object):
     def _loads(self, text):
         try:
             yml = yaml.load(text)
+            self._generator = yml.pop("generator", None)
+            self._name = yml.pop("name", None)
             for package_name, data in yml.items():
                 local_package = LocalPackage(self._base_folder, data)
                 self._local_packages[package_name] = local_package
