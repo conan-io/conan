@@ -564,7 +564,23 @@ class HelloConan(ConanFile):
         ab.configure(target="i686-apple-darwin")
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
 
-    def test_make_targets(self):
+        conanfile = MockConanfile(MockSettings({"build_type": "Debug",
+                                                "arch": "x86",
+                                                "os": "Windows",
+                                                "os_build": "Windows",
+                                                "arch_build": "x86_64",
+                                                "compiler": "gcc",
+                                                "compiler.libcxx": "libstdc++"}),
+                                               None, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertIn("x86_64-w64-mingw32", ab.build)
+        self.assertIn("i686-w64-mingw32", ab.host)
+        ab.configure()
+        self.assertIn("./configure  --build=x86_64-w64-mingw32 --host=i686-w64-mingw32", runner.command_called)
+        ab.configure(build="fake_build_triplet", host="fake_host_triplet")
+        self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet", runner.command_called)
+
+    def test_make_targets_install(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         
@@ -572,5 +588,26 @@ class HelloConan(ConanFile):
         ab.configure()
         
         ab.make(target="install")
-        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())        
+        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())
+        ab.install()
+        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())
 
+    def autotools_prefix_test(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), None, runner)
+        # Package folder is not defined
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        self.assertNotIn("--prefix", runner.command_called)
+        # package folder defined
+        conanfile.package_folder = "/package_folder"
+        ab.configure()
+        self.assertIn("./configure --prefix=/package_folder", runner.command_called)
+        # --prefix already used in args
+        ab.configure(args=["--prefix=/my_package_folder"])
+        self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
+
+    def autotools_get_triplets_test(self):
+        pass
+    def autotools_vars_test(self):
+        pass

@@ -112,18 +112,18 @@ class AutoToolsBuildEnvironment(object):
         """Based on google search for build/host triplets, it could need a lot
         and complex verification"""
 
-        arch_detect = arch_detected or detected_architecture() or platform.machine()
-        os_detect = os_detected or platform.system()
+        arch_platform = arch_detected or detected_architecture() or platform.machine()
+        os_platform = os_detected or platform.system()
         arch_settings = self._conanfile.settings.get_safe("arch")
         os_settings = self._conanfile.settings.get_safe("os")
 
-        if (os_detected is None or arch_detected is None or arch_settings is None or
+        if (os_platform is None or arch_platform is None or arch_settings is None or
             os_settings is None):
             return False, False, False
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        build = self.get_triplet(self._conanfile, arch_detected, os_detected)
+        build = self.get_triplet(self._conanfile, arch_platform, os_platform)
         host = self.get_triplet(self._conanfile, arch_settings, os_settings)
 
         return build, host, None
@@ -207,11 +207,8 @@ class AutoToolsBuildEnvironment(object):
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
 
-    def install(self, make_program=None, vars=None):
-        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
-        with environment_append(vars or self.vars):
-            self._conanfile.run("%s" % join_arguments([make_program, "install"]),
-                                win_bash=self._win_bash, subsystem=self.subsystem)
+    def install(self, args="", make_program=None, vars=None):
+        self.make(args=args, make_program=make_program, target="install", vars=vars)
 
     def _configure_link_flags(self):
         """Not the -L"""
