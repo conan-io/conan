@@ -40,6 +40,7 @@ class UserIO(object):
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
+        self._raise_if_non_interactive()
         user_input = ''
         while not username:
             try:
