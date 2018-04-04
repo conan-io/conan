@@ -173,7 +173,7 @@ class BasicAuthorizer(Authorizer):
         """Checks if a rule specified in config file applies to current conans
         reference and current user"""
         try:
-            rule_ref = ConanFileReference.loads(rule[0])
+            rule_ref = ConanFileReference.loads(rule[0]).without_revision
         except Exception:
             # TODO: Log error
             raise InternalErrorException("Invalid server configuration. "
@@ -184,7 +184,7 @@ class BasicAuthorizer(Authorizer):
                                          "Contact the administrator.")
 
         # Check if rule apply conan_reference
-        if self._check_ref_apply_for_rule(rule_ref, conan_reference):
+        if self._check_ref_apply_for_rule(rule_ref, conan_reference.without_revision):
             if authorized_users[0] == "*" or username in authorized_users:
                 return True  # Ok, applies and match username
             else:
