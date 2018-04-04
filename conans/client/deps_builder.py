@@ -439,19 +439,20 @@ class DepsGraphBuilder(object):
                          alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
+        conan_reference, conanfile_path = self._retriever.get_recipe(requirement.conan_reference,
+                                                                     resolve_revisions=True)
+        output = ScopedOutput(str(conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
-                                                reference=requirement.conan_reference)
+                                                reference=conan_reference)
 
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or requirement.conan_reference
-            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
-            aliased[alias_reference] = requirement.conan_reference
+            alias_reference = alias_ref or conan_reference
+            conan_reference = ConanFileReference.loads(dep_conanfile.alias)
+            aliased[alias_reference] = conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, alias_ref=alias_reference)
 
-        new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node = Node(conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node)
         if not requirement.private:

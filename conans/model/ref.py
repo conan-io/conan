@@ -5,6 +5,7 @@ from conans.model.version import Version
 
 
 class ConanName(object):
+    revision_separator = "#"
     _max_chars = 50
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
@@ -40,6 +41,19 @@ class ConanName(object):
                 return
             ConanName.invalid_name_message(name)
 
+    @staticmethod
+    def validate_channel(name):
+        """Check for name compliance with pattern rules"""
+        if ConanName.revision_separator not in name:
+            return ConanName.validate_name(name)
+
+        try:
+            channel, revision = name.split(ConanName.revision_separator)
+            int(revision)
+            return ConanName.validate_name(channel)
+        except ValueError:
+            raise InvalidNameException("Invalid revision in channel: %s" % name)
+
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
     """ Full reference of a package recipes, e.g.:
@@ -48,17 +62,35 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/")
 
-    def __new__(cls, name, version, user, channel):
+    def __new__(cls, name, version, user, channel, revision=None):
         """Simple name creation.
         @param name:        string containing the desired name
         @param validate:    checks for valid complex name. default True
         """
+        if revision:
+            channel = "%s%s%s" % (channel, ConanName.revision_separator, revision)
         ConanName.validate_name(name)
         ConanName.validate_name(version, True)
         ConanName.validate_name(user)
-        ConanName.validate_name(channel)
+        ConanName.validate_channel(channel)
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
+
+    @property
+    def revision(self):
+        if ConanName.revision_separator not in self.channel:
+            return None
+        return self.channel.split(ConanName.revision_separator)[1]
+
+    @property
+    def channel_without_revision(self):
+        if ConanName.revision_separator not in self.channel:
+            return self.channel
+        return self.channel.split(ConanName.revision_separator)[0]
+
+    @property
+    def without_revision(self):
+        return ConanFileReference(self.name, self.version, self.user, self.channel_without_revision)
 
     @staticmethod
     def loads(text):

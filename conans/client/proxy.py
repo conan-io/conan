@@ -81,8 +81,8 @@ class ConanProxy(object):
         if os.path.exists(package_folder):
             if self._check_updates:
                 read_manifest = self._client_cache.load_package_manifest(package_ref)
-                try:  # get_conan_digest can fail, not in server
-                    upstream_manifest = self.get_package_digest(package_ref)
+                try:  # get_conan_manifest can fail, not in server
+                    upstream_manifest = self.get_package_manifest(package_ref)
                     if upstream_manifest != read_manifest:
                         if upstream_manifest.time > read_manifest.time:
                             output.warn("Current package is older than remote upstream one")
@@ -101,8 +101,7 @@ class ConanProxy(object):
             log_package_got_from_local_cache(package_ref)
             self._recorder.package_fetched_from_cache(package_ref)
         else:
-            installed = self._retrieve_remote_package(package_ref, package_folder,
-                                                      output)
+            installed = self._retrieve_remote_package(package_ref, short_paths, output)
         self.handle_package_manifest(package_ref, installed)
         return installed
 
@@ -112,7 +111,6 @@ class ConanProxy(object):
             self._manifest_manager.check_package(package_ref, remote)
 
     def get_recipe_sources(self, conan_reference, short_paths=False):
-        export_path = self._client_cache.export(conan_reference)
         sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
         if os.path.exists(sources_folder):
             return
@@ -122,13 +120,15 @@ class ConanProxy(object):
             raise ConanException("Error while trying to get recipe sources for %s. "
                                  "No remote defined" % str(conan_reference))
         else:
-            self._remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
-                                                    current_remote)
+            self._remote_manager.get_recipe_sources(conan_reference, current_remote,
+                                                    short_paths=short_paths)
 
-    def get_recipe(self, conan_reference):
+    def get_recipe(self, conan_reference, resolve_revisions=False):
+        if resolve_revisions:
+            conan_reference = self._client_cache.get_latest_revision_reference(conan_reference)
         with self._client_cache.conanfile_write_lock(conan_reference):
-            result = self._get_recipe(conan_reference)
-        return result
+            conan_reference, paths = self._get_recipe(conan_reference)
+        return conan_reference, paths
 
     def _get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
@@ -155,10 +155,10 @@ class ConanProxy(object):
                                             % remote.name)
                             output.warn("Refused to install!")
                         else:
-                            export_path = self._client_cache.export(conan_reference)
                             DiskRemover(self._client_cache).remove(conan_reference)
                             output.info("Retrieving from remote '%s'..." % remote.name)
-                            self._remote_manager.get_recipe(conan_reference, export_path, remote)
+                            conan_reference = self._remote_manager.get_recipe(conan_reference,
+                                                                              remote)
                             output.info("Updated!")
                     elif ret == -1:
                         if not self._update:
@@ -170,7 +170,9 @@ class ConanProxy(object):
                                          "to replace it." % (remote.name, conan_reference))
 
         else:
-            self._retrieve_recipe(conan_reference, output)
+            conan_reference = self._retrieve_recipe(conan_reference, output)
+            # The new conan_reference could be a revision one
+            conanfile_path = self._client_cache.conanfile(conan_reference)
 
         if self._manifest_manager:
             # Just make sure that the recipe sources are there to check
@@ -179,7 +181,7 @@ class ConanProxy(object):
             remote = self._registry.get_ref(conan_reference)
             self._manifest_manager.check_recipe(conan_reference, remote)
 
-        return conanfile_path
+        return conan_reference, conanfile_path
 
     def update_available(self, conan_reference):
         """Returns 0 if the conanfiles are equal, 1 if there is an update and -1 if
@@ -188,8 +190,8 @@ class ConanProxy(object):
             return 0
         read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
         if read_manifest:
-            try:  # get_conan_digest can fail, not in server
-                upstream_manifest = self.get_conan_digest(conan_reference)
+            try:  # get_conan_manifest can fail, not in server
+                upstream_manifest = self.get_conan_manifest(conan_reference)
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404
@@ -203,10 +205,10 @@ class ConanProxy(object):
         """
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
-            export_path = self._client_cache.export(conan_reference)
-            self._remote_manager.get_recipe(conan_reference, export_path, the_remote)
-            self._registry.set_ref(conan_reference, the_remote)
-            self._recorder.recipe_downloaded(conan_reference, the_remote.url)
+            ref = self._remote_manager.get_recipe(conan_reference, the_remote)
+            self._registry.set_ref(ref, the_remote)
+            self._recorder.recipe_downloaded(ref, the_remote.url)
+            return ref
 
         if self._remote_name:
             output.info("Not found, retrieving from server '%s' " % self._remote_name)
@@ -218,8 +220,8 @@ class ConanProxy(object):
 
         if ref_remote:
             try:
-                _retrieve_from_remote(ref_remote)
-                return
+                conan_reference = _retrieve_from_remote(ref_remote)
+                return conan_reference
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(conan_reference), ref_remote.name)
                 self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
@@ -235,8 +237,8 @@ class ConanProxy(object):
         for remote in remotes:
             logger.debug("Trying with remote %s" % remote.name)
             try:
-                _retrieve_from_remote(remote)
-                return
+                conan_reference = _retrieve_from_remote(remote)
+                return conan_reference
             # If not found continue with the next, else raise
             except NotFoundException as exc:
                 if remote == remotes[-1]:  # Last element not found
@@ -316,20 +318,20 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def get_conan_digest(self, conan_ref):
+    def get_conan_manifest(self, conan_ref):
         """ used by update to check the date of packages, require force if older
         """
         remote, current_remote = self._get_remote(conan_ref)
-        result = self._remote_manager.get_conan_digest(conan_ref, remote)
+        result = self._remote_manager.get_conan_manifest(conan_ref, remote)
         if not current_remote:
             self._registry.set_ref(conan_ref, remote)
         return result
 
-    def get_package_digest(self, package_ref):
+    def get_package_manifest(self, package_ref):
         """ used by update to check the date of packages, require force if older
         """
         remote, ref_remote = self._get_remote(package_ref.conan)
-        result = self._remote_manager.get_package_digest(package_ref, remote)
+        result = self._remote_manager.get_package_manifest(package_ref, remote)
         if not ref_remote:
             self._registry.set_ref(package_ref.conan, remote)
         return result
@@ -380,20 +382,19 @@ class ConanProxy(object):
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))
         remote, _ = self._get_remote(reference)
-        export_path = self._client_cache.export(reference)
-        self._remote_manager.get_recipe(reference, export_path, remote)
         conanfile_path = self._client_cache.conanfile(reference)
+        if not os.path.exists(conanfile_path):
+            raise Exception("Download recipe first")
         conanfile = load_conanfile_class(conanfile_path)
         short_paths = conanfile.short_paths
         self._registry.set_ref(reference, remote)
         output = ScopedOutput(str(reference), self._out)
         for package_id in package_ids:
             package_ref = PackageReference(reference, package_id)
-            package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
             self._out.info("Downloading %s" % str(package_ref))
-            self._retrieve_remote_package(package_ref, package_folder, output, remote)
+            self._retrieve_remote_package(package_ref, short_paths, output, remote)
 
-    def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):
+    def _retrieve_remote_package(self, package_ref, short_paths, output, remote=None):
 
         if remote is None:
             remote = self._registry.get_ref(package_ref.conan)
@@ -405,7 +406,7 @@ class ConanProxy(object):
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_ref, package_folder, remote)
+            self._remote_manager.get_package(package_ref, remote, short_paths)
             output.success('Package installed %s' % package_id)
             self._recorder.package_downloaded(package_ref, remote.url)
 

@@ -36,12 +36,15 @@ class FileManager(object):
     def get_download_conanfile_urls(self, reference, files_subset=None, user=None):
         """Returns a {filepath: url} """
         assert isinstance(reference, ConanFileReference)
-        return self._get_download_urls(self.paths.export(reference), files_subset, user)
+        reference = self.paths.get_latest_revision_reference(reference)
+        return reference, self._get_download_urls(self.paths.export(reference), files_subset, user)
 
     def get_download_package_urls(self, package_reference, files_subset=None, user=None):
         """Returns a {filepath: url} """
         assert isinstance(package_reference, PackageReference)
-        return self._get_download_urls(self.paths.package(package_reference), files_subset, user)
+        reference = self.paths.get_latest_revision_reference(package_reference.conan)
+        package_reference = PackageReference(reference, package_reference.package_id)
+        return package_reference, self._get_download_urls(self.paths.package(package_reference), files_subset, user)
 
     # ############ UPLOAD URLS
     def get_upload_conanfile_urls(self, reference, filesizes, user):

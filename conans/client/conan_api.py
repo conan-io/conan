@@ -322,8 +322,6 @@ class ConanAPIV1(object):
                                   update=update,
                                   keep_build=keep_build)
 
-
-
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_name=None, settings=None,
@@ -343,7 +341,8 @@ class ConanAPIV1(object):
 
         if package_folder:
             if build_folder or source_folder:
-                raise ConanException("package folder definition incompatible with build and source folders")
+                raise ConanException("package folder definition incompatible "
+                                     "with build and source folders")
             package_folder = _make_abs_path(package_folder, cwd)
 
         build_folder = _make_abs_path(build_folder, cwd)
@@ -365,17 +364,27 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         conanfile = load_conanfile_class(conanfile_path)
+        revision = None
+        if getattr(conanfile, "_revision_"):
+            revision = conanfile._revision_
+
         if (name and conanfile.name and conanfile.name != name) or \
            (version and conanfile.version and conanfile.version != version):
             raise ConanException("Specified name/version doesn't match with the "
                                  "name/version in the conanfile")
-        self._manager.export(conanfile_path, name, version, user, channel)
 
         if not (name and version):
             name = conanfile.name
             version = conanfile.version
 
         reference = ConanFileReference(name, version, user, channel)
+        if reference.revision:  # Could be improved modifying the recipe?
+            raise ConanException("Specify the revision in a recipe field '_revision_'")
+        else:
+            reference = ConanFileReference(name, version, user, channel, revision)
+
+        self._manager.export(conanfile_path, name, version, user, channel, revision)
+
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
                                  package_folder=package_folder, install_folder=install_folder,
                                  profile=profile, force=force)
@@ -386,7 +395,7 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote, recipe=recipe)
+        self._manager.download(conan_ref, package, remote=remote, only_recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -676,16 +685,19 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_ref(self, reference, remote):
+        reference = ConanFileReference.loads(str(reference))
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         return registry.add_ref(reference, remote)
 
     @api_method
     def remote_remove_ref(self, reference):
+        reference = ConanFileReference.loads(str(reference))
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         return registry.remove_ref(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote):
+        reference = ConanFileReference.loads(str(reference))
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         return registry.update_ref(reference, remote)
 

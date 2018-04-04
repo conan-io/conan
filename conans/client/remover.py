@@ -10,6 +10,7 @@ from conans.client.remote_registry import RemoteRegistry
 
 
 class DiskRemover(object):
+
     def __init__(self, paths):
         self._paths = paths
 
@@ -139,7 +140,7 @@ class ConanRemover(object):
                     packages = disk_search.search_packages(reference, packages_query)
                 if outdated:
                     if remote:
-                        recipe_hash = self._remote_proxy.get_conan_digest(reference).summary_hash
+                        recipe_hash = self._remote_proxy.get_conan_manifest(reference).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)

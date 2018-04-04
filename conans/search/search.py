@@ -5,8 +5,8 @@ from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import CONANINFO
+from conans.model.ref import PackageReference, ConanFileReference, ConanName
+from conans.paths import CONANINFO, REVISIONS_SEPARATOR_PATH
 from conans.util.log import logger
 import os
 from conans.search.query_parse import infix_to_postfix, evaluate_postfix
@@ -146,7 +146,10 @@ class DiskSearchManager(SearchManagerABC):
         else:
             ret = []
             for subdir in subdirs:
-                conan_ref = ConanFileReference(*subdir.split("/"))
+                name, version, user, channel = subdir.split("/")
+                # FIXME: Ugly, responsibility of paths
+                channel = channel.replace(REVISIONS_SEPARATOR_PATH, ConanName.revision_separator)
+                conan_ref = ConanFileReference(name, version, user, channel)
                 if pattern:
                     if pattern.match(str(conan_ref)):
                         ret.append(conan_ref)

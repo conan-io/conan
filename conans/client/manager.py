@@ -207,7 +207,7 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote, recipe):
+    def download(self, reference, package_ids, remote, only_recipe):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
@@ -223,9 +223,8 @@ class ConanManager(object):
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        remote_proxy.get_recipe(reference)
-
-        if recipe:
+        reference, _ = remote_proxy.get_recipe(reference, resolve_revisions=True)
+        if only_recipe:
             return
 
         # Download the sources too, don't be lazy
@@ -362,6 +361,10 @@ class ConanManager(object):
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+
+        # Fixme: Pretty shitty implementation
+        # We want a reference without revision to be resolved (if present) to the latest
+
         deps_graph = graph_builder.load(conanfile)
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
