@@ -364,7 +364,6 @@ class ConanInstaller(object):
 
     def _build_project_pkg(self, conan_file, output, conan_ref, flat, deps_graph,
                            conanfile_path, profile_build_requires):
-        source_folder = os.path.dirname(conanfile_path)
         self._build_requires.install(conan_ref, conan_file, self,
                                      profile_build_requires, output)
 
@@ -377,6 +376,7 @@ class ConanInstaller(object):
 
         build_folder = local_package.local_build_path(conan_file.settings)
         package_folder = local_package.local_package_path(conan_file.settings)
+        source_folder = os.path.dirname(conanfile_path)
         mkdir(build_folder)
         mkdir(package_folder)
         os.chdir(build_folder)
@@ -559,7 +559,8 @@ class ConanInstaller(object):
                     else:
                         local_project = self._conan_project[conan_ref]
                         if local_project:
-                            build_node = False
+                            # Maybe the folder is not there, check it!
+                            build_node = local_project.need_build(conan_file.settings)
                         else:
                             available = self._remote_proxy.package_available(package_reference,
                                                                              conan_file.short_paths,
