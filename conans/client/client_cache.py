@@ -213,11 +213,6 @@ class ClientCache(SimplePaths):
         filename = self.digestfile_conanfile(conan_reference)
         return FileTreeManifest.loads(load(filename))
 
-    def load_package_manifest(self, package_reference):
-        """conan_id = sha(zip file)"""
-        filename = self.digestfile_package(package_reference, short_paths=None)
-        return FileTreeManifest.loads(load(filename))
-
     @staticmethod
     def read_package_recipe_hash(package_folder):
         filename = join(package_folder, CONANINFO)

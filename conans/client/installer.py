@@ -400,12 +400,10 @@ class ConanInstaller(object):
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
-        if not os.path.exists(package_folder):
-            output.info("Retrieving package %s" % package_reference.package_id)
-
         try:
             if self._remote_proxy.get_package(package_reference,
                                               short_paths=conan_file.short_paths):
+                proxy.handle_package_manifest()
                 _handle_system_requirements(conan_file, package_reference,
                                             self._client_cache, output)
                 if get_env("CONAN_READ_ONLY_CACHE", False):
