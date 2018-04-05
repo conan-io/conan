@@ -7,16 +7,17 @@ from conans import tools
 from conans.test.utils.test_files import temp_folder
 
 
-class Unix2dosTest(unittest.TestCase):
+class Dos2unixTest(unittest.TestCase):
     @staticmethod
-    def _new_unix_file(filename):
+    def _new_dos_file(filename):
         tmp_dir = temp_folder()
         filepath = os.path.join(tmp_dir, filename)
         with open(filepath, 'wb') as f:
-            f.write(b'This is a test\n')
+            f.write(b'This is a test\r\n')
         return filepath
 
     def test_successful_conversion(self):
-        unix_file = self._new_unix_file('dummy')
-        tools.unix2dos(unix_file)
-        self.assertTrue(b'\r\n' in open(unix_file, 'rb').read())
+        dos_file = self._new_dos_file('dummy')
+        tools.dos2unix(dos_file)
+        self.assertTrue(b'\n' in open(dos_file, 'rb').read())
+        self.assertFalse(b'\r\n' in open(dos_file, 'rb').read())
