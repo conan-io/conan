@@ -278,17 +278,25 @@ def unix2dos(filepath):
     """
     Converts line breaks in a text file from Unix format (LF) to DOS format (CRLF)
     :param filepath: Path to the text file to convert
-    :return:
+    :return: The return value. True for success, False otherwise.
     """
     contents = open(filepath, 'rb').read()
-    open(filepath, 'wb').write(contents.replace(b'\n', b'\r\n'))
+    if b'\r\n' in contents:
+        return False
+    else:
+        open(filepath, 'wb').write(contents.replace(b'\n', b'\r\n'))
+        return True
 
 
 def dos2unix(filepath):
     """
     Converts line breaks in a text file from DOS format (CRLF) to Unix format (LF)
     :param filepath: Path to the text file to convert
-    :return:
+    :return: The return value. True for success, False otherwise.
     """
     contents = open(filepath, 'rb').read()
-    open(filepath, 'wb').write(contents.replace(b'\r\n', b'\n'))
+    if b'\r\n' not in contents:
+        return False
+    else:
+        open(filepath, 'wb').write(contents.replace(b'\r\n', b'\n'))
+        return True
