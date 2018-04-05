@@ -571,17 +571,23 @@ class HelloConan(ConanFile):
                                                 "compiler.libcxx": "libstdc++"}),
                                   None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
         self.assertIn("i686-w64-mingw32", ab.host)
         if platform.system() == "Windows":
             self.assertIn("x86_64-w64-mingw32", ab.build)
+            self.assertIn("./configure  --build=x86_64-w64-mingw32 --host=i686-w64-mingw32",
+                          runner.command_called)
         elif platform.system() == "Linux":
             self.assertIn("x86_64-linux-gnu", ab.build)
+            self.assertIn("./configure  --build=x86_64-linux-gnu --host=i686-w64-mingw32",
+                          runner.command_called)
         else:
             self.assertIn("x86_64-apple-darwin", ab.build)
-        ab.configure()
-        self.assertIn("./configure  --build=x86_64-w64-mingw32 --host=i686-w64-mingw32", runner.command_called)
+            self.assertIn("./configure  --build=x86_64-apple-darwin --host=i686-w64-mingw32",
+                          runner.command_called)
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")
-        self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet", runner.command_called)
+        self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet",
+                      runner.command_called)
 
     def test_make_targets_install(self):
         runner = RunnerMock()
