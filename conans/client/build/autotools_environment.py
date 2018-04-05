@@ -63,7 +63,11 @@ class AutoToolsBuildEnvironment(object):
     @staticmethod
     def get_triplet(conanfile, the_arch, the_os):
         """
-        machine-vendor-op_system, But vendor can be omitted in practice
+        Creates string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
+
+        :param conanfile: used to get the compiler of the recipe and access the output
+        :param the_arch: arch to be used to create the triplet
+        :param the_os: os to be used to create the triplet
         """
 
         # Calculate the arch
@@ -118,9 +122,9 @@ class AutoToolsBuildEnvironment(object):
         os_settings = self._conanfile.settings.get_safe("os")
 
         if (os_platform is None or arch_platform is None or arch_settings is None or
-            os_settings is None):
+                os_settings is None):
             return False, False, False
-        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+        if not cross_building(self._conanfile.settings, os_platform, arch_platform):
             return False, False, False
 
         build = self.get_triplet(self._conanfile, arch_platform, os_platform)
@@ -178,7 +182,7 @@ class AutoToolsBuildEnvironment(object):
         if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder]
-            elif not True in ["--prefix=" in arg for arg in args]:
+            elif True not in ["--prefix=" in arg for arg in args]:
                 args.append("--prefix=%s" % self._conanfile.package_folder)
 
         with environment_append(pkg_env):
@@ -343,6 +347,7 @@ class AutoToolsBuildEnvironment(object):
                "LIBS": libs.strip(),
                }
         return ret
+
 
 def _environ_value_prefix(var_name, prefix=" "):
     if os.environ.get(var_name, ""):
