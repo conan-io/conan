@@ -571,7 +571,7 @@ class HelloConan(ConanFile):
                                                 "arch_build": "x86_64",
                                                 "compiler": "gcc",
                                                 "compiler.libcxx": "libstdc++"}),
-                                               None, runner)
+                                  None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         self.assertIn("x86_64-w64-mingw32", ab.build)
         self.assertIn("i686-w64-mingw32", ab.host)
@@ -583,14 +583,14 @@ class HelloConan(ConanFile):
     def test_make_targets_install(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
-        
+
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
-        
+
         ab.make(target="install")
-        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())
+        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
         ab.install()
-        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())
+        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
 
     def autotools_prefix_test(self):
         runner = RunnerMock()
@@ -608,6 +608,60 @@ class HelloConan(ConanFile):
         self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
 
     def autotools_get_triplets_test(self):
-        pass
-    def autotools_vars_test(self):
-        pass
+        runner = RunnerMock()
+        settings = MockSettings({"compiler": "gcc"})
+
+        for os in ["Windows", "Linux"]:
+            for arch in ["x86_64", "x86"]:
+                settings.values["os"] = os
+                settings.values["arch"] = arch
+                conanfile = MockConanfile(settings, None, runner)
+                triplet = AutoToolsBuildEnvironment.get_triplet(conanfile, settings.values["arch"],
+                                                                settings.values["os"])
+
+                output = ""
+                if arch == "x86_64":
+                    output += "x86_64"
+                else:
+                    output += "i686" if os != "Linux" else "x86"
+
+                output += "-"
+                if os == "Windows":
+                    output += "w64-mingw32"
+                else:
+                    output += "linux-gnu"
+
+                self.assertIn(output, triplet)
+
+    def autotools_configure_vars_test(self):
+        from mock import patch
+
+        runner = RunnerMock()
+        settings = MockSettings({"build_type": "Debug",
+                                 "arch": "x86_64",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++"})
+        conanfile = MockConanfile(settings, None, runner)
+        conanfile.settings = settings
+        self._set_deps_info(conanfile)
+
+        def custom_configure(obj, configure_dir=None, args=None, build=None, host=None, target=None,
+                             pkg_config_paths=None, vars=None):  # @UnusedVariable
+            self.assertNotEqual(obj.vars, vars)
+            return vars or obj.vars
+
+        with patch.object(AutoToolsBuildEnvironment, 'configure', new=custom_configure):
+            be = AutoToolsBuildEnvironment(conanfile)
+
+            # Get vars and modify them
+            my_vars = be.vars
+            my_vars["fake_var"] = "fake"
+            my_vars["super_fake_var"] = "fakefake"
+
+            # TEST with default vars
+            mocked_result = be.configure()
+            self.assertEqual(mocked_result, be.vars)
+
+            # TEST with custom vars
+            mocked_result = be.configure(vars=my_vars)
+            self.assertEqual(mocked_result, my_vars)
