@@ -84,6 +84,7 @@ class TestServerLauncher(object):
                               server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
+            self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):
         """from multiprocessing import Process

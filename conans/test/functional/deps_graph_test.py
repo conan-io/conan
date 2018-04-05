@@ -17,8 +17,8 @@ class DepsGraphTest(unittest.TestCase):
 
         conanfile1 = ConanFile(None, None, Settings({}))
         conanfile2 = ConanFile(None, None, Settings({}))
-        n1 = Node(conan_ref1, conanfile1)
-        n2 = Node(conan_ref2, conanfile2)
+        n1 = Node(conan_ref1, conanfile1, conan_ref1)
+        n2 = Node(conan_ref2, conanfile2, conan_ref2)
 
         self.assertNotEqual(n1, n2)
 

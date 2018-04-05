@@ -124,25 +124,24 @@ class ConanProxy(object):
                                                     short_paths=short_paths)
 
     def get_recipe(self, conan_reference, resolve_revisions=False):
-        if resolve_revisions:
-            conan_reference = self._client_cache.get_latest_revision_reference(conan_reference)
         with self._client_cache.conanfile_write_lock(conan_reference):
-            conan_reference, paths = self._get_recipe(conan_reference)
+            conan_reference, paths = self._get_recipe(conan_reference, resolve_revisions)
         return conan_reference, paths
 
-    def _get_recipe(self, conan_reference):
+    def _get_recipe(self, conan_reference, resolve_revisions):
         output = ScopedOutput(str(conan_reference), self._out)
 
+        local_reference = self._client_cache.get_latest_revision_reference(conan_reference) \
+                            if resolve_revisions else conan_reference
+
         # check if it is in disk
-        conanfile_path = self._client_cache.conanfile(conan_reference)
+        conanfile_path = self._client_cache.conanfile(local_reference)
 
         if os.path.exists(conanfile_path):
-            log_recipe_got_from_local_cache(conan_reference)
-            self._recorder.recipe_fetched_from_cache(conan_reference)
             if self._check_updates:
-                ret = self.update_available(conan_reference)
+                ret = self.update_available(local_reference, conan_reference)
                 if ret != 0:  # Found and not equal
-                    remote, ref_remote = self._get_remote(conan_reference)
+                    remote, ref_remote = self._get_remote(local_reference)
                     if ret == 1:
                         if not self._update:
                             if remote != ref_remote:  # Forced new remote
@@ -155,43 +154,52 @@ class ConanProxy(object):
                                             % remote.name)
                             output.warn("Refused to install!")
                         else:
-                            DiskRemover(self._client_cache).remove(conan_reference)
+                            DiskRemover(self._client_cache).remove(local_reference)
                             output.info("Retrieving from remote '%s'..." % remote.name)
-                            conan_reference = self._remote_manager.get_recipe(conan_reference,
-                                                                              remote)
+                            local_reference = self._remote_manager.get_recipe(conan_reference, remote)
+                            conanfile_path = self._client_cache.conanfile(local_reference)
                             output.info("Updated!")
                     elif ret == -1:
                         if not self._update:
-                            output.info("Current conanfile is newer "
-                                        "than %s's one" % remote.name)
+                            output.info("Current conanfile is newer than %s's one" % remote.name)
                         else:
                             output.error("Current conanfile is newer than %s's one. "
                                          "Run 'conan remove %s' and run install again "
-                                         "to replace it." % (remote.name, conan_reference))
+                                         "to replace it." % (remote.name, local_reference))
+
+            log_recipe_got_from_local_cache(local_reference)
+            self._recorder.recipe_fetched_from_cache(local_reference)
 
         else:
-            conan_reference = self._retrieve_recipe(conan_reference, output)
+            local_reference = self._retrieve_recipe(conan_reference, output)
             # The new conan_reference could be a revision one
-            conanfile_path = self._client_cache.conanfile(conan_reference)
+            conanfile_path = self._client_cache.conanfile(local_reference)
 
         if self._manifest_manager:
             # Just make sure that the recipe sources are there to check
             conanfile = load_conanfile_class(conanfile_path)
-            self.get_recipe_sources(conan_reference, conanfile.short_paths)
-            remote = self._registry.get_ref(conan_reference)
-            self._manifest_manager.check_recipe(conan_reference, remote)
+            self.get_recipe_sources(local_reference, conanfile.short_paths)
+            remote = self._registry.get_ref(local_reference)
+            self._manifest_manager.check_recipe(local_reference, remote)
 
-        return conan_reference, conanfile_path
+        return local_reference, conanfile_path
 
-    def update_available(self, conan_reference):
+    def update_available(self, local_ref, original_ref):
         """Returns 0 if the conanfiles are equal, 1 if there is an update and -1 if
-        the local is newer than the remote"""
-        if not conan_reference:
+        the local is newer than the remote
+        :param local_ref is the current recipe we have
+        :param original_ref is the requested original recipe, it is important because if the original
+        contains a revision, the revision shouldn't be upgraded."""
+        if not local_ref:
             return 0
-        read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
+        read_manifest, _ = self._client_cache.conan_manifests(local_ref)
         if read_manifest:
             try:  # get_conan_manifest can fail, not in server
-                upstream_manifest = self.get_conan_manifest(conan_reference)
+                remote_ref, upstream_manifest = self.get_conan_manifest(original_ref)
+                if remote_ref != local_ref:
+                    return 1 if remote_ref.revision > local_ref.revision else -1
+
+                # Same reference, check manifests
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404

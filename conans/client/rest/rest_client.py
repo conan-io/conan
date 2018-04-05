@@ -116,13 +116,14 @@ class RestApiClient(object):
 
         # Obtain the URLs
         url = "%s/conans/%s/digest" % (self._remote_api_url, "/".join(conan_reference))
-        _, urls = self._get_file_to_url_dict(url)
+        conan_reference, urls = self._get_file_to_url_dict(url, conan_reference)
 
         # Get the digest
         contents = self.download_files(urls)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+        return (ConanFileReference.loads(str(conan_reference)),
+                FileTreeManifest.loads(contents[CONAN_MANIFEST]))
 
     def get_package_manifest(self, package_reference):
         """Gets a FileTreeManifest from a package"""
@@ -131,7 +132,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
                                                    "/".join(package_reference.conan),
                                                    package_reference.package_id)
-        _, urls = self._get_file_to_url_dict(url)
+        _, urls = self._get_file_to_url_dict(url, package_reference)
 
         # Get the digest
         contents = self.download_files(urls)
@@ -145,9 +146,8 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        reference, urls = self._get_file_to_url_dict(url)
-        if reference:
-            package_reference = PackageReference.loads(reference)
+        reference, urls = self._get_file_to_url_dict(url, package_reference)
+        package_reference = PackageReference.loads(str(reference))
         if not urls:
             raise NotFoundException("Package not found!")
 
@@ -164,9 +164,8 @@ class RestApiClient(object):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
-        reference, urls = self._get_file_to_url_dict(url)
-        if reference:
-            conan_reference = ConanFileReference.loads(reference)
+        reference, urls = self._get_file_to_url_dict(url, conan_reference)
+        conan_reference = ConanFileReference.loads(str(reference))
 
         return conan_reference, urls
 
@@ -175,13 +174,12 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        reference, urls = self._get_file_to_url_dict(url)
-        if reference:
-            reference = PackageReference.loads(reference)
+        reference, urls = self._get_file_to_url_dict(url, package_reference)
+        package_reference = PackageReference.loads(str(reference))
         if not urls:
             raise NotFoundException("Package not found!")
 
-        return reference, urls
+        return package_reference, urls
 
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
                       no_overwrite):
@@ -214,7 +212,7 @@ class RestApiClient(object):
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
             filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                          for filename, abs_path in files_to_upload.items()}
-            _, urls = self._get_file_to_url_dict(url, data=filesizes)
+            _, urls = self._get_file_to_url_dict(url, conan_reference, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
@@ -251,7 +249,7 @@ class RestApiClient(object):
             filesizes = {filename: os.stat(abs_path).st_size for filename,
                          abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
-            _, urls = self._get_file_to_url_dict(url, data=filesizes)
+            _, urls = self._get_file_to_url_dict(url, package_reference, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
@@ -407,11 +405,11 @@ class RestApiClient(object):
             return url
         return urljoin(self.remote_url, url)
 
-    def _get_file_to_url_dict(self, url, data=None):
+    def _get_file_to_url_dict(self, url, conan_reference, data=None):
         """Call to url and decode the json returning a dict of {filepath: url} dict
         converting the url to a complete url when needed"""
         ret = self._get_json(url, data=data)
-        reference = None
+        reference = conan_reference
         if "reference" in ret:  # Return from a v2/download_urls
             reference = ret["reference"]
             data = ret["files"]
@@ -548,12 +546,11 @@ class RestApiClient(object):
                                                               "/".join(conan_reference),
                                                               package_id)
         try:
-            reference, urls = self._get_file_to_url_dict(url)
-            if reference:
-                if package_id:
-                    conan_reference = PackageReference.loads(reference).conan
-                else:
-                    conan_reference = ConanFileReference.loads(reference)
+            reference, urls = self._get_file_to_url_dict(url, conan_reference)
+            if package_id:
+                conan_reference = PackageReference.loads(str(reference)).conan
+            else:
+                conan_reference = ConanFileReference.loads(str(reference))
         except NotFoundException:
             if package_id:
                 raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))

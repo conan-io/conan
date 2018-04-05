@@ -106,9 +106,9 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref):
+    def get_recipe(self, conan_ref, resolve_revisions):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path
+        return conan_ref, conan_path
 
     def search_recipes(self, pattern):
         from fnmatch import translate

@@ -33,7 +33,7 @@ class ConanController(Controller):
             reference = ConanFileReference(conanname, version, username, channel)
             _, urls = conan_service.get_conanfile_download_urls(reference, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise NotFoundException("No manifest found")
             return urls
 
         @app.route("%s/packages/:package_id/digest" % conan_route, method=["GET"])
@@ -47,7 +47,7 @@ class ConanController(Controller):
 
             _, urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise NotFoundException("No manifest found")
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 

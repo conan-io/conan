@@ -183,7 +183,7 @@ class ConanManager(object):
         # this is a bit tricky, but works. The loading of a cache package makes the referenced
         # one, the first of the first level, always existing
         nodes = deps_graph.direct_requires()
-        _, conanfile = nodes[0]
+        conanfile = nodes[0].conanfile
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
         pkg_reference = PackageReference(reference, pkg_id)
@@ -362,8 +362,6 @@ class ConanManager(object):
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
 
-        # Fixme: Pretty shitty implementation
-        # We want a reference without revision to be resolved (if present) to the latest
 
         deps_graph = graph_builder.load(conanfile)
 

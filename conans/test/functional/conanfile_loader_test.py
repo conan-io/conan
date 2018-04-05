@@ -52,6 +52,37 @@ class MyTest(ConanFile):
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 
+    def conanfile_txt_revisions_test(self):
+        file_content = '''[requires]
+OpenCV/2.4.10@phil/stable # My requirement for CV
+'''
+        parser = ConanFileTextLoader(file_content)
+        self.assertEquals(parser.requirements, ["OpenCV/2.4.10@phil/stable"])
+
+        file_content = '''[requires]
+OpenCV/2.4.10@phil/stable#3
+'''
+        parser = ConanFileTextLoader(file_content)
+        self.assertEquals(parser.requirements, ["OpenCV/2.4.10@phil/stable#3"])
+
+        file_content = '''[requires]
+OpenCV/2.4.10@phil/stable#3 # Comment
+'''
+        parser = ConanFileTextLoader(file_content)
+        self.assertEquals(parser.requirements, ["OpenCV/2.4.10@phil/stable#3"])
+
+        file_content = '''[requires]
+OpenCV/2.4.10@phil/stable# 3 # Comment
+'''
+        parser = ConanFileTextLoader(file_content)
+        self.assertEquals(parser.requirements, ["OpenCV/2.4.10@phil/stable"])
+
+        file_content = '''[build_requires]
+OpenCV/2.4.10@phil/stable#comment
+'''
+        parser = ConanFileTextLoader(file_content)
+        self.assertEquals(parser.build_requirements, ["OpenCV/2.4.10@phil/stable"])
+
     def conanfile_txt_errors_test(self):
         # Valid content
         file_content = '''[requires}

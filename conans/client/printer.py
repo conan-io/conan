@@ -29,7 +29,7 @@ class Printer(object):
         """
         self._out.writeln("Requirements", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
-            ref, _ = node
+            ref = node.conan_ref
             if not ref:
                 continue
             remote = registry.get_ref(ref)
@@ -37,7 +37,7 @@ class Printer(object):
             self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
         self._out.writeln("Packages", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
-            ref, conanfile = node
+            ref, conanfile, _ = node
             if not ref:
                 continue
             ref = PackageReference(ref, conanfile.info.package_id())
@@ -89,7 +89,7 @@ class Printer(object):
 
         graph_updates_info = graph_updates_info or {}
         for node in sorted(deps_graph.nodes):
-            ref, conan = node
+            ref, conan, _ = node
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference

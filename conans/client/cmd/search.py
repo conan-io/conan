@@ -44,7 +44,7 @@ class Search(object):
             remote = RemoteRegistry(self._client_cache.registry, self._user_io.out).remote(remote)
             packages_props = self._remote_manager.search_packages(remote, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            manifest = self._remote_manager.get_conan_manifest(reference, remote)
+            _, manifest = self._remote_manager.get_conan_manifest(reference, remote)
             recipe_hash = manifest.summary_hash
         else:
             searcher = DiskSearchManager(self._client_cache)
