@@ -321,35 +321,21 @@ class ConanInstaller(object):
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
             output = ScopedOutput(str(conan_ref), self._out)
-            package_ref = PackageReference(conan_ref, package_id)
-            package_folder = self._client_cache.package(package_ref,
-                                                        conan_file.short_paths)
 
             local_package = self._conan_project[conan_ref]
-            if build_needed and (conan_ref, package_id) not in self._built_packages:
-                if local_package:
+            if local_package:
+                if build_needed and (conan_ref, package_id) not in self._built_packages:
                     conanfile_path = local_package.conanfile_path
                     self._build_project_pkg(conan_file, output, conan_ref, flat,
-                                            deps_graph, conanfile_path, profile_build_requires)
+                                            deps_graph, conanfile_path, profile_build_requires,
+                                            local_package)
                 else:
-                    self._build_package(conan_file, conan_ref, package_id, package_ref, output,
-                                        keep_build, profile_build_requires, flat, deps_graph)
-            else:
-                if not local_package:
-                    # Get the package, we have a not outdated remote package
-                    with self._client_cache.package_lock(package_ref):
-                        self._get_remote_package(conan_file, package_ref, output, package_folder)
+                    self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-                self._propagate_info(conan_file, conan_ref, flat, deps_graph)
-
-            if not local_package:
-                # Call the info method
-                self._call_package_info(conan_file, package_folder)
-            else:
-                package_folder = local_package.conanfile_path
                 include_dirs = local_package.includedirs(conan_file.settings)
                 lib_dirs = local_package.libdirs(conan_file.settings)
                 if not include_dirs:
+                    package_folder = local_package.conanfile_path
                     self._call_package_info(conan_file, package_folder)
                 else:
                     root_folder = os.path.dirname(local_package.conanfile_path)
@@ -358,12 +344,28 @@ class ConanInstaller(object):
                         conan_file.cpp_info.includedirs = include_dirs
                     if lib_dirs:
                         conan_file.cpp_info.libdirs = lib_dirs
+            else:
+                package_ref = PackageReference(conan_ref, package_id)
+                package_folder = self._client_cache.package(package_ref,
+                                                            conan_file.short_paths)
+                if build_needed and (conan_ref, package_id) not in self._built_packages:
+                    self._build_package(conan_file, conan_ref, package_id, package_ref, output,
+                                        keep_build, profile_build_requires, flat, deps_graph)
+                else:
+                    # Get the package, we have a not outdated remote package
+                    with self._client_cache.package_lock(package_ref):
+                        self._get_remote_package(conan_file, package_ref, output, package_folder)
+
+                    self._propagate_info(conan_file, conan_ref, flat, deps_graph)
+
+                # Call the info method
+                self._call_package_info(conan_file, package_folder)
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_conanfile, None, flat, deps_graph)
 
     def _build_project_pkg(self, conan_file, output, conan_ref, flat, deps_graph,
-                           conanfile_path, profile_build_requires):
+                           conanfile_path, profile_build_requires, local_package):
         self._build_requires.install(conan_ref, conan_file, self,
                                      profile_build_requires, output)
 
@@ -371,9 +373,7 @@ class ConanInstaller(object):
         self._propagate_info(conan_file, conan_ref, flat, deps_graph)
         output.highlight("Calling build()")
 
-        local_package = self._conan_project[conan_ref]
         include_dirs = local_package._includedirs
-
         build_folder = local_package.local_build_path(conan_file.settings)
         package_folder = local_package.local_package_path(conan_file.settings)
         source_folder = os.path.dirname(conanfile_path)
