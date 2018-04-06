@@ -45,8 +45,8 @@ from conans.client.cmd.user import users_clean, users_list, user_set
 default_manifest_folder = '.conan_manifests'
 
 
-def get_request_timeout(client_cache):
-    timeout = client_cache.conan_config.request_timeout
+def get_request_timeout():
+    timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
     try:
         return float(timeout) if timeout is not None else None
     except ValueError:
@@ -57,7 +57,7 @@ def get_basic_requester(client_cache):
     requester = requests.Session()
     # Manage the verify and the client certificates and setup proxies
 
-    return ConanRequester(requester, client_cache, get_request_timeout(client_cache))
+    return ConanRequester(requester, client_cache, get_request_timeout())
 
 
 def api_method(f):

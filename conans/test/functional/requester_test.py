@@ -29,6 +29,7 @@ request_timeout=2
         self.assertEquals(client.requester.get("MyUrl"), 2.0)
 
         with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
+            client = TestClient(requester_class=MyRequester)
             client.init_dynamic_vars()
             self.assertEquals(client.requester.get("MyUrl"), 4.3)
 

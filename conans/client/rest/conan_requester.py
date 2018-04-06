@@ -55,6 +55,7 @@ class ConanRequester(object):
                 kwargs["proxies"] = self.proxies
         if self._timeout_seconds:
             kwargs["timeout"] = self._timeout_seconds
+        print(kwargs)
         return kwargs
 
     def get(self, url, **kwargs):

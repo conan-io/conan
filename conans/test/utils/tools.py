@@ -389,23 +389,23 @@ class TestClient(object):
             if isinstance(server, str):  # Just URI
                 real_servers = True
 
-        if real_servers:
-            requester = requests.Session()
-        else:
-            if self.requester_class:
-                requester = self.requester_class(self.servers)
+        with tools.environment_append(self.client_cache.conan_config.env_vars):
+            if real_servers:
+                requester = requests.Session()
             else:
-                requester = TestRequester(self.servers)
+                if self.requester_class:
+                    requester = self.requester_class(self.servers)
+                else:
+                    requester = TestRequester(self.servers)
 
-        self.requester = ConanRequester(requester, self.client_cache,
-                                        get_request_timeout(self.client_cache))
+            self.requester = ConanRequester(requester, self.client_cache,
+                                            get_request_timeout())
 
-        self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
-                                                        self.requester, self.client_cache,
-                                                        self.user_io, self.client_version,
-                                                        self.min_server_compatible_version)
-
-        set_global_instances(output, self.requester)
+            self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
+                                                            self.requester, self.client_cache,
+                                                            self.user_io, self.client_version,
+                                                            self.min_server_compatible_version)
+            set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
