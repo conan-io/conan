@@ -10,66 +10,10 @@ from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, CONAN_MANIFEST
-from conans.util.files import rmdir, mkdir, load
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conans.util.files import mkdir
 from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
-from conans.model.manifest import FileTreeManifest
-
-
-def get_package(package_ref, package_folder, output, check_updates, update, registry, recorder,
-                remote_manager):
-    """ obtain a package, either from disk or retrieve from remotes if necessary
-    and not necessary to build
-    """
-    # Check current package status
-    if os.path.exists(package_folder):
-        if check_updates:
-            read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
-                                                                     CONAN_MANIFEST)))
-            try:  # get_conan_digest can fail, not in server
-                # Use remote argument one or stored in registry
-                upstream_manifest = self.get_package_digest(package_ref)
-            except NotFoundException:
-                pass
-            else:
-                if upstream_manifest != read_manifest:
-                    if upstream_manifest.time > read_manifest.time:
-                        output.warn("Current package is older than remote upstream one")
-                        if update:
-                            output.warn("Removing it to retrieve or build an updated one")
-                            rmdir(package_folder)
-                    else:
-                        output.warn("Current package is newer than remote upstream one")
-
-    local_package = os.path.exists(package_folder)
-    if local_package:
-        output.success('Already installed!')
-        installed = True
-        log_package_got_from_local_cache(package_ref)
-        recorder.package_fetched_from_cache(package_ref)
-    else:
-        remote = registry.get_ref(package_ref.conan)
-        if not remote:
-            output.warn("Package doesn't have a remote defined. "
-                        "Probably created locally and not uploaded")
-            raise X
-            return False
-        package_id = str(package_ref.package_id)
-        try:
-            output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
-            # Will raise if not found NotFoundException
-            remote_manager.get_package(package_ref, package_folder, remote)
-            output.success('Package installed %s' % package_id)
-            recorder.package_downloaded(package_ref, remote.url)
-            return True
-        except NotFoundException as e:
-            msg = 'Binary for %s not in remote: %s' % (package_id, str(e))
-            output.warn(msg)
-            recorder.package_install_error(package_ref, INSTALL_ERROR_MISSING, msg, remote.url)
-            return False
-
-    return installed
+from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -126,44 +70,8 @@ class ConanProxy(object):
 
         return True
 
-    def get_package(self, package_ref, short_paths):
-        """ obtain a package, either from disk or retrieve from remotes if necessary
-        and not necessary to build
-        """
-        output = ScopedOutput(str(package_ref.conan), self._out)
-        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-
-        # Check current package status
-        if os.path.exists(package_folder):
-            if self._check_updates:
-                read_manifest = self._client_cache.load_package_manifest(package_ref)
-                try:  # get_conan_digest can fail, not in server
-                    upstream_manifest = self.get_package_digest(package_ref)
-                    if upstream_manifest != read_manifest:
-                        if upstream_manifest.time > read_manifest.time:
-                            output.warn("Current package is older than remote upstream one")
-                            if self._update:
-                                output.warn("Removing it to retrieve or build an updated one")
-                                rmdir(package_folder)
-                        else:
-                            output.warn("Current package is newer than remote upstream one")
-                except NotFoundException:
-                    pass
-
-        local_package = os.path.exists(package_folder)
-        if local_package:
-            output.success('Already installed!')
-            installed = True
-            log_package_got_from_local_cache(package_ref)
-            self._recorder.package_fetched_from_cache(package_ref)
-        else:
-            installed = self._retrieve_remote_package(package_ref, package_folder,
-                                                      output)
-        self.handle_package_manifest(package_ref, installed)
-        return installed
-
-    def handle_package_manifest(self, package_ref, installed):
-        if installed and self._manifest_manager:
+    def handle_package_manifest(self, package_ref):
+        if self._manifest_manager:
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
@@ -299,7 +207,7 @@ class ConanProxy(object):
                     msg = "Unable to find '%s' in remotes" % str(conan_reference)
                     logger.debug("Not found in any remote, raising...%s" % exc)
                     self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
-                                                            msg, None)
+                                                        msg, None)
                     raise NotFoundException(msg)
 
         raise ConanException("No remote defined")
@@ -447,28 +355,4 @@ class ConanProxy(object):
             package_ref = PackageReference(reference, package_id)
             package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
             self._out.info("Downloading %s" % str(package_ref))
-            self._retrieve_remote_package(package_ref, package_folder, output, remote)
-
-    def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):
-
-        if remote is None:
-            remote = self._registry.get_ref(package_ref.conan)
-        if not remote:
-            output.warn("Package doesn't have a remote defined. "
-                        "Probably created locally and not uploaded")
-            return False
-        package_id = str(package_ref.package_id)
-        try:
-            output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
-            # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_ref, package_folder, remote)
-            output.success('Package installed %s' % package_id)
-            self._recorder.package_downloaded(package_ref, remote.url)
-
-            return True
-        except NotFoundException as e:
-            msg = 'Binary for %s not in remote: %s' % (package_id, str(e))
-            output.warn(msg)
-            self._recorder.package_install_error(package_ref, INSTALL_ERROR_MISSING, msg,
-                                                 remote.url)
-            return False
+            self._remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)

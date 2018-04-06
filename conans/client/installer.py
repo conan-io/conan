@@ -4,18 +4,16 @@ import shutil
 import platform
 
 from conans.client import tools
-from conans.client.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING, \
-    INSTALL_ERROR_MISSING
+from conans.client.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME, rm_conandir
+from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir, make_read_only
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import (ConanException, conanfile_exception_formatter,
-                           ConanExceptionInUserConanfileMethod,
-                           ConanManifestException)
+                           ConanExceptionInUserConanfileMethod)
 from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
@@ -26,6 +24,8 @@ from conans.client.importer import remove_imports
 
 from conans.util.tracer import log_package_built
 from conans.client.tools.env import pythonpath
+from conans.client.package_installer import raise_package_not_found_error,\
+    get_package
 
 
 def build_id(conan_file):
@@ -178,24 +178,6 @@ class _ConanPackageBuilder(object):
             remove_imports(self._conan_file, copied_files, self._out)
 
 
-def _raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder):
-    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-
-    msg = '''Can't find a '%s' package for the specified options and settings:
-- Settings: %s
-- Options: %s
-- Package ID: %s
-''' % (conan_ref, settings_text, options_text, package_id)
-    out.warn(msg)
-    recorder.package_install_error(PackageReference(conan_ref, package_id),
-                                   INSTALL_ERROR_MISSING, msg, remote=None)
-    raise ConanException('''Missing prebuilt package for '%s'
-Try to build it from sources with "--build %s"
-Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (conan_ref, conan_ref.name))
-
-
 def _handle_system_requirements(conan_file, package_reference, client_cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
@@ -328,10 +310,9 @@ class ConanInstaller(object):
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 self._build_package(conan_file, conan_ref, package_id, package_ref, output,
                                     keep_build, profile_build_requires, flat, deps_graph)
+                self._built_packages.add((conan_ref, package_id))
             else:
-                # Get the package, we have a not outdated remote package
-                with self._client_cache.package_lock(package_ref):
-                    self._get_remote_package(conan_file, package_ref, output, package_folder)
+                self._get_existing_package(conan_file, package_ref, output, package_folder)
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
             # Call the info method
@@ -344,7 +325,7 @@ class ConanInstaller(object):
                        profile_build_requires, flat, deps_graph):
         build_allowed = self._build_mode.allowed(conan_file, conan_ref)
         if not build_allowed:
-            _raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder)
+            raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
 
         skip_build = conan_file.develop and keep_build
         if skip_build:
@@ -388,41 +369,19 @@ class ConanInstaller(object):
                                                          str(exc), remote=None)
                     raise exc
                 else:
-                    self._remote_proxy.handle_package_manifest(package_ref, installed=True)
+                    self._remote_proxy.handle_package_manifest(package_ref)
 
                     # Log build
                     self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
-                    self._built_packages.add((conan_ref, package_id))
 
-    def _get_remote_package(self, conan_file, package_reference, output, package_folder):
-        """Get remote package. It won't check if it's outdated"""
-        # Compute conan_file package from local (already compiled) or from remote
-        # If already exists do not dirt the output, the common situation
-        # is that package is already installed and OK. If don't, the proxy
-        # will print some other message about it
-        try:
-            if self._remote_proxy.get_package(package_reference,
-                                              short_paths=conan_file.short_paths):
-                proxy.handle_package_manifest()
+    def _get_existing_package(self, conan_file, package_reference, output, package_folder):
+        with self._client_cache.package_lock(package_reference):
+            installed = get_package(conan_file, package_reference, package_folder, output,
+                                    self._recorder, self._remote_proxy)
+            self._remote_proxy.handle_package_manifest(package_reference)
+            if installed:
                 _handle_system_requirements(conan_file, package_reference,
                                             self._client_cache, output)
-                if get_env("CONAN_READ_ONLY_CACHE", False):
-                    make_read_only(package_folder)
-                return True
-        except ConanManifestException:
-            raise  # If is a manifest verify exception, do NOT remove folder
-        except BaseException as e:
-            output.error("Exception while getting package: %s" % str(package_reference.package_id))
-            output.error("Exception: %s %s" % (type(e), str(e)))
-            try:
-                output.warn("Trying to remove package folder: %s" % package_folder)
-                rm_conandir(package_folder)
-            except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
-                                     "using it, and retry" % (str(e), package_folder))
-            raise
-        _raise_package_not_found_error(conan_file, package_reference.conan,
-                                       package_reference.package_id, output)
 
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)
