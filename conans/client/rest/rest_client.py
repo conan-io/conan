@@ -96,8 +96,6 @@ class RestApiClient(object):
         return self._server_capabilities.get(self.remote_url, None)
 
     def _parse_server_capabilities(self, response):
-        # version_check = response.headers.get('X-Conan-Client-Version-Check', None)
-        # server_version = response.headers.get('X-Conan-Server-Version', None)
         server_capabilities = response.headers.get('X-Conan-Server-Capabilities', "")
         server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
 

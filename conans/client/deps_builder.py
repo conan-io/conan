@@ -17,13 +17,15 @@ class Node(namedtuple("Node", "conan_ref conanfile original_ref")):
     """ The Node of the dependencies graph is defined by:
     ref: ConanFileReference, if it is a user space one, user=channel=none
     conanfile: the loaded conanfile object withs its values
+    original_ref: The original requested reference. It is not the same to have:
+                        conan_ref = lib/1.2@conan/stable#1 and original_ref = lib/1.2@conan/stable#1
+                  Than:
+                        conan_ref = lib/1.2@conan/stable#1 and original_ref = lib/1.2@conan/stable
+
+                  In the second case, for example, we should check for updates in the remote.
     """
     def __repr__(self):
         return repr(self.conanfile)
-
-    @property
-    def is_revision_resolved(self):
-        return self.conan_ref != self.original_ref
 
     def __cmp__(self, other):
         if other is None:
