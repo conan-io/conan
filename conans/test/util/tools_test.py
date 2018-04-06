@@ -800,3 +800,7 @@ class MyConan(ConanFile):
                     output += "linux-gnu"
 
                 self.assertIn(output, triplet)
+
+        # Compiler not specified for os="Windows"
+        with self.assertRaises(ConanException):
+            tools.get_gnu_triplet("Windows", "x86")

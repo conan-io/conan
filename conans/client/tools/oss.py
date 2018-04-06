@@ -313,6 +313,9 @@ def get_gnu_triplet(os, arch, compiler=None):
     :param compiler: compiler used to create the triplet (only needed fo windows)
     """
 
+    if os == "Windows" and compiler is None:
+        raise ConanException("Compiler not specified and needed for os=\"Windows\"")
+
     # Calculate the arch
     machine = {"x86": "i686" if os != "Linux" else "x86",
                 "x86_64": "x86_64",
