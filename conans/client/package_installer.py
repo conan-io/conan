@@ -34,7 +34,8 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy)
     remote_manager = proxy._remote_manager
     registry = proxy.registry
     try:
-        _remove_if_outdated(package_folder, package_ref, update, proxy, output)
+        if update:
+            _remove_if_outdated(package_folder, package_ref, proxy, output)
         local_package = os.path.exists(package_folder)
         if local_package:
             output.success('Already installed!')
@@ -65,23 +66,22 @@ def _clean_package(package_folder, output):
                              "using it, and retry" % (str(e), package_folder))
 
 
-def _remove_if_outdated(package_folder, package_ref, update, proxy, output):
-    if update:
-        if os.path.exists(package_folder):
-            try:  # get_conan_digest can fail, not in server
-                # FIXME: This can iterate remotes to get and associate in registry
-                upstream_manifest = proxy.get_package_digest(package_ref)
-            except NotFoundException:
-                output.warn("Can't update, no package in remote")
-            except NoRemoteAvailable:
-                output.warn("Can't update, no remote defined")
-            else:
-                read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
-                                                                         CONAN_MANIFEST)))
-                if upstream_manifest != read_manifest:
-                    if upstream_manifest.time > read_manifest.time:
-                        output.warn("Current package is older than remote upstream one")
-                        output.warn("Removing it to retrieve or build an updated one")
-                        rmdir(package_folder)
-                    else:
-                        output.warn("Current package is newer than remote upstream one")
+def _remove_if_outdated(package_folder, package_ref, proxy, output):
+    if os.path.exists(package_folder):
+        try:  # get_conan_digest can fail, not in server
+            # FIXME: This can iterate remotes to get and associate in registry
+            upstream_manifest = proxy.get_package_digest(package_ref)
+        except NotFoundException:
+            output.warn("Can't update, no package in remote")
+        except NoRemoteAvailable:
+            output.warn("Can't update, no remote defined")
+        else:
+            read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
+                                                                     CONAN_MANIFEST)))
+            if upstream_manifest != read_manifest:
+                if upstream_manifest.time > read_manifest.time:
+                    output.warn("Current package is older than remote upstream one")
+                    output.warn("Removing it to retrieve or build an updated one")
+                    rmdir(package_folder)
+                else:
+                    output.warn("Current package is newer than remote upstream one")
