@@ -314,7 +314,8 @@ def get_gnu_triplet(os, arch, compiler=None):
     """
 
     if os == "Windows" and compiler is None:
-        raise ConanException("Compiler not specified and needed for os=\"Windows\"")
+        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
+                             "needed for os=Windows")
 
     # Calculate the arch
     machine = {"x86": "i686" if os != "Linux" else "x86",
