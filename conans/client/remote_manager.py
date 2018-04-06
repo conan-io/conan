@@ -204,7 +204,7 @@ class RemoteManager(object):
 
     def get_package(self, conanfile, package_reference, dest_folder, remote, output):
         package_id = package_reference.package_id
-        output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
+        output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:

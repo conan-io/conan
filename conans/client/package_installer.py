@@ -1,7 +1,7 @@
 import os
 
 from conans.client.action_recorder import INSTALL_ERROR_MISSING
-from conans.errors import (ConanException, NotFoundException)
+from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.util.files import rmdir, load, make_read_only
@@ -43,12 +43,7 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy)
             return False
         else:
             remote = registry.get_ref(package_ref.conan)
-            if not remote:
-                output.warn("Package doesn't have a remote defined. "
-                            "Probably created locally and not uploaded")
-                raise_package_not_found_error(conanfile, package_ref.conan,
-                                              package_ref.package_id, output, None)
-
+            # remote will be defined, as package availability has been checked from installer
             remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
@@ -73,14 +68,16 @@ def _clean_package(package_folder, output):
 def _remove_if_outdated(package_folder, package_ref, update, proxy, output):
     if update:
         if os.path.exists(package_folder):
-            read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
-                                                                     CONAN_MANIFEST)))
             try:  # get_conan_digest can fail, not in server
                 # FIXME: This can iterate remotes to get and associate in registry
                 upstream_manifest = proxy.get_package_digest(package_ref)
             except NotFoundException:
-                pass
+                output.warn("Can't update, no package in remote")
+            except NoRemoteAvailable:
+                output.warn("Can't update, no remote defined")
             else:
+                read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
+                                                                         CONAN_MANIFEST)))
                 if upstream_manifest != read_manifest:
                     if upstream_manifest.time > read_manifest.time:
                         output.warn("Current package is older than remote upstream one")
