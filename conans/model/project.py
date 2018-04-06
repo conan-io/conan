@@ -11,14 +11,14 @@ class LocalPackage(object):
         self._base_folder = base_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         self._source_folder = data.get("source")  # By default the conanfile_folder
-        self._build_folder = data.get("build", "build_{build_type}_{arch}")
+        self._build_folder = data.get("build", "build")
         # package_folder can be None, then it will directly use build_folder
-        self._package_folder = data.get("package", "package_{build_type}_{arch}")
+        self._package_folder = data.get("package", "package")
         self._install_folder = data.get("install")
         self._cmakedir = data.get("cmakedir")
-        includedirs = data.get("includedirs")  # To override include dirs, mainly for build_folder
+        includedirs = data.get("includedirs", [])  # To override include dirs, mainly for build_folder
         self._includedirs = [includedirs] if not isinstance(includedirs, list) else includedirs
-        libdirs = data.get("libdirs")  # To override libdirs...
+        libdirs = data.get("libdirs", [])  # To override libdirs...
         self._libdirs = [libdirs] if not isinstance(libdirs, list) else libdirs
 
     @property

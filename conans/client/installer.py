@@ -336,7 +336,7 @@ class ConanInstaller(object):
                 include_dirs = local_package.includedirs(conan_file.settings)
                 lib_dirs = local_package.libdirs(conan_file.settings)
                 if not include_dirs:
-                    package_folder = local_package.conanfile_path
+                    package_folder = local_package.local_package_path(conan_file.settings)
                     self._call_package_info(conan_file, package_folder)
                 else:
                     root_folder = os.path.dirname(local_package.conanfile_path)
@@ -367,6 +367,9 @@ class ConanInstaller(object):
 
     def _build_project_pkg(self, conan_file, output, conan_ref, flat, deps_graph,
                            conanfile_path, profile_build_requires, local_package):
+        build_allowed = self._build_mode.allowed(conan_file, conan_ref)
+        if not build_allowed:
+            _raise_package_not_found_error(conan_file, conan_ref, "local in conan-project", output, self._recorder)
         self._build_requires.install(conan_ref, conan_file, self,
                                      profile_build_requires, output)
 

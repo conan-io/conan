@@ -86,33 +86,52 @@ class ConanProjectTest(unittest.TestCase):
     def basic_test(self):
         client = TestClient()
         base_folder = client.current_folder
-        project = """[HelloB]
-folder: ../B
-[HelloC]
-folder: ../C
+        project = """HelloB:
+    folder: ../B
+HelloC:
+    folder: ../C
 """
         client.save({"C/conanfile.py": conanfile.format(deps=None),
                      "C/header_c.h": "header-c!",
                      "B/conanfile.py": conanfile.format(deps="'HelloC/0.1@lasote/stable'"),
                      "B/header_b.h": "header-b!",
                      "A/conanfile.py": conanfile.format(deps="'HelloB/0.1@lasote/stable'"),
-                     "A/conan-project.txt": project})
+                     "A/conan-project.yml": project})
 
         client.current_folder = os.path.join(base_folder, "A")
+        error = client.run("install .", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("HelloC/0.1@lasote/stable: WARN: Can't find a 'HelloC/0.1@lasote/stable'",
+                      client.out)
+
         client.run("install . -g cmake --build")
+        self.assertIn("HelloC/0.1@lasote/stable: Calling build()", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable: Calling build()", client.out)
+        # It doesn't build again
+        client.run("install . -g cmake --build=missing")
+        self.assertNotIn("Calling build()", client.out)
+
         client.run("search")
         self.assertIn("There are no packages", client.out)
         # Check A
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_hellob,
+                         os.path.join(base_folder, "B", "package", "include").replace("\\", "/"))
         self.assertEqual("header-b!", load(os.path.join(include_dirs_hellob, "header_b.h")))
         include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_helloc,
+                         os.path.join(base_folder, "C", "package", "include").replace("\\", "/"))
         self.assertEqual("header-c!", load(os.path.join(include_dirs_helloc, "header_c.h")))
 
         # Check B
         content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
         include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
+
+        # modify
+        client.save({"C/header_c.h": "header-c2!",
+                     "B/header_b.h": "header-b2!"})
 
     def build_test(self):
         client = TestClient()
