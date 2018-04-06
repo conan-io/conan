@@ -448,6 +448,7 @@ class HelloConan(ConanFile):
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         if platform.system() == "Windows":
+            # Not crossbuilding
             self.assertFalse(ab.host)
             self.assertFalse(ab.build)
             self.assertIn("./configure", runner.command_called)
@@ -456,12 +457,12 @@ class HelloConan(ConanFile):
         elif platform.system() == "Linux":
             self.assertIn("x86_64-w64-mingw32", ab.host)
             self.assertIn("x86_64-linux-gnu", ab.build)
-            self.assertIn("./configure  --build=x86_64-linux-gnu --host=i686-w64-mingw32",
+            self.assertIn("./configure  --build=x86_64-linux-gnu --host=x86_64-w64-mingw32",
                           runner.command_called)
         else:
             self.assertIn("x86_64-w64-mingw32", ab.host)
             self.assertIn("x86_64-apple-darwin", ab.build)
-            self.assertIn("./configure  --build=x86_64-apple-darwin --host=i686-w64-mingw32",
+            self.assertIn("./configure  --build=x86_64-apple-darwin --host=x86_64-w64-mingw32",
                           runner.command_called)
 
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")
