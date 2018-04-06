@@ -379,7 +379,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def test_previous_env(self):
         settings = MockSettings({"arch": "x86",
-                                 "os": "Linux"})
+                                 "os": "Linux",
+                                 "compiler": "gcc"})
         conanfile = MockConanfile(settings)
 
         with tools.environment_append({"CPPFLAGS": "MyCppFlag"}):
