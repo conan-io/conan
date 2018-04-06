@@ -131,7 +131,7 @@ class AutoToolsBuildEnvironment(object):
         if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder]
-            elif True not in ["--prefix=" in arg for arg in args]:
+            elif any(["--prefix=" in arg for arg in args]):
                 args.append("--prefix=%s" % self._conanfile.package_folder)
 
         with environment_append(pkg_env):
