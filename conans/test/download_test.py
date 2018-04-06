@@ -1,17 +1,10 @@
-import os
 import unittest
 
 from conans.client.action_recorder import ActionRecorder
-from conans.client.manager import CONANFILE
 from conans.client.proxy import ConanProxy
 from conans.errors import NotFoundException, ConanException
-from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST, CONANINFO
-from conans.test.utils.test_files import hello_source_files
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import save
-from conans.client.package_installer import get_package
 
 
 myconan1 = """

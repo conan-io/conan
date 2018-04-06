@@ -53,7 +53,6 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
-        print my_json
         self.assertFalse(my_json["installed"][0]["packages"][0]["built"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["downloaded"])
 
