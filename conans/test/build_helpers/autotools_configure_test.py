@@ -386,135 +386,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
             be = AutoToolsBuildEnvironment(conanfile)
             self.assertEquals(be.vars["CPPFLAGS"], "MyCppFlag")
 
-    def cross_build_flags_test(self):
-
-        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
-            settings = MockSettings({"arch": setting_arch,
-                                     "os": setting_os,
-                                     "compiler": compiler})
-            conanfile = MockConanfile(settings)
-            conanfile.settings = settings
-            be = AutoToolsBuildEnvironment(conanfile)
-            return be._get_host_build_target_flags(this_arch, this_os)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86", "Linux", "armv7hf")
-        self.assertEquals(build, "x86-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86", "Linux", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "x86_64")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86-linux-gnu")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv8")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "aarch64-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-w64-mingw32")
-
-        build, host, target = get_values("Windows", "x86_64", "Windows", "x86_64")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86", "Windows", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "i686-w64-mingw32")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
-
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Darwin", "x86_64", "Macos", "x86")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "i686-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "iOS", "armv7")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "watchOS", "armv7k")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "tvOS", "armv8")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "aarch64-apple-darwin")
-
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
             return
@@ -552,6 +423,10 @@ class HelloConan(ConanFile):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.build)
+        self.assertFalse(ab.host)
+        self.assertFalse(ab.target)
+
         ab.configure()
         self.assertEquals(runner.command_called, "./configure  ")
 
@@ -565,28 +440,38 @@ class HelloConan(ConanFile):
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
 
         conanfile = MockConanfile(MockSettings({"build_type": "Debug",
-                                                "arch": "x86",
+                                                "arch": "x86_64",
                                                 "os": "Windows",
                                                 "compiler": "gcc",
                                                 "compiler.libcxx": "libstdc++"}),
                                   None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
-        self.assertIn("i686-w64-mingw32", ab.host)
         if platform.system() == "Windows":
-            self.assertIn("x86_64-w64-mingw32", ab.build)
-            self.assertIn("./configure  --build=x86_64-w64-mingw32 --host=i686-w64-mingw32",
-                          runner.command_called)
+            self.assertFalse(ab.host)
+            self.assertFalse(ab.build)
+            self.assertIn("./configure", runner.command_called)
+            self.assertNotIn("--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32",
+                             runner.command_called)
         elif platform.system() == "Linux":
+            self.assertIn("x86_64-w64-mingw32", ab.host)
             self.assertIn("x86_64-linux-gnu", ab.build)
             self.assertIn("./configure  --build=x86_64-linux-gnu --host=i686-w64-mingw32",
                           runner.command_called)
         else:
+            self.assertIn("x86_64-w64-mingw32", ab.host)
             self.assertIn("x86_64-apple-darwin", ab.build)
             self.assertIn("./configure  --build=x86_64-apple-darwin --host=i686-w64-mingw32",
                           runner.command_called)
+
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")
         self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet",
+                      runner.command_called)
+
+        ab.build = "superfake_build_triplet"
+        ab.host = "superfake_host_triplet"
+        ab.configure()
+        self.assertIn("./configure  --build=superfake_build_triplet --host=superfake_host_triplet",
                       runner.command_called)
 
     def test_make_targets_install(self):
@@ -621,32 +506,6 @@ class HelloConan(ConanFile):
             self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
         else:
             self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
-
-    def autotools_get_triplets_test(self):
-        runner = RunnerMock()
-        settings = MockSettings({"compiler": "gcc"})
-
-        for os in ["Windows", "Linux"]:
-            for arch in ["x86_64", "x86"]:
-                settings.values["os"] = os
-                settings.values["arch"] = arch
-                conanfile = MockConanfile(settings, None, runner)
-                triplet = AutoToolsBuildEnvironment.get_triplet(conanfile, settings.values["arch"],
-                                                                settings.values["os"])
-
-                output = ""
-                if arch == "x86_64":
-                    output += "x86_64"
-                else:
-                    output += "i686" if os != "Linux" else "x86"
-
-                output += "-"
-                if os == "Windows":
-                    output += "w64-mingw32"
-                else:
-                    output += "linux-gnu"
-
-                self.assertIn(output, triplet)
 
     def autotools_configure_vars_test(self):
         from mock import patch

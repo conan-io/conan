@@ -12,7 +12,7 @@ from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
-                          detected_architecture)
+                          detected_architecture, get_gnu_triplet)
 
 
 class AutoToolsBuildEnvironment(object):
@@ -60,75 +60,24 @@ class AutoToolsBuildEnvironment(object):
         # Precalculate build, host, target triplets
         self.build, self.host, self.target = self._get_host_build_target_flags()
 
-    @staticmethod
-    def get_triplet(conanfile, the_arch, the_os):
-        """
-        Creates string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
-
-        :param conanfile: used to get the compiler of the recipe and access the output
-        :param the_arch: arch to be used to create the triplet
-        :param the_os: os to be used to create the triplet
-        """
-
-        # Calculate the arch
-        machine = {"x86": "i686" if the_os != "Linux" else "x86",
-                   "x86_64": "x86_64",
-                   "armv6": "arm",
-                   "armv7": "arm",
-                   "armv7s": "arm",
-                   "armv7k": "arm",
-                   "armv7hf": "arm",
-                   "armv8": "aarch64"}.get(the_arch, None)
-        if machine is None:
-            conanfile.output.warn("Unknown '%s' machine, Conan doesn't know how to "
-                                  "translate it to the GNU triplet, please report at "
-                                  " https://github.com/conan-io/conan/issues" % the_arch)
-            return "unknown"
-
-        # Calculate the OS
-        compiler = conanfile.settings.get_safe("compiler")
-        if compiler == "gcc":
-            windows_op = "w64-mingw32"
-        elif compiler == "Visual Studio":
-            windows_op = "windows-msvc"
-        else:
-            windows_op = "windows"
-
-        op_system = {"Windows": windows_op,
-                     "Linux": "linux-gnu",
-                     "Darwin": "apple-darwin",
-                     "Android": "linux-android",
-                     "Macos": "apple-darwin",
-                     "iOS": "apple-darwin",
-                     "watchOS": "apple-darwin",
-                     "tvOS": "apple-darwin"}.get(the_os, the_os.lower())
-
-        if the_os in ("Linux", "Android"):
-            if "arm" in the_arch and the_arch != "armv8":
-                op_system += "eabi"
-
-            if the_arch == "armv7hf" and the_os == "Linux":
-                op_system += "hf"
-
-        return "%s-%s" % (machine, op_system)
-
-    def _get_host_build_target_flags(self, arch_detected=None, os_detected=None):
+    def _get_host_build_target_flags(self):
         """Based on google search for build/host triplets, it could need a lot
         and complex verification"""
 
-        arch_platform = arch_detected or detected_architecture() or platform.machine()
-        os_platform = os_detected or platform.system()
+        arch_detected = detected_architecture() or platform.machine()
+        os_detected = platform.system()
         arch_settings = self._conanfile.settings.get_safe("arch")
         os_settings = self._conanfile.settings.get_safe("os")
+        compiler = self._conanfile.settings.get_safe("compiler")
 
-        if (os_platform is None or arch_platform is None or arch_settings is None or
+        if (os_detected is None or arch_detected is None or arch_settings is None or
                 os_settings is None):
             return False, False, False
-        if not cross_building(self._conanfile.settings, os_platform, arch_platform):
+        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        build = self.get_triplet(self._conanfile, arch_platform, os_platform)
-        host = self.get_triplet(self._conanfile, arch_settings, os_settings)
+        build = get_gnu_triplet(os_detected, arch_detected, compiler)
+        host = get_gnu_triplet(os_settings, arch_settings, compiler)
 
         return build, host, None
 
