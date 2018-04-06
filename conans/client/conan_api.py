@@ -46,7 +46,7 @@ default_manifest_folder = '.conan_manifests'
 
 
 def get_request_timeout(client_cache):
-    timeout = os.getenv("CONAN_REQUEST_TIMEOUT") or client_cache.conan_config.request_timeout
+    timeout = client_cache.conan_config.request_timeout
     try:
         return float(timeout) if timeout is not None else None
     except ValueError:
