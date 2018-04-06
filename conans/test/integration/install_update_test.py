@@ -33,6 +33,7 @@ class Pkg(ConanFile):
         client2.run("install Pkg/0.1@lasote/testing")
         value = load(os.path.join(client2.current_folder, "file.txt"))
 
+        time.sleep(1)  # Make sure the new timestamp is later
         self.client.run("create . Pkg/0.1@lasote/testing")
         self.client.run("upload Pkg/0.1@lasote/testing --all")
 
@@ -46,6 +47,7 @@ class Pkg(ConanFile):
         self.assertNotEqual(value, new_value)
 
         # Now check newer local modifications are not overwritten
+        time.sleep(1)  # Make sure the new timestamp is later
         self.client.run("create . Pkg/0.1@lasote/testing")
         self.client.run("upload Pkg/0.1@lasote/testing --all")
 
