@@ -29,12 +29,12 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 
 
 def get_package(conanfile, package_ref, package_folder, output, recorder, proxy):
-    check_updates = proxy._check_updates
+    # TODO: This access to proxy attributes has to be improved
     update = proxy._update
     remote_manager = proxy._remote_manager
     registry = proxy.registry
     try:
-        _remove_if_outdated(package_folder, package_ref, check_updates, update, proxy, output)
+        _remove_if_outdated(package_folder, package_ref, update, proxy, output)
         local_package = os.path.exists(package_folder)
         if local_package:
             output.success('Already installed!')
@@ -43,9 +43,16 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy)
             return False
         else:
             remote = registry.get_ref(package_ref.conan)
+            if not remote:
+                output.warn("Package doesn't have a remote defined. "
+                            "Probably created locally and not uploaded")
+                raise_package_not_found_error(conanfile, package_ref.conan,
+                                              package_ref.package_id, output, None)
+
             remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
+            recorder.package_downloaded(package_ref, remote.url)
             return True
     except BaseException as e:
         output.error("Exception while getting package: %s" % str(package_ref.package_id))
@@ -63,8 +70,8 @@ def _clean_package(package_folder, output):
                              "using it, and retry" % (str(e), package_folder))
 
 
-def _remove_if_outdated(package_folder, package_ref, check_updates, update, proxy, output):
-    if check_updates:
+def _remove_if_outdated(package_folder, package_ref, update, proxy, output):
+    if update:
         if os.path.exists(package_folder):
             read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
                                                                      CONAN_MANIFEST)))
@@ -77,8 +84,7 @@ def _remove_if_outdated(package_folder, package_ref, check_updates, update, prox
                 if upstream_manifest != read_manifest:
                     if upstream_manifest.time > read_manifest.time:
                         output.warn("Current package is older than remote upstream one")
-                        if update:
-                            output.warn("Removing it to retrieve or build an updated one")
-                            rmdir(package_folder)
+                        output.warn("Removing it to retrieve or build an updated one")
+                        rmdir(package_folder)
                     else:
                         output.warn("Current package is newer than remote upstream one")

@@ -203,12 +203,6 @@ class RemoteManager(object):
                 touch(os.path.join(dirname, fname))
 
     def get_package(self, conanfile, package_reference, dest_folder, remote, output):
-        if not remote:
-            output.warn("Package doesn't have a remote defined. "
-                        "Probably created locally and not uploaded")
-            raise_package_not_found_error(conanfile, package_reference.conan,
-                                          package_reference.package_id, output, None)
-
         package_id = package_reference.package_id
         output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
@@ -227,6 +221,7 @@ class RemoteManager(object):
             for dirname, _, filenames in os.walk(dest_folder):
                 for fname in filenames:
                     touch(os.path.join(dirname, fname))
+            output.success('Package installed %s' % package_id)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

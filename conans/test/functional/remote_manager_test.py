@@ -79,5 +79,5 @@ class RemoteManagerTest(unittest.TestCase):
         self.assertTrue(self.remote_client.get_recipe.called)
 
         self.assertFalse(self.remote_client.get_package.called)
-        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url", True))
+        self.manager.get_package(None, self.package_reference, temp_folder(), Remote("other", "url", True), self.output)
         self.assertTrue(self.remote_client.get_package.called)

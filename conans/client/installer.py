@@ -310,7 +310,6 @@ class ConanInstaller(object):
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 self._build_package(conan_file, conan_ref, package_id, package_ref, output,
                                     keep_build, profile_build_requires, flat, deps_graph)
-                self._built_packages.add((conan_ref, package_id))
             else:
                 self._get_existing_package(conan_file, package_ref, output, package_folder)
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
@@ -373,6 +372,7 @@ class ConanInstaller(object):
 
                     # Log build
                     self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
+                    self._built_packages.add((conan_ref, package_id))
 
     def _get_existing_package(self, conan_file, package_reference, output, package_folder):
         with self._client_cache.package_lock(package_reference):
