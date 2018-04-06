@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from conans.test.utils.tools import TestServer, TestClient
@@ -126,6 +127,7 @@ class MyConanfile(ConanFile):
         a_conanfile = self.conanfile % ("AA", "1.0", "45", "")
         a_conanfile = a_conanfile.replace("I AM", "I AM A NEW")
         client2.save({"conanfile.py": a_conanfile}, clean_first=True)
+        time.sleep(1)
         client2.run("create . user/channel")
         client2.run('upload "*" -c --all')
 
