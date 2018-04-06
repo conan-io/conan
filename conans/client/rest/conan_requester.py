@@ -6,10 +6,11 @@ from conans.util.files import save
 
 class ConanRequester(object):
 
-    def __init__(self, requester, client_cache):
+    def __init__(self, requester, client_cache, timeout):
         self.proxies = client_cache.conan_config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",")]
+        self._timeout_seconds = timeout
 
         # Retrocompatibility with deprecated no_proxy
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
@@ -52,6 +53,8 @@ class ConanRequester(object):
         if self.proxies:
             if not self._should_skip_proxy(url):
                 kwargs["proxies"] = self.proxies
+        if self._timeout_seconds:
+            kwargs["timeout"] = self._timeout_seconds
         return kwargs
 
     def get(self, url, **kwargs):

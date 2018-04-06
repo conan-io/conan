@@ -17,7 +17,7 @@ from conans import __version__ as CLIENT_VERSION, tools
 from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
-from conans.client.conan_api import migrate_and_get_client_cache, Conan
+from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
@@ -147,6 +147,7 @@ class TestRequester(object):
             kwargs.pop("verify", None)
             kwargs.pop("auth", None)
             kwargs.pop("cert", None)
+            kwargs.pop("timeout", None)
             if "data" in kwargs:
                 if isinstance(kwargs["data"], IterableToFileAdapter):
                     data_accum = b""
@@ -396,7 +397,8 @@ class TestClient(object):
             else:
                 requester = TestRequester(self.servers)
 
-        self.requester = ConanRequester(requester, self.client_cache)
+        self.requester = ConanRequester(requester, self.client_cache,
+                                        get_request_timeout(self.client_cache))
 
         self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                         self.requester, self.client_cache,
