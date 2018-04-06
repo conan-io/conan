@@ -68,8 +68,11 @@ class RequireResolver(object):
             raise ConanException("The version in '%s' from requirement '%s' could not be resolved"
                                  % (version_range, require))
 
-    def _filter_latest_revisions(self, local_found_refs, search_ref):
+    @staticmethod
+    def _filter_latest_revisions(local_found_refs, search_ref):
 
+        if not local_found_refs:
+            return None
         newer = {}
         for ref in local_found_refs:
             if ref.without_revision.channel != search_ref.without_revision.channel:
@@ -85,7 +88,7 @@ class RequireResolver(object):
                 query = "%s*" % str(search_ref)
             local_found_refs = self._local_search.search_recipes(query)
             latest_refs = self._filter_latest_revisions(local_found_refs, search_ref)
-            if local_found_refs:
+            if latest_refs:
                 resolved_version = self._resolve_version(version_range, latest_refs)
                 if resolved_version:
                     return resolved_version
