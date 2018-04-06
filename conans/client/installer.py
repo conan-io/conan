@@ -243,6 +243,7 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
         self._recorder = recorder
+        self._conan_project = None
 
     def install(self, deps_graph, profile_build_requires, keep_build=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
@@ -322,7 +323,7 @@ class ConanInstaller(object):
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
             output = ScopedOutput(str(conan_ref), self._out)
 
-            local_package = self._conan_project[conan_ref]
+            local_package = self._conan_project[conan_ref] if self._conan_project else None
             if local_package:
                 if build_needed and (conan_ref, package_id) not in self._built_packages:
                     conanfile_path = local_package.conanfile_path
@@ -557,7 +558,7 @@ class ConanInstaller(object):
                     if self._build_mode.forced(conan_file, conan_ref):
                         build_node = True
                     else:
-                        local_project = self._conan_project[conan_ref]
+                        local_project = self._conan_project[conan_ref] if self._conan_project else None
                         if local_project:
                             # Maybe the folder is not there, check it!
                             build_node = local_project.need_build(conan_file.settings)

@@ -402,7 +402,8 @@ class ConanManager(object):
 
         build_mode.report_matches()
 
-        conan_project.generate()
+        if conan_project:
+            conan_project.generate()
 
         if install_folder:
             # Write generators

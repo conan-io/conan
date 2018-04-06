@@ -207,7 +207,7 @@ name: MyProject
         client.current_folder = base_folder
         client.runner('cmake . -G "Visual Studio 15 Win64"', cwd=base_folder)
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        command = os.sep.join([".", "build", "Release", "app"])
+        command = os.sep.join([".", "A", "build", "Release", "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)

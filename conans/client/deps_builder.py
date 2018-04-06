@@ -254,6 +254,7 @@ class DepsGraphBuilder(object):
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._conan_project = None
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -440,7 +441,7 @@ class DepsGraphBuilder(object):
         """ creates and adds a new node to the dependency graph
         """
 
-        local_package = self._conan_project[requirement.conan_reference]
+        local_package = self._conan_project[requirement.conan_reference] if self._conan_project else None
         if local_package:
             conanfile_path = local_package.conanfile_path
         else:

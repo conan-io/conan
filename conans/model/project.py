@@ -80,16 +80,16 @@ class ConanProject(object):
     @staticmethod
     def get_conan_project(folder):
         if isinstance(folder, ConanFileReference):
-            return ConanProject(None)
+            return None
         if not os.path.exists(folder):
-            return ConanProject(None)
+            return None
         path = os.path.join(folder, CONAN_PROJECT)
         if os.path.exists(path):
             return ConanProject(path)
         parent = os.path.dirname(folder)
         if parent and parent != folder:
             return ConanProject.get_conan_project(parent)
-        return ConanProject(None)
+        return None
 
     def generate(self):
         # FIXME: SHITTY I NEED THE settings
