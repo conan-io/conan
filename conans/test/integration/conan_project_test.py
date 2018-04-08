@@ -99,17 +99,18 @@ HelloC:
                      "A/conan-project.yml": project})
 
         client.current_folder = os.path.join(base_folder, "A")
-        error = client.run("install .", ignore_error=True)
+        error = client.run("install . --build=never", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("HelloC/0.1@lasote/stable: WARN: Can't find a 'HelloC/0.1@lasote/stable'",
+        self.assertIn("ERROR: Missing prebuilt package for 'HelloC/0.1@lasote/stable'",
                       client.out)
 
-        client.run("install . -g cmake --build")
+        client.run("install . -g cmake")
         self.assertIn("HelloC/0.1@lasote/stable: Calling build()", client.out)
         self.assertIn("HelloB/0.1@lasote/stable: Calling build()", client.out)
         # It doesn't build again
-        client.run("install . -g cmake --build=missing")
+        client.run("install . -g cmake --build=never")
         self.assertNotIn("Calling build()", client.out)
+        self.assertIn("Not building local package as specified by --build=never", client.out)
 
         client.run("search")
         self.assertIn("There are no packages", client.out)
@@ -176,7 +177,7 @@ name: MyProject
 
         base_folder = client.current_folder
         client.current_folder = os.path.join(base_folder, "A")
-        client.run("install . --build -if=build")
+        client.run("install . -if=build")
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
         # Make sure nothing in local cache
@@ -203,7 +204,7 @@ name: MyProject
         self.assertIn("Hello World A Release!", client.out)
 
         # Now do the same for debug
-        client.run("install . --build=missing -if=build -s build_type=Debug")
+        client.run("install . -if=build -s build_type=Debug")
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         client.run("build . -bf=build")
         command = os.sep.join([".", "build", "Debug", "app"])
