@@ -1,7 +1,6 @@
 import unittest
 import tarfile
 import os
-import tempfile
 import platform
 import gnupg
 
@@ -113,11 +112,6 @@ qL7yzZr/qpkNLbp2djiZw3erAtxgRVUTMYrVF1OSkg==
 
 class GPGVerifyTest(unittest.TestCase):
     def setUp(self):
-        """self._data_file = "gpg_test_data.tar.gz"
-        self._sig_file = "gpg_test_data.tar.gz.sig"
-        self._key_file = "pubkey.txt"
-        self._ascii_sig_file = "gpg_test_data.tar.gz.asc"""
-
         tmp_folder = temp_folder()
         basename = os.path.join(tmp_folder, "gpg_test_data")
         self.basename = basename
@@ -134,7 +128,7 @@ class GPGVerifyTest(unittest.TestCase):
 
         # import private key
         gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
-        gpghome = tempfile.mkdtemp()
+        gpghome = temp_folder()
 
         _gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gpghome)
         _gpg.import_keys(GPG_PRIVATE_KEY)
