@@ -1,4 +1,6 @@
 import unittest
+
+from conans.client.action_recorder import ActionRecorder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
@@ -172,7 +174,8 @@ class VersionRangesTest(unittest.TestCase):
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search, update=False)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
+                                        ActionRecorder())
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """

@@ -246,7 +246,7 @@ class DepsGraph(object):
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver):
+    def __init__(self, retriever, output, loader, resolver, recorder):
         """ param retriever: something that implements retrieve_conanfile for installed conans
         :param loader: helper ConanLoader to be able to load user space conanfile
         """
@@ -254,6 +254,7 @@ class DepsGraphBuilder(object):
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._recorder = recorder
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -443,6 +444,9 @@ class DepsGraphBuilder(object):
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
+
+        if dep_conanfile.develop:
+            self._recorder.add_recipe_being_developed(requirement.conan_reference)
 
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference

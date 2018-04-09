@@ -65,15 +65,21 @@ def api_method(f):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
+            the_self.init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                return f(*args, **kwargs)
+                ret = f(*args, **kwargs)
+                if ret is None:  # FIXME: Probably each method should manage its return
+                    return the_self._recorder.get_info()
+                return ret
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
             except:
                 pass
+            if isinstance(exc, ConanException):
+                exc.info = the_self._recorder.get_info()
             raise
 
     return wrapper
@@ -197,12 +203,21 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self.recorder = ActionRecorder()
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     _settings_preprocessor, self.recorder)
+        self._search_manager = search_manager
+        self._settings_preprocessor = _settings_preprocessor
+        self._recorder = None
+        self._manager = None
+
         if not interactive:
             self._user_io.disable_input()
 
+    def init_manager(self):
+        """Every api call gets a new recorder and new manager"""
+        self._recorder = ActionRecorder()
+        self._manager = ConanManager(self._client_cache, self._user_io,
+                                     self._runner, self._remote_manager,
+                                     self._search_manager,
+                                     self._settings_preprocessor, self._recorder)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -330,8 +345,6 @@ class ConanAPIV1(object):
                                   build_modes=build_modes,
                                   update=update,
                                   keep_build=keep_build)
-
-
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -605,7 +618,7 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, self.recorder, force=force)
+                 self._user_io, self._remote_manager, self._recorder, force=force)
 
     @api_method
     def authenticate(self, name, password, remote=None):
@@ -654,7 +667,7 @@ class ConanAPIV1(object):
         if force and no_overwrite:
             raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
 
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote, self.recorder)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote, self._recorder)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
                                skip_upload, integrity_check, no_overwrite)
 

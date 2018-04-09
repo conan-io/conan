@@ -216,17 +216,21 @@ class Command(object):
 
         cwd = os.getcwd()
 
+        info = None
         try:
-            self._conan.create(args.path, name, version, user, channel,
-                               args.profile, args.settings, args.options,
-                               args.env, args.test_folder, args.not_export,
-                               args.build, args.keep_source, args.keep_build, args.verify,
-                               args.manifests, args.manifests_interactive,
-                               args.remote, args.update,
-                               test_build_folder=args.test_build_folder)
+            info = self._conan.create(args.path, name, version, user, channel,
+                                      args.profile, args.settings, args.options,
+                                      args.env, args.test_folder, args.not_export,
+                                      args.build, args.keep_source, args.keep_build, args.verify,
+                                      args.manifests, args.manifests_interactive,
+                                      args.remote, args.update,
+                                      test_build_folder=args.test_build_folder)
+        except ConanException as exc:
+            info = exc.info
+            raise
         finally:
             if args.json:
-                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
+                self._outputer.json_install(info, args.json, cwd)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -288,34 +292,38 @@ class Command(object):
         args = parser.parse_args(*args)
         cwd = os.getcwd()
 
+        info = None
         try:
             try:
                 reference = ConanFileReference.loads(args.path)
             except ConanException:
-                self._conan.install(path=args.path,
-                                    settings=args.settings, options=args.options,
-                                    env=args.env,
-                                    remote=args.remote,
-                                    verify=args.verify, manifests=args.manifests,
-                                    manifests_interactive=args.manifests_interactive,
-                                    build=args.build, profile_name=args.profile,
-                                    update=args.update, generators=args.generator,
-                                    no_imports=args.no_imports,
-                                    install_folder=args.install_folder)
+                info = self._conan.install(path=args.path,
+                                           settings=args.settings, options=args.options,
+                                           env=args.env,
+                                           remote=args.remote,
+                                           verify=args.verify, manifests=args.manifests,
+                                           manifests_interactive=args.manifests_interactive,
+                                           build=args.build, profile_name=args.profile,
+                                           update=args.update, generators=args.generator,
+                                           no_imports=args.no_imports,
+                                           install_folder=args.install_folder)
             else:
-                self._conan.install_reference(reference, settings=args.settings,
-                                              options=args.options,
-                                              env=args.env,
-                                              remote=args.remote,
-                                              verify=args.verify, manifests=args.manifests,
-                                              manifests_interactive=args.manifests_interactive,
-                                              build=args.build, profile_name=args.profile,
-                                              update=args.update,
-                                              generators=args.generator,
-                                              install_folder=args.install_folder)
+                info = self._conan.install_reference(reference, settings=args.settings,
+                                                     options=args.options,
+                                                     env=args.env,
+                                                     remote=args.remote,
+                                                     verify=args.verify, manifests=args.manifests,
+                                                     manifests_interactive=args.manifests_interactive,
+                                                     build=args.build, profile_name=args.profile,
+                                                     update=args.update,
+                                                     generators=args.generator,
+                                                     install_folder=args.install_folder)
+        except ConanException as exc:
+            info = exc.info
+            raise
         finally:
             if args.json:
-                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
+                self._outputer.json_install(info, args.json, cwd)
 
     def config(self, *args):
         """Manages configuration. Edits the conan.conf or installs config files.
