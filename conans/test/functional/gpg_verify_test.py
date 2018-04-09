@@ -1,26 +1,17 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jan  3 15:39:35 2018
-
-@author: weatherill
-"""
-
 import unittest
 import tarfile
 import os
 import tempfile
 import platform
-
 import gnupg
 
 from conans.errors import ConanException
-
-
 from conans.tools import verify_gpg_sig
+from conans.util.files import save
+from conans.test.utils.test_files import temp_folder
+
 
 PASSPHRASE = "test_key"
-TEST_MESSAGE_CONTENTS = "test message"
 
 FINGERPRINT = "9CA0A9A040F911A9468706DABAE58647546E350C"
 
@@ -120,119 +111,90 @@ qL7yzZr/qpkNLbp2djiZw3erAtxgRVUTMYrVF1OSkg==
 """
 
 
-def _generate_gpg_data(basename):
-    outfiles = []
-
-
-    #create text file
-    with open(basename + ".txt", "w") as f:
-        f.write(TEST_MESSAGE_CONTENTS)
-        f.write('\n')
-
-    outfiles.append(basename+".txt")
-
-    #create binary file
-    with tarfile.TarFile(basename + ".tar.gz", "w") as f:
-        f.add(basename+".txt")
-
-    outfiles.append(basename + ".tar.gz")
-
-    #write public key file
-    with open("pubkey.txt", "w") as f:
-        f.write(GPG_PUBLIC_KEY)
-
-    outfiles.append("pubkey.txt")
-
-    #import private key
-    gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
-    gpghome = tempfile.mkdtemp()
-
-    _gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gpghome)
-    print(gnupg.__file__)
-    _gpg.import_keys(GPG_PRIVATE_KEY)
-    _gpg.import_keys(GPG_PUBLIC_KEY)
-
-
-    if not _gpg.list_keys(keys=FINGERPRINT):
-        raise RuntimeError("importing GPG keys failed")
-
-
-    #sign binary file detached signature
-    with open(basename + ".tar.gz", "rb") as f:
-        signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
-                                passphrase=PASSPHRASE, detach=True,
-                                binary=True, output=basename+".tar.gz.sig")
-
-    if not signed:
-        raise RuntimeError("failed to sign test data")
-
-    #sign binary file detached ascii signature
-    with open(basename + ".tar.gz", "rb") as f:
-        signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
-                                passphrase=PASSPHRASE, detach=True,
-                                binary=False, output=basename+".tar.gz.asc")
-
-    outfiles.append(basename + ".tar.gz.sig")
-
-
-
-    #delete private and public keys
-    deleted_priv = _gpg.delete_keys(FINGERPRINT, secret=True)
-    if not deleted_priv:
-        raise RuntimeError("failed to delete private key: %s"
-                           % deleted_priv.status)
-
-    deleted_pub = _gpg.delete_keys(FINGERPRINT)
-    if not deleted_pub:
-        raise RuntimeError("failed to delete public key: %s "
-                           % deleted_pub.status)
-
-    return outfiles, _gpg
-
-
-
 class GPGVerifyTest(unittest.TestCase):
     def setUp(self):
-        self._data_files, self._gpg = _generate_gpg_data("gpg_test_data")
-        self._data_file = "gpg_test_data.tar.gz"
+        """self._data_file = "gpg_test_data.tar.gz"
         self._sig_file = "gpg_test_data.tar.gz.sig"
         self._key_file = "pubkey.txt"
-        self._ascii_sig_file = "gpg_test_data.tar.gz.asc"
+        self._ascii_sig_file = "gpg_test_data.tar.gz.asc"""
 
-    def tearDown(self):
-        map(os.remove, self._data_files)
+        tmp_folder = temp_folder()
+        basename = os.path.join(tmp_folder, "gpg_test_data")
+        self.basename = basename
+        # create text file
+        save(basename + ".txt",  "test message\n")
+
+        # create binary file
+        with tarfile.TarFile(basename + ".tar.gz", "w") as f:
+            f.add(basename+".txt")
+
+        # write public key file
+        self.pubkey = os.path.join(tmp_folder, "pubkey.txt")
+        save(self.pubkey, GPG_PUBLIC_KEY)
+
+        # import private key
+        gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
+        gpghome = tempfile.mkdtemp()
+
+        _gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gpghome)
+        _gpg.import_keys(GPG_PRIVATE_KEY)
+        _gpg.import_keys(GPG_PUBLIC_KEY)
+
+        if not _gpg.list_keys(keys=FINGERPRINT):
+            raise RuntimeError("importing GPG keys failed")
+
+        # sign binary file detached signature
+        with open(basename + ".tar.gz", "rb") as f:
+            signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
+                                    passphrase=PASSPHRASE, detach=True,
+                                    binary=True, output=basename+".tar.gz.sig")
+
+        if not signed:
+            raise RuntimeError("failed to sign test data")
+
+        # sign binary file detached ascii signature
+        with open(basename + ".tar.gz", "rb") as f:
+            signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
+                                    passphrase=PASSPHRASE, detach=True,
+                                    binary=False, output=basename+".tar.gz.asc")
+
+        # delete private and public keys
+        deleted_priv = _gpg.delete_keys(FINGERPRINT, secret=True)
+        if not deleted_priv:
+            raise RuntimeError("failed to delete private key: %s"
+                               % deleted_priv.status)
+
+        deleted_pub = _gpg.delete_keys(FINGERPRINT)
+        if not deleted_pub:
+            raise RuntimeError("failed to delete public key: %s "
+                               % deleted_pub.status)
 
     def test_correct_verify_file(self):
-        verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
-                       sig_file=self._sig_file)
-        #if we got to here without throwing, verification completed
+        verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey=GPG_PUBLIC_KEY,
+                       sig_file=self.basename + ".tar.gz.sig")
+        # if we got to here without throwing, verification completed
 
     def test_incorrect_signature_verify_file(self):
         with self.assertRaises(ConanException):
-            verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
-                           sig_file=self._data_file)
+            verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey=GPG_PUBLIC_KEY,
+                           sig_file=self.basename + ".tar.gz")
 
     def test_incorrect_pubkey_verify_file(self):
         with self.assertRaises(ConanException):
-            verify_gpg_sig(data_file=self._data_file, pubkey="public",
-                           sig_file=self._sig_file)
+            verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey="public",
+                           sig_file=self.basename + ".tar.gz.sig")
 
     def test_verify_with_key_file(self):
-        verify_gpg_sig(data_file=self._data_file, pubkey=self._key_file,
-                       sig_file=self._sig_file)
+        verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey=self.pubkey,
+                       sig_file=self.basename + ".tar.gz.sig")
 
     def test_verify_with_plaintext_signature(self):
-        verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
-                       sig_file=self._ascii_sig_file)
+        verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey=GPG_PUBLIC_KEY,
+                       sig_file=self.basename + ".tar.gz.asc")
 
     def test_verify_with_bad_key_fingerprint(self):
-        #don't do network access, just test that this key isn't found with
+        # don't do network access, just test that this key isn't found with
         # a public keyserver
         with self.assertRaises(ConanException):
-            verify_gpg_sig(data_file=self._data_file, pubkey=FINGERPRINT,
-                           sig_file=self._sig_file)
-
-
-
-if __name__ == "__main__":
-    unittest.main()
+            verify_gpg_sig(data_file=self.basename + ".tar.gz", pubkey=FINGERPRINT,
+                           sig_file=self.basename + ".tar.gz.sig")

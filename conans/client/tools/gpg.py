@@ -1,5 +1,4 @@
 import tempfile
-import gnupg
 import platform
 from conans.errors import ConanException
 import os
@@ -8,6 +7,7 @@ _global_output = None
 
 
 def _get_gpg():
+    import gnupg
     try:
         _GPG_HOME_DIR = tempfile.mkdtemp(suffix="_conan_gpg")
         gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
