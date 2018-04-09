@@ -324,6 +324,7 @@ class ConanAPIV1(object):
                                          "or it doesn't have a conanfile.py" % tf)
 
         test_conanfile_path = get_test_conanfile_path(test_folder)
+        self._recorder.add_recipe_being_developed(reference)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)

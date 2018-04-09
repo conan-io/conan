@@ -177,8 +177,7 @@ class ConanManager(object):
         if install_folder and existing_info_files(install_folder):
             _load_deps_info(install_folder, conanfile, required=True)
 
-        graph_builder = self._get_graph_builder(loader, False, remote_proxy,
-                                                recorder=self._recorder)
+        graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
         # this is a bit tricky, but works. The loading of a cache package makes the referenced
@@ -260,18 +259,16 @@ class ConanManager(object):
         conanfile._user = inject_require.user
         conanfile._channel = inject_require.channel
 
-    def _get_graph_builder(self, loader, update, remote_proxy, recorder):
+    def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy, update=update)
-        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver,
-                                         recorder)
+        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, remote_proxy):
         loader = self.get_loader(profile)
         conanfile = self._load_install_conanfile(loader, reference)
-        graph_builder = self._get_graph_builder(loader, False, remote_proxy,
-                                                recorder=self._recorder)
+        graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
         return deps_graph, graph_builder, conanfile
 
@@ -364,8 +361,7 @@ class ConanManager(object):
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)
-        graph_builder = self._get_graph_builder(loader, update, remote_proxy,
-                                                recorder=self._recorder)
+        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)

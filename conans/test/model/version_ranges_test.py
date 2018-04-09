@@ -174,8 +174,7 @@ class VersionRangesTest(unittest.TestCase):
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search, update=False)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
-                                        ActionRecorder())
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
