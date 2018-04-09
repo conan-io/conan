@@ -12,10 +12,12 @@ class SConsGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE1"]
+        cpp_info.version = "0.1"
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
-        ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
+        ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE2"]
+        cpp_info.version = "3.2.3"
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = SConsGenerator(conanfile)
         content = generator.content
@@ -23,3 +25,6 @@ class SConsGeneratorTest(unittest.TestCase):
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\', \'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\'],", scons_lines)
+        self.assertIn("        \"VERSION\"     : \"None\",", scons_lines)
+        self.assertIn("        \"VERSION\"     : \"0.1\",", scons_lines)
+        self.assertIn("        \"VERSION\"     : \"3.2.3\",", scons_lines)

@@ -12,3 +12,4 @@ future==0.16.0
 pygments>=2.0, <3.0
 astroid>=1.6, <1.7
 python-gnupg>=0.4.1
+deprecation>=2.0, <2.1

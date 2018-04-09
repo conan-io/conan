@@ -281,12 +281,18 @@ class DepsGraphBuilder(object):
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
-    def _resolve_deps(self, conanref, conanfile):
+    def _resolve_deps(self, conanref, conanfile, aliased):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RequireResolver are also done in new_reqs, and then propagated!
         for _, require in conanfile.requires.items():
             self._resolver.resolve(require, conanref)
+
+        # After resolving ranges,
+        for req in conanfile.requires.values():
+            alias = aliased.get(req.conan_reference, None)
+            if alias:
+                req.conan_reference = alias
 
         if not hasattr(conanfile, "_evaluated_requires"):
             conanfile._evaluated_requires = conanfile.requires.copy()
@@ -295,8 +301,8 @@ class DepsGraphBuilder(object):
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile.requires.values()),
-                                    list(conanfile._evaluated_requires.values())))
+                                 % (conanref, list(conanfile._evaluated_requires.values()),
+                                    list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors, aliased):
@@ -314,7 +320,7 @@ class DepsGraphBuilder(object):
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 
-        self._resolve_deps(conanref, conanfile)
+        self._resolve_deps(conanref, conanfile, aliased)
 
         # Expand each one of the current requirements
         for name, require in conanfile.requires.items():
@@ -338,6 +344,8 @@ class DepsGraphBuilder(object):
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
+                # Necessary to make sure that it is pointing to the correct aliased
+                require.conan_reference = alias_ref
                 if previous_node.conan_ref != alias_ref:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
@@ -377,7 +385,8 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            with get_env_context_manager(conanfile):
+            # Avoid extra time manipulating the sys.path for python
+            with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
                     if not conanref:
                         output = ScopedOutput(str("PROJECT"), self._output)
@@ -387,7 +396,7 @@ class DepsGraphBuilder(object):
                         conanfile.config()
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
-                conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
+                conanfile.options.propagate_upstream(down_options, down_ref, conanref)
                 if hasattr(conanfile, "config"):
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()

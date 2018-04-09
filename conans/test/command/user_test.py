@@ -4,13 +4,49 @@ from conans.test.utils.tools import TestClient, TestServer
 
 class UserTest(unittest.TestCase):
 
-    def test_command_user(self):
-        """ Test that the user can be shown and changed, and it is reflected in the
-        user cache localdb
+    def test_command_user_no_remotes(self):
+        """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
         client = TestClient()
-        client.run('user')
+        with self.assertRaises(Exception):
+            client.run("user")
         self.assertIn("ERROR: No remotes defined", client.user_io.out)
+
+        with self.assertRaises(Exception):
+            client.run("user -r wrong_remote")
+        self.assertIn("ERROR: No remote 'wrong_remote' defined", client.user_io.out)
+
+    def test_command_user_list(self):
+        """ Test list of user is reported for all remotes or queried remote
+        """
+        servers = {
+            "default": TestServer(),
+            "test_remote_1": TestServer(),
+        }
+        client = TestClient(servers=servers)
+
+        # Test with wrong remote right error is reported
+        with self.assertRaises(Exception):
+            client.run("user -r Test_Wrong_Remote")
+        self.assertIn("ERROR: No remote 'Test_Wrong_Remote' defined", client.out)
+
+        # Test user list for requested remote reported
+        client.run("user -r test_remote_1")
+        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
+        self.assertNotIn("Current 'default' user: None (anonymous)", client.out)
+
+        # Test user list for all remotes is reported
+        client.run("user")
+        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
+        self.assertIn("Current 'default' user: None (anonymous)", client.out)
+
+    def test_with_no_user(self):
+        test_server = TestServer()
+        client = TestClient(servers={"default": test_server})
+        error = client.run('user -p test', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: User for remote 'default' is not defined. [Remote: default]",
+                      client.out)
 
     def test_with_remote_no_connect(self):
         test_server = TestServer()
@@ -111,3 +147,21 @@ class ConanLib(ConanFile):
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
         self.assertIn("Current 'default' user: lasote", conan.user_io.out)
+
+    def test_command_user_with_interactive_password_login_prompt_disabled(self):
+        """ Interactive password should not work.
+        """
+        test_server = TestServer()
+        servers = {"default": test_server}
+        conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        conan.run('config set general.non_interactive=True')
+        error = conan.run('user -p -r default lasote', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Conan interactive mode disabled', conan.user_io.out)
+        self.assertNotIn("Please enter a password for \"lasote\" account:", conan.out)
+        conan.run("user")
+        self.assertIn("Current 'default' user: None", conan.user_io.out)
+        error = conan.run("user -p", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Conan interactive mode disabled', conan.out)
+        self.assertNotIn("Remote 'default' username:", conan.out)

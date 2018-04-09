@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
@@ -20,6 +21,11 @@ class ConanRunner(object):
         @param log_filepath: If specified, also log to a file
         @param cwd: Move to directory to execute
         """
+        if output and isinstance(output, io.StringIO) and six.PY2:
+            # in py2 writing to a StringIO requires unicode, otherwise it fails
+            print("*** WARN: Invalid output parameter of type io.StringIO(), "
+                  "use six.StringIO() instead ***")
+
         stream_output = output if output and hasattr(output, "write") else sys.stdout
 
         if not self._generate_run_log_file:

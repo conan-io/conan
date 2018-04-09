@@ -1,5 +1,6 @@
 from os.path import join
 
+from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
 from conans.util.files import save, normalize
@@ -20,6 +21,7 @@ from .virtualenv import VirtualEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .boostbuild import BoostBuildGenerator
+from .json_generator import JsonGenerator
 import traceback
 from conans.util.env_reader import get_env
 
@@ -47,6 +49,7 @@ registered_generators = _GeneratorManager()
 
 registered_generators.add("txt", TXTGenerator)
 registered_generators.add("gcc", GCCGenerator)
+registered_generators.add("compiler_args", CompilerArgsGenerator)
 registered_generators.add("cmake", CMakeGenerator)
 registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("qmake", QmakeGenerator)
@@ -62,6 +65,7 @@ registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
 registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
+registered_generators.add("json", JsonGenerator)
 
 
 def write_generators(conanfile, path, output):

@@ -1,4 +1,6 @@
 import os
+import subprocess
+
 from conans.util.files import load, mkdir, save, rmdir
 import tempfile
 
@@ -48,6 +50,16 @@ def path_shortener(path, short_paths):
         drive = os.path.splitdrive(path)[0]
         short_home = drive + "/.conan"
     mkdir(short_home)
+
+    # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
+    # access problems in cygwin/msys2 windows subsystems when using short_home folder
+    try:
+        cmd = r'cacls %s /E /G "%s\%s":F' % (short_home, os.environ['USERDOMAIN'], os.environ['USERNAME'])
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
+    except subprocess.CalledProcessError as e:
+        # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
+        pass
+
     redirect = tempfile.mkdtemp(dir=short_home, prefix="")
     # This "1" is the way to have a non-existing directory, so commands like
     # shutil.copytree() to it, works. It can be removed without compromising the

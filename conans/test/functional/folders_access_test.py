@@ -82,6 +82,8 @@ class AConan(ConanFile):
         self.copy_build_folder = self.build_folder
         
     def package(self):
+        assert(self.install_folder is not None)
+
         if self.no_copy_source:
             # First call with source, second with build
             if self.counter_package_calls == 0:

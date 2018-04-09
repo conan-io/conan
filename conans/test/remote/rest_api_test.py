@@ -41,13 +41,43 @@ class RestApiTest(unittest.TestCase):
             token = cls.api.authenticate("private_user", "private_pass")
             cls.api.token = token
 
-
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
 
     def tearDown(self):
         RestApiTest.server.clean()
+
+    def relative_url_completion_test(self):
+        api = RestApiClient(TestBufferConanOutput(), requester=requests)
+
+        # test absolute urls
+        self.assertEquals(api._complete_url("http://host"), "http://host")
+        self.assertEquals(api._complete_url("http://host:1234"), "http://host:1234")
+        self.assertEquals(api._complete_url("https://host"), "https://host")
+        self.assertEquals(api._complete_url("https://host:1234"), "https://host:1234")
+
+        # test relative urls
+        api.remote_url = "http://host"
+        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
+                          "http://host/v1/path_to_file.txt")
+
+        api.remote_url = "http://host:1234"
+        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
+                          "http://host:1234/v1/path_to_file.txt")
+
+        api.remote_url = "https://host"
+        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
+                          "https://host/v1/path_to_file.txt")
+
+        api.remote_url = "https://host:1234"
+        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
+                          "https://host:1234/v1/path_to_file.txt")
+
+        # test relative urls with subdirectory
+        api.remote_url = "https://host:1234/subdir/"
+        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
+                          "https://host:1234/subdir/v1/path_to_file.txt")
 
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
@@ -224,7 +254,8 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0,
+                                no_overwrite=None)
 
     def _upload_recipe(self, conan_reference, base_files=None, retry=1, retry_wait=0):
 
@@ -251,4 +282,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False)
+        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False, None)

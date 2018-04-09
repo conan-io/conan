@@ -47,12 +47,12 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("    os=Windows", client.user_io.out)
-        self.assertIn("    MyOption=32", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.user_io.out)
+        self.assertIn("MyOption=32", client.user_io.out)
         client.run("profile show profile3")
-        self.assertIn("    CC=/path/tomy/gcc_build", client.user_io.out)
-        self.assertIn("    CXX=/path/tomy/g++_build", client.user_io.out)
-        self.assertIn("    package:VAR=value", client.user_io.out)
+        self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
+        self.assertIn("CXX=/path/tomy/g++_build", client.user_io.out)
+        self.assertIn("package:VAR=value", client.user_io.out)
 
     def profile_update_and_get_test(self):
         client = TestClient()
@@ -125,14 +125,29 @@ class ProfileTest(unittest.TestCase):
         client.run("profile remove env.foo ./MyProfile", ignore_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.user_io.out)
 
+    def profile_update_env_test(self):
+        client = TestClient()
+        client.run("profile new ./MyProfile")
+        pr_path = os.path.join(client.current_folder, "MyProfile")
+
+        client.run("profile update env.foo=bar ./MyProfile")
+        self.assertEqual(["[env]", "foo=bar"], load(pr_path).splitlines()[-2:])
+        client.run("profile update env.foo=BAZ ./MyProfile")
+        self.assertEqual(["[env]", "foo=BAZ"], load(pr_path).splitlines()[-2:])
+        client.run("profile update env.MyPkg:foo=FOO ./MyProfile")
+        self.assertEqual(["[env]", "foo=BAZ", "MyPkg:foo=FOO"], load(pr_path).splitlines()[-3:])
+        client.run("profile update env.MyPkg:foo=FOO,BAZ,BAR ./MyProfile")
+        self.assertEqual(["[env]", "foo=BAZ", "MyPkg:foo=FOO,BAZ,BAR"],
+                         load(pr_path).splitlines()[-3:])
+
     def profile_new_test(self):
         client = TestClient()
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
         self.assertTrue(os.path.exists(pr_path))
-        self.assertEquals(load(pr_path), """[build_requires]
-[settings]
+        self.assertEquals(load(pr_path), """[settings]
 [options]
+[build_requires]
 [env]
 """)
 

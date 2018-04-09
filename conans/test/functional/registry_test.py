@@ -24,12 +24,10 @@ class RegistryTest(unittest.TestCase):
         # Add
         registry.add("local", "http://localhost:9300")
         self.assertEqual(registry.remotes, [("conan-center", "https://conan.bintray.com", True),
-                                            ("conan-transit", "https://conan-transit.bintray.com", True),
                                             ("local", "http://localhost:9300", True)])
         # Add
         registry.add("new", "new_url", False)
         self.assertEqual(registry.remotes, [("conan-center", "https://conan.bintray.com", True),
-                                            ("conan-transit", "https://conan-transit.bintray.com", True),
                                             ("local", "http://localhost:9300", True),
                                             ("new", "new_url", False)])
         with self.assertRaises(ConanException):
@@ -37,7 +35,6 @@ class RegistryTest(unittest.TestCase):
         # Update
         registry.update("new", "other_url")
         self.assertEqual(registry.remotes, [("conan-center", "https://conan.bintray.com", True),
-                                            ("conan-transit", "https://conan-transit.bintray.com", True),
                                             ("local", "http://localhost:9300", True),
                                             ("new", "other_url", True)])
         with self.assertRaises(ConanException):
@@ -45,14 +42,12 @@ class RegistryTest(unittest.TestCase):
 
         registry.update("new", "other_url", False)
         self.assertEqual(registry.remotes, [("conan-center", "https://conan.bintray.com", True),
-                                            ("conan-transit", "https://conan-transit.bintray.com", True),
                                             ("local", "http://localhost:9300", True),
                                             ("new", "other_url", False)])
 
         # Remove
         registry.remove("local")
         self.assertEqual(registry.remotes, [("conan-center", "https://conan.bintray.com", True),
-                                            ("conan-transit", "https://conan-transit.bintray.com", True),
                                             ("new", "other_url", False)])
         with self.assertRaises(ConanException):
             registry.remove("new2")

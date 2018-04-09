@@ -1,5 +1,6 @@
 import unittest
 import os
+from conans import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
@@ -116,3 +117,45 @@ class ConanLib(ConanFile):
         self.assertTrue(error)
         self.assertIn("Conanfile not found: %s" % os.path.join(client.current_folder, "not_real_dir",
                                                                "conanfile.py"), client.out)
+
+    def build_folder_handling_test(self):
+        test_conanfile = '''
+from conans import ConanFile
+
+class TestConanLib(ConanFile):
+    def test(self):
+        pass
+'''
+        # Create a package which can be tested afterwards.
+        client = TestClient()
+        client.save({CONANFILE: conanfile}, clean_first=True)
+        client.run("create . lasote/stable")
+
+        # Test the default behavior.
+        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
+        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("test test_package Hello/0.1@lasote/stable")
+        self.assertTrue(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected.
+        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("test -tbf=build_folder test_package Hello/0.1@lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if using a temporary test folder can be enabled via the environment variable.
+        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
+        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+            client.run("test test_package Hello/0.1@lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if using a temporary test folder can be enabled via the config file.
+        client.run('config set general.temp_test_folder=True')
+        client.run("test test_package Hello/0.1@lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected also when the use of
+        # temporary test folders is enabled in the config file.
+        client.run("test -tbf=test_package/build_folder test_package Hello/0.1@lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))

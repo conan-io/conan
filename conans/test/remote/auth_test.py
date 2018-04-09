@@ -20,7 +20,6 @@ class OpenSSLConan(ConanFile):
 class AuthorizeTest(unittest.TestCase):
 
     def setUp(self):
-        unittest.TestCase.setUp(self)
         self.servers = {}
         self.conan_reference = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
         # Create a default remote. R/W is not authorized for conan_reference, just for pepe and owner
@@ -33,8 +32,8 @@ class AuthorizeTest(unittest.TestCase):
     def retries_test(self):
         """Bad login 2 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                       ("baduser", "badpass2"),
-                                                                       ("pepe", "pepepass")]})
+                                                                         ("baduser", "badpass2"),
+                                                                         ("pepe", "pepepass")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
         errors = self.conan.run("upload %s" % str(self.conan_reference))
@@ -83,8 +82,8 @@ class AuthorizeTest(unittest.TestCase):
     def max_retries_test(self):
         """Bad login 3 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                    ("baduser", "badpass2"),
-                                                                    ("baduser3", "badpass3")]})
+                                                                         ("baduser", "badpass2"),
+                                                                         ("baduser3", "badpass3")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
         errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)

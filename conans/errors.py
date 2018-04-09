@@ -71,6 +71,16 @@ class ConanException(Exception):
     pass
 
 
+class ConanManifestException(ConanException):
+    pass
+
+
+class NoRemoteAvailable(ConanException):
+    """ No default remote configured or the specified remote do not exists
+    """
+    pass
+
+
 class InvalidNameException(ConanException):
     pass
 

@@ -1,4 +1,7 @@
+import platform
 import unittest
+import os
+
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 
@@ -12,6 +15,7 @@ class HelloConan(ConanFile):
     build_policy="missing"
     def package_info(self):
         self.cpp_info.cppflags = ["MyFlag1", "MyFlag2"]
+        self.cpp_info.cflags = ["-load", "C:\some\path"]
 """
 
 chatconanfile_py = """
@@ -40,6 +44,8 @@ conan_basic_setup()
 
 message(STATUS "CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 message(STATUS "CONAN_CXX_FLAGS=${CONAN_CXX_FLAGS}")
+message(STATUS "CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
+message(STATUS "CONAN_C_FLAGS=${CONAN_C_FLAGS}")
 message(STATUS "HELLO_CXX_FLAGS=${HELLO_FLAGS}")
 message(STATUS "CHAT_CXX_FLAGS=${CHAT_FLAGS}")
 """
@@ -68,7 +74,9 @@ class CMakeFlagsTest(unittest.TestCase):
         client.runner("cmake .", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
-        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
+        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
+        self.assertIn("CMAKE_C_FLAGS= -load C:\some\path", client.out)
+        self.assertIn("CONAN_C_FLAGS=-load C:\some\path ", client.out)
 
     def transitive_flags_test(self):
         client = TestClient()
@@ -103,8 +111,9 @@ class CMakeFlagsTest(unittest.TestCase):
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def targets_own_flags_test(self):
         client = TestClient()
@@ -126,8 +135,9 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def transitive_targets_flags_test(self):
         client = TestClient()
@@ -152,10 +162,12 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn("CHAT_CXX_FLAGS=MyChatFlag1;MyChatFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def cmake_test_needed_settings(self):
         conanfile = """
@@ -211,3 +223,52 @@ class MyLib(ConanFile):
         client.run("install .")
         client.run("build .")
 
+    def std_flag_applied_test(self):
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "arch", "compiler", "cppstd"
+    generators = "cmake"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+        """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "mylib.cpp": "auto myfunc(){return 3;}",  # c++14 feature
+                     "CMakeLists.txt": """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+add_library(mylib mylib.cpp)
+target_link_libraries(mylib ${CONAN_LIBS})
+"""})
+
+        if platform.system() != "Windows":
+            client.run("install . --install-folder=build -s cppstd=gnu98")
+            error = client.run("build . --build-folder=build", ignore_error=True)
+            self.assertTrue(error)
+            self.assertIn("Error in build()", client.out)
+
+            # Now specify c++14
+            client.run("install . --install-folder=build -s cppstd=gnu14")
+            client.run("build . --build-folder=build")
+            self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
+            libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
+            libpath = os.path.join(client.current_folder, "build", "lib", libname)
+            self.assertTrue(os.path.exists(libpath))
+
+        client.run("install . --install-folder=build -s cppstd=14")
+        client.run("build . --build-folder=build")
+        self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
+        libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
+        libpath = os.path.join(client.current_folder, "build", "lib", libname)
+        self.assertTrue(os.path.exists(libpath))

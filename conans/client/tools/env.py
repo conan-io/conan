@@ -1,4 +1,3 @@
-import platform
 import sys
 from contextlib import contextmanager
 
@@ -10,16 +9,18 @@ from conans.errors import ConanException
 
 @contextmanager
 def pythonpath(conanfile):
-    old_path = sys.path[:]
     python_path = conanfile.env.get("PYTHONPATH", None)
     if python_path:
+        old_path = sys.path[:]
         if isinstance(python_path, list):
             sys.path.extend(python_path)
         else:
             sys.path.append(python_path)
 
-    yield
-    sys.path = old_path
+        yield
+        sys.path = old_path
+    else:
+        yield
 
 
 @contextmanager
@@ -30,18 +31,22 @@ def environment_append(env_vars):
                       => e.j. PATH=/path/1:/path/2
     :return: None
     """
-    old_env = dict(os.environ)
     for name, value in env_vars.items():
         if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
-            if name in old_env:
-                env_vars[name] += os.pathsep + old_env[name]
-    os.environ.update(env_vars)
-    try:
+            old = os.environ.get(name)
+            if old:
+                env_vars[name] += os.pathsep + old
+    if env_vars:
+        old_env = dict(os.environ)
+        os.environ.update(env_vars)
+        try:
+            yield
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+    else:
         yield
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
 
 
 @contextmanager

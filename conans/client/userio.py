@@ -9,20 +9,38 @@ from six.moves import input as raw_input
 
 class UserIO(object):
     """Class to interact with the user, used to show messages and ask for information"""
+
     def __init__(self, ins=sys.stdin, out=None):
-        '''
+        """
         Params:
             ins: input stream
             out: ConanOutput, should have "write" method
-        '''
+        """
         self._ins = ins
         if not out:
             out = ConanOutput(sys.stdout)
         self.out = out
+        self._interactive = True
+
+    def disable_input(self):
+        self._interactive = False
+
+    def _raise_if_non_interactive(self):
+        if not self._interactive:
+            raise ConanException("Conan interactive mode disabled")
+
+    def raw_input(self):
+        self._raise_if_non_interactive()
+        return raw_input()
+
+    def get_pass(self):
+        self._raise_if_non_interactive()
+        return getpass.getpass("")
 
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
+        self._raise_if_non_interactive()
         user_input = ''
         while not username:
             try:
@@ -35,22 +53,26 @@ class UserIO(object):
         self.out.write('Please enter a password for "%s" account: ' % username)
         try:
             pwd = self.get_password(remote_name)
+        except ConanException:
+            raise
         except Exception as e:
             raise ConanException('Cancelled pass %s' % e)
         return username, pwd
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
-        return self._get_env_username(remote_name) or raw_input()
+        return self._get_env_username(remote_name) or self.raw_input()
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        return self._get_env_password(remote_name) or getpass.getpass("")
+        return self._get_env_password(remote_name) or self.get_pass()
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
         :param msg Name of the msg
         """
+        self._raise_if_non_interactive()
+
         if default_value:
             self.out.input_text('%s (%s): ' % (msg, default_value))
         else:

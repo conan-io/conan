@@ -6,12 +6,12 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, save
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
-from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from six.moves.urllib.parse import urlsplit, parse_qs, urlencode, urlparse, urljoin
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
 from conans.model.info import ConanInfo
@@ -76,23 +76,9 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
-        self._verify_ssl = True
+        # Remote manager will set it to True or False dynamically depending on the remote
+        self.verify_ssl = True
         self._put_headers = put_headers
-
-    @property
-    def verify_ssl(self):
-        from conans.client.rest import cacert
-        if self._verify_ssl:
-            # Necessary for pyinstaller, because it doesn't copy the cacert.
-            # It should not be necessary anymore the own conan.io certificate (fixed in server)
-            return cacert.file_path
-        else:
-            return False
-
-    @verify_ssl.setter
-    def verify_ssl(self, check):
-        assert(isinstance(check, bool))
-        self._verify_ssl = check
 
     @property
     def auth(self):
@@ -103,7 +89,7 @@ class RestApiClient(object):
 
         # Obtain the URLs
         url = "%s/conans/%s/digest" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self.download_files(urls)
@@ -118,7 +104,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
                                                    "/".join(package_reference.conan),
                                                    package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self.download_files(urls)
@@ -132,7 +118,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
@@ -149,7 +135,7 @@ class RestApiClient(object):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         urls = filter_files_function(urls)
         if not urls:
@@ -164,7 +150,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
         # TODO: Get fist an snapshot and compare files and download only required?
@@ -173,7 +159,8 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
+                      no_overwrite):
         """
         the_files: dict with relative_path: content
         """
@@ -188,8 +175,13 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all", "recipe"):
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbbiden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 
@@ -198,14 +190,14 @@ class RestApiClient(object):
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
             filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                          for filename, abs_path in files_to_upload.items()}
-            urls = self._get_json(url, data=filesizes)
+            urls = self._get_file_to_url_dict(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
         return files_to_upload or deleted
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -219,8 +211,13 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all"):
+                raise ConanException("Local package is different from the remote package. "
+                                     "Forbbiden overwrite")
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
@@ -230,7 +227,7 @@ class RestApiClient(object):
             filesizes = {filename: os.stat(abs_path).st_size for filename,
                          abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
-            urls = self._get_json(url, data=filesizes)
+            urls = self._get_file_to_url_dict(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
@@ -388,6 +385,20 @@ class RestApiClient(object):
                                        json=payload)
         return response
 
+    def _complete_url(self, url):
+        """ Ensures that an url is absolute by completing relative urls with
+            the remote url. urls that are already absolute are not modified.
+        """
+        if bool(urlparse(url).netloc):
+            return url
+        return urljoin(self.remote_url, url)
+
+    def _get_file_to_url_dict(self, url, data=None):
+        """Call to url and decode the json returning a dict of {filepath: url} dict
+        converting the url to a complete url when needed"""
+        urls = self._get_json(url, data=data)
+        return {filepath: self._complete_url(url) for filepath, url in urls.items()}
+
     def _get_json(self, url, data=None):
         t1 = time.time()
         headers = self.custom_headers
@@ -509,7 +520,7 @@ class RestApiClient(object):
                                                               "/".join(conan_reference),
                                                               package_id)
         try:
-            urls = self._get_json(url)
+            urls = self._get_file_to_url_dict(url)
         except NotFoundException:
             if package_id:
                 raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))

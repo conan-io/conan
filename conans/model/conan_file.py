@@ -1,6 +1,8 @@
 import os
+from contextlib import contextmanager
 
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
+from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvValues
@@ -48,13 +50,13 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings):
+def create_settings(conanfile, settings, local):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current)
+        settings.constraint(current, raise_undefined_field=not local)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -78,8 +80,19 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
-def get_env_context_manager(conanfile):
-    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
+@contextmanager
+def _env_and_python(conanfile):
+    with environment_append(conanfile.env):
+        with pythonpath(conanfile):
+            yield
+
+
+def get_env_context_manager(conanfile, without_python=False):
+    if not conanfile.apply_env:
+        return no_op()
+    if without_python:
+        return environment_append(conanfile.env)
+    return _env_and_python(conanfile)
 
 
 class ConanFile(object):
@@ -97,7 +110,7 @@ class ConanFile(object):
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
-    def __init__(self, output, runner, settings, user=None, channel=None):
+    def __init__(self, output, runner, settings, user=None, channel=None, local=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -106,7 +119,7 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
+        self.settings = create_settings(self, settings, local)
         try:
             if self.settings.os_build and self.settings.os:
                 output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -135,6 +148,7 @@ class ConanFile(object):
         self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
+        self.copy_deps = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -148,11 +162,12 @@ class ConanFile(object):
         self._user = user
         self._channel = channel
 
-        # Are we in local cache? Suggest a better name
         self.in_local_cache = False
-
-        # Init a description
         self.description = None
+        # Vars to control the build steps (build(), package())
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
 
     @property
     def env(self):
@@ -225,9 +240,15 @@ class ConanFile(object):
         """
 
     def build(self):
+        """ build your project calling the desired build tools as done in the command line.
+        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
+        """
         self.output.warn("This conanfile has no build step")
 
     def package(self):
+        """ package the needed files from source and build folders.
+        E.g. self.copy("*.h", src="src/includes", dst="includes")
+        """
         self.output.warn("This conanfile has no package step")
 
     def package_info(self):
@@ -252,6 +273,9 @@ class ConanFile(object):
         """
 
     def test(self):
+        """ test the generated executable.
+        E.g.  self.run("./example")
+        """
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):

@@ -11,6 +11,22 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
+def export_pkg(conanfile, src_package_folder, package_folder, output):
+    mkdir(package_folder)
+
+    output.info("Exporting to cache existing package from user folder")
+    output.info("Package folder %s" % (package_folder))
+
+    copier = FileCopier(src_package_folder, package_folder)
+    copier("*", symlinks=True)
+    copier.report(output, warn=True)
+
+    save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
+    digest = FileTreeManifest.create(package_folder)
+    save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+    output.success("Package '%s' created" % os.path.basename(package_folder))
+
+
 def create_package(conanfile, source_folder, build_folder, package_folder, install_folder,
                    output, local=False, copy_info=False):
     """ copies built artifacts, libs, headers, data, etc from build_folder to
@@ -27,6 +43,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         output.highlight("Calling package()")
         conanfile.package_folder = package_folder
         conanfile.source_folder = source_folder
+        conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
 
         def recipe_has(conanfile, attribute):

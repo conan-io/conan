@@ -6,7 +6,6 @@ import sys
 import os
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import WSL, MSYS2, CYGWIN, MSYS
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.log import logger
@@ -35,10 +34,16 @@ def cpu_count():
 
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
-    if "64" in platform.machine():
+    machine = platform.machine()
+    if "64" in machine:
         return "x86_64"
-    elif "86" in platform.machine():
+    elif "86" in machine:
         return "x86"
+    elif "armv8" in machine:
+        return "armv8"
+    elif "armv7" in machine:
+        return "armv7"
+
     return None
 
 # DETECT OS, VERSION AND DISTRIBUTIONS
@@ -118,7 +123,7 @@ class OSInfo(object):
     def with_zypper(self):
         return self.is_linux and self.linux_distro in \
             ("opensuse", "sles")
-    
+
     @staticmethod
     def get_win_os_version():
         """
@@ -256,6 +261,7 @@ class OSInfo(object):
 
     @staticmethod
     def detect_windows_subsystem():
+        from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
         output = OSInfo.uname()
         if not output:
             return None

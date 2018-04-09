@@ -3,6 +3,7 @@ import platform
 import re
 from subprocess import Popen, PIPE, STDOUT
 
+from conans.client.output import Color
 from conans.model.version import Version
 from conans.tools import vs_installation_path
 
@@ -23,7 +24,15 @@ def _execute(command):
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
+
     try:
+        if platform.system() == "Darwin":
+            # In Mac OS X check if gcc is a fronted using apple-clang
+            _, out = _execute("%s --version" % compiler_exe)
+            out = out.lower()
+            if "clang" in out:
+                return None
+
         _, out = _execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
@@ -146,7 +155,12 @@ def _get_default_compiler(output):
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if "gcc" in command:
-            return _gcc_compiler(output, command)
+            gcc = _gcc_compiler(output, command)
+            if platform.system() == "Darwin" and gcc is None:
+                output.error(
+                    "%s detected as a frontend using apple-clang. Compiler not supported" % command
+                )
+            return gcc
         if "clang" in command.lower():
             return _clang_compiler(output, command)
         if platform.system() == "SunOS" and command.lower() == "cc":
@@ -186,6 +200,23 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
+            if Version(version) >= Version("5.1"):
+
+                msg = """
+Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
+'libstdc++' for backwards compatibility.
+Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
+
+If you want Conan to use the new ABI, edit the default profile at:
+
+    ~/.conan/profiles/default
+
+adjusting 'compiler.libcxx=libstdc++11'
+"""
+                output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
+                               "***********************\n %s\n************************************"
+                               "************************************************\n\n\n" % msg,
+                               Color.BRIGHT_RED)
         elif compiler == "cc":
             if platform.system() == "SunOS":
                 result.append(("compiler.libstdcxx", "libstdcxx4"))

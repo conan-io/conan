@@ -2,24 +2,25 @@
 to the local store, as an initial step before building or uploading to remotes
 """
 
-import shutil
 import os
+import shutil
 
-from conans.util.log import logger
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty
-from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.client.output import ScopedOutput
-from conans.client.file_copier import FileCopier
-from conans.model.conan_file import create_exports, create_exports_sources
-from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.export_linter import conan_linter
+from conans.client.file_copier import FileCopier
+from conans.client.loader_parse import load_conanfile_class
+from conans.client.output import ScopedOutput
+from conans.errors import ConanException
+from conans.model.conan_file import create_exports, create_exports_sources
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
+from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.search.search import DiskSearchManager
+from conans.util.files import save, load, rmdir, is_dirty, set_dirty
+from conans.util.log import logger
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
-               output, search_manager, client_cache):
+               output, client_cache):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -33,7 +34,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
-    refs = search_manager.search(conan_ref_str, ignorecase=True)
+    refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
     if refs and conan_ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
