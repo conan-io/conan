@@ -210,12 +210,8 @@ class ClientCache(SimplePaths):
 
     def load_manifest(self, conan_reference):
         """conan_id = sha(zip file)"""
+        assert isinstance(conan_reference, ConanFileReference)
         filename = self.digestfile_conanfile(conan_reference)
-        return FileTreeManifest.loads(load(filename))
-
-    def load_package_manifest(self, package_reference):
-        """conan_id = sha(zip file)"""
-        filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
 
     @staticmethod
@@ -225,6 +221,7 @@ class ClientCache(SimplePaths):
         return info.recipe_hash
 
     def conan_manifests(self, conan_reference):
+        assert isinstance(conan_reference, ConanFileReference)
         digest_path = self.digestfile_conanfile(conan_reference)
         if not os.path.exists(digest_path):
             return None, None
