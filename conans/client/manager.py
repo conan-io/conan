@@ -223,7 +223,7 @@ class ConanManager(object):
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        reference, _ = remote_proxy.get_recipe(reference, resolve_revisions=True)
+        reference, _ = remote_proxy.get_recipe(reference)
         if only_recipe:
             return
 

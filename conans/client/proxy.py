@@ -123,16 +123,15 @@ class ConanProxy(object):
             self._remote_manager.get_recipe_sources(conan_reference, current_remote,
                                                     short_paths=short_paths)
 
-    def get_recipe(self, conan_reference, resolve_revisions=False):
+    def get_recipe(self, conan_reference):
         with self._client_cache.conanfile_write_lock(conan_reference):
-            conan_reference, paths = self._get_recipe(conan_reference, resolve_revisions)
+            conan_reference, paths = self._get_recipe(conan_reference)
         return conan_reference, paths
 
-    def _get_recipe(self, conan_reference, resolve_revisions):
+    def _get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
-        local_reference = self._client_cache.get_latest_revision_reference(conan_reference) \
-                            if resolve_revisions else conan_reference
+        local_reference = self._client_cache.get_latest_revision_reference(conan_reference)
 
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(local_reference)

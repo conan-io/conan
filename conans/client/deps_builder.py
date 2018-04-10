@@ -443,8 +443,7 @@ class DepsGraphBuilder(object):
                          alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        resolved_reference, conanfile_path = self._retriever.get_recipe(requirement.conan_reference,
-                                                                        resolve_revisions=True)
+        resolved_reference, conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
 
         assert(resolved_reference.without_revision == requirement.conan_reference.without_revision)
         output = ScopedOutput(str(resolved_reference), self._output)
