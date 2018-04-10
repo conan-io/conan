@@ -6,7 +6,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum, save
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -131,21 +131,15 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder, filter_files_function):
+    def get_recipe_urls(self, conan_reference):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_file_to_url_dict(url)
 
-        urls = filter_files_function(urls)
-        if not urls:
-            return None
+        return conan_reference, urls
 
-        # TODO: Get fist an snapshot and compare files and download only required?
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
-
-    def get_package(self, package_reference, dest_folder):
+    def get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
@@ -153,11 +147,8 @@ class RestApiClient(object):
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
-        # TODO: Get fist an snapshot and compare files and download only required?
 
-        # Download the resources
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
+        return urls
 
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
                       no_overwrite):
@@ -461,24 +452,24 @@ class RestApiClient(object):
                 output.writeln("")
             yield os.path.normpath(filename), contents
 
-    def download_files_to_folder(self, file_urls, to_folder, output=None):
+    def download_files_to_folder(self, file_urls, to_folder):
         """
         :param: file_urls is a dict with {filename: abs_path}
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, output, self.verify_ssl)
+        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
-                output.writeln("Downloading %s" % filename)
+            if self._output:
+                self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
             downloader.download(resource_url, abs_path, auth=auth)
-            if output:
-                output.writeln("")
+            if self._output:
+                self._output.writeln("")
             ret[filename] = abs_path
         return ret
 
