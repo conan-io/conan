@@ -21,7 +21,7 @@ class MockRemoteClient(object):
 
     def __init__(self):
         self.upload_package = Mock()
-        self.get_conan_digest = Mock()
+        self.get_conan_manifest = Mock()
         tmp_folder = tempfile.mkdtemp(suffix='conan_download')
         save(os.path.join(tmp_folder, "one.txt"), "ONE")
         self.get_recipe = Mock(return_value={"one.txt": os.path.join(tmp_folder, "one.txt")})
@@ -70,9 +70,9 @@ class RemoteManagerTest(unittest.TestCase):
         self.manager.upload_package(self.package_reference, Remote("other", "url", True), 1, 0)
         self.assertTrue(self.remote_client.upload_package.called)
 
-        self.assertFalse(self.remote_client.get_conan_digest.called)
-        self.manager.get_conan_digest(self.conan_reference, Remote("other", "url", True))
-        self.assertTrue(self.remote_client.get_conan_digest.called)
+        self.assertFalse(self.remote_client.get_conan_manifest.called)
+        self.manager.get_conan_manifest(self.conan_reference, Remote("other", "url", True))
+        self.assertTrue(self.remote_client.get_conan_manifest.called)
 
         self.assertFalse(self.remote_client.get_recipe.called)
         self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url", True))

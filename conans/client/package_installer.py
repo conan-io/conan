@@ -70,7 +70,7 @@ def _remove_if_outdated(package_folder, package_ref, proxy, output):
     if os.path.exists(package_folder):
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
-            upstream_manifest = proxy.get_package_digest(package_ref)
+            upstream_manifest = proxy.get_package_manifest(package_ref)
         except NotFoundException:
             output.warn("Can't update, no package in remote")
         except NoRemoteAvailable:
