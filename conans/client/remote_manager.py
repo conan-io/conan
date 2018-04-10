@@ -145,14 +145,14 @@ class RemoteManager(object):
         returns (ConanInfo, remote_name)"""
         return self._call_remote(remote, "get_package_info", package_reference)
 
-    def get_recipe(self, conan_reference, dest_folder, remote):
+    def get_recipe(self, conan_reference, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        rmdir(dest_folder)  # Remove first the destination folder
-        t1 = time.time()
+        dest_folder = self._client_cache.export(conan_reference)
+        rmdir(dest_folder)
 
         def filter_function(urls):
             if CONANFILE not in list(urls.keys()):
@@ -161,8 +161,14 @@ class RemoteManager(object):
             urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
             return urls
 
-        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder,
-                                         filter_function)
+        t1 = time.time()
+        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+        urls = filter_function(urls)
+        if not urls:
+            return conan_reference
+
+        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
+
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote, zipped_files)
 
@@ -182,8 +188,13 @@ class RemoteManager(object):
                 return None
             return urls
 
-        zipped_files = self._call_remote(remote, "get_recipe",
-                                         conan_reference, export_folder, filter_function)
+        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+        urls = filter_function(urls)
+        if not urls:
+            return conan_reference
+
+        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, export_folder)
+
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
@@ -204,7 +215,8 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+            urls = self._call_remote(remote, "get_package_urls", package_reference)
+            zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
         except NotFoundException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             raise_package_not_found_error(conanfile, package_reference.conan,
