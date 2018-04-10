@@ -19,7 +19,7 @@ class SConsGenerator(Generator):
                     '        "SHLINKFLAGS" : {info.sharedlinkflags},\n'
                     '        "LINKFLAGS"   : {info.exelinkflags},\n'
                     '    }},\n'
-                    '    "{dep}_version" : "{info.version}"\n')
+                    '    "{dep}_version" : "{info.version}",\n')
 
         sections = []
         sections.append("conan = {\n")
