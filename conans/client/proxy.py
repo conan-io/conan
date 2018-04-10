@@ -101,7 +101,7 @@ class ConanProxy(object):
             log_package_got_from_local_cache(package_ref)
             self._recorder.package_fetched_from_cache(package_ref)
         else:
-            installed = self._retrieve_remote_package(package_ref, short_paths, output)
+            installed = self._retrieve_remote_package(package_ref, package_folder, output)
         self.handle_package_manifest(package_ref, installed)
         return installed
 
@@ -154,6 +154,7 @@ class ConanProxy(object):
                             DiskRemover(self._client_cache).remove(conan_reference)
                             output.info("Retrieving from remote '%s'..." % remote.name)
                             self._remote_manager.get_recipe(conan_reference, remote)
+
                             output.info("Updated!")
                     elif ret == -1:
                         if not self._update:
@@ -385,10 +386,11 @@ class ConanProxy(object):
         output = ScopedOutput(str(reference), self._out)
         for package_id in package_ids:
             package_ref = PackageReference(reference, package_id)
+            package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
             self._out.info("Downloading %s" % str(package_ref))
-            self._retrieve_remote_package(package_ref, short_paths, output, remote)
+            self._retrieve_remote_package(package_ref, package_folder, output, remote)
 
-    def _retrieve_remote_package(self, package_ref, short_paths, output, remote=None):
+    def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):
 
         if remote is None:
             remote = self._registry.get_ref(package_ref.conan)
@@ -400,7 +402,7 @@ class ConanProxy(object):
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_ref, remote, short_paths)
+            self._remote_manager.get_package(package_ref, package_folder, remote)
             output.success('Package installed %s' % package_id)
             self._recorder.package_downloaded(package_ref, remote.url)
 

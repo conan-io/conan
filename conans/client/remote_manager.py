@@ -211,13 +211,12 @@ class RemoteManager(object):
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
 
-    def get_package(self, package_reference, remote, short_paths):
+    def get_package(self, package_reference, dest_folder, remote):
         """
         Read the conans package from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        dest_folder = self._client_cache.package(package_reference, short_paths=short_paths)
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         urls = self._call_remote(remote, "get_package_urls", package_reference)
