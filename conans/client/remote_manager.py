@@ -12,7 +12,7 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
-from conans.util.files import touch
+from conans.util.files import touch_folder
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_upload, log_recipe_upload,
@@ -169,9 +169,7 @@ class RemoteManager(object):
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
-        for dirname, _, filenames in os.walk(dest_folder):
-            for fname in filenames:
-                touch(os.path.join(dirname, fname))
+        touch_folder(dest_folder)
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
@@ -198,9 +196,7 @@ class RemoteManager(object):
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
-        for dirname, _, filenames in os.walk(export_sources_folder):
-            for fname in filenames:
-                touch(os.path.join(dirname, fname))
+        touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, package_reference, dest_folder, remote, output):
         package_id = package_reference.package_id
@@ -218,9 +214,7 @@ class RemoteManager(object):
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
             # Issue #214 https://github.com/conan-io/conan/issues/214
-            for dirname, _, filenames in os.walk(dest_folder):
-                for fname in filenames:
-                    touch(os.path.join(dirname, fname))
+            touch_folder(dest_folder)
             output.success('Package installed %s' % package_id)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
