@@ -108,6 +108,7 @@ class RestApiTest(unittest.TestCase):
         # Get the conans digest
         _, digest = self.api.get_conan_manifest(conan_reference)
 
+
         self.assertEquals(digest.summary_hash, "34b389d4abf03f3b240ee4aa7cd9ac49")
         self.assertEquals(digest.time, 123123123)
 

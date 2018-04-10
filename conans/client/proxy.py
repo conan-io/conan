@@ -83,7 +83,6 @@ class ConanProxy(object):
             if self._check_updates:
                 read_manifest = self._client_cache.load_package_manifest(package_ref)
                 try:  # get_conan_manifest can fail, not in server
-
                     upstream_manifest = self.get_package_manifest(package_ref)
                     if upstream_manifest != read_manifest:
                         if upstream_manifest.time > read_manifest.time:
@@ -201,7 +200,6 @@ class ConanProxy(object):
                     return 1 if remote_ref.revision > local_ref.revision else -1
 
                 # Same reference, check manifests
-
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404

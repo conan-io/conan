@@ -55,6 +55,12 @@ def touch(fname, times=None):
     os.utime(fname, times)
 
 
+def touch_folder(folder):
+    for dirname, _, filenames in os.walk(folder):
+        for fname in filenames:
+            os.utime(os.path.join(dirname, fname), None)
+
+
 def normalize(text):
     if platform.system() == "Windows":
         return re.sub("\r?\n", "\r\n", text)
