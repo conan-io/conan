@@ -137,8 +137,8 @@ class ConanApiAuthManager(object):
                                                 no_overwrite)
 
     @input_credentials_if_unauthorized
-    def get_conan_digest(self, conan_reference):
-        return self._rest_client.get_conan_digest(conan_reference)
+    def get_conan_manifest(self, conan_reference):
+        return self._rest_client.get_conan_manifest(conan_reference)
 
     @input_credentials_if_unauthorized
     def get_package_digest(self, package_reference):

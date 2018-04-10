@@ -84,7 +84,7 @@ class RestApiClient(object):
     def auth(self):
         return JWTAuth(self.token)
 
-    def get_conan_digest(self, conan_reference):
+    def get_conan_manifest(self, conan_reference):
         """Gets a FileTreeManifest from conans"""
 
         # Obtain the URLs

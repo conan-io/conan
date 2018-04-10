@@ -25,7 +25,7 @@ class ConanController(Controller):
             return
 
         @app.route("%s/digest" % conan_route, method=["GET"])
-        def get_conan_digest_url(conanname, version, username, channel, auth_user):
+        def get_conan_manifest_url(conanname, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -37,7 +37,7 @@ class ConanController(Controller):
             return urls
 
         @app.route("%s/packages/:package_id/digest" % conan_route, method=["GET"])
-        def get_package_digest_url(conanname, version, username, channel, package_id, auth_user):
+        def get_package_manifest_url(conanname, version, username, channel, package_id, auth_user):
             """
             Get a dict with all files and the download url
             """
