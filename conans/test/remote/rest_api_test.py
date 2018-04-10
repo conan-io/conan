@@ -91,11 +91,16 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(conan_reference)
 
         # Get the conans
+        urls = self.api.get_recipe_urls(conan_reference)
+        self.assertIsNotNone(urls)
+        self.assertIn(CONANFILE, urls)
+        self.assertIn(CONAN_MANIFEST, urls)
+
+        # Download them
         tmp_dir = temp_folder()
-        recipe_paths = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
-        self.assertIsNotNone(recipe_paths)
-        self.assertIn(CONANFILE, recipe_paths)
-        self.assertIn(CONAN_MANIFEST, recipe_paths)
+        self.api.download_files_to_folder(urls, tmp_dir)
+        self.assertIn(CONANFILE, os.listdir(tmp_dir))
+        self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
     def get_conan_manifest_test(self):
         # Upload a conans
@@ -117,10 +122,14 @@ class RestApiTest(unittest.TestCase):
         self._upload_package(package_reference)
 
         # Get the package
+        urls = self.api.get_package_urls(package_reference)
+        self.assertIsNotNone(urls)
+        self.assertIn("hello.cpp", urls)
+
+        # Download them
         tmp_dir = temp_folder()
-        package = self.api.get_package(package_reference, tmp_dir)
-        self.assertIsNotNone(package)
-        self.assertIn("hello.cpp", package)
+        self.api.download_files_to_folder(urls, tmp_dir)
+        self.assertIn("hello.cpp", os.listdir(tmp_dir))
 
     def get_package_info_test(self):
         # Upload a conans
@@ -156,10 +165,9 @@ class RestApiTest(unittest.TestCase):
             self._upload_recipe(conan_reference, files)
 
             # Get the conans
-            tmp_dir = temp_folder()
-            pack = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
-            self.assertIsNotNone(pack)
-            self.assertIn("file999.cpp", pack)
+            urls = self.api.get_recipe_urls(conan_reference)
+            self.assertIsNotNone(urls)
+            self.assertIn("file999.cpp", urls)
 
     def search_test(self):
         # Upload a conan1

@@ -159,7 +159,7 @@ class RemoteManager(object):
             return urls
 
         t1 = time.time()
-        conan_reference, urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
         urls = filter_function(urls)
         if not urls:
             return conan_reference
@@ -188,7 +188,7 @@ class RemoteManager(object):
                 return None
             return urls
 
-        conan_reference, urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
         urls = filter_function(urls)
         if not urls:
             return conan_reference

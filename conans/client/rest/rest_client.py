@@ -137,7 +137,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_file_to_url_dict(url)
 
-        return conan_reference, urls
+        return urls
 
     def get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
