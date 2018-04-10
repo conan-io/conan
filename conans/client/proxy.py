@@ -10,10 +10,11 @@ from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import rmdir, mkdir
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, CONAN_MANIFEST
+from conans.util.files import rmdir, mkdir, load
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
+from conans.model.manifest import FileTreeManifest
 
 
 class ConanProxy(object):
@@ -80,9 +81,10 @@ class ConanProxy(object):
         # Check current package status
         if os.path.exists(package_folder):
             if self._check_updates:
-                read_manifest = self._client_cache.load_package_manifest(package_ref)
-                try:  # get_conan_digest can fail, not in server
-                    upstream_manifest = self.get_package_digest(package_ref)
+                read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
+                                                                         CONAN_MANIFEST)))
+                try:  # get_manifest can fail, not in server
+                    upstream_manifest = self.get_package_manifest(package_ref)
                     if upstream_manifest != read_manifest:
                         if upstream_manifest.time > read_manifest.time:
                             output.warn("Current package is older than remote upstream one")
@@ -188,8 +190,8 @@ class ConanProxy(object):
             return 0
         read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
         if read_manifest:
-            try:  # get_conan_digest can fail, not in server
-                upstream_manifest = self.get_conan_digest(conan_reference)
+            try:  # get_conan_manifest can fail, not in server
+                upstream_manifest = self.get_conan_manifest(conan_reference)
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404
@@ -243,7 +245,7 @@ class ConanProxy(object):
                     msg = "Unable to find '%s' in remotes" % str(conan_reference)
                     logger.debug("Not found in any remote, raising...%s" % exc)
                     self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
-                                                            msg, None)
+                                                        msg, None)
                     raise NotFoundException(msg)
 
         raise ConanException("No remote defined")
@@ -316,20 +318,20 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def get_conan_digest(self, conan_ref):
+    def get_conan_manifest(self, conan_ref):
         """ used by update to check the date of packages, require force if older
         """
         remote, current_remote = self._get_remote(conan_ref)
-        result = self._remote_manager.get_conan_digest(conan_ref, remote)
+        result = self._remote_manager.get_conan_manifest(conan_ref, remote)
         if not current_remote:
             self._registry.set_ref(conan_ref, remote)
         return result
 
-    def get_package_digest(self, package_ref):
+    def get_package_manifest(self, package_ref):
         """ used by update to check the date of packages, require force if older
         """
         remote, ref_remote = self._get_remote(package_ref.conan)
-        result = self._remote_manager.get_package_digest(package_ref, remote)
+        result = self._remote_manager.get_package_manifest(package_ref, remote)
         if not ref_remote:
             self._registry.set_ref(package_ref.conan, remote)
         return result
