@@ -111,6 +111,7 @@ class ConanProxy(object):
             self._manifest_manager.check_package(package_ref, remote)
 
     def get_recipe_sources(self, conan_reference, short_paths=False):
+        export_path = self._client_cache.export(conan_reference)
         sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
         if os.path.exists(sources_folder):
             return
@@ -120,8 +121,8 @@ class ConanProxy(object):
             raise ConanException("Error while trying to get recipe sources for %s. "
                                  "No remote defined" % str(conan_reference))
         else:
-            self._remote_manager.get_recipe_sources(conan_reference, current_remote,
-                                                    short_paths=short_paths)
+            self._remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
+                                                    current_remote)
 
     def get_recipe(self, conan_reference):
         with self._client_cache.conanfile_write_lock(conan_reference):
