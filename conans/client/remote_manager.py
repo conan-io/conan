@@ -150,6 +150,8 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
+        dest_folder = self._client_cache.export(conan_reference)
+        rmdir(dest_folder)
 
         def filter_function(urls):
             if CONANFILE not in list(urls.keys()):
@@ -164,7 +166,6 @@ class RemoteManager(object):
         if not urls:
             return conan_reference
 
-        dest_folder = self._client_cache.export(conan_reference)
         zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
 
         duration = time.time() - t1
