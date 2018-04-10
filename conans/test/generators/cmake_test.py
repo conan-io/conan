@@ -9,6 +9,9 @@ from conans.client.generators.cmake import CMakeGenerator
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.client.conf import default_settings_yml
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
+import os
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -41,6 +44,24 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
+
+    def paths_cmake_multi_user_vars_test(self):
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_undefined_field: x), None)
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        tmp_folder = temp_folder()
+        save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
+        save(os.path.join(tmp_folder, "include", "myheader.h"), "")
+        cpp_info = CppInfo(tmp_folder)
+        cpp_info.release.libs = ["hello"]
+        cpp_info.debug.libs = ["hello_D"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = CMakeMultiGenerator(conanfile)
+        release = generator.content["conanbuildinfo_release.cmake"]
+        release = release.replace(tmp_folder.replace("\\", "/"), "root_folder")
+        cmake_lines = release.splitlines()
+        self.assertIn('set(CONAN_INCLUDE_DIRS_MYPKG_RELEASE "root_folder/include")', cmake_lines)
+        self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
