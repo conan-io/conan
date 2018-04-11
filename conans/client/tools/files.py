@@ -15,6 +15,7 @@ _global_output = None
 
 UNIT_SIZE = 1000.0
 
+
 @contextmanager
 def chdir(newdir):
     old_path = os.getcwd()
