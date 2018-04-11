@@ -9,9 +9,9 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     fi
     pyenv activate conan
     # OSX py3 do not show output in more than 10min causing the build to fail
-    nosetests --with-coverage conans.test conans.test_integration --verbosity=2
+    nosetests --with-coverage conans.test --verbosity=2
 else
-    nosetests --with-coverage conans.test conans.test_integration --verbosity=2 --processes=4 --process-timeout=1000
+    nosetests --with-coverage conans.test --verbosity=2 --processes=4 --process-timeout=1000
 fi
 
 

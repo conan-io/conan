@@ -13,6 +13,11 @@ class Values(object):
             return None
         return self._dict[attr]
 
+    def __delattr__(self, attr):
+        if attr not in self._dict:
+            return
+        del self._dict[attr]
+
     def clear(self):
         # TODO: Test. DO not delete, might be used by package_id() to clear settings values
         self._dict.clear()

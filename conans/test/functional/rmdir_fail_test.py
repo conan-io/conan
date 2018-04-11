@@ -17,7 +17,7 @@ class MyPkg(ConanFile):
     version = "0.1"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install MyPkg/0.1@lasote/testing --build")
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/testing")
         builds = client.client_cache.builds(ref)

@@ -14,7 +14,7 @@ class BrokenDownloadTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files()
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.paths.export(ref)))
         client.run("upload Hello/0.1@lasote/stable")

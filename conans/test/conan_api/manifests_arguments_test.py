@@ -1,6 +1,7 @@
-from conans.client.conan_api import _parse_manifests_arguments, ConanException, default_manifest_folder, prepare_cwd
+from conans.client.conan_api import _parse_manifests_arguments, ConanException, default_manifest_folder
 import unittest
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
+import os
 
 
 class ArgumentsTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class ArgumentsTest(unittest.TestCase):
             _parse_manifests_arguments(cwd=None, **arguments)
 
     def test_manifests_arguments_verify(self):
-        cwd = prepare_cwd(None)
+        cwd = os.getcwd()
         manifests = _parse_manifests_arguments(verify=default_manifest_folder,
                                                manifests=None,
                                                manifests_interactive=None,
@@ -38,7 +39,7 @@ class ArgumentsTest(unittest.TestCase):
         self.assertTrue(manifest_verify)
 
     def test_manifests_arguments_manifests_interactive(self):
-        cwd = prepare_cwd(None)
+        cwd = os.getcwd()
         manifests = _parse_manifests_arguments(verify=None,
                                                manifests=None,
                                                manifests_interactive=default_manifest_folder,
@@ -50,7 +51,7 @@ class ArgumentsTest(unittest.TestCase):
         self.assertFalse(manifest_verify)
 
     def test_manifests_arguments_manifests(self):
-        cwd = prepare_cwd(None)
+        cwd = os.getcwd()
         manifests = _parse_manifests_arguments(verify=None,
                                                manifests=default_manifest_folder,
                                                manifests_interactive=None,
@@ -62,7 +63,7 @@ class ArgumentsTest(unittest.TestCase):
         self.assertFalse(manifest_verify)
 
     def test_manifests_arguments_no_manifests(self):
-        cwd = prepare_cwd(None)
+        cwd = os.getcwd()
         manifests = _parse_manifests_arguments(verify=None, manifests=None, manifests_interactive=None, cwd=cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
 

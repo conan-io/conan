@@ -25,7 +25,7 @@ class InLocalCacheTest(unittest.TestCase):
     def test_in_local_cache_flag(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build missing")
         self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
@@ -39,13 +39,13 @@ class InLocalCacheTest(unittest.TestCase):
         pack_folder = os.path.join(client.current_folder, "package")
         os.mkdir(pack_folder)
         client.current_folder = pack_folder
-        client.run("package .. --build_folder ..")
+        client.run("package .. --build-folder ..")
         self.assertIn("package() IN LOCAL CACHE=> False", client.user_io.out)
 
         # Confirm that we have the flag depending on the recipe too
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         conanfile_reuse = """
 from conans import ConanFile, tools
 
@@ -61,7 +61,7 @@ class OtherConan(ConanFile):
         client.run("install . --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello1/0.1@lasote/stable --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)

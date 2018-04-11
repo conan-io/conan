@@ -5,7 +5,7 @@ from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans import tools
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.model.profile import Profile
 
@@ -115,7 +115,7 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create user/testing")
+        client.run("create . user/testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
@@ -129,7 +129,7 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": file_content})
-        client.run("install")
+        client.run("install .")
         error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)

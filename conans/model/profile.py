@@ -31,10 +31,7 @@ class Profile(object):
         return result
 
     def dumps(self):
-        result = ["[build_requires]"]
-        for pattern, req_list in self.build_requires.items():
-            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
-        result.append("[settings]")
+        result = ["[settings]"]
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
@@ -43,6 +40,10 @@ class Profile(object):
 
         result.append("[options]")
         result.append(self.options.dumps())
+
+        result.append("[build_requires]")
+        for pattern, req_list in self.build_requires.items():
+            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
         result.append("[env]")
         result.append(self.env_values.dumps())
@@ -74,7 +75,7 @@ class Profile(object):
                 if "." not in name:
                     if name in self.settings and self.settings[name] != value:
                         for cur_name, _ in self.settings.items():
-                            if cur_name.startswith(name):
+                            if cur_name.startswith("%s." % name):
                                 del res[cur_name]
             # Now merge the new values
             res.update(new_settings)

@@ -34,15 +34,49 @@ class AConan(ConanFile):
 
 class ConanBuildTest(unittest.TestCase):
 
+    def partial_build_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+
+class Conan(ConanFile):
+    def build(self):
+        self.output.info("CONFIGURE=%s!" % self.should_configure)
+        self.output.info("BUILD=%s!" % self.should_build)
+        self.output.info("INSTALL=%s!" % self.should_install)
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+        client.run("build . -c")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=False!", client.out)
+        self.assertIn("INSTALL=False!", client.out)
+        client.run("build . -b")
+        self.assertIn("CONFIGURE=False!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=False!", client.out)
+        client.run("build . -i")
+        self.assertIn("CONFIGURE=False!", client.out)
+        self.assertIn("BUILD=False!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+
     def build_error_test(self):
         """ If not using -g txt generator, and build() requires self.deps_cpp_info,
         or self.deps_user_info it wont fail because now it's automatic
         """
         client = TestClient()
         client.save({CONANFILE: conanfile_dep})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
 
         client.run("build .")  # We do not need to specify -g txt anymore
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
@@ -62,20 +96,21 @@ class AConan(ConanFile):
         assert(hasattr(self, "package_folder"))
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
-        client.run("install --build=missing")
-        client.run("build .")
+        client.run("install . --build=missing")
+        client.run("build ./conanfile.py")
 
     def build_test(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
         client = TestClient()
         client.save({CONANFILE: conanfile_dep})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
 
-        client.run("build .")
+        client.save({"my_conanfile.py": conanfile_scope_env})
+        client.run("build ./my_conanfile.py")
         ref = PackageReference.loads("Hello/0.1@lasote/testing:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_folder = client.paths.package(ref).replace("\\", "/")
@@ -107,8 +142,8 @@ class AConan(ConanFile):
         with client.chdir("build1"):
             client.run("install ..")
         # Try relative to cwd
-        client.run("build . --build_folder build2 --install-folder build1 "
-                   "--package_folder build1/pkg")
+        client.run("build . --build-folder build2 --install-folder build1 "
+                   "--package-folder build1/pkg")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build2"),
                       client.out)
         self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "build1", "pkg"),
@@ -116,7 +151,7 @@ class AConan(ConanFile):
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
         # Try default package folder
-        client.run("build . --build_folder build1 --package_folder package1")
+        client.run("build conanfile.py --build-folder build1 --package-folder package1")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
                       client.out)
         self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "package"),
@@ -124,7 +159,7 @@ class AConan(ConanFile):
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
         # Try absolute package folder
-        client.run("build . --build-folder build1 --package_folder '%s'" %
+        client.run("build . --build-folder build1 --package-folder '%s'" %
                    os.path.join(client.current_folder, "mypackage"))
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
                       client.out)
@@ -137,7 +172,7 @@ class AConan(ConanFile):
         bdir = os.path.join(client.current_folder, "other/mybuild")
         with client.chdir(bdir):
             client.run("install '%s'" % conanfile_dir)
-        client.run("build . --build_folder '%s' --package_folder relpackage" % bdir)
+        client.run("build ./conanfile.py --build-folder '%s' --package-folder relpackage" % bdir)
 
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other/mybuild"),
                       client.out)
@@ -148,12 +183,12 @@ class AConan(ConanFile):
         # Try different source
         with client.chdir("other/build"):
             client.run("install ../..")
-        error = client.run("build . --source_folder '%s' --build-folder other/build" %
+        error = client.run("build . --source-folder '%s' --build-folder other/build" %
                            os.path.join(client.current_folder, "mysrc"), ignore_error=True)
         self.assertTrue(error)  # src is not created automatically, it makes no sense
         mkdir(os.path.join(client.current_folder, "mysrc"))
 
-        client.run("build . --source_folder '%s' --build_folder other/build"
+        client.run("build . --source-folder '%s' --build-folder other/build"
                    % os.path.join(client.current_folder, "mysrc"))
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other", "build"),
                       client.out)
@@ -172,8 +207,8 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create Hello.Pkg/0.1@lasote/testing")
-        client.run("create Hello-Tools/0.1@lasote/testing")
+        client.run("create . Hello.Pkg/0.1@lasote/testing")
+        client.run("create . Hello-Tools/0.1@lasote/testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
@@ -185,7 +220,7 @@ class AConan(ConanFile):
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
 """
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install conanfile.py --build=missing")
         client.run("build .")
 
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
@@ -212,7 +247,7 @@ cmake_minimum_required(VERSION 2.8.12)
         client.save({CONANFILE: conanfile,
                      "CMakeLists.txt": cmake,
                      "header.h": "my header h!!"})
-        client.run("install")
+        client.run("install .")
         client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
         header = load(os.path.join(client.current_folder, "package/include/header.h"))
         self.assertEqual(header, "my header h!!")
@@ -221,7 +256,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "CMakeLists.txt": cmake,
                      "header.h": "my header3 h!!"}, clean_first=True)
         client.run("install .")
-        client.run("build -pf=mypkg .")
+        client.run("build -pf=mypkg ./conanfile.py")
         header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
         self.assertEqual(header, "my header3 h!!")
 
@@ -248,7 +283,7 @@ class AConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         conanfile = """
 from conans import ConanFile

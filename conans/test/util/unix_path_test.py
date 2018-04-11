@@ -7,19 +7,16 @@ from conans import tools
 
 class UnixPathTest(unittest.TestCase):
 
-    def test_default_path(self):
-        self.assertEqual('/c/windows/system32', tools.unix_path('C:\\Windows\\System32'))
-
     def test_msys_path(self):
         self.assertEqual('/c/windows/system32', tools.unix_path('C:\\Windows\\System32',
-                                                                path_flavor=tools.MSYS))
+                                                                path_flavor=tools.MSYS2))
 
     def test_cygwin_path(self):
         self.assertEqual('/cygdrive/c/windows/system32', tools.unix_path('C:\\Windows\\System32',
                                                                          path_flavor=tools.CYGWIN))
 
     def test_wsl_path(self):
-        self.assertEqual('/mnt/c/windows/system32', tools.unix_path('C:\\Windows\\System32',
+        self.assertEqual('/mnt/c/Windows/System32', tools.unix_path('C:\\Windows\\System32',
                                                                     path_flavor=tools.WSL))
 
     def test_sfu_path(self):

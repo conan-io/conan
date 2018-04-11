@@ -29,7 +29,7 @@ class MyConanfile(ConanFile):
         %s
     '''
             client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
 
         export_lib("LIB_A", "", "self.user_info.VAR1=2")
         export_lib("LIB_B", "LIB_A/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
@@ -54,7 +54,7 @@ class MyConanfile(ConanFile):
         assert(self.deps_user_info["LIB_D"].var1=="2")
     '''
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run('install reuse/0.1@lasote/stable --build -g txt')
 
         # Assert generator TXT

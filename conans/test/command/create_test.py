@@ -1,5 +1,8 @@
+from conans import tools
 from conans.test.utils.tools import TestClient
 import unittest
+import os
+from parameterized.parameterized import parameterized
 
 
 class CreateTest(unittest.TestCase):
@@ -23,15 +26,84 @@ class HelloTestConan(ConanFile):
         pass
 '''
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("create lasote/testing")
+        client.run("create . lasote/testing")
         self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                       client.user_io.out)
         client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
                      "    requires='HelloBar/0.1@lasote/testing'",
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                          client.user_io.out)
+
+    @parameterized.expand([(True, ), (False, )])
+    def keep_build_test(self, with_test):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    exports_sources = "*.h"
+    def source(self):
+        self.output.info("mysource!!")
+    def build(self):
+        self.output.info("mybuild!!")
+    def package(self):
+        self.output.info("mypackage!!")
+        self.copy("*.h")
+"""
+        if with_test:
+            client.save({"conanfile.py": conanfile,
+                         "header.h": ""})
+        else:
+            test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+            client.save({"conanfile.py": conanfile,
+                         "header.h": "",
+                         "test_package/conanfile.py": test_conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep the source
+        client.save({"conanfile.py": conanfile + " "})
+        client.run("create . Pkg/0.1@lasote/testing --keep-source")
+        self.assertIn("A new conanfile.py version was exported", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep build
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
+        # Changes in the recipe again
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        # The source folder is removed, but not necessary, as it will reuse build
+        self.assertNotIn("Pkg/0.1@lasote/testing: Removing 'source' folder", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
+    def keep_build_error_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        error = client.run("create . Pkg/0.1@lasote/testing --keep-build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
     def create_test(self):
         client = TestClient()
@@ -59,17 +131,17 @@ class MyPkg(ConanFile):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
 """})
-        client.run("create Pkg/0.1@lasote/testing")
+        client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
         # Create with only user will raise an error because of no name/version
-        error = client.run("create lasote/testing", ignore_error=True)
+        error = client.run("create conanfile.py lasote/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("conanfile.py doesn't declare package name or version", client.out)
         # Same with only user, (default testing)
-        error = client.run("create lasote", ignore_error=True)
+        error = client.run("create . lasote", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
@@ -80,23 +152,23 @@ class MyPkg(ConanFile):
 class Pkg(ConanFile):
     pass
         """})
-        client.run("export LibA/0.1@user/channel")
-        client.run("export LibA/0.2@user/channel")
+        client.run("export . LibA/0.1@user/channel")
+        client.run("export conanfile.py LibA/0.2@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.1@user/channel"
         """})
-        client.run("export LibB/0.1@user/channel")
+        client.run("export ./ LibB/0.1@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.2@user/channel"
         """})
-        client.run("export LibC/0.1@user/channel")
+        client.run("export . LibC/0.1@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
         """})
-        error = client.run("create Consumer/0.1@lasote/testing", ignore_error=True)
+        error = client.run("create ./conanfile.py Consumer/0.1@lasote/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
                       client.out)
@@ -110,11 +182,11 @@ class TestConan(ConanFile):
     version = "1.2"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create Hello/1.2@lasote/stable")
-        error = client.run("create Pkg/1.2@lasote/stable", ignore_error=True)
+        client.run("create . Hello/1.2@lasote/stable")
+        error = client.run("create ./ Pkg/1.2@lasote/stable", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Package recipe exported with name Pkg!=Hello", client.out)
-        error = client.run("create Hello/1.1@lasote/stable", ignore_error=True)
+        error = client.run("create . Hello/1.1@lasote/stable", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Package recipe exported with version 1.1!=1.2", client.out)
 
@@ -125,12 +197,12 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/channel")
+        client.run("create . lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
-        error = client.run("create lasote", ignore_error=True)  # testing default
+        error = client.run("create . lasote", ignore_error=True)  # testing default
         self.assertTrue(error)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
@@ -142,7 +214,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/channel --cwd subfolder")
+        client.run("create subfolder lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
@@ -155,7 +227,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/channel --cwd subfolder --file CustomConanFile.py")
+        client.run("create subfolder/CustomConanFile.py lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
@@ -171,9 +243,28 @@ class MyTest(ConanFile):
     def test(self):
         self.output.info("TESTING!!!")
 """})
-        client.run("create lasote/testing")
+        client.run("create . lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: TESTING!!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
+
+    def create_skip_test_package_test(self):
+        """
+        Skip the test package stage if explicitly disabled with --test-folder=None
+        """
+        # https://github.com/conan-io/conan/issues/2355
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+""", "test_package/conanfile.py": """from conans import ConanFile
+class MyTest(ConanFile):
+    def test(self):
+        self.output.info("TESTING!!!")
+"""})
+        client.run("create . lasote/testing --test-folder=None")
+        self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
     def create_test_package_requires(self):
         client = TestClient()
@@ -182,8 +273,8 @@ class MyPkg(ConanFile):
     pass
     """
         client.save({"conanfile.py": dep_conanfile})
-        client.run("create Dep/0.1@user/channel")
-        client.run("create Other/1.0@user/channel")
+        client.run("create . Dep/0.1@user/channel")
+        client.run("create . Other/1.0@user/channel")
 
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -207,17 +298,18 @@ class MyPkg(ConanFile):
         """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info: include", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Pkg/0.1@lasote/testing", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Other",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Other",
                       client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Dep",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Dep",
                       client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Pkg",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Pkg",
                       client.out)
 
     def create_with_tests_and_build_requires_test(self):
@@ -231,7 +323,7 @@ class MyBuildRequire(ConanFile):
     def package_info(self):
         self.env_info.MYVAR="1"
 """})
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
 
         # Create a recipe that will use a profile requiring the build_require
         client.save({"conanfile.py": """from conans import ConanFile
@@ -259,7 +351,7 @@ class MyTest(ConanFile):
 """}, clean_first=True)
 
         # Test that the build require is applyed to testing
-        client.run("create conan/stable --profile ./myprofile --build missing")
+        client.run("create . conan/stable --profile ./myprofile --build missing")
         self.assertIn("TESTING!!", client.user_io.out)
 
     def build_policy_test(self):
@@ -282,12 +374,58 @@ class HelloTestConan(ConanFile):
         pass
 '''
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("create lasote/testing")
+        client.run("create . lasote/testing")
         self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                       client.out)
         client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
                      "    requires='HelloBar/0.1@lasote/testing'",
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                       client.out)
+
+    def test_build_folder_handling_test(self):
+        conanfile = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        test_conanfile = '''
+from conans import ConanFile
+
+class TestConanLib(ConanFile):
+    def test(self):
+        pass
+'''
+        client = TestClient()
+        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
+
+        # Test the default behavior.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create . lasote/stable")
+        self.assertTrue(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create -tbf=build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if using a temporary test folder can be enabled via the environment variable.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+            client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # # Test if using a temporary test folder can be enabled via the config file.
+        client.run('config set general.temp_test_folder=True')
+        client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected also when the use of
+        # temporary test folders is enabled in the config file.
+        client.run("create -tbf=test_package/build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))

@@ -54,11 +54,11 @@ class AuthorizeBearerTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        expected_calls = [('get_conan_digest_url', None),
+        expected_calls = [('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_conanfile_snapshot', 'Bearer'),
@@ -79,12 +79,12 @@ class AuthorizeBearerTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         # Upload will fail, as conan_server is expecting a signed URL
         errors = client.run("upload Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(errors)
 
-        expected_calls = [('get_conan_digest_url', None),
+        expected_calls = [('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_conanfile_snapshot', 'Bearer'),

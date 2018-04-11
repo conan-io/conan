@@ -24,7 +24,7 @@ class Pkg(ConanFile):
         self.cpp_info.cppflags = ["-some_cpp_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
 """})
-        client.run("export Hello/0.1@lasote/stable")
+        client.run("export . Hello/0.1@lasote/stable")
         conanfile_txt = '''[requires]
 Hello/0.1@lasote/stable # My req comment
 [generators]
@@ -36,7 +36,7 @@ xcode
         client.save({"conanfile.txt": conanfile_txt}, clean_first=True)
 
         # Install requirements
-        client.run('install --build missing')
+        client.run('install . --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
                                  BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
                                  BUILD_INFO_XCODE, CONANINFO]),

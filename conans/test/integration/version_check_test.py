@@ -81,7 +81,7 @@ class VersionCheckTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
         tmp_client.save(files)
-        tmp_client.run("export lasote/stable")
+        tmp_client.run("export . lasote/stable")
         errors = tmp_client.run("upload Hello0/0.1@lasote/stable -r normal_server --all")
         errors |= tmp_client.run("upload Hello0/0.1@lasote/stable -r the_last_server --all")
         self.assertFalse(errors)
@@ -100,7 +100,7 @@ class VersionCheckTest(unittest.TestCase):
                                  ignore_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). "
                       "Upgrade conan client.", self.client.user_io.out)
-        self.assertFalse(errors)  # No Errors! because it finds the package in the second remote
+        self.assertTrue(errors)  # Errors! because it fails in the first remote
 
     def _get_server(self, server_version, min_client_compatible_version):
         server_version = str(server_version)

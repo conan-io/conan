@@ -54,12 +54,12 @@ class CMakeTargetsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "hello.h": hello})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
         self.assertNotIn("', skipping the version check...", client.user_io.out)
@@ -75,8 +75,8 @@ class CMakeTargetsTest(unittest.TestCase):
             debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
             release_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MD'
 
-            client.run('install %s -s build_type=Debug -g cmake_multi' % debug_install)
-            client.run('install %s -s build_type=Release -g cmake_multi' % release_install)
+            client.run('install . %s -s build_type=Debug -g cmake_multi' % debug_install)
+            client.run('install . %s -s build_type=Release -g cmake_multi' % release_install)
             client.runner("cmake .", cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
             self.assertNotIn("', skipping the version check...", client.user_io.out)
@@ -99,11 +99,11 @@ class CMakeTargetsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_fr,
                      "hello.h": hello})
 
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run("install -g cmake")
+        client.run("install . -g cmake")
         bili = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("-framework Foundation", bili)

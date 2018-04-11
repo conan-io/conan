@@ -55,7 +55,7 @@ class SearchManagerABC(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def search(self, pattern=None, ignorecase=True):
+    def search_recipes(self, pattern=None, ignorecase=True):
         pass
 
     @abstractmethod
@@ -128,12 +128,11 @@ class DiskSearchManager(SearchManagerABC):
     """Will search recipes and packages using a file system.
     Can be used with a SearchAdapter"""
 
-    def __init__(self, paths, disk_search_adapter):
+    def __init__(self, paths, disk_search_adapter=None):
         self._paths = paths
-        self._adapter = disk_search_adapter
+        self._adapter = disk_search_adapter or DiskSearchAdapter()
 
-    def search(self, pattern=None, ignorecase=True):
-
+    def search_recipes(self, pattern=None, ignorecase=True):
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, ConanFileReference):

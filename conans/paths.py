@@ -28,12 +28,12 @@ CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
 BUILD_INFO = 'conanbuildinfo.txt'
 BUILD_INFO_GCC = 'conanbuildinfo.gcc'
+BUILD_INFO_COMPILER_ARGS = 'conanbuildinfo.args'
 BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
-BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
@@ -160,3 +160,4 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
+

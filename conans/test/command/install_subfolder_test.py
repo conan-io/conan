@@ -23,7 +23,7 @@ class InstallSubfolderTest(unittest.TestCase):
         """
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._create("Hello0", "0.1")

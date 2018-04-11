@@ -22,6 +22,6 @@ class CPUCountTest(unittest.TestCase):
         self.client = TestClient()
         self.client.save({CONANFILE: conanfile})
         self.client.run("config set general.cpu_count=5")
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.assertIn("CPU COUNT=> 5", self.client.user_io.out)

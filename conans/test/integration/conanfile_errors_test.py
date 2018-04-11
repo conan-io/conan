@@ -18,7 +18,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9",
                       client.user_io.out)
@@ -41,7 +41,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9",
                       client.user_io.out)
@@ -64,7 +64,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package_info() method, line 9",
                       client.user_io.out)
@@ -87,7 +87,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
 
         self.assertIn("""ERROR: Hello/0.1@lasote/stable: Error in configure() method, line 9
@@ -108,7 +108,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in source() method, line 9",
                       client.user_io.out)

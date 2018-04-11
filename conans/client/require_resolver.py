@@ -22,10 +22,11 @@ def satisfying(list_versions, versionexpr, output):
 
 class RequireResolver(object):
 
-    def __init__(self, output, local_search, remote_search):
+    def __init__(self, output, local_search, remote_search, update):
         self._output = output
         self._local_search = local_search
         self._remote_search = remote_search
+        self._update = update
 
     def resolve(self, require, base_conanref):
         version_range = require.version_range
@@ -48,28 +49,38 @@ class RequireResolver(object):
         ref = require.conan_reference
         # The search pattern must be a string
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
-        resolved = self._resolve_local(search_ref, version_range)
-        if not resolved:
-            # We should use ignorecase=False, we want the exact case!
-            remote_found = self._remote_search.search_remotes(search_ref, ignorecase=False)
-            if remote_found:
-                resolved = self._resolve_version(version_range, remote_found)
+
+        if self._update:
+            searches = (self._resolve_remote, self._resolve_local)
+        else:
+            searches = (self._resolve_local, self._resolve_remote)
+
+        for fcn in searches:
+            resolved = fcn(search_ref, version_range)
+            if resolved:
+                break
 
         if resolved:
             self._output.success("Version range '%s' required by '%s' resolved to '%s'"
                                  % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
-            raise ConanException(
-                "The version in '%s' from requirement '%s' could not be resolved" % (version_range, require))
+            raise ConanException("The version in '%s' from requirement '%s' could not be resolved"
+                                 % (version_range, require))
 
     def _resolve_local(self, search_ref, version_range):
         if self._local_search:
-            local_found = self._local_search.search(search_ref)
+            local_found = self._local_search.search_recipes(search_ref)
             if local_found:
                 resolved_version = self._resolve_version(version_range, local_found)
                 if resolved_version:
                     return resolved_version
+
+    def _resolve_remote(self, search_ref, version_range):
+        # We should use ignorecase=False, we want the exact case!
+        remote_found = self._remote_search.search_remotes(search_ref, ignorecase=False)
+        if remote_found:
+            return self._resolve_version(version_range, remote_found)
 
     def _resolve_version(self, version_range, local_found):
         versions = {ref.version: ref for ref in local_found}

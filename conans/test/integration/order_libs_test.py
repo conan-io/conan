@@ -36,7 +36,7 @@ class HelloReuseConan(ConanFile):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._export("ZLib")

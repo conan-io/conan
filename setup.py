@@ -25,6 +25,7 @@ def get_requires(filename):
                 requirements.append(line)
     return requirements
 
+
 project_requirements = get_requires("conans/requirements.txt")
 if platform.system() == "Darwin":
     project_requirements.extend(get_requires("conans/requirements_osx.txt"))
@@ -53,7 +54,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=load_version(), # + ".rc1",
+    version=load_version(),  # + ".rc1",
 
     description='Conan C/C++ package manager',
     # long_description="An open source, decentralized package manager, to automate building and sharing of packages",
@@ -71,12 +72,14 @@ setup(
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6'
     ],
 
     # What does your project relate to?

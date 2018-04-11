@@ -1,6 +1,7 @@
+import io
 import os
 import sys
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 from conans.util.files import decode_text
 from conans.errors import ConanException
 import six
@@ -20,6 +21,11 @@ class ConanRunner(object):
         @param log_filepath: If specified, also log to a file
         @param cwd: Move to directory to execute
         """
+        if output and isinstance(output, io.StringIO) and six.PY2:
+            # in py2 writing to a StringIO requires unicode, otherwise it fails
+            print("*** WARN: Invalid output parameter of type io.StringIO(), "
+                  "use six.StringIO() instead ***")
+
         stream_output = output if output and hasattr(output, "write") else sys.stdout
 
         if not self._generate_run_log_file:
@@ -46,7 +52,10 @@ class ConanRunner(object):
     def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
         try:
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd)
+            # piping both stdout, stderr and then later only reading one will hang the process
+            # if the other fills the pip. So piping stdout, and redirecting stderr to stdour,
+            # so both are merged and use just a single get_stream_lines() call
+            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -70,7 +79,7 @@ class ConanRunner(object):
                     log_handler.write(line if six.PY2 else decoded_line)
 
         get_stream_lines(proc.stdout)
-        get_stream_lines(proc.stderr)
+        # get_stream_lines(proc.stderr)
 
         proc.communicate()
         ret = proc.returncode

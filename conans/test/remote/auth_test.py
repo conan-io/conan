@@ -20,7 +20,6 @@ class OpenSSLConan(ConanFile):
 class AuthorizeTest(unittest.TestCase):
 
     def setUp(self):
-        unittest.TestCase.setUp(self)
         self.servers = {}
         self.conan_reference = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
         # Create a default remote. R/W is not authorized for conan_reference, just for pepe and owner
@@ -33,10 +32,10 @@ class AuthorizeTest(unittest.TestCase):
     def retries_test(self):
         """Bad login 2 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                       ("baduser", "badpass2"),
-                                                                       ("pepe", "pepepass")]})
+                                                                         ("baduser", "badpass2"),
+                                                                         ("pepe", "pepepass")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export lasote/testing")
+        self.conan.run("export . lasote/testing")
         errors = self.conan.run("upload %s" % str(self.conan_reference))
         # Check that return was  ok
         self.assertFalse(errors)
@@ -51,7 +50,7 @@ class AuthorizeTest(unittest.TestCase):
         def _upload_with_credentials(credentials):
             cli = TestClient(servers=self.servers, users={})
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
-            cli.run("export lasote/testing")
+            cli.run("export . lasote/testing")
             with tools.environment_append(credentials):
                 cli.run("upload %s" % str(self.conan_reference))
             return cli
@@ -83,10 +82,10 @@ class AuthorizeTest(unittest.TestCase):
     def max_retries_test(self):
         """Bad login 3 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                    ("baduser", "badpass2"),
-                                                                    ("baduser3", "badpass3")]})
+                                                                         ("baduser", "badpass2"),
+                                                                         ("baduser3", "badpass3")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export lasote/testing -p ./ ")
+        self.conan.run("export . lasote/testing")
         errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)
         # Check that return was not ok
         self.assertTrue(errors)

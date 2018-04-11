@@ -6,7 +6,7 @@ class VirtualRunEnvGenerator(VirtualEnvGenerator):
 
     def __init__(self, conanfile):
         super(VirtualRunEnvGenerator, self).__init__(conanfile)
-
+        self.venv_name = "conanrunenv"
         run_env = RunEnvironment(conanfile)
         self.env = run_env.vars
 

@@ -12,11 +12,11 @@ Flow:
     get_conan with the new token.
 """
 
-from conans.errors import AuthenticationException, ForbiddenException,\
-    ConanException
+from conans.errors import AuthenticationException, ForbiddenException, ConanException
 from uuid import getnode as get_mac
 import hashlib
 from conans.util.log import logger
+from conans.client.cmd.user import update_localdb
 
 
 def input_credentials_if_unauthorized(func):
@@ -40,9 +40,9 @@ def input_credentials_if_unauthorized(func):
                 remote = self.remote
                 self._user_io.out.info('Please log in to "%s" to perform this action. '
                                        'Execute "conan user" command.' % remote.name)
-                if remote.name == "conan.io":
+                if "bintray" in remote.url:
                     self._user_io.out.info('If you don\'t have an account sign up here: '
-                                           'http://www.conan.io')
+                                           'https://bintray.com/signup/oss')
                 return retry_with_new_token(self, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
@@ -60,7 +60,6 @@ def input_credentials_if_unauthorized(func):
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
             user, password = self._user_io.request_login(self._remote.name, self.user)
-            token = None
             try:
                 token = self.authenticate(user, password)
             except AuthenticationException:
@@ -71,11 +70,10 @@ def input_credentials_if_unauthorized(func):
                         'Wrong password for user "%s"' % self.user)
                     self._user_io.out.info(
                         'You can change username with "conan user <username>"')
-            if token:
+            else:
                 logger.debug("Got token: %s" % str(token))
                 self._rest_client.token = token
                 self.user = user
-                self._store_login((user, token))
                 # Set custom headers of mac_digest and username
                 self.set_custom_headers(user)
                 return wrapper(self, *args, **kwargs)
@@ -127,29 +125,35 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
+                      no_overwrite):
         return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                               ignore_deleted_file)
+                                               ignore_deleted_file, no_overwrite)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
-        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait)
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
+        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait,
+                                                no_overwrite)
 
     @input_credentials_if_unauthorized
-    def get_conan_digest(self, conan_reference):
-        return self._rest_client.get_conan_digest(conan_reference)
+    def get_conan_manifest(self, conan_reference):
+        return self._rest_client.get_conan_manifest(conan_reference)
 
     @input_credentials_if_unauthorized
-    def get_package_digest(self, package_reference):
-        return self._rest_client.get_package_digest(package_reference)
+    def get_package_manifest(self, package_reference):
+        return self._rest_client.get_package_manifest(package_reference)
 
     @input_credentials_if_unauthorized
-    def get_recipe(self, conan_reference, dest_folder, filter_function):
-        return self._rest_client.get_recipe(conan_reference, dest_folder, filter_function)
+    def get_recipe_urls(self, conan_reference):
+        return self._rest_client.get_recipe_urls(conan_reference)
 
     @input_credentials_if_unauthorized
-    def get_package(self, package_reference, dest_folder):
-        return self._rest_client.get_package(package_reference, dest_folder)
+    def get_package_urls(self, package_reference):
+        return self._rest_client.get_package_urls(package_reference)
+
+    @input_credentials_if_unauthorized
+    def download_files_to_folder(self, urls, dest_folder):
+        return self._rest_client.download_files_to_folder(urls, dest_folder)
 
     @input_credentials_if_unauthorized
     def get_package_info(self, package_reference):
@@ -176,29 +180,18 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_path(conan_reference, path, package_id)
 
     def authenticate(self, user, password):
-        remote_url = self._remote.url
-        prev_user = self._localdb.get_username(remote_url)
-        prev_username = prev_user or "None (anonymous)"
-        if not user:
-            self._user_io.out.info("Current '%s' user: %s" % (self._remote.name, prev_username))
-        else:
-            user = None if user.lower() == 'none' else user
-            if user and password is not None:
-                token = self._remote_auth(user, password)
+        if user is None:  # The user is already in DB, just need the passwd
+            prev_user = self._localdb.get_username(self._remote.url)
+            if prev_user is None:
+                raise ConanException("User for remote '%s' is not defined" % self._remote.name)
             else:
-                token = None
-            if prev_user == user:
-                self._user_io.out.info("Current '%s' user already: %s"
-                                       % (self._remote.name, prev_username))
-            else:
-                username = user or "None (anonymous)"
-                self._user_io.out.info("Change '%s' user from %s to %s"
-                                       % (self._remote.name, prev_username, username))
-            self._localdb.set_login((user, token), remote_url)
-            return token
+                user = prev_user
 
-    def _remote_auth(self, user, password):
         try:
-            return self._rest_client.authenticate(user, password)
+            token = self._rest_client.authenticate(user, password)
         except UnicodeDecodeError:
             raise ConanException("Password contains not allowed symbols")
+
+        # Store result in DB
+        update_localdb(self._localdb, user, token, self._remote, self._user_io.out)
+        return token

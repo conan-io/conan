@@ -77,7 +77,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
         # Upload only the recipe
         self.new_client.save(self.files)
-        self.new_client.run("export lasote/stable")
+        self.new_client.run("export . lasote/stable")
         self.new_client.run("upload  Hello0/0.1@lasote/stable --all")
 
         # And try to download all
@@ -90,7 +90,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         # No build.
         self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):", "def build(self):\n        return\n")
         client.save(self.files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "

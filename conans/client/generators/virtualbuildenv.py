@@ -7,6 +7,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
 
     def __init__(self, conanfile):
         super(VirtualBuildEnvGenerator, self).__init__(conanfile)
+        self.venv_name = "conanbuildenv"
         compiler = conanfile.settings.get_safe("compiler")
         if compiler != "Visual Studio":
             tools = AutoToolsBuildEnvironment(conanfile)

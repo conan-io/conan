@@ -38,6 +38,10 @@ class Lock(object):
         self._output = output
         self._first_lock = True
 
+    @property
+    def files(self):
+        return (self._count_file, self._count_lock_file)
+
     def _info_locked(self):
         if self._first_lock:
             self._first_lock = False

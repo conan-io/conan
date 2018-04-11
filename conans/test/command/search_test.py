@@ -139,6 +139,26 @@ class SearchTest(unittest.TestCase):
                           },
                          self.client.paths.store)
 
+    def recipe_search_all_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self.client.run("search Hello* -r=all")
+
+        def check():
+            for remote in ("local", "search_able"):
+                expected = """Remote '{}':
+Hello/1.4.10@fenix/testing
+Hello/1.4.11@fenix/testing
+Hello/1.4.12@fenix/testing
+helloTest/1.4.10@fenix/stable""".format(remote)
+                self.assertIn(expected, self.client.out)
+
+        check()
+        self.client.run("search Hello* -r=all --raw")
+        check()
+
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
@@ -238,7 +258,7 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         self.client.run("remove Hello* -f")
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("outdated from recipe: False", self.client.user_io.out)
+        self.assertIn("Outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
@@ -386,7 +406,7 @@ class SearchTest(unittest.TestCase):
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@fenix/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        outdated from recipe: False
+        Outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -396,7 +416,7 @@ class SearchTest(unittest.TestCase):
             compiler: gcc
             compiler.libcxx: libstdc++
             compiler.version: 4.3
-        outdated from recipe: True
+        Outdated from recipe: True
 
 """, self.client.user_io.out)
 
@@ -419,6 +439,15 @@ class SearchTest(unittest.TestCase):
         client.run("search nonexist/1.0@lasote/stable")
         self.assertIn("There are no packages", self.client.user_io.out)
 
+    def search_with_no_registry_test(self):
+        # https://github.com/conan-io/conan/issues/2589
+        client = TestClient()
+        os.remove(os.path.join(client.client_cache.registry))
+        error = client.run("search nonexist/1.0@lasote/stable -r=myremote", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
+        self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
+
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
@@ -432,10 +461,10 @@ class Test(ConanFile):
     settings = "os"
     """
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Windows")
         client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Linux")
         client.run("upload * --all --confirm")
         for remote in ("", "-r=default"):

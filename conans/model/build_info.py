@@ -26,7 +26,7 @@ class _CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
-        self.sysroot = None
+        self.sysroot = ""
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None

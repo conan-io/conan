@@ -5,7 +5,7 @@ from conans.test.utils.test_files import temp_folder
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import load, mkdir
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 
 class DeployTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create Lib/0.1@user/testing")
+        client.run("create . Lib/0.1@user/testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -48,7 +48,7 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        client.run("create . Pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
 
         def test_install_in(folder):

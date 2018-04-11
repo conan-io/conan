@@ -24,7 +24,7 @@ class MyPkg(ConanFile):
     version = "0.1"
     exports_sources = "*.txt"
 """, "myfile.txt": "Hello world"})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing")
         client.run("remove * -f")
         client.run("search")

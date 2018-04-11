@@ -21,7 +21,7 @@ class MyPkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "myheader.h": "my header"})
-        client.run("create Pkg/0.1@lasote/channel")
+        client.run("create . Pkg/0.1@lasote/channel")
         self.client = client
 
     def basic_test(self):

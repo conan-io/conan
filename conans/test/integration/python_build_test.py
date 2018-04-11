@@ -100,10 +100,67 @@ class ToolsTest(MyCoolConanFile):
 
 class PythonBuildTest(unittest.TestCase):
 
+    def reuse_package_info_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile, tools
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def package_info(self):
+        import mytest
+        mytest.bar(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Bar", client.out)
+
+    def reuse_build_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile, tools
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def build(self):
+        import mytest
+        mytest.foo(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Foo", client.out)
+
+    def reuse_source_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile, tools
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def source(self):
+        import mytest
+        mytest.baz(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Baz", client.out)
+
     def reuse_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("install .")
@@ -113,7 +170,7 @@ class PythonBuildTest(unittest.TestCase):
         self.assertNotIn("Hello Bar", client.user_io.out)
         self.assertIn("Hello Foo", client.user_io.out)
 
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
@@ -125,10 +182,10 @@ class PythonBuildTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
@@ -139,7 +196,7 @@ class PythonBuildTest(unittest.TestCase):
         client.run("remove * -f")
         client.run("search")
         self.assertNotIn("lasote/stable", client.user_io.out)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
@@ -153,10 +210,10 @@ class PythonBuildTest(unittest.TestCase):
     def basic_install_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
@@ -166,10 +223,10 @@ class PythonBuildTest(unittest.TestCase):
     def basic_package_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build", ignore_error=True)
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
@@ -179,7 +236,7 @@ class PythonBuildTest(unittest.TestCase):
     def basic_source_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("install .")
@@ -192,10 +249,10 @@ class PythonBuildTest(unittest.TestCase):
     def errors_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("install")
+        client.run("install .")
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
         client.run("source .", ignore_error=True)
@@ -238,7 +295,7 @@ class ConanToolPackage(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         # We can't build the package without our PYTHONPATH
         self.assertRaises(Exception, client.run, "install conantool/1.0@lasote/stable --build missing")
@@ -263,7 +320,7 @@ class ToolsTest(ConanFile):
             external.external_baz()
 """
         client.save({CONANFILE: reuse})
-        client.run("install --build -e PYTHONPATH=['%s']" % external_dir)
+        client.run("install . --build -e PYTHONPATH=['%s']" % external_dir)
         client.run("build .")
         info = ConanInfo.loads(load(os.path.join(client.current_folder, "conaninfo.txt")))
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]
@@ -293,6 +350,6 @@ def external_baz():
         save(os.path.join(external_dir, "external.py"), external_py)
 
         client.save({CONANFILE: conanfile_simple})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         # Should work even if PYTHONPATH is not declared as [], only external resource needed
         client.run('install Hello/0.1@lasote/stable --build missing -e PYTHONPATH="%s"' % external_dir)

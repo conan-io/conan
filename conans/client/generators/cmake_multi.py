@@ -1,7 +1,9 @@
-from conans.model import Generator
-from conans.client.generators.cmake_common import cmake_dependency_vars, cmake_package_info,\
-    cmake_macros_multi, generate_targets_section, cmake_dependencies, cmake_global_vars, cmake_user_info_vars
 from conans.client.generators.cmake import DepsCppCmake
+from conans.client.generators.cmake_common import (cmake_dependency_vars, cmake_package_info,
+                                                   cmake_macros_multi, generate_targets_section,
+                                                   cmake_dependencies, cmake_global_vars,
+                                                   cmake_user_info_vars)
+from conans.model import Generator
 from conans.model.build_info import CppInfo
 
 

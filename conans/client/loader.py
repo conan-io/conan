@@ -31,7 +31,7 @@ class ConanFileLoader(object):
         self._env_values = profile.env_values
         self.dev_reference = None
 
-    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
         result = load_conanfile_class(conanfile_path)
@@ -52,8 +52,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(output, self._runner, tmp_settings,
-                            os.path.dirname(conanfile_path), user, channel)
+            result = result(output, self._runner, tmp_settings, user, channel, local)
 
             # Assign environment
             result._env_values.update(self._env_values)
@@ -83,7 +82,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def _parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, Settings(), path)
+        conanfile = ConanFile(output, self._runner, Settings())
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
@@ -96,6 +95,11 @@ class ConanFileLoader(object):
         for requirement_text in parser.requirements:
             ConanFileReference.loads(requirement_text)  # Raise if invalid
             conanfile.requires.add(requirement_text)
+        for build_requirement_text in parser.build_requirements:
+            ConanFileReference.loads(build_requirement_text)
+            if not hasattr(conanfile, "build_requires"):
+                conanfile.build_requires = []
+            conanfile.build_requires.append(build_requirement_text)
 
         conanfile.generators = parser.generators
 
@@ -108,11 +112,11 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, cwd, scope_options=True,
+    def load_virtual(self, references, scope_options=True,
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy(), conanfile_directory=cwd)
+        conanfile = ConanFile(None, self._runner, self._settings.copy())
         conanfile.settings = self._settings.copy_values()
         # Assign environment
         conanfile._env_values.update(self._env_values)

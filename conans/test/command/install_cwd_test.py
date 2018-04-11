@@ -24,7 +24,7 @@ class MyLib(ConanFile):
         pass
 """
         self.client.save({CONANFILE: conanfile})
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def test_install_cwd(self):
         self.client.save({CONANFILE_TXT: "[requires]MyLib/0.1@lasote/stable"}, clean_first=True)

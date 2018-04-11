@@ -45,13 +45,55 @@ class Meson(object):
         self._build_type = build_type
         self.definitions.update(self._build_type_definition())
 
+    @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
+
+    @staticmethod
+    def _get_dir(folder, origin):
+        if folder:
+            if os.path.isabs(folder):
+                return folder
+            return os.path.join(origin, folder)
+        return origin
+
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder'")
+
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = self._get_dir(build_folder, self._conanfile.build_folder)
+            source_ret = self._get_dir(source_folder, self._conanfile.source_folder)
+
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = self._get_dir(cache_build_folder, self._conanfile.build_folder)
+
+        return source_ret, build_ret
+
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  pkg_config_paths=None):
+                  pkg_config_paths=None, cache_build_folder=None,
+                  build_folder=None, source_folder=None):
+        if not self._conanfile.should_configure:
+            return
         args = args or []
         defs = defs or {}
-        pc_paths = os.pathsep.join(pkg_config_paths or [self._conanfile.build_folder])
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder or "."
+
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
+
+        if pkg_config_paths:
+            pc_paths = os.pathsep.join(self._get_dir(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)
+        else:
+            pc_paths = self._conanfile.install_folder
 
         mkdir(self.build_dir)
         build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()
@@ -72,6 +114,8 @@ class Meson(object):
         return command
 
     def build(self, args=None, build_dir=None, targets=None):
+        if not self._conanfile.should_build:
+            return
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
 
@@ -79,7 +123,7 @@ class Meson(object):
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         arg_list = join_arguments([
-            "-C %s" % build_dir,
+            '-C "%s"' % build_dir,
             args_to_string(args),
             args_to_string(targets)
         ])

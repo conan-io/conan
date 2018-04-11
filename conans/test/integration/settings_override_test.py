@@ -16,7 +16,7 @@ class SettingsOverrideTest(unittest.TestCase):
         self._patch_build_to_print_compiler(files)
 
         self.client.save(files)
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
     def test_override(self):
 
@@ -24,7 +24,7 @@ class SettingsOverrideTest(unittest.TestCase):
                                       version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
         self._patch_build_to_print_compiler(files)
         self.client.save(files)
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
                         "-s MinGWBuild:compiler='gcc' -s MinGWBuild:compiler.libcxx='libstdc++' "
@@ -50,7 +50,7 @@ class SettingsOverrideTest(unittest.TestCase):
         files = cpp_hello_conan_files(name="VisualBuild",
                                       version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
         self.client.save(files)
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
                         "-s MinGWBuild:missingsetting='gcc' ", ignore_error=True)
@@ -61,7 +61,7 @@ class SettingsOverrideTest(unittest.TestCase):
                                       version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
         self._patch_build_to_print_compiler(files)
         self.client.save(files)
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
                         "-s MISSINGID:compiler='gcc' ")
@@ -74,7 +74,7 @@ class SettingsOverrideTest(unittest.TestCase):
                                       version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
         self._patch_build_to_print_compiler(files)
         self.client.save(files)
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio",
                                        "CONAN_ENV_COMPILER_VERSION": "14",
                                        "CONAN_ENV_COMPILER_RUNTIME": "MD"}):

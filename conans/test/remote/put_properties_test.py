@@ -16,7 +16,7 @@ class PutPropertiesTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         props_file = client.client_cache.put_headers_path
         self.assertTrue(os.path.exists(props_file))
 
@@ -24,12 +24,12 @@ class PutPropertiesTest(unittest.TestCase):
         wanted_vars = {"MyHeader1": "MyHeaderValue1;MyHeaderValue2", "Other": "Value"}
 
         class RequesterCheckHeaders(TestRequester):
-            def put(self, url, data, headers=None, verify=None, auth=None):
+            def put(self, url, **kwargs):
                 for name, value in wanted_vars.items():
-                    value1 = headers[name]
+                    value1 = kwargs["headers"][name]
                     if value1 != value:
                         raise Exception()
-                return super(RequesterCheckHeaders, self).put(url, data, headers, verify, auth)
+                return super(RequesterCheckHeaders, self).put(url, **kwargs)
 
         self.client = TestClient(requester_class=RequesterCheckHeaders, servers=self.servers,
                                  users={"default": [("lasote", "mypass")]})
@@ -37,7 +37,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload Hello0/0.1@lasote/stable -c")
 
 

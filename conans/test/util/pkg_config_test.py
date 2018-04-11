@@ -7,6 +7,7 @@ import os
 from nose.plugins.attrib import attr
 from conans.tools import PkgConfig, environment_append
 from conans.test.utils.test_files import temp_folder
+from conans.errors import ConanException
 
 libastral_pc = """
 PC FILE EXAMPLE:
@@ -26,6 +27,13 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 @attr("unix")
 class PkgConfigTest(unittest.TestCase):
+    def test_negative(self):
+        if platform.system() == "Windows":
+            return
+        pc = PkgConfig('libsomething_that_does_not_exist_in_the_world')
+        with self.assertRaises(ConanException):
+            pc.libs()
+
     def test_pc(self):
         if platform.system() == "Windows":
             return

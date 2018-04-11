@@ -53,3 +53,20 @@ demo: %s
 
         server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo:manolito!@"})
         self.assertEquals(server_config.users, {"demo": "manolito!@"})
+
+    def test_relative_public_url(self):
+        tmp_dir = temp_folder()
+        server_conf = """
+[server]
+
+[write_permissions]
+
+[users]
+        """
+        server_dir = os.path.join(tmp_dir, ".conan_server")
+        mkdir(server_dir)
+        conf_path = os.path.join(server_dir, "server.conf")
+        save(conf_path, server_conf)
+
+        server_config = ConanServerConfigParser(tmp_dir)
+        self.assertEquals(server_config.public_url, "v1")

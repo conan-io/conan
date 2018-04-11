@@ -24,7 +24,7 @@ class ConanLib(ConanFile):
 
         files = {"conanfile.py": zlib}
         client.save(files)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         boost = """from conans import ConanFile
 from conans import tools
@@ -42,10 +42,10 @@ class BoostConan(ConanFile):
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         files = {"conanfile.txt": "[requires]\nBoostDbg/1.0@lasote/testing"}
         client.save(files, clean_first=True)
-        client.run("install -o BoostDbg:shared=True --build=missing")
+        client.run("install . -o BoostDbg:shared=True --build=missing")
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertIn("zlib:shared=True", conaninfo)

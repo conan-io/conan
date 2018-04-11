@@ -1,7 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import six
+import unittest
+
+from io import StringIO
 from conans.client.runner import ConanRunner
+from conans.test.utils.tools import TestClient
 
 
 class RunnerTest(unittest.TestCase):
@@ -12,7 +15,7 @@ class RunnerTest(unittest.TestCase):
         test_folder = os.path.join(client.current_folder, "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
         return client
 
@@ -32,6 +35,17 @@ class ConanFileToolsTest(ConanFile):
         test_folder = os.path.join(client.current_folder, "test_folder")
         self.assertTrue(os.path.exists(test_folder))
 
+    def test_write_to_stringio(self):
+        runner = ConanRunner(print_commands_to_output=True,
+                             generate_run_log_file=True,
+                             log_run_to_output=True)
+
+        out = six.StringIO()
+        runner("python --version", output=out)
+        self.assertIn("""---Running------
+> python --version
+-----------------""", out.getvalue())
+
     def log_test(self):
         conanfile = '''
 from conans import ConanFile
@@ -42,7 +56,7 @@ class ConanFileToolsTest(ConanFile):
 
     def build(self):
         self.run("cmake --version")
-    '''
+'''
         # A runner logging everything
         runner = ConanRunner(print_commands_to_output=True,
                              generate_run_log_file=True,
@@ -118,7 +132,7 @@ class ConanFileToolsTest(ConanFile):
         test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
         self.assertTrue(os.path.exists(test_folder))
 
@@ -140,7 +154,7 @@ class ConanFileToolsTest(ConanFile):
         test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error while executing 'mkdir test_folder'", client.user_io.out)

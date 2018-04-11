@@ -62,17 +62,17 @@ class BuildRequiresTest(unittest.TestCase):
         client = TestClient()
         files = cpp_hello_conan_files("Test0")
         client.save(files, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         files = cpp_hello_conan_files("Test1", deps=["Test0/0.1@lasote/stable"])
         client.save(files, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         # client.run("install Test1/0.1@lasote/stable --build=missing")
 
         client.save({"conanfile.py": conanfile,
                      "test.cpp": test,
                      "CMakeLists.txt": cmake,
                      "profile.txt": test_profile}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install MyLib/0.1@lasote/stable --build=missing")
         self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.user_io.out)
         self.assertNotIn("100% tests passed", client.user_io.out)

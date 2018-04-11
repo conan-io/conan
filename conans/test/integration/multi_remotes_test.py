@@ -21,7 +21,7 @@ class MultiRemotesTest(unittest.TestCase):
         files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
         client.save(files, clean_first=True)
         if export:
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
 
     def conan_test_test(self):
         '''Checks --build in test command'''

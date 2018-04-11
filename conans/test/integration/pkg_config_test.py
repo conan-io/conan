@@ -173,13 +173,13 @@ class LibAConan(ConanFile):
         client.save({"conanfile.py": conanfile_b,
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h}, clean_first=True)
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
         client.run("install libB/1.0@conan/stable --build missing")
 
         client.save({"conanfile.py": conanfile_a,
                      "main.cpp": main_cpp}, clean_first=True)
 
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 
         subprocess.Popen("./main", cwd=client.current_folder)

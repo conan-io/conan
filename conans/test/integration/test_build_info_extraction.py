@@ -23,7 +23,7 @@ class MyBuildInfo(unittest.TestCase):
     def test_only_download(self):
         files = cpp_hello_conan_files("Hello", "1.0", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload '*' -c --all")
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         self.client.run("remove '*' -f")
@@ -41,15 +41,15 @@ class MyBuildInfo(unittest.TestCase):
         # Upload to server Hello1 => Hello0 and Hello2 => Hello0
         files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         files = cpp_hello_conan_files("Hello1", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         files = cpp_hello_conan_files("Hello2", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello1/1.0@lasote/stable --build missing")
         self.client.run("install Hello2/1.0@lasote/stable --build missing")
         self.client.run("upload '*' -c --all")
@@ -94,13 +94,13 @@ class MyBuildInfo(unittest.TestCase):
         # Upload to alternative server Hello0 but Hello1 to the default
         files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         files = cpp_hello_conan_files("Hello1", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello1/1.0@lasote/stable --build missing")
 
         self.client.run("upload 'Hello0*' -c --all -r alternative")
@@ -126,7 +126,7 @@ class MyBuildInfo(unittest.TestCase):
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
             self.client.save(files)
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             self.client.run("install Hello0/1.0@lasote/stable --build")
             self.client.run("upload '*' --all -c")
 

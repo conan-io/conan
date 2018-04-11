@@ -3,7 +3,6 @@ import os
 from conans.errors import ConanException
 from conans.client.profile_loader import read_profile, get_profile_path
 from conans.util.files import save
-from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.client.conf.detect import detect_defaults_settings
@@ -44,7 +43,11 @@ def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False):
 
     contents = profile.dumps()
     save(profile_path, contents)
-    output.info("Empty profile created: %s" % profile_path)
+
+    if detect:
+        output.info("Profile created with detected settings: %s" % profile_path)
+    else:
+        output.info("Empty profile created: %s" % profile_path)
     return profile_path
 
 
@@ -58,7 +61,7 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
         tmp = OptionsValues([(rest_key, value)])
         profile.options.update(tmp)
     elif first_key == "env":
-        profile.env_values.update(EnvValues.loads("%s=%s" % (rest_key, value)))
+        profile.env_values.update_replace(rest_key, value)
     elif first_key == "build_requires":
         raise ConanException("Edit the profile manually to change the build_requires")
 

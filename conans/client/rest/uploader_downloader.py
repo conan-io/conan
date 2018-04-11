@@ -1,11 +1,12 @@
-from conans.errors import ConanException, ConanConnectionError
-from conans.util.log import logger
-import traceback
-from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
 import os
 import time
-from conans.util.tracer import log_download
+import traceback
+
 import conans.tools
+from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.util.log import logger
+from conans.util.tracer import log_download
 
 
 class Uploader(object):
@@ -132,6 +133,8 @@ class Downloader(object):
         ret = bytearray()
         response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth, headers)
         if not response.ok:  # Do not retry if not found or whatever controlled error
+            if response.status_code == 404:
+                raise NotFoundException("Not found: %s" % url)
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:

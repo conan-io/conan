@@ -39,7 +39,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        client.run("export user/testing")
+        client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         conan_ref = ConanFileReference.loads("Test/0.1@user/testing")
@@ -78,7 +78,7 @@ class SystemReqsTest(unittest.TestCase):
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%",
                                                         "self.global_system_requirements=True")}
         client.save(files)
-        client.run("export user/testing")
+        client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         conan_ref = ConanFileReference.loads("Test/0.1@user/testing")
@@ -114,7 +114,7 @@ class SystemReqsTest(unittest.TestCase):
         files = {'conanfile.py':
                  base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')}
         client.save(files)
-        client.run("export user/testing")
+        client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         conan_ref = ConanFileReference.loads("Test/0.1@user/testing")

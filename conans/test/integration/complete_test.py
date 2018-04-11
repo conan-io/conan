@@ -1,4 +1,7 @@
 import unittest
+
+from parameterized import parameterized
+
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -11,16 +14,16 @@ from conans.test.utils.test_files import uncompress_packaged_files
 @attr("slow")
 class CompleteFlowTest(unittest.TestCase):
 
-    def setUp(self):
-        test_server = TestServer()
+    @parameterized.expand([(True, ), (False, )])
+    def reuse_test(self, complete_urls):
+        test_server = TestServer(complete_urls=complete_urls)
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
 
         self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' files: helloHello0.h",
@@ -80,17 +83,16 @@ class CompleteFlowTest(unittest.TestCase):
             self._assert_library_exists(ref, other_conan.paths)
 
         client3 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
-        client3.run('install')
+        client3.run('install .')
         client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, cwd=client3.current_folder)
         self.assertIn("Hello Hello1", client3.user_io.out)
         self.assertIn("Hello Hello0", client3.user_io.out)
 
-        client3.run('install -o language=1 --build missing')
+        client3.run('install . -o language=1 --build missing')
         time.sleep(1)
         client3.run('build .')
 

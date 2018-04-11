@@ -25,7 +25,7 @@ class PrivateDepsTest(unittest.TestCase):
                                       cmake_targets=False)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         if upload:
             self.client.run("upload %s" % str(conan_ref))
 
@@ -34,7 +34,7 @@ class PrivateDepsTest(unittest.TestCase):
                                       private_includes=True, build=False,
                                       cmake_targets=True)
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def modern_cmake_test(self):
         self._export("glew", "0.1")
@@ -106,7 +106,7 @@ class PrivateDepsTest(unittest.TestCase):
                                                    ],
                             build=False, upload=False)
 
-        self.client.run('install --build missing')
+        self.client.run('install . --build missing')
         self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.user_io.out)
         self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.user_io.out)
@@ -114,13 +114,13 @@ class PrivateDepsTest(unittest.TestCase):
         self.client.run("remove Hello0* -p -f ")
         self.client.run("remove Hello1* -p -f")
         self.client.run("search Hello0/0.1@lasote/stable")
-        self.assertIn("There are no packages for pattern 'Hello0/0.1@lasote/stable'",
+        self.assertIn("There are no packages for reference 'Hello0/0.1@lasote/stable', but package recipe found.",
                       self.client.user_io.out)
         self.client.run("search Hello1/0.1@lasote/stable")
-        self.assertIn("There are no packages for pattern 'Hello1/0.1@lasote/stable'",
+        self.assertIn("There are no packages for reference 'Hello1/0.1@lasote/stable', but package recipe found.",
                       self.client.user_io.out)
 
-        self.client.run('install --build missing')
+        self.client.run('install . --build missing')
         self.assertNotIn("Hello0/0.1@lasote/stable: Generating the package",
                          self.client.user_io.out)
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
@@ -128,100 +128,61 @@ class PrivateDepsTest(unittest.TestCase):
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")
-        self._export_upload("Hello00", "0.2", msg="#")
         self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
-                            static=False)
-        self._export_upload("Hello2", "0.1", deps=[("Hello00/0.2@lasote/stable", "private")],
                             static=False)
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files3 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                                         "Hello2/0.1@lasote/stable"])
-
-        # WE need to copy the DLLs and dylib
+        files3 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable"])
         client.save(files3)
 
-        client.run('install --build missing')
+        client.run('install . --build missing')
         client.run('build .')
 
         # assert Hello3 only depends on Hello2, and Hello1
-        info_path = os.path.join(client.current_folder, BUILD_INFO_CMAKE)
-        build_info_cmake = load(info_path)
+        build_info_cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
         # Ensure it does not depend on Hello0 to build, as private in dlls
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
-        self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0', 'Hello Hello2',
-                          'Hello #'],
-                         str(client.user_io.out).splitlines()[-5:])
+        self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
+                         str(client.user_io.out).splitlines()[-3:])
 
-        # assert Hello3 only depends on Hello2, and Hello1
-        info_path = os.path.join(client.current_folder, CONANINFO)
-        conan_info = ConanInfo.loads(load(info_path))
-
+        conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
 
         # Try to upload and reuse the binaries
         client.run("upload Hello1/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
-        client.run("upload Hello2/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
 
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files2 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                                         "Hello2/0.1@lasote/stable"])
+        client2.save(files3)
 
-        # WE need to copy the DLLs
-        client2.save(files2)
-
-        client2.run("install . --build missing")
+        client2.run("install .")
         self.assertNotIn("Package installed in Hello0/0.1", client2.user_io.out)
         self.assertNotIn("Building", client2.user_io.out)
         client2.run("build .")
 
         self.assertNotIn("libhello0.a", client2.user_io.out)
-        self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
-        self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
         client2.runner(command, cwd=client2.current_folder)
 
-        self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0', 'Hello Hello2',
-                          'Hello #'],
-                         str(client2.user_io.out).splitlines()[-5:])
-        files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
-                                                         "Hello2/0.1@lasote/stable"], language=1)
-
-        client2.save(files3)
-        client2.run('install -o language=1 --build missing')
-        client2.run('build .')
-        self.assertNotIn("libhello0.a", client2.user_io.out)
-        self.assertNotIn("libhello00.a", client2.user_io.out)
-        self.assertNotIn("libhello1.a", client2.user_io.out)
-        self.assertNotIn("libhello2.a", client2.user_io.out)
-        self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, cwd=client2.current_folder)
-        self.assertEqual(['Hola Hello3', 'Hola Hello1',
-                          'Hola Hello0', 'Hola Hello2', 'Hola #'],
-                         str(client2.user_io.out).splitlines()[-5:])
+        self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
+                         str(client2.user_io.out).splitlines()[-3:])
 
         # Issue 79, fixing private deps from current project
         files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
-                                                         "Hello2/0.1@lasote/stable",
-                                                         ("Hello0/0.1@lasote/stable", "private"),
-                                                         ("Hello00/0.2@lasote/stable", "private")],
+                                                         ("Hello0/0.1@lasote/stable", "private")],
                                        language=1)
 
         client2.save(files3, clean_first=True)
-        client2.run('install -o language=1 --build missing')
+        client2.run('install . -o language=1 --build missing')
         client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
-        self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
-        self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
-                          'Hola Hello0', 'Hola Hello2', 'Hola #', 'Hola Hello0', 'Hola #'],
-                         str(client2.user_io.out).splitlines()[-7:])
+                          'Hola Hello0', 'Hola Hello0'],
+                         str(client2.user_io.out).splitlines()[-4:])

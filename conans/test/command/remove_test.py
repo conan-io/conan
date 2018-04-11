@@ -26,10 +26,10 @@ class Test(ConanFile):
     settings = "os"
     """
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Windows")
         client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Linux")
         client.run("upload * --all --confirm")
         for remote in ("", "-r=default"):

@@ -1,5 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from parameterized import parameterized
 
 
 conanfile = """from conans import ConanFile
@@ -27,10 +28,20 @@ class Pkg(ConanFile):
 
 class DevelopTest(unittest.TestCase):
 
-    def develop_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def develop_test(self, with_test):
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        if with_test:
+            client.save({"conanfile.py": conanfile})
+        else:
+            test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+            client.save({"conanfile.py": conanfile,
+                         "test_package/conanfile.py": test_conanfile})
+        client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Develop requirements!", client.out)
         self.assertIn("Develop source!", client.out)
         self.assertIn("Develop build!", client.out)
@@ -46,7 +57,7 @@ class Pkg(ConanFile):
     requires = "Pkg/0.1@user/testing"
 """
         client.save({"conanfile.py": consumer})
-        client.run("create Other/1.0@user/testing")
+        client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop", client.out)
 
     def local_commands_test(self):

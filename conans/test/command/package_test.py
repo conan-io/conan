@@ -4,9 +4,9 @@ from conans import tools
 from conans.test.utils.tools import TestClient
 import os
 from conans.paths import CONANFILE
-from conans.util.files import load
+from conans.util.files import load, mkdir
 from conans.test.utils.test_files import temp_folder
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 class PackageLocalCommandTest(unittest.TestCase):
@@ -18,28 +18,67 @@ class PackageLocalCommandTest(unittest.TestCase):
             the_client.save({"src/header.h": "contents"}, clean_first=True)
             the_client.run("new lib/1.0 -s")
 
-            # don't need real build
+            # don't need build method
             tools.replace_in_file(os.path.join(client.current_folder,
-                                               "conanfile.py"), "cmake =",
-                                  "return\n#")
+                                               "conanfile.py"),
+                                               "def build",
+                                               "def skip_build")
             the_client.run("install . --install-folder build")
-            the_client.run("build . --build-folder build2 --install-folder build")
+            mkdir(os.path.join(client.current_folder, "build2"))
 
         # In current dir subdir
         prepare_for_package(client)
-        client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
+        client.run("package . --build-folder build2 --install-folder build --package-folder=subdir")
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
+
+        # In current dir subdir with conanfile path
+        prepare_for_package(client)
+        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package-folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path
         prepare_for_package(client)
         client.run("package . --build-folder build")
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
+
+        # Default path with conanfile path
+        prepare_for_package(client)
+        client.run("package conanfile.py --build-folder build")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Abs path
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
-        client.run("package . --build-folder build --package_folder='%s'" % pf)
+        client.run("package . --build-folder build --package-folder='%s'" % pf)
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
+
+        # Abs path with conanfile path
+        prepare_for_package(client)
+        pf = os.path.join(client.current_folder, "mypackage/two")
+        os.rename(os.path.join(client.current_folder, "conanfile.py"),
+                  os.path.join(client.current_folder, "my_conanfile.py"))
+        client.run("package ./my_conanfile.py --build-folder build --package-folder='%s'" % pf)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
+
+    def package_with_path_errors_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": "contents"}, clean_first=True)
+
+        # Path with conanfile.txt
+        error = client.run("package conanfile.txt --build-folder build2 --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("A conanfile.py is needed (not valid conanfile.txt)", client.out)
+
+        # Path with wrong conanfile path
+        error = client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found: %s" % os.path.join(client.current_folder, "not_real_dir",
+                                                               "conanfile.py"), client.out)
 
     def package_with_reference_errors_test(self):
         client = TestClient()
@@ -59,9 +98,9 @@ class MyConan(ConanFile):
 """
         client.save({"include/file.h": "foo",
                      CONANFILE: conanfile_template})
-        client.run("install")
-        recipe_folder = client.current_folder
-        client.run('package "%s"' % recipe_folder)
+        client.run("install .")
+        path = client.current_folder
+        client.run('package "%s"' % path)
         package_folder = os.path.join(client.current_folder, "package")
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
@@ -69,8 +108,8 @@ class MyConan(ConanFile):
                          sorted(["include", "conaninfo.txt", "conanmanifest.txt"]))
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
 
-    @parameterized.expand([(False, ), (True, )])
-    def local_package_build_test(self, default_folder):
+    @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
+    def local_package_build_test(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -84,21 +123,26 @@ class MyConan(ConanFile):
         client.save({"include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
                      CONANFILE: conanfile_template})
-        recipe_folder = client.current_folder
+        path = client.current_folder
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install ..")
 
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
-            client.run('package .. --build-folder=.')
+            path = "../conanfile.py" if conanfile_path else ".."
+            client.run('package {0} --build-folder=.'.format(path))
             self.assertEqual(sorted(os.listdir(package_folder)),
                              sorted(["include", "lib", "conaninfo.txt", "conanmanifest.txt"]))
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder
-            build_folder = os.path.join(recipe_folder, "build")
-            client.run('package "{0}" --build_folder="{2}"'
-                       ' --package_folder="{1}"'.format(recipe_folder, package_folder, build_folder))
+            build_folder = os.path.join(path, "build")
+
+            if conanfile_path:
+                path = os.path.join(path, "conanfile.py")
+
+            client.run('package "{0}" --build-folder="{2}"'
+                       ' --package-folder="{1}"'.format(path, package_folder, build_folder))
             self.assertEqual(sorted(os.listdir(package_folder)),
                              sorted(["include", "lib", "conaninfo.txt",
                                      "conanmanifest.txt"]))
@@ -108,8 +152,8 @@ class MyConan(ConanFile):
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
 
-    @parameterized.expand([(False, ), (True, )])
-    def local_package_source_test(self, default_folder):
+    @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
+    def local_package_source_test(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -123,18 +167,24 @@ class MyConan(ConanFile):
         client.save({"src/include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
                      CONANFILE: conanfile_template})
-        recipe_folder = client.current_folder
+        conanfile_folder = client.current_folder
+        path = conanfile_folder
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install ..")
 
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
-            client.run('package .. --build_folder=. --source_folder=../src ')
+            path = "../conanfile.py" if conanfile_path else ".."
+            client.run('package {0} --build-folder=. --source-folder=../src'.format(path))
         else:
             package_folder = temp_folder()
-            client.run('package "{0}" --build_folder="{0}/build" '
-                       '--package_folder="{1}" --source_folder="{0}/src"'.
-                       format(recipe_folder, package_folder))
+
+            if conanfile_path:
+                path = os.path.join(path, "conanfile.py")
+
+            client.run('package "{0}" --build-folder="{1}/build" '
+                       '--package-folder="{2}" --source-folder="{1}/src"'.
+                       format(path, conanfile_folder, package_folder))
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),

@@ -14,32 +14,29 @@ class VersionCheckerRequester(object):
         self.client_version = client_version
         self.min_server_compatible_version = min_server_compatible_version
 
-    def get(self, url, auth=None, headers=None, verify=None, stream=None):
-        headers = headers or {}
-        headers['X-Conan-Client-Version'] = str(self.client_version)
-        ret = self.requester.get(url, auth=auth, headers=headers, verify=verify, stream=stream)
+    def _add_version_header(self, kwargs):
+        if "headers" not in kwargs or kwargs["headers"] is None:
+            kwargs["headers"] = {}
+        kwargs["headers"]['X-Conan-Client-Version'] = str(self.client_version)
+        return kwargs
+
+    def get(self, *args, **kwargs):
+        ret = self.requester.get(*args, **self._add_version_header(kwargs))
         self._handle_ret(ret)
         return ret
 
-    def put(self, url, data, headers=None, verify=None, auth=None):
-        headers = headers or {}
-        headers['X-Conan-Client-Version'] = str(self.client_version)
-        ret = self.requester.put(url, data=data, headers=headers, verify=verify, auth=auth)
+    def put(self, *args, **kwargs):
+        ret = self.requester.put(*args, **self._add_version_header(kwargs))
         self._handle_ret(ret)
         return ret
 
-    def delete(self, url, auth, headers, verify=None):
-        headers = headers or {}
-        headers['X-Conan-Client-Version'] = str(self.client_version)
-        ret = self.requester.delete(url, auth=auth, headers=headers, verify=verify)
+    def delete(self, *args, **kwargs):
+        ret = self.requester.delete(*args, **self._add_version_header(kwargs))
         self._handle_ret(ret)
         return ret
 
-    def post(self, url, auth=None, headers=None, verify=None, stream=None, data=None, json=None):
-        headers = headers or {}
-        headers['X-Conan-Client-Version'] = str(self.client_version)
-        ret = self.requester.post(url, auth=auth, headers=headers,
-                                  verify=verify, stream=stream, data=data, json=json)
+    def post(self, *args, **kwargs):
+        ret = self.requester.post(*args, **self._add_version_header(kwargs))
         self._handle_ret(ret)
         return ret
 
