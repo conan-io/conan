@@ -342,6 +342,8 @@ class ConanManager(object):
         """
 
         conan_project = ConanProject.get_conan_project(reference)
+        if conan_project:
+            self._user_io.out.success("Using conan-project.yml file from %s" % conan_project._base_folder)
 
         if generators is not False:
             generators = set(generators) if generators else set()
