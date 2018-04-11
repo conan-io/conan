@@ -141,6 +141,7 @@ class ConanRemover(object):
                 if outdated:
                     if remote:
                         _, manifest = self._remote_proxy.get_conan_manifest(reference)
+                        recipe_hash = manifest.summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)
