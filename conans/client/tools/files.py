@@ -13,6 +13,7 @@ from conans.util.files import (load, save, _generic_algorithm_sum)
 
 _global_output = None
 
+UNIT_SIZE = 1000.0
 
 @contextmanager
 def chdir(newdir):
@@ -35,9 +36,9 @@ def human_size(size_bytes):
 
     num = float(size_bytes)
     for suffix, precision in suffixes_table:
-        if num < 1024.0:
+        if num < UNIT_SIZE:
             break
-        num /= 1024.0
+        num /= UNIT_SIZE
 
     if precision == 0:
         formatted_size = "%d" % num
