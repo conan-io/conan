@@ -90,6 +90,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans
         _, urls = self.api.get_recipe_urls(conan_reference)
+
         self.assertIsNotNone(urls)
         self.assertIn(CONANFILE, urls)
         self.assertIn(CONAN_MANIFEST, urls)
@@ -123,6 +124,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the package
         _, urls = self.api.get_package_urls(package_reference)
+
         self.assertIsNotNone(urls)
         self.assertIn("hello.cpp", urls)
 
@@ -166,6 +168,7 @@ class RestApiTest(unittest.TestCase):
 
             # Get the conans
             _, urls = self.api.get_recipe_urls(conan_reference)
+
             self.assertIsNotNone(urls)
             self.assertIn("file999.cpp", urls)
 

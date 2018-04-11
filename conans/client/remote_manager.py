@@ -160,11 +160,14 @@ class RemoteManager(object):
 
         t1 = time.time()
         conan_reference, urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+
         urls = filter_function(urls)
         if not urls:
             return conan_reference
 
         dest_folder = self._client_cache.export(conan_reference)
+        rmdir(dest_folder)
+
         zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
 
         duration = time.time() - t1
@@ -189,6 +192,7 @@ class RemoteManager(object):
             return urls
 
         conan_reference, urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+
         urls = filter_function(urls)
         if not urls:
             return conan_reference
@@ -221,6 +225,7 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         package_reference, urls = self._call_remote(remote, "get_package_urls", package_reference)
+
         zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
         duration = time.time() - t1
         log_package_download(package_reference, duration, remote, zipped_files)

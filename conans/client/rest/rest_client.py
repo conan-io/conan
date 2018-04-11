@@ -6,7 +6,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum, save
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -166,6 +166,7 @@ class RestApiClient(object):
         conan_reference = ConanFileReference.loads(str(reference))
 
         return conan_reference, urls
+
 
     def get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""

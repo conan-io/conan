@@ -10,11 +10,10 @@ from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, CONAN_MANIFEST
-from conans.util.files import rmdir, mkdir, load
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conans.util.files import rmdir, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
-from conans.model.manifest import FileTreeManifest
 
 
 class ConanProxy(object):
@@ -102,7 +101,8 @@ class ConanProxy(object):
             log_package_got_from_local_cache(package_ref)
             self._recorder.package_fetched_from_cache(package_ref)
         else:
-            installed = self._retrieve_remote_package(package_ref, short_paths, output)
+            installed = self._retrieve_remote_package(package_ref, package_folder, output)
+
         self.handle_package_manifest(package_ref, installed)
         return installed
 
@@ -158,6 +158,7 @@ class ConanProxy(object):
                             output.info("Retrieving from remote '%s'..." % remote.name)
                             local_reference = self._remote_manager.get_recipe(conan_reference, remote)
                             conanfile_path = self._client_cache.conanfile(local_reference)
+
                             output.info("Updated!")
                     elif ret == -1:
                         if not self._update:
@@ -169,6 +170,9 @@ class ConanProxy(object):
 
             log_recipe_got_from_local_cache(local_reference)
             self._recorder.recipe_fetched_from_cache(local_reference)
+
+            log_recipe_got_from_local_cache(conan_reference)
+            self._recorder.recipe_fetched_from_cache(conan_reference)
 
         else:
             local_reference = self._retrieve_recipe(conan_reference, output)
@@ -217,6 +221,7 @@ class ConanProxy(object):
             self._registry.set_ref(ref, the_remote)
             self._recorder.recipe_downloaded(ref, the_remote.url)
             return ref
+
 
         if self._remote_name:
             output.info("Not found, retrieving from server '%s' " % self._remote_name)
