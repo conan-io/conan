@@ -14,6 +14,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import rmdir, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
+from conans.client import python_requires
 
 
 class ConanProxy(object):
@@ -32,6 +33,7 @@ class ConanProxy(object):
         self._check_updates = check_updates or update  # Update forces check (and of course the update)
         self._manifest_manager = manifest_manager
         self._recorder = recorder
+        python_requires._retriever = self
 
     @property
     def registry(self):
