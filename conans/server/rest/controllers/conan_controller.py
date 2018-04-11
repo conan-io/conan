@@ -31,9 +31,9 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
-            urls = conan_service.get_conanfile_download_urls(reference, [CONAN_MANIFEST])
+            _, urls = conan_service.get_conanfile_download_urls(reference, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise NotFoundException("No manifest found")
             return urls
 
         @app.route("%s/packages/<package_id>/digest" % conan_route, method=["GET"])
@@ -45,9 +45,9 @@ class ConanController(Controller):
             reference = ConanFileReference(conanname, version, username, channel)
             package_reference = PackageReference(reference, package_id)
 
-            urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
+            _, urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise NotFoundException("No manifest found")
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
@@ -83,7 +83,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
-            urls = conan_service.get_conanfile_download_urls(reference)
+            _, urls = conan_service.get_conanfile_download_urls(reference)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
@@ -96,7 +96,7 @@ class ConanController(Controller):
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
             package_reference = PackageReference(reference, package_id)
-            urls = conan_service.get_package_download_urls(package_reference)
+            _, urls = conan_service.get_package_download_urls(package_reference)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
@@ -181,3 +181,5 @@ class ConanController(Controller):
             payload = json.load(reader(request.body))
             files = [os.path.normpath(filename) for filename in payload["files"]]
             conan_service.remove_package_files(package_reference, files)
+
+        return conan_route

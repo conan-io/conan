@@ -1,5 +1,6 @@
 import re
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 
 
 def get_bool_from_text_value(value):
@@ -51,9 +52,22 @@ class ConfigParser(object):
             else:
                 if current_lines is None:
                     raise ConanException("ConfigParser: Unexpected line '%s'" % line)
+                line = line.strip()
                 if parse_lines:
-                    line = line.split('#')[0]
-                    line = line.strip()
+                    tmp = line.split("#")
+                    if len(tmp) > 1:
+                        try:
+                            # A reference with revision could be interpreted as a comment
+                            if len(tmp) > 2:  # Reference with revision and comments?
+                                if tmp[1].startswith(" "):  # Not a valid revision
+                                    raise ConanException()
+                                line = tmp[0] + "#" + tmp[1].rstrip()
+                                ConanFileReference.loads(line)
+                            elif len(tmp) == 2:
+                                ConanFileReference.loads(line)
+                        except ConanException:
+                            line = tmp[0].strip()
+
                 current_lines.append(line)
 
     def __getattr__(self, name):

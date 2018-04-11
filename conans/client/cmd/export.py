@@ -32,6 +32,15 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_linter(conanfile_path, output)
     conanfile = _load_export_conanfile(conanfile_path, output, name, version)
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    if conan_ref.revision:  # Could be improved modifying the recipe?
+        raise ConanException("Specify the revision in a recipe field '_revision_'")
+    elif conanfile._revision_:
+        try:
+            int(conanfile._revision_)
+        except ValueError:
+            raise ConanException("Specify an integer revision")
+        conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, conanfile._revision_)
+
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
     refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
@@ -39,6 +48,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
                              % (conan_ref_str, " ".join(str(s) for s in refs)))
+
+    # FIXME: Check exporting without revision where there are revisions?
+
     output = ScopedOutput(str(conan_ref), output)
     with client_cache.conanfile_write_lock(conan_ref):
         _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source)

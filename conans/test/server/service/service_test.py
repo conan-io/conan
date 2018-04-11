@@ -120,7 +120,7 @@ class ConanServiceTest(unittest.TestCase):
         self.assertEquals(snap, snap_expected)
 
     def test_get_conanfile_download_urls(self):
-        urls = self.service.get_conanfile_download_urls(self.conan_reference)
+        _, urls = self.service.get_conanfile_download_urls(self.conan_reference)
         # Remove parameters
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
@@ -136,7 +136,7 @@ class ConanServiceTest(unittest.TestCase):
         self.assertEquals(urls, expected_urls)
 
     def test_get_package_download_urls(self):
-        urls = self.service.get_package_download_urls(self.package_reference)
+        _, urls = self.service.get_package_download_urls(self.package_reference)
         # Remove parameters
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 

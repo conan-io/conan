@@ -4,6 +4,15 @@ from conans.errors import ConanException
 
 
 class RefTest(unittest.TestCase):
+
+    def revisions_test(self):
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#34")
+        self.assertEquals(ref.channel_without_revision, "testing")
+        self.assertEquals(ref.channel, "testing#34")
+        self.assertEquals(ref.revision, "34")
+
+        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote/stable#notint")
+
     def basic_test(self):
         ref = ConanFileReference.loads("opencv/2.4.10 @ lasote/testing")
         self.assertEqual(ref.name, "opencv")

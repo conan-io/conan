@@ -102,6 +102,7 @@ class ConanFile(object):
     name = None
     version = None  # Any str, can be "1.1" or whatever
     url = None  # The URL where this File is located, as github, to collaborate in package
+    _revision_ = None
     # The license of the PACKAGE, just a shortcut, does not replace or
     # change the actual license of the source code
     license = None

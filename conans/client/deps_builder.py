@@ -13,10 +13,16 @@ from conans.util.log import logger
 from collections import defaultdict
 
 
-class Node(namedtuple("Node", "conan_ref conanfile")):
+class Node(namedtuple("Node", "conan_ref conanfile original_ref")):
     """ The Node of the dependencies graph is defined by:
     ref: ConanFileReference, if it is a user space one, user=channel=none
     conanfile: the loaded conanfile object withs its values
+    original_ref: The original requested reference. It is not the same to have:
+                        conan_ref = lib/1.2@conan/stable#1 and original_ref = lib/1.2@conan/stable#1
+                  Than:
+                        conan_ref = lib/1.2@conan/stable#1 and original_ref = lib/1.2@conan/stable
+
+                  In the second case, for example, we should check for updates in the remote.
     """
     def __repr__(self):
         return repr(self.conanfile)
@@ -79,9 +85,8 @@ class DepsGraph(object):
         """ return nodes with direct reacheability by public dependencies
         """
         neighbors = self._neighbors[node]
-        _, conanfile = node
 
-        public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
+        public_requires = [r.conan_reference for r in node.conanfile.requires.values() if not r.private]
         result = [n for n in neighbors if n.conan_ref in public_requires]
         return result
 
@@ -98,34 +103,33 @@ class DepsGraph(object):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                _, conanfile = node
                 neighbors = self._neighbors[node]
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for nref, nconan in neighbors:
+                for nref, nconan, _ in neighbors:
                     package_id = nconan.info.package_id()
                     package_reference = PackageReference(nref, package_id)
                     direct_reqs.append(package_reference)
                     indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(nref, nconan.info.full_options)
+                    node.conanfile.options.propagate_downstream(nref, nconan.info.full_options)
                     # Might be never used, but update original requirement, just in case
-                    conanfile.requires[nref.name].conan_reference = nref
+                    node.conanfile.requires[nref.name].conan_reference = nref
 
                 # Make sure not duplicated
                 indirect_reqs.difference_update(direct_reqs)
                 # There might be options that are not upstream, backup them, might be
                 # for build-requires
-                conanfile.build_requires_options = conanfile.options.values
-                conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
+                node.conanfile.build_requires_options = node.conanfile.options.values
+                node.conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
-                conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                                  conanfile.options.values,
-                                                  direct_reqs,
-                                                  indirect_reqs)
+                node.conanfile.info = ConanInfo.create(node.conanfile.settings.values,
+                                                       node.conanfile.options.values,
+                                                       direct_reqs,
+                                                       indirect_reqs)
 
                 # Once we are done, call package_id() to narrow and change possible values
-                with conanfile_exception_formatter(str(conanfile), "package_id"):
-                    conanfile.package_id()
+                with conanfile_exception_formatter(str(node.conanfile), "package_id"):
+                    node.conanfile.package_id()
         return ordered
 
     def direct_requires(self):
@@ -260,13 +264,13 @@ class DepsGraphBuilder(object):
         returns a dict of conan_reference: 1 if there is an update,
         0 if don't and -1 if local is newer
         """
-        return {conan_reference: self._retriever.update_available(conan_reference)
-                for conan_reference, _ in deps_graph.nodes}
+        return {conan_reference: self._retriever.update_available(conan_reference, original_ref)
+                for conan_reference, _, original_ref in deps_graph.nodes}
 
     def load(self, conanfile):
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node = Node(None, conanfile)
+        root_node = Node(None, conanfile, None)
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         aliased = {}
@@ -316,7 +320,7 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration
-        conanref, conanfile = node
+        conanref, conanfile, _ = node
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 
@@ -439,19 +443,21 @@ class DepsGraphBuilder(object):
                          alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
+        resolved_reference, conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
+
+        assert(resolved_reference.without_revision == requirement.conan_reference.without_revision)
+        output = ScopedOutput(str(resolved_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
-                                                reference=requirement.conan_reference)
+                                                reference=resolved_reference)
 
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or requirement.conan_reference
+            alias_reference = alias_ref or resolved_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, alias_ref=alias_reference)
 
-        new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node = Node(resolved_reference, dep_conanfile, requirement.conan_reference)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node)
         if not requirement.private:

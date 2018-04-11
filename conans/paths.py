@@ -1,5 +1,5 @@
 import os
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, ConanName
 from os.path import join, normpath
 import platform
 from conans.errors import ConanException
@@ -49,6 +49,9 @@ RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 
 
+REVISIONS_SEPARATOR_PATH = "___"
+
+
 def get_conan_user_home():
     tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
     if not os.path.isabs(tmp):
@@ -77,9 +80,10 @@ if is_case_insensitive_os():
                     if item.lower() == part.lower():
                         offending = item
                         break
-                raise ConanException("Requested '%s' but found case incompatible '%s'\n"
-                                     "Case insensitive filesystem can't manage this"
-                                     % (str(conan_reference), offending))
+                if offending:
+                    raise ConanException("Requested '%s' but found case incompatible '%s'\n"
+                                         "Case insensitive filesystem can't manage this"
+                                         % (str(conan_reference), offending))
             tmp = os.path.normpath(tmp + os.sep + part)
 else:
     def _check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
@@ -91,6 +95,7 @@ class SimplePaths(object):
     Generate Conan paths. Handles the conan domain path logic. NO DISK ACCESS, just
     path logic responsability
     """
+
     def __init__(self, store_folder):
         self._store_folder = store_folder
 
@@ -102,7 +107,17 @@ class SimplePaths(object):
         """ the base folder for this package reference, for each ConanFileReference
         """
         assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self._store_folder, "/".join(conan_reference)))
+        if conan_reference.revision:
+            path = "/".join([conan_reference.name,
+                            conan_reference.version,
+                            conan_reference.user,
+                            "%s%s%s" % (conan_reference.channel_without_revision,
+                                        REVISIONS_SEPARATOR_PATH,
+                                        conan_reference.revision)])
+        else:
+            path = "/".join(conan_reference)
+
+        return normpath(join(self._store_folder, path))
 
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -155,9 +170,44 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), PACKAGES_FOLDER))
 
+    def channels_path(self, name, version, user):
+        return normpath(join(self._store_folder, "/".join([name, version, user])))
+
     def package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
 
+    def get_latest_revision_reference(self, conan_reference):
+        if conan_reference.revision is not None:
+            return conan_reference
+        try:
+            path = self.channels_path(conan_reference.name,
+                                      conan_reference.version, conan_reference.user)
+            channels = [channel for channel in os.listdir(path)
+                        if os.path.isdir(join(path, channel)) and
+                           conan_reference.channel_without_revision ==
+                           channel.split(REVISIONS_SEPARATOR_PATH, 1)[0]]
+
+        except OSError:  # if there isn't any package folder
+            channels = []
+
+        max_revision = None
+        for channel in channels:
+            channel = channel.replace(REVISIONS_SEPARATOR_PATH, ConanName.revision_separator)
+            ref = ConanFileReference(conan_reference.name, conan_reference.version,
+                                     conan_reference.user, channel)
+            if not max_revision or (ref.revision is not None and ref.revision > max_revision):
+                max_revision = ref.revision
+
+        if not max_revision:  # There are not references with revisions
+            return conan_reference
+        else:
+            new_channel = "%s%s%s" % (conan_reference.channel_without_revision,
+                                      ConanName.revision_separator,
+                                      max_revision)
+            ref = ConanFileReference(conan_reference.name, conan_reference.version,
+                                     conan_reference.user, new_channel)
+            # self._output.info("Using latest revision '%s'" % str(ref))
+            return ref

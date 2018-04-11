@@ -115,12 +115,12 @@ class ConanService(object):
             {filename: url}
         """
         self._authorizer.check_read_conan(self._auth_user, reference)
-        urls = self._file_manager.get_download_conanfile_urls(reference,
-                                                              files_subset,
-                                                              self._auth_user)
+        reference, urls = self._file_manager.get_download_conanfile_urls(reference,
+                                                                         files_subset,
+                                                                         self._auth_user)
         if not urls:
             raise NotFoundException("conanfile not found")
-        return urls
+        return reference, urls
 
     def get_conanfile_upload_urls(self, reference, filesizes):
         _validate_conan_reg_filenames(list(filesizes.keys()))
@@ -165,9 +165,9 @@ class ConanService(object):
             [filename: {'url': url, 'md5': md5}]
         """
         self._authorizer.check_read_package(self._auth_user, package_reference)
-        urls = self._file_manager.get_download_package_urls(package_reference,
-                                                            files_subset=files_subset)
-        return urls
+        package_reference, urls = self._file_manager.get_download_package_urls(package_reference,
+                                                                               files_subset=files_subset)
+        return package_reference, urls
 
     def get_package_upload_urls(self, package_reference, filesizes):
         """

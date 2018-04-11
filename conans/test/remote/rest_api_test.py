@@ -80,9 +80,7 @@ class RestApiTest(unittest.TestCase):
                           "https://host:1234/subdir/v1/path_to_file.txt")
 
     def server_info_test(self):
-        check, version, capabilities = self.api.server_info()
-        self.assertEquals(version, "0.16.0")
-        self.assertEquals(check, None)  # None because we are not sending client version
+        capabilities = self.api.get_capabilities()
         self.assertEquals(capabilities, ["ImCool"])
 
     def get_conan_test(self):
@@ -91,7 +89,8 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(conan_reference)
 
         # Get the conans
-        urls = self.api.get_recipe_urls(conan_reference)
+        _, urls = self.api.get_recipe_urls(conan_reference)
+
         self.assertIsNotNone(urls)
         self.assertIn(CONANFILE, urls)
         self.assertIn(CONAN_MANIFEST, urls)
@@ -108,7 +107,9 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(conan_reference)
 
         # Get the conans digest
-        digest = self.api.get_conan_manifest(conan_reference)
+        _, digest = self.api.get_conan_manifest(conan_reference)
+
+
         self.assertEquals(digest.summary_hash, "34b389d4abf03f3b240ee4aa7cd9ac49")
         self.assertEquals(digest.time, 123123123)
 
@@ -122,7 +123,8 @@ class RestApiTest(unittest.TestCase):
         self._upload_package(package_reference)
 
         # Get the package
-        urls = self.api.get_package_urls(package_reference)
+        _, urls = self.api.get_package_urls(package_reference)
+
         self.assertIsNotNone(urls)
         self.assertIn("hello.cpp", urls)
 
@@ -165,7 +167,8 @@ class RestApiTest(unittest.TestCase):
             self._upload_recipe(conan_reference, files)
 
             # Get the conans
-            urls = self.api.get_recipe_urls(conan_reference)
+            _, urls = self.api.get_recipe_urls(conan_reference)
+
             self.assertIsNotNone(urls)
             self.assertIn("file999.cpp", urls)
 

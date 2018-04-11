@@ -120,7 +120,8 @@ class CmdUpload(object):
 
     def _check_recipe_date(self, conan_ref):
         try:
-            remote_recipe_manifest = self._remote_proxy.get_conan_manifest(conan_ref)
+            _, remote_recipe_manifest = self._remote_proxy.get_conan_manifest(conan_ref)
+
         except NotFoundException:
             return  # First time uploading this package
 

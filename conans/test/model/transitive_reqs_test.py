@@ -39,7 +39,7 @@ class Retriever(object):
 
     def get_recipe(self, conan_ref):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path
+        return conan_ref, conan_path
 
 
 say_content = """
