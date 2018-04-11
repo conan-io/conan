@@ -171,9 +171,6 @@ class ConanProxy(object):
             log_recipe_got_from_local_cache(local_reference)
             self._recorder.recipe_fetched_from_cache(local_reference)
 
-            log_recipe_got_from_local_cache(conan_reference)
-            self._recorder.recipe_fetched_from_cache(conan_reference)
-
         else:
             local_reference = self._retrieve_recipe(conan_reference, output)
             # The new conan_reference could be a revision one
