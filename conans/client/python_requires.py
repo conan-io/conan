@@ -2,17 +2,16 @@ from conans.model.ref import ConanFileReference
 from conans.client.loader_parse import _parse_file
 import sys
 
-_retriever = None
+_retriever = None # proxy to retrieve recipes
+_modules = {} # Private dict for caching already parsed modules
 
-
-def conan_python_requires(requires):
-    for r in requires:
-        r = ConanFileReference.loads(r)
-        path = _retriever.get_recipe(r)
-        module, path = _parse_file(path)
-        module.kk = False
-        print module
-        print module.__dict__.keys()
-        print path
+def conan_python_require(require):
+    try:
+        return _modules[require]
+    except KeyError:
+        r = ConanFileReference.loads(require)
+        path = _retriever.get_recipe()
+        module, _ = _parse_file(path)
+        _modules[require] = module
         return module
 

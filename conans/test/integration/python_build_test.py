@@ -68,7 +68,7 @@ class PythonExtendTest(unittest.TestCase):
     def reuse_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
-class ToolsTest(ConanFile):
+class MyConanfileBase(ConanFile):
     def source(self):
         self.output.info("My cool source!")
     def build(self):
@@ -79,17 +79,21 @@ class ToolsTest(ConanFile):
         self.output.info("My cool package_info!")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . MyCool/0.1@user/testing")
-        reuse = """from conans import ConanFile
-from conans.client.python_requires import conan_python_requires
-mod = conan_python_requires(["MyCool/0.1@user/testing"])
-class PkgTest(mod.ToolsTest):
+        client.run("create . MyConanfileBase/1.1@user/testing")
+        reuse = """from conans import ConanFile, conan_python_require
+
+base = conan_python_require("MyConanfileBase/1.1@user/testing")
+
+class PkgTest(base.MyConanfileBase):
     pass
 """
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
-        print client.out
+        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
 
 class PythonBuildTest(unittest.TestCase):

@@ -29,16 +29,14 @@ def _parse_module(conanfile_module, filename):
     """
     result = None
     for name, attr in conanfile_module.__dict__.items():
-        print "INSPECTING ", name, attr, type(attr)
-        if name[0] == "_" or getattr(attr, "kk", True):
+        if name[0] == "_":
             continue
-        print "CHECKING ", name, attr, type(attr)
         if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
                 attr.__dict__["__module__"] == filename):
             if result is None:
                 result = attr
-            else:
-                raise ConanException("More than 1 conanfile in the file")
+            #else:
+            #    raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
             registered_generators.add(attr.__name__, attr)

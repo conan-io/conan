@@ -10,10 +10,10 @@ from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.util.files import load
+from conans.client.python_requires import conan_python_require
 
 # complex_search: With ORs and not filtering by not restricted settings
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
 __version__ = '1.3.0-dev'
-
