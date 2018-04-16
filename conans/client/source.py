@@ -82,6 +82,7 @@ def _before_source(conan_file, src_folder, export_folder, export_source_folder, 
         cvs_checkout = conan_file.cvs_checkout
         if cvs_checkout == "source":
             output.warn("Checkout not defined. Copying sources from: %s" % cvs_url)
+            # Maybe this can be avoided and just point source_folder to user folder?
             shutil.copytree(cvs_url, src_folder, symlinks=True)
         else:
             output.info("Getting sources from: %s - %s" % (cvs_url, cvs_checkout))
