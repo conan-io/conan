@@ -506,8 +506,10 @@ class HelloConan(ConanFile):
         ab.configure(args=["--prefix=/my_package_folder"])
         if platform.system() == "Windows":
             self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
+            self.assertNotIn("--prefix=/package_folder", runner.command_called)
         else:
             self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
+            self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
 
     def autotools_configure_vars_test(self):
         from mock import patch
