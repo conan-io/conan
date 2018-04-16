@@ -17,7 +17,6 @@ from uuid import getnode as get_mac
 import hashlib
 from conans.util.log import logger
 from conans.client.cmd.user import update_localdb
-from conans.util.env_reader import get_env
 
 
 def input_credentials_if_unauthorized(func):
@@ -137,20 +136,24 @@ class ConanApiAuthManager(object):
                                                 no_overwrite)
 
     @input_credentials_if_unauthorized
-    def get_conan_digest(self, conan_reference):
-        return self._rest_client.get_conan_digest(conan_reference)
+    def get_conan_manifest(self, conan_reference):
+        return self._rest_client.get_conan_manifest(conan_reference)
 
     @input_credentials_if_unauthorized
-    def get_package_digest(self, package_reference):
-        return self._rest_client.get_package_digest(package_reference)
+    def get_package_manifest(self, package_reference):
+        return self._rest_client.get_package_manifest(package_reference)
 
     @input_credentials_if_unauthorized
-    def get_recipe(self, conan_reference, dest_folder, filter_function):
-        return self._rest_client.get_recipe(conan_reference, dest_folder, filter_function)
+    def get_recipe_urls(self, conan_reference):
+        return self._rest_client.get_recipe_urls(conan_reference)
 
     @input_credentials_if_unauthorized
-    def get_package(self, package_reference, dest_folder):
-        return self._rest_client.get_package(package_reference, dest_folder)
+    def get_package_urls(self, package_reference):
+        return self._rest_client.get_package_urls(package_reference)
+
+    @input_credentials_if_unauthorized
+    def download_files_to_folder(self, urls, dest_folder):
+        return self._rest_client.download_files_to_folder(urls, dest_folder)
 
     @input_credentials_if_unauthorized
     def get_package_info(self, package_reference):

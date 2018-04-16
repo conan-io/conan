@@ -52,15 +52,15 @@ class CompilerArgsGenerator(Generator):
             # Necessary in the "cl" invocation before specify the rest of linker flags
             flags.append(visual_linker_option_separator)
 
-        the_os = self.conanfile.settings.get_safe("os_build") or \
-                 self.conanfile.settings.get_safe("os")
+        the_os = (self.conanfile.settings.get_safe("os_build") or
+                  self.conanfile.settings.get_safe("os"))
         flags.extend(rpath_flags(the_os, self.compiler, self._deps_build_info.lib_paths))
         flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
         flags.extend(format_libraries(self._deps_build_info.libs, compiler=self.compiler))
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
-        flags.extend(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
+        flags.append(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
                                  self.conanfile.settings.get_safe("compiler.version"),
                                  self.conanfile.settings.get_safe("cppstd")))
         sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
