@@ -15,6 +15,76 @@ class InstallUpdateTest(unittest.TestCase):
         self.servers = {"myremote": test_server}
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
+    def update_binaries_test(self):
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+import os, random
+class Pkg(ConanFile):
+    def package(self):
+        save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
+    def deploy(self):
+        self.copy("file.txt")
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . Pkg/0.1@lasote/testing")
+        self.client.run("upload Pkg/0.1@lasote/testing --all -r=myremote")
+
+        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2.run("install Pkg/0.1@lasote/testing")
+        value = load(os.path.join(client2.current_folder, "file.txt"))
+
+        time.sleep(1)  # Make sure the new timestamp is later
+        self.client.run("create . Pkg/0.1@lasote/testing")
+        self.client.run("upload Pkg/0.1@lasote/testing --all")
+
+        client2.run("install Pkg/0.1@lasote/testing")
+        new_value = load(os.path.join(client2.current_folder, "file.txt"))
+        self.assertEqual(value, new_value)
+
+        client2.run("install Pkg/0.1@lasote/testing --update")
+        self.assertIn("Current package is older than remote upstream one", client2.out)
+        new_value = load(os.path.join(client2.current_folder, "file.txt"))
+        self.assertNotEqual(value, new_value)
+
+        # Now check newer local modifications are not overwritten
+        time.sleep(1)  # Make sure the new timestamp is later
+        self.client.run("create . Pkg/0.1@lasote/testing")
+        self.client.run("upload Pkg/0.1@lasote/testing --all")
+
+        client2.save({"conanfile.py": conanfile})
+        client2.run("create . Pkg/0.1@lasote/testing")
+        client2.run("install Pkg/0.1@lasote/testing")
+        value2 = load(os.path.join(client2.current_folder, "file.txt"))
+        client2.run("install Pkg/0.1@lasote/testing --update")
+        self.assertIn("Current package is newer than remote upstream one", client2.out)
+        new_value = load(os.path.join(client2.current_folder, "file.txt"))
+        self.assertEqual(value2, new_value)
+
+    def update_binaries_failed_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("install Pkg/0.1@lasote/testing --update")
+        self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined",
+                      client.out)
+
+    def update_binaries_no_package_error_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("upload Pkg/0.1@lasote/testing")
+        client.run("install Pkg/0.1@lasote/testing --update")
+        self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
+                      client.out)
+
     def update_not_date_test(self):
         # Regression for https://github.com/conan-io/conan/issues/949
         files0 = cpp_hello_conan_files("Hello0", "1.0", build=False)

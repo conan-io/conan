@@ -20,6 +20,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
 from conans.client.source import merge_directories
+from conans.client.package_installer import raise_package_not_found_error
 
 
 class RemoteManager(object):
@@ -208,21 +209,25 @@ class RemoteManager(object):
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
 
-    def get_package(self, package_reference, dest_folder, remote):
-        """
-        Read the conans package from remotes
-        Will iterate the remotes to find the conans unless remote was specified
-
-        returns (dict relative_filepath:abs_path , remote_name)"""
+    def get_package(self, conanfile, package_reference, dest_folder, remote, output):
+        package_id = package_reference.package_id
+        output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
-        urls = self._call_remote(remote, "get_package_urls", package_reference)
-        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
-        duration = time.time() - t1
-        log_package_download(package_reference, duration, remote, zipped_files)
-        unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
-        # Issue #214 https://github.com/conan-io/conan/issues/214
-        touch_folder(dest_folder)
+        try:
+            urls = self._call_remote(remote, "get_package_urls", package_reference)
+            zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
+        except NotFoundException as e:
+            output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
+            raise_package_not_found_error(conanfile, package_reference.conan,
+                                          package_id, output, remote.url)
+        else:
+            duration = time.time() - t1
+            log_package_download(package_reference, duration, remote, zipped_files)
+            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
+            # Issue #214 https://github.com/conan-io/conan/issues/214
+            touch_folder(dest_folder)
+            output.success('Package installed %s' % package_id)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
