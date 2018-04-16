@@ -193,7 +193,7 @@ class Command(object):
                                  '"None" if test stage needs to be disabled')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Optional. Working directory for the build of the test project.')
-        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
+        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
@@ -703,7 +703,7 @@ class Command(object):
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
-        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
+        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
