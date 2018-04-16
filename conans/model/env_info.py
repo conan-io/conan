@@ -153,26 +153,30 @@ class EnvValues(object):
         ret = {}
         ret_multi = {}
         # First process the global variables
-        for package, pairs in self._sorted_data:
-            for name, value in pairs.items():
-                if package is None:
-                    if isinstance(value, list):
-                        ret_multi[name] = value
-                    else:
-                        ret[name] = value
+
+        global_pairs = self._data.get(None)
+        own_pairs = self._data.get(package_name)
+
+        if global_pairs:
+            for name, value in global_pairs.items():
+                if isinstance(value, list):
+                    ret_multi[name] = value
+                else:
+                    ret[name] = value
 
         # Then the package scoped vars, that will override the globals
-        for package, pairs in self._sorted_data:
-            for name, value in pairs.items():
-                if package == package_name:
-                    if isinstance(value, list):
-                        ret_multi[name] = value
-                        if name in ret:  # Already exists a global variable, remove it
-                            del ret[name]
-                    else:
-                        ret[name] = value
-                        if name in ret_multi:  # Already exists a list global variable, remove it
-                            del ret_multi[name]
+        if own_pairs:
+            for name, value in own_pairs.items():
+                if isinstance(value, list):
+                    ret_multi[name] = value
+                    if name in ret:  # Already exists a global variable, remove it
+                        del ret[name]
+                else:
+                    ret[name] = value
+                    if name in ret_multi:  # Already exists a list global variable, remove it
+                        del ret_multi[name]
+
+        # FIXME: This dict is only used doing a ret.update(ret_multi). Unnecessary?
         return ret, ret_multi
 
     def __repr__(self):

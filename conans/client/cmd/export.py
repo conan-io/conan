@@ -2,25 +2,24 @@
 to the local store, as an initial step before building or uploading to remotes
 """
 
-import shutil
 import os
+import shutil
 
-from conans.util.log import logger
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty
-from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.client.output import ScopedOutput
-from conans.client.file_copier import FileCopier
-from conans.model.conan_file import create_exports, create_exports_sources
-from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.export_linter import conan_linter
+from conans.client.file_copier import FileCopier
+from conans.client.loader_parse import load_conanfile_class
+from conans.client.output import ScopedOutput
+from conans.errors import ConanException
+from conans.model.conan_file import create_exports, create_exports_sources
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
+from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
-import subprocess
 from conans.client.tools.files import replace_in_file
 from conans.client.tools.git import git_uncommitted, git_origin, git_branch,\
     git_commit
+from conans.util.files import save, load, rmdir, is_dirty, set_dirty
+from conans.util.log import logger
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,

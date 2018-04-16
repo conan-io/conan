@@ -77,7 +77,7 @@ class ClientCache(SimplePaths):
         if self._no_locks():
             return NoLock()
         return SimpleLock(join(self.conan(package_ref.conan), "locks",
-                                       package_ref.package_id))
+                               package_ref.package_id))
 
     @property
     def put_headers_path(self):
@@ -136,8 +136,8 @@ class ClientCache(SimplePaths):
         if os.path.isabs(self.conan_config.default_profile):
             return self.conan_config.default_profile
         else:
-            return os.path.expanduser(join(self.conan_folder, PROFILES_FOLDER,
-                                                   self.conan_config.default_profile))
+            return join(self.conan_folder, PROFILES_FOLDER,
+                        self.conan_config.default_profile)
 
     @property
     def default_profile(self):
@@ -210,6 +210,7 @@ class ClientCache(SimplePaths):
 
     def load_manifest(self, conan_reference):
         """conan_id = sha(zip file)"""
+        assert isinstance(conan_reference, ConanFileReference)
         filename = self.digestfile_conanfile(conan_reference)
         return FileTreeManifest.loads(load(filename))
 
@@ -225,6 +226,7 @@ class ClientCache(SimplePaths):
         return info.recipe_hash
 
     def conan_manifests(self, conan_reference):
+        assert isinstance(conan_reference, ConanFileReference)
         digest_path = self.digestfile_conanfile(conan_reference)
         if not os.path.exists(digest_path):
             return None, None

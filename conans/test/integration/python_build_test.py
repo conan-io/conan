@@ -65,6 +65,65 @@ class ToolsTest(ConanFile):
 
 class PythonBuildTest(unittest.TestCase):
 
+    def reuse_package_info_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile, tools
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def package_info(self):
+        import mytest
+        mytest.bar(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Bar", client.out)
+
+    def reuse_build_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def build(self):
+        import mytest
+        mytest.foo(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Foo", client.out)
+        self.assertNotIn("WARN: Linter. Line 8: Unable to import 'mytest'", client.out)
+
+    def reuse_source_test(self):
+        # https://github.com/conan-io/conan/issues/2644
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export . lasote/stable")
+        reuse = """from conans import ConanFile
+class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
+    requires = "conantool/1.0@lasote/stable"
+
+    def source(self):
+        import mytest
+        mytest.baz(self.output)
+"""
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("create . conan/testing")
+        self.assertIn("Consumer/0.1@conan/testing: Hello Baz", client.out)
+        self.assertNotIn("WARN: Linter. Line 8: Unable to import 'mytest'", client.out)
+
     def reuse_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -122,6 +181,7 @@ class PythonBuildTest(unittest.TestCase):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
+        self.assertNotIn("Unable to import 'mytest'", client.out)
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]

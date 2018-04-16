@@ -1,4 +1,5 @@
 import unittest
+from conans.tools import environment_append
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -186,6 +187,143 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Package is up to date, upload skipped", client2.out)
 
+    def no_overwrite_argument_collision_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+
+        # Not valid values as arguments
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite kk", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR", client.out)
+
+        # --force not valid with --no-overwrite
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite --force",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: 'no_overwrite' argument cannot be used together with 'force'", client.out)
+
+    def upload_no_overwrite_all_test(self):
+        conanfile_new = """from conans import ConanFile, tools
+class MyPkg(ConanFile):
+    name = "Hello0"
+    version = "1.2.1"
+    exports_sources = "*"
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+
+    def build(self):
+        if tools.get_env("MY_VAR", False):
+            open("file.h", 'w').close()
+
+    def package(self):
+        self.copy("*.h")
+"""
+        client = self._client()
+        client.save({"conanfile.py": conanfile_new,
+                     "hello.h": "",
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # CASE: Upload again
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
+
+        # CASE: Without changes
+        client.run("create . frodo/stable")
+        ## upload recipe and packages
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
+        self.assertIn("Recipe is up to date, upload skipped", client.all_output)
+        self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
+
+        # CASE: When recipe and package changes
+        new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
+                                           "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
+        client.save({"conanfile.py": new_recipe})
+        client.run("create . frodo/stable")
+        ## upload recipe and packages
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Uploading package", client.out)
+
+         # CASE: When package changes
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+        with environment_append({"MY_VAR": "True"}):
+            client.run("create . frodo/stable")
+        ## upload recipe and packages
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("ERROR: Local package is different from the remote package", client.out)
+        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
+
+    def upload_no_overwrite_recipe_test(self):
+        conanfile_new = """from conans import ConanFile, tools
+class MyPkg(ConanFile):
+    name = "Hello0"
+    version = "1.2.1"
+    exports_sources = "*"
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+
+    def build(self):
+        if tools.get_env("MY_VAR", False):
+            open("file.h", 'w').close()
+
+    def package(self):
+        self.copy("*.h")
+"""
+        client = self._client()
+        client.save({"conanfile.py": conanfile_new,
+                     "hello.h": "",
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # Upload again
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
+
+        # Create without changes
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
+
+        # Create with recipe and package changes
+        new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
+                                           "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
+        client.save({"conanfile.py": new_recipe})
+        client.run("create . frodo/stable")
+        ## upload recipe and packages
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Uploading package", client.out)
+
+        # Create with package changes
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+        with environment_append({"MY_VAR": "True"}):
+            client.run("create . frodo/stable")
+        ## upload recipe and packages
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
+
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
         """
@@ -241,3 +379,51 @@ class Pkg(ConanFile):
         client2.run("upload * --all --confirm -r=server2")
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
+
+    def upload_login_prompt_disabled_no_user_test(self):
+        """ Without user info, uploads should fail when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.non_interactive=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        error = client.run("upload Hello0/1.2.1@user/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertNotIn("Uploading conanmanifest.txt", client.out)
+        self.assertNotIn("Uploading conanfile.py", client.out)
+        self.assertNotIn("Uploading conan_export.tgz", client.out)
+        
+    def upload_login_prompt_disabled_user_not_authenticated_test(self):
+        """ When a user is not authenticated, uploads should fail when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.non_interactive=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        client.run("user lasote")
+        error = client.run("upload Hello0/1.2.1@user/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertNotIn("Uploading conanmanifest.txt", client.out)
+        self.assertNotIn("Uploading conanfile.py", client.out)
+        self.assertNotIn("Uploading conan_export.tgz", client.out)
+        
+    def upload_login_prompt_disabled_user_authenticated_test(self):
+        """ When a user is authenticated, uploads should work even when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.non_interactive=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        client.run("user lasote -p mypass")
+        client.run("upload Hello0/1.2.1@user/testing")
+        self.assertIn("Uploading conanmanifest.txt", client.out)
+        self.assertIn("Uploading conanfile.py", client.out)
+        self.assertIn("Uploading conan_export.tgz", client.out)

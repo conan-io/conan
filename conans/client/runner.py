@@ -7,7 +7,6 @@ from conans.errors import ConanException
 import six
 
 
-
 class ConanRunner(object):
 
     def __init__(self, print_commands_to_output=False, generate_run_log_file=False, log_run_to_output=True):
@@ -24,8 +23,8 @@ class ConanRunner(object):
         """
         if output and isinstance(output, io.StringIO) and six.PY2:
             # in py2 writing to a StringIO requires unicode, otherwise it fails
-            raise Exception("Invalid output parameter of type io.StringIO(), "
-                            "use six.StringIO() instead")
+            print("*** WARN: Invalid output parameter of type io.StringIO(), "
+                  "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else sys.stdout
 

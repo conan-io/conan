@@ -169,6 +169,7 @@ class CMake(object):
         if self._cmake_system_name is False:
             return ret
 
+        # System name and system version
         if self._cmake_system_name is not True:  # String not empty
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
@@ -177,15 +178,19 @@ class CMake(object):
                 if self._os != self._os_build:
                     if self._os:  # the_os is the host (regular setting)
                         ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
-                                                                          "watchOS"] else self._os
+                                                                            "watchOS"] else self._os
                         if os_ver:
                             ret["CMAKE_SYSTEM_VERSION"] = os_ver
                     else:
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
 
+        # system processor
+        cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR", None)
+        if cmake_system_processor:
+            ret["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
+
         if ret:  # If enabled cross compile
-            for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
-                            "CONAN_CMAKE_FIND_ROOT_PATH",
+            for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"]:
