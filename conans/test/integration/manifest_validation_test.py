@@ -235,7 +235,6 @@ class ConanFileTest(ConanFile):
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         save(client.paths.digestfile_package(package_reference), str(manifest))
 
-        manifest = FileTreeManifest.loads(load(os.path.join(package_folder, CONAN_MANIFEST)))
         client.run("upload %s --all" % str(self.reference))
 
         # now verify, with update

@@ -11,9 +11,10 @@ from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_N
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import rmdir, mkdir
+from conans.util.files import mkdir, rmdir
 from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
+from conans.util.tracer import log_recipe_got_from_local_cache,\
+    log_package_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -105,8 +106,8 @@ class ConanProxy(object):
         self.handle_package_manifest(package_ref, installed)
         return installed
 
-    def handle_package_manifest(self, package_ref, installed):
-        if installed and self._manifest_manager:
+    def handle_package_manifest(self, package_ref):
+        if self._manifest_manager:
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
@@ -389,28 +390,4 @@ class ConanProxy(object):
             package_ref = PackageReference(reference, package_id)
             package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
             self._out.info("Downloading %s" % str(package_ref))
-            self._retrieve_remote_package(package_ref, package_folder, output, remote)
-
-    def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):
-
-        if remote is None:
-            remote = self._registry.get_ref(package_ref.conan)
-        if not remote:
-            output.warn("Package doesn't have a remote defined. "
-                        "Probably created locally and not uploaded")
-            return False
-        package_id = str(package_ref.package_id)
-        try:
-            output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
-            # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_ref, package_folder, remote)
-            output.success('Package installed %s' % package_id)
-            self._recorder.package_downloaded(package_ref, remote.url)
-
-            return True
-        except NotFoundException as e:
-            msg = 'Binary for %s not in remote: %s' % (package_id, str(e))
-            output.warn(msg)
-            self._recorder.package_install_error(package_ref, INSTALL_ERROR_MISSING, msg,
-                                                 remote.url)
-            return False
+            self._remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)
