@@ -76,7 +76,7 @@ def _normal_linter(conanfile_path, hook):
             return False
         if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False
-        if symbol == "import-error" and msg.get("line") > 5:  # Import of a conan python package
+        if symbol == "import-error" and msg.get("column") > 3:  # Import of a conan python package
             return False
 
         return True
