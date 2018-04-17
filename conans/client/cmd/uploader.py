@@ -5,7 +5,6 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
-from conans.client.proxy import ConanProxy
 from conans.search.search import DiskSearchManager
 
 
@@ -20,11 +19,10 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, remote, recorder):
+    def __init__(self, client_cache, user_io, remote_proxy):
         self._client_cache = client_cache
         self._user_io = user_io
-        self._remote_proxy = ConanProxy(self._client_cache, self._user_io, remote_manager, remote,
-                                        recorder)
+        self._remote_proxy = remote_proxy
         self._cache_search = DiskSearchManager(self._client_cache)
 
     def upload(self, conan_reference_or_pattern, package_id=None, all_packages=None,
@@ -120,7 +118,7 @@ class CmdUpload(object):
 
     def _check_recipe_date(self, conan_ref):
         try:
-            remote_recipe_manifest = self._remote_proxy.get_conan_digest(conan_ref)
+            remote_recipe_manifest = self._remote_proxy.get_conan_manifest(conan_ref)
         except NotFoundException:
             return  # First time uploading this package
 

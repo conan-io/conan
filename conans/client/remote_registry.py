@@ -19,6 +19,7 @@ class RemoteRegistry(object):
     def __init__(self, filename, output):
         self._filename = filename
         self._output = output
+        self._remotes = None
 
     def _parse(self, contents):
         remotes = OrderedDict()
@@ -75,29 +76,34 @@ class RemoteRegistry(object):
     def default_remote(self):
         try:
             return self.remotes[0]
-        except:
+        except IndexError:
             raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
 
     @property
     def remotes(self):
-        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            remotes, _ = self._load()
-            return [Remote(ref, remote, verify_ssl) for ref, (remote, verify_ssl) in remotes.items()]
+        return list(self._remote_dict.values())
+
+    def remote(self, name):
+        try:
+            return self._remote_dict[name]
+        except KeyError:
+            raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
+                                    % (name, self._filename))
+
+    @property
+    def _remote_dict(self):
+        if self._remotes is None:
+            with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
+                remotes, _ = self._load()
+                self._remotes = OrderedDict([(ref, Remote(ref, remote, verify_ssl))
+                                             for ref, (remote, verify_ssl) in remotes.items()])
+        return self._remotes
 
     @property
     def refs(self):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             _, refs = self._load()
             return refs
-
-    def remote(self, name):
-        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            remotes, _ = self._load()
-            try:
-                return Remote(name, remotes[name][0], remotes[name][1])
-            except KeyError:
-                raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
-                                        % (name, self._filename))
 
     def get_ref(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
@@ -157,6 +163,7 @@ class RemoteRegistry(object):
         self._add_update(remote_name, remote, verify_ssl, exists_function, insert)
 
     def remove(self, remote_name):
+        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             if remote_name not in remotes:
@@ -172,6 +179,7 @@ class RemoteRegistry(object):
         self._add_update(remote_name, remote, verify_ssl, exists_function, insert)
 
     def define_remotes(self, remotes):
+        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             _, refs = self._load()
             new_remotes = OrderedDict()
@@ -181,7 +189,7 @@ class RemoteRegistry(object):
             self._save(new_remotes, refs)
 
     def _add_update(self, remote_name, remote, verify_ssl, exists_function, insert=None):
-
+        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             exists_function(remotes)
