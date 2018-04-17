@@ -158,8 +158,8 @@ class Command(object):
         """Test a package consuming it from a conanfile.py with a test() method. This command
         installs the conanfile dependencies (including the tested package), calls a 'conan build' to
         build test apps and finally executes the test() method. The testing recipe does not require
-        name orversion, neither definition of package() or package_info() methods. The package to be
-        tested must exist in the local cache or in any configured remote.
+        name or version, neither definition of package() or package_info() methods. The package to
+        be tested must exist in the local cache or in any configured remote.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
@@ -177,15 +177,15 @@ class Command(object):
                                 build_modes=args.build, test_build_folder=args.test_build_folder)
 
     def create(self, *args):
-        """Builds a binary package for a conanfile.py. Uses the specified configuration in a
-        profile or in -s settings, -o options etc. If a 'test_package' folder (the name can be
+        """Builds a binary package for a recipe (conanfile.py). Uses the specified configuration in
+        a profile or in -s settings, -o options etc. If a 'test_package' folder (the name can be
         configured with -tf) is found, the command will run the consumer project to ensure that the
         package has been created correctly. Check 'conan test' command to know more about
         'test_folder' project.
         """
         parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("scope_or_reference",
+        parser.add_argument("reference",
                             help='user/channel or pkg/version@user/channel (if name and version not'
                             ' declared in conanfile.py) where the pacakage will be created')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -208,7 +208,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        name, version, user, channel = get_reference_fields(args.scope_or_reference)
+        name, version, user, channel = get_reference_fields(args.reference)
 
         if args.test_folder == "None":
             # Now if parameter --test-folder=None (string None) we have to skip tests
@@ -232,7 +232,7 @@ class Command(object):
         """Downloads recipe and binaries to the local cache, without using settings. It works
         specifying the recipe reference and package ID to be installed. Not transitive, requirements
         of the specified reference will NOT be retrieved. Useful together with 'conan copy' to
-        automate the promotion of packages to a different scope (user/channel). Only if a reference
+        automate the promotion of packages to a different user/channel. Only if a reference
         is specified, it will download all packages from the specified remote. Otherwise, it will
         search sequentially in the configured remotes.
         """
@@ -600,15 +600,15 @@ class Command(object):
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports a recipe & creates a package with given files calling 'conan package'. It
-        executes the package() method applied to the local folders '--source-folder' and
-        '--build-folder' and creates a new package in the local cache for the specified 'reference'
-        and for the specified '--settings', '--options' and or '--profile'.
+        """Exports a recipe & creates a package with given files calling the package() method
+        applied to the local folders '--source-folder' and '--build-folder' and creates a new
+        package in the local cache for the specified 'reference' and for the specified '--settings',
+        '--options' and or '--profile'.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("scope_or_reference", help="user/channel or pkg/version@user/channel "
+        parser.add_argument("reference", help="user/channel or pkg/version@user/channel "
                                                       "(if name and version are not declared in the"
                                                       " conanfile.py)")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
@@ -634,7 +634,7 @@ class Command(object):
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
 
         args = parser.parse_args(*args)
-        name, version, user, channel = get_reference_fields(args.scope_or_reference)
+        name, version, user, channel = get_reference_fields(args.reference)
 
         return self._conan.export_pkg(conanfile_path=args.path,
                                       name=name,
@@ -658,13 +658,13 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("scope_or_reference", help="user/channel, or Pkg/version@user/channel "
+        parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel "
                                                       "(if name and version are not declared in the"
                                                       "conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         args = parser.parse_args(*args)
-        name, version, user, channel = get_reference_fields(args.scope_or_reference)
+        name, version, user, channel = get_reference_fields(args.reference)
 
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
@@ -717,7 +717,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
                             help='package reference. e.g., MyPackage/1.2@user/channel')
-        parser.add_argument("scope", default="",
+        parser.add_argument("user_channel", default="",
                             help='Destination user/channel. e.g., lasote/testing')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
                             help='copy specified package ID')
@@ -730,9 +730,8 @@ class Command(object):
         if args.all and args.package:
             raise ConanException("Cannot specify both --all and --package")
 
-        return self._conan.copy(reference=args.reference, user_channel=args.scope,
-                                force=args.force,
-                                packages=args.package or args.all)
+        return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
+                                force=args.force, packages=args.package or args.all)
 
     def user(self, *parameters):
         """Authenticates against a remote with user/pass, caching the auth token. Useful to avoid
