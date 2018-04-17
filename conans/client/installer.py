@@ -226,7 +226,7 @@ class ConanInstaller(object):
         self._built_packages = set()  # To avoid re-building twice the same package reference
         self._recorder = recorder
 
-    def install(self, deps_graph, profile_build_requires, keep_build=False):
+    def install(self, deps_graph, profile_build_requires, keep_build=False, update=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         t1 = time.time()
@@ -243,7 +243,7 @@ class ConanInstaller(object):
         # Get the nodes in order and if we have to build them
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
         self._build(nodes_to_process, deps_graph, skip_private_nodes, profile_build_requires, keep_build,
-                    root_conanfile)
+                    root_conanfile, update)
         logger.debug("Install-build %s", (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -288,7 +288,7 @@ class ConanInstaller(object):
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
     def _build(self, nodes_to_process, deps_graph, skip_nodes, profile_build_requires, keep_build,
-               root_conanfile):
+               root_conanfile, update):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
@@ -311,7 +311,7 @@ class ConanInstaller(object):
                 self._build_package(conan_file, conan_ref, package_id, package_ref, output,
                                     keep_build, profile_build_requires, flat, deps_graph)
             else:
-                self._get_existing_package(conan_file, package_ref, output, package_folder)
+                self._get_existing_package(conan_file, package_ref, output, package_folder, update)
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
             # Call the info method
@@ -374,10 +374,10 @@ class ConanInstaller(object):
                     self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
                     self._built_packages.add((conan_ref, package_id))
 
-    def _get_existing_package(self, conan_file, package_reference, output, package_folder):
+    def _get_existing_package(self, conan_file, package_reference, output, package_folder, update):
         with self._client_cache.package_lock(package_reference):
             installed = get_package(conan_file, package_reference, package_folder, output,
-                                    self._recorder, self._remote_proxy)
+                                    self._recorder, self._remote_proxy, update=update)
             self._remote_proxy.handle_package_manifest(package_reference)
             if installed:
                 _handle_system_requirements(conan_file, package_reference,
