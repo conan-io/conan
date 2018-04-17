@@ -47,11 +47,12 @@ class DownloadTest(unittest.TestCase):
         package_ref = PackageReference(conan_ref, "123123123")
         installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager,
                                "default", recorder=ActionRecorder())
+        package_folder = client2.client_cache.package(package_ref)
 
         with self.assertRaises(NotFoundException):
             installer.get_recipe(conan_ref)
 
-        self.assertFalse(installer.package_available(package_ref, False, True))
+        self.assertFalse(installer.package_available(package_ref, package_folder, True))
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
@@ -69,7 +70,7 @@ class DownloadTest(unittest.TestCase):
             pass
 
         try:
-            installer.package_available(package_ref, False, True)
+            installer.package_available(package_ref, package_folder, True)
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:
