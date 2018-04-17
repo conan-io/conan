@@ -60,8 +60,12 @@ _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildin
                         "(from previous 'conan install'). Defaulted to --build-folder")
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache. Use this for testing purposes"
                      " only")
+_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., 'boost/*', "
+                              "'MyPackage/1.2@user/channel'")
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
+_QUERY_HELP = ("Packages query: 'os=Windows AND (arch=x86 OR compiler=gcc)'. The "
+               "'pattern_or_reference' parameter has to be a reference: MyPackage/1.2@user/channel")
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
                        " relative path to current directory can also be specified")
 
@@ -187,14 +191,14 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
                             help='user/channel or pkg/version@user/channel (if name and version not'
-                            ' declared in conanfile.py) where the pacakage will be created')
+                                 ' declared in conanfile.py) where the pacakage will be created')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
                             help='Do not remove the build folder in local cache. Use this for '
-                            'testing purposes only')
+                                 'testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -609,8 +613,8 @@ class Command(object):
                                          prog="conan export-pkg")
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help="user/channel or pkg/version@user/channel "
-                                                      "(if name and version are not declared in the"
-                                                      " conanfile.py)")
+                                              "(if name and version are not declared in the "
+                                              "conanfile.py)")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-e", "--env", nargs=1, action=Extender,
                             help='Environment variables that will be set during the package build, '
@@ -658,9 +662,8 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel "
-                                                      "(if name and version are not declared in the"
-                                                      "conanfile.py")
+        parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel (if name "
+                                              "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         args = parser.parse_args(*args)
@@ -671,12 +674,12 @@ class Command(object):
                                   keep_source=args.keep_source)
 
     def remove(self, *args):
-        """Removes all packages or binaries matching pattern from local cache or remote.
-        It can also be used to remove temporary source or build folders in the local conan cache.
-        If no remote is specified, the removal will be done by default in the local conan cache.
+        """Removes packages or binaries matching pattern from local cache or remote. It can also be
+        used to remove temporary source or build folders in the local conan cache. If no remote is
+        specified, the removal will be done by default in the local conan cache.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
-        parser.add_argument('pattern', help='Pattern name. e.g., boost/*')
+        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-b', '--builds', nargs="*", action=Extender,
                             help=("By default, remove all the build folders or select one, "
                                   "specifying the package ID"))
@@ -686,19 +689,14 @@ class Command(object):
                             help="Remove only outdated from recipe packages")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Select package to remove specifying the package ID")
-        parser.add_argument('-q', '--query', default=None, action=OnceArgument,
-                            help='Packages query: "os=Windows AND '
-                                 '(arch=x86 OR compiler=gcc)".'
-                                 ' The "pattern" parameter '
-                                 'has to be a package recipe '
-                                 'reference: MyPackage/1.2'
-                                 '@user/channel')
+        parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
         args = parser.parse_args(*args)
-        reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
+        reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
+                                                                  args.query)
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -775,17 +773,10 @@ class Command(object):
         Windows, case sensitive search can be forced with '--case-sensitive'.
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
-        parser.add_argument('pattern_or_reference', nargs='?',
-                            help='Pattern name (boost/*) or reference (pkg/0.1@user/channel)')
+        parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
                             help='Show only outdated from recipe packages')
-        parser.add_argument('-q', '--query', default=None, action=OnceArgument,
-                            help='Packages query: "os=Windows AND '
-                                 '(arch=x86 OR compiler=gcc)".'
-                                 ' The "pattern" parameter '
-                                 'has to be a package recipe '
-                                 'reference: MyPackage/1.2'
-                                 '@user/channel')
+        parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help="Remote to search in. '-r all' searches all remotes")
         parser.add_argument('--case-sensitive', default=False, action='store_true',
@@ -829,8 +820,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
-        parser.add_argument('pattern_or_reference', help='Pattern or package recipe reference, '
-                                            'e.g., "boost/*", "MyPackage/1.2@user/channel"')
+        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument("-p", "--package", default=None, action=OnceArgument,
                             help='package ID to upload')
         parser.add_argument("-r", "--remote", action=OnceArgument,
