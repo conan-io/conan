@@ -380,13 +380,12 @@ class ConanInstaller(object):
                 self._built_packages.add((conan_ref, package_id))
 
     def _get_existing_package(self, conan_file, package_reference, output, package_folder, update):
-        with self._client_cache.package_lock(package_reference):
-            installed = get_package(conan_file, package_reference, package_folder, output,
-                                    self._recorder, self._remote_proxy, update=update)
-            self._remote_proxy.handle_package_manifest(package_reference)
-            if installed:
-                _handle_system_requirements(conan_file, package_reference,
-                                            self._client_cache, output)
+        installed = get_package(conan_file, package_reference, package_folder, output,
+                                self._recorder, self._remote_proxy, update=update)
+        self._remote_proxy.handle_package_manifest(package_reference)
+        if installed:
+            _handle_system_requirements(conan_file, package_reference,
+                                        self._client_cache, output)
 
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)
