@@ -17,7 +17,6 @@ from conans.client.output import ScopedOutput, Color
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
-from conans.client.remote_registry import RemoteRegistry
 from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source_local
@@ -183,7 +182,7 @@ class ConanManager(object):
             _load_deps_info(install_folder, conanfile, required=True)
 
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
-        deps_graph = graph_builder.load(conanfile)
+        deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False)
 
         # this is a bit tricky, but works. The loading of a cache package makes the referenced
         # one, the first of the first level, always existing
@@ -227,7 +226,7 @@ class ConanManager(object):
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        remote_proxy.get_recipe(reference)
+        remote_proxy.get_recipe(reference, check_updates=True, update=True)
 
         if recipe:
             return
@@ -362,8 +361,6 @@ class ConanManager(object):
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load_graph(conanfile, False, update)
 
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput(("%s (test package)" % str(inject_require)) if inject_require else "PROJECT",
                                   self._user_io.out)
@@ -371,7 +368,7 @@ class ConanManager(object):
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.highlight("Installing package")
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
+        Printer(self._user_io.out).print_graph(deps_graph, self._registry)
 
         try:
             if cross_building(loader._settings):
@@ -382,13 +379,13 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry)
+        build_requires = BuildRequires(loader, graph_builder, self._registry)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires, recorder=self._recorder)
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
-            build_requires.install("", conanfile, installer, profile.build_requires, output)
+            build_requires.install("", conanfile, installer, profile.build_requires, output, update)
 
         installer.install(deps_graph, profile.build_requires, keep_build)
         build_mode.report_matches()
@@ -529,7 +526,8 @@ class ConanManager(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
         remote_proxy = self.get_proxy(remote_name=remote_name)
-        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy,
+                               self._registry)
         remover.remove(pattern, remote_name, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 

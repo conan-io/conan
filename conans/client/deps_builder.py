@@ -339,7 +339,7 @@ class DepsGraphBuilder(object):
                 # maybe we could move these functionality to here and build only the graph
                 # with the nodes to be took in account
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
-                                                 check_updates, update, aliased)
+                                                 aliased, check_updates, update)
                 # RECURSION!
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
                                 new_options, new_loop_ancestors, aliased, check_updates, update)
@@ -451,7 +451,8 @@ class DepsGraphBuilder(object):
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
-                                         name_req, aliased, alias_ref=alias_reference)
+                                         name_req, aliased, check_updates, update,
+                                         alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)

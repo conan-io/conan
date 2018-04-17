@@ -515,7 +515,7 @@ class ConanAPIV1(object):
                        profile_name=None, update=False, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        ret = self._manager.info_get_graph(reference, remote=remote, profile=profile,
+        ret = self._manager.info_get_graph(reference, remote_name=remote, profile=profile,
                                            check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
@@ -621,7 +621,7 @@ class ConanAPIV1(object):
 
     @api_method
     def user_set(self, user, remote_name=None):
-        return user_set(self._client_cache, self._user_io.out, user, remote_name)
+        return user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
 
     @api_method
     def users_clean(self):
@@ -629,18 +629,18 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        users = users_list(self._client_cache, self._user_io.out, remote)
+        users = users_list(self._client_cache, self._registry, remote)
         for remote_name, username in users:
             self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_recipes(pattern, remote, case_sensitive)
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_packages(reference, remote, query=query,
                                       outdated=outdated)
 

@@ -10,16 +10,15 @@ from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_N
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import mkdir, rmdir
+from conans.util.files import mkdir
 from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache,\
-    log_package_got_from_local_cache
+from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
     """ Class to access the conan storage, to perform typical tasks as to get packages,
     getting conanfiles, uploading, removing from remote, etc.
-    It uses the RemoteRegistry to control where the packages come from.
+    It uses the registry to control where the packages come from.
     """
     def __init__(self, client_cache, user_io, remote_manager, remote_name, recorder, registry,
                  manifest_manager=False):

@@ -309,7 +309,7 @@ class ConanInstaller(object):
 
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 self._build_package(conan_file, conan_ref, package_id, package_ref, output,
-                                    keep_build, profile_build_requires, flat, deps_graph)
+                                    keep_build, profile_build_requires, flat, deps_graph, update)
             else:
                 self._get_existing_package(conan_file, package_ref, output, package_folder, update)
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
@@ -321,7 +321,7 @@ class ConanInstaller(object):
         self._propagate_info(root_conanfile, None, flat, deps_graph)
 
     def _build_package(self, conan_file, conan_ref, package_id, package_ref, output, keep_build,
-                       profile_build_requires, flat, deps_graph):
+                       profile_build_requires, flat, deps_graph, update):
         build_allowed = self._build_mode.allowed(conan_file, conan_ref)
         if not build_allowed:
             raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
@@ -337,7 +337,7 @@ class ConanInstaller(object):
 
         if not skip_build:
             self._build_requires.install(conan_ref, conan_file, self,
-                                         profile_build_requires, output)
+                                         profile_build_requires, output, update)
 
         # It is important that it is done AFTER build_requires install
         self._propagate_info(conan_file, conan_ref, flat, deps_graph)
