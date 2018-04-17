@@ -5,34 +5,32 @@ from requests.exceptions import RequestException
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
-from conans.client.remote_registry import RemoteRegistry
 from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import mkdir, rmdir
+from conans.util.files import mkdir
 from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache,\
-    log_package_got_from_local_cache
+from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
     """ Class to access the conan storage, to perform typical tasks as to get packages,
     getting conanfiles, uploading, removing from remote, etc.
-    It uses the RemoteRegistry to control where the packages come from.
+    It uses the registry to control where the packages come from.
     """
-    def __init__(self, client_cache, user_io, remote_manager, remote_name, recorder,
-                 update=False, check_updates=False, manifest_manager=False):
+    def __init__(self, client_cache, user_io, remote_manager, remote_name, recorder, registry,
+                 manifest_manager=False):
+        # collaborators
         self._client_cache = client_cache
         self._out = user_io.out
         self._remote_manager = remote_manager
-        self._registry = RemoteRegistry(self._client_cache.registry, self._out)
-        self._remote_name = remote_name
-        self._update = update
-        self._check_updates = check_updates or update  # Update forces check (and of course the update)
+        self._registry = registry
         self._manifest_manager = manifest_manager
         self._recorder = recorder
+        # inputs
+        self._remote_name = remote_name
 
     @property
     def registry(self):
@@ -90,24 +88,24 @@ class ConanProxy(object):
             self._remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
                                                     current_remote)
 
-    def get_recipe(self, conan_reference):
+    def get_recipe(self, conan_reference, check_updates, update):
         with self._client_cache.conanfile_write_lock(conan_reference):
-            result = self._get_recipe(conan_reference)
+            result = self._get_recipe(conan_reference, check_updates, update)
         return result
 
-    def _get_recipe(self, conan_reference):
+    def _get_recipe(self, conan_reference, check_updates, update):
         output = ScopedOutput(str(conan_reference), self._out)
-
+        check_updates = check_updates or update
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(conan_reference)
 
         if os.path.exists(conanfile_path):
-            if self._check_updates:
+            if check_updates:
                 ret = self.update_available(conan_reference)
                 if ret != 0:  # Found and not equal
                     remote, ref_remote = self._get_remote(conan_reference)
                     if ret == 1:
-                        if not self._update:
+                        if not update:
                             if remote != ref_remote:  # Forced new remote
                                 output.warn("There is a new conanfile in '%s' remote. "
                                             "Execute 'install -u -r %s' to update it."
@@ -124,7 +122,7 @@ class ConanProxy(object):
 
                             output.info("Updated!")
                     elif ret == -1:
-                        if not self._update:
+                        if not update:
                             output.info("Current conanfile is newer than %s's one" % remote.name)
                         else:
                             output.error("Current conanfile is newer than %s's one. "

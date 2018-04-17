@@ -1,22 +1,20 @@
 from conans.search.search import DiskSearchManager, filter_outdated
 from collections import OrderedDict
-from conans.client.remote_registry import RemoteRegistry
 
 
 class Search(object):
-    def __init__(self, client_cache, remote_manager, user_io):
+    def __init__(self, client_cache, remote_manager, remote_registry):
         self._client_cache = client_cache
         self._remote_manager = remote_manager
-        self._user_io = user_io
+        self._registry = remote_registry
 
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         ignorecase = not case_sensitive
         if not remote:
             return DiskSearchManager(self._client_cache).search_recipes(pattern, ignorecase)
 
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if remote == 'all':
-            remotes = registry.remotes
+            remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
@@ -27,10 +25,10 @@ class Search(object):
                         references[remote.name] = result
                 return references
         # single remote
-        remote = registry.remote(remote)
+        remote = self._registry.remote(remote)
         return self._remote_manager.search_recipes(remote, pattern, ignorecase)
 
-    def search_packages(self, reference=None, remote=None, query=None, outdated=False):
+    def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -40,8 +38,8 @@ class Search(object):
                 packages_pattern = String query with binary
                                    packages properties: "arch=x86 AND os=Windows"
         """
-        if remote:
-            remote = RemoteRegistry(self._client_cache.registry, self._user_io.out).remote(remote)
+        if remote_name:
+            remote = self._registry.remote(remote_name)
             packages_props = self._remote_manager.search_packages(remote, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
             manifest = self._remote_manager.get_conan_manifest(reference, remote)

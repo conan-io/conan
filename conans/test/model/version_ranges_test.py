@@ -106,7 +106,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref):
+    def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariables
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
@@ -187,7 +187,7 @@ class SayConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(root_conan)
+        deps_graph = self.builder.load_graph(root_conan, False, False)
         return deps_graph
 
     def test_local_basic(self):

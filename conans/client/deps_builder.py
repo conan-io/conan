@@ -263,7 +263,8 @@ class DepsGraphBuilder(object):
         return {conan_reference: self._retriever.update_available(conan_reference)
                 for conan_reference, _ in deps_graph.nodes}
 
-    def load(self, conanfile):
+    def load_graph(self, conanfile, check_updates, update):
+        check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         root_node = Node(None, conanfile)
@@ -274,7 +275,7 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         loop_ancestors = []
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
-                        loop_ancestors, aliased)
+                        loop_ancestors, aliased, check_updates, update)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.propagate_info()
@@ -305,7 +306,7 @@ class DepsGraphBuilder(object):
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
-                   loop_ancestors, aliased):
+                   loop_ancestors, aliased, check_updates, update):
         """ loads a Conan object from the given file
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
@@ -337,10 +338,11 @@ class DepsGraphBuilder(object):
                 # we could not download the private dep. See installer _compute_private_nodes
                 # maybe we could move these functionality to here and build only the graph
                 # with the nodes to be took in account
-                new_node = self._create_new_node(node, dep_graph, require, public_deps, name, aliased)
+                new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
+                                                 aliased, check_updates, update)
                 # RECURSION!
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options, new_loop_ancestors, aliased)
+                                new_options, new_loop_ancestors, aliased, check_updates, update)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
@@ -360,7 +362,7 @@ class DepsGraphBuilder(object):
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                    new_options, new_loop_ancestors, aliased)
+                                    new_options, new_loop_ancestors, aliased, check_updates, update)
 
     def _recurse(self, closure, new_reqs, new_options):
         """ For a given closure, if some requirements or options coming from downstream
@@ -436,10 +438,10 @@ class DepsGraphBuilder(object):
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req, aliased,
-                         alias_ref=None):
+                         check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
+        conanfile_path = self._retriever.get_recipe(requirement.conan_reference, check_updates, update)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
@@ -449,7 +451,8 @@ class DepsGraphBuilder(object):
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
-                                         name_req, aliased, alias_ref=alias_reference)
+                                         name_req, aliased, check_updates, update,
+                                         alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)
