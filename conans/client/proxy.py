@@ -11,10 +11,9 @@ from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_N
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import mkdir, rmdir
+from conans.util.files import mkdir
 from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache,\
-    log_package_got_from_local_cache
+from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -38,15 +37,13 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def package_available(self, package_ref, short_paths, check_outdated):
+    def package_available(self, package_ref, package_folder, check_outdated):
         """
         Returns True if there is a local or remote package available (and up to date if check_outdated).
         It wont download the package, just check its hash
         """
 
         output = ScopedOutput(str(package_ref.conan), self._out)
-        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-
         remote_info = None
         # No package in local cache
         if not os.path.exists(package_folder):

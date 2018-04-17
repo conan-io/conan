@@ -69,6 +69,7 @@ class ClientCache(SimplePaths):
         return WriteLock(self.conan(conan_ref), conan_ref, self._output)
 
     def conanfile_lock_files(self, conan_ref):
+        # Used in ConanRemover
         if self._no_locks():
             return ()
         return WriteLock(self.conan(conan_ref), conan_ref, self._output).files
