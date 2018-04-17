@@ -322,10 +322,10 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                                    "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True AND nonexistant_option=3'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["PlatformIndependantSHA",
