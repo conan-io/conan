@@ -184,7 +184,6 @@ class RemoteRegistry(object):
             _, refs = self._load()
             new_remotes = OrderedDict()
             for remote in remotes:
-                print remote, type(remote)
                 new_remotes[remote.name] = (remote.url, remote.verify_ssl)
             refs = {k: v for k, v in refs.items() if v in new_remotes}
             self._save(new_remotes, refs)
