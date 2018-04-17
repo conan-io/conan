@@ -37,7 +37,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref):
+    def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariable
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
@@ -135,7 +135,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(root_conan)
+        deps_graph = self.builder.load_graph(root_conan, False, False)
         return deps_graph
 
     def test_basic(self):
@@ -1632,7 +1632,7 @@ class CoreSettingsTest(unittest.TestCase):
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
-        deps_graph = builder.load(root_conan)
+        deps_graph = builder.load_graph(root_conan, False, False)
         return deps_graph
 
     def test_basic(self):
@@ -1920,7 +1920,7 @@ class ChatConan(ConanFile):
         retriever.conan(hello_ref, hello_content)
 
         root_conan = retriever.root(chat_content)
-        deps_graph = builder.load(root_conan)
+        deps_graph = builder.load_graph(root_conan, False, False)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
