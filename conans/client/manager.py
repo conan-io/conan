@@ -387,7 +387,7 @@ class ConanManager(object):
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer, profile.build_requires, output, update)
 
-        installer.install(deps_graph, profile.build_requires, keep_build)
+        installer.install(deps_graph, profile.build_requires, keep_build, update=update)
         build_mode.report_matches()
 
         if install_folder:

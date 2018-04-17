@@ -337,7 +337,7 @@ class ConanInstaller(object):
 
         if not skip_build:
             self._build_requires.install(conan_ref, conan_file, self,
-                                         profile_build_requires, output, update)
+                                         profile_build_requires, output, update=update)
 
         # It is important that it is done AFTER build_requires install
         self._propagate_info(conan_file, conan_ref, flat, deps_graph)

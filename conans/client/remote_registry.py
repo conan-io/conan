@@ -81,7 +81,7 @@ class RemoteRegistry(object):
 
     @property
     def remotes(self):
-        return self._remote_dict.values()
+        return list(self._remote_dict.values())
 
     def remote(self, name):
         try:
