@@ -73,10 +73,6 @@ class ConanException(Exception):
         super(ConanException, self).__init__(*args, **kwargs)
 
 
-class ConanManifestException(ConanException):
-    pass
-
-
 class NoRemoteAvailable(ConanException):
     """ No default remote configured or the specified remote do not exists
     """
