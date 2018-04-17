@@ -70,42 +70,6 @@ class ConanProxy(object):
 
         return True
 
-    def get_package(self, package_ref, short_paths, check_updates, update):
-        """ obtain a package, either from disk or retrieve from remotes if necessary
-        and not necessary to build
-        """
-        output = ScopedOutput(str(package_ref.conan), self._out)
-        check_updates = check_updates or update
-        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-
-        # Check current package status
-        if os.path.exists(package_folder):
-            if check_updates:
-                read_manifest = self._client_cache.load_package_manifest(package_ref)
-                try:  # get_conan_manifest can fail, not in server
-                    upstream_manifest = self.get_package_manifest(package_ref)
-                    if upstream_manifest != read_manifest:
-                        if upstream_manifest.time > read_manifest.time:
-                            output.warn("Current package is older than remote upstream one")
-                            if update:
-                                output.warn("Removing it to retrieve or build an updated one")
-                                rmdir(package_folder)
-                        else:
-                            output.warn("Current package is newer than remote upstream one")
-                except NotFoundException:
-                    pass
-
-        local_package = os.path.exists(package_folder)
-        if local_package:
-            output.success('Already installed!')
-            installed = True
-            log_package_got_from_local_cache(package_ref)
-            self._recorder.package_fetched_from_cache(package_ref)
-        else:
-            installed = self._retrieve_remote_package(package_ref, package_folder, output)
-        self.handle_package_manifest(package_ref, installed)
-        return installed
-
     def handle_package_manifest(self, package_ref):
         if self._manifest_manager:
             remote = self._registry.get_ref(package_ref.conan)
