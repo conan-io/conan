@@ -676,6 +676,10 @@ class ConanAPIV1(object):
         return self._registry.update(remote, url, verify_ssl, insert)
 
     @api_method
+    def remote_rename(self, remote, new_remote):
+        return self._registry.rename(remote, new_remote)
+
+    @api_method
     def remote_list_ref(self):
         return self._registry.refs
 
