@@ -55,7 +55,7 @@ class Lock(object):
             self._first_lock = False
             self._output.info("%s is locked by another concurrent conan process, wait..."
                               % str(self._locked_item))
-            self._output.info("If not the case, quit, and do 'conan remove --locks")
+            self._output.info("If not the case, quit, and do 'conan remove --locks'")
 
     def _readers(self):
         try:
