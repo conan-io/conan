@@ -10,7 +10,7 @@ from conans.errors import ConanException, ConanConnectionError, NotFoundExceptio
 from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
-from conans.util.files import gzopen_without_timestamps
+from conans.util.files import gzopen_without_timestamps, is_dirty
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch_folder
 from conans.util.log import logger
@@ -92,6 +92,11 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
+        if is_dirty(package_folder):
+            raise ConanException("Package %s is dirty, aborting upload.\n"
+                                 "Remove it with 'conan remove %s -p=%s'" % (package_reference,
+                                                                             package_reference.conan,
+                                                                             package_reference.package_id))
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
 

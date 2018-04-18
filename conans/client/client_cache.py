@@ -266,6 +266,11 @@ class ClientCache(SimplePaths):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
+    def remove_package_locks(self, reference):
+        conan_folder = self.conan(reference)
+        Lock.clean(conan_folder)
+        shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
     def invalidate(self):
         self._conan_config = None
         self._settings = None

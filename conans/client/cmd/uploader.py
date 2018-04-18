@@ -86,8 +86,9 @@ class CmdUpload(object):
         if all_packages:
             self._check_reference(conan_ref)
 
-            for index, package_id in enumerate(self._client_cache.conan_packages(conan_ref)):
-                total = len(self._client_cache.conan_packages(conan_ref))
+            packages = self._client_cache.conan_packages(conan_ref)
+            total = len(packages)
+            for index, package_id in enumerate(packages):
                 self.upload_package(PackageReference(conan_ref, package_id), index + 1, total,
                                     retry, retry_wait, skip_upload, integrity_check, no_overwrite)
 
