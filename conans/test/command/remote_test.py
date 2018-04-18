@@ -41,6 +41,18 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
+    def rename_test(self):
+        client = TestClient()
+        client.run("remote add r1 https://r1")
+        client.run("remote add r2 https://r2")
+        client.run("remote add r3 https://r3")
+        client.run("remote rename r2 mynewr2")
+        client.run("remote list")
+        lines = str(client.user_io.out).splitlines()
+        self.assertIn("r1: https://r1", lines[0])
+        self.assertIn("mynewr2: https://r2", lines[1])
+        self.assertIn("r3: https://r3", lines[2])
+
     def insert_test(self):
         self.client.run("remote add origin https://myurl --insert")
         self.client.run("remote list")
