@@ -455,11 +455,12 @@ class ConanInstaller(object):
                     package_references.add(package_reference)
                     package_folder = self._client_cache.package(package_reference,
                                                                 short_paths=conan_file.short_paths)
-                    # with self._client_cache.package_lock(package_reference):
-                    if is_dirty(package_folder):
-                        output = ScopedOutput(str(conan_ref), self._out)
-                        output.warn("Package is dirty, removing folder: %s" % package_folder)
-                        rmdir(package_folder)
+
+                    with self._client_cache.package_lock(package_reference):
+                        if is_dirty(package_folder):
+                            output = ScopedOutput(str(conan_ref), self._out)
+                            output.warn("Package is dirty, removing folder: %s" % package_folder)
+                            rmdir(package_folder)
                     check_outdated = self._build_mode.outdated
                     if self._build_mode.forced(conan_file, conan_ref):
                         build_node = True
