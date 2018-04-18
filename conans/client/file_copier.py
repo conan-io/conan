@@ -6,7 +6,7 @@ from collections import defaultdict
 from conans import tools
 
 
-def report_copied_files(copied, output, warn=False):
+def report_copied_files(copied, output, warn=None):
     ext_files = defaultdict(list)
     for f in copied:
         _, ext = os.path.splitext(f)
@@ -19,7 +19,7 @@ def report_copied_files(copied, output, warn=False):
         output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
 
     if warn and not ext_files:
-        output.warn("No files copied!")
+        output.warn(warn)
 
 
 class FileCopier(object):

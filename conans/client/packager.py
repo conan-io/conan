@@ -54,14 +54,15 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            warn = recipe_has(conanfile, "package")
+            warn = "No files copied from source folder!" if recipe_has(conanfile, "package") else None
             conanfile.copy.report(package_output, warn=warn)
 
         conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        warn = recipe_has(conanfile, "build") and recipe_has(conanfile, "package")
+        warn = "No files copied from build folder!" if recipe_has(conanfile, "build") and recipe_has(conanfile, "package") else None
+        # warn = recipe_has(conanfile, "build") and recipe_has(conanfile, "package")
         conanfile.copy.report(package_output, warn=warn)
     except Exception as e:
         if not local:
