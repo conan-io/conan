@@ -719,7 +719,7 @@ class Command(object):
         If no remote is specified, the removal will be done by default in the local conan cache.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
-        parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
+        parser.add_argument('pattern', help='Pattern name, e.g., openssl/*', nargs="?")
         parser.add_argument('-p', '--packages',
                             help='By default, remove all the packages or select one, '
                                  'specifying the package ID',
@@ -744,6 +744,7 @@ class Command(object):
                                  '@user/channel')
         parser.add_argument("-o", "--outdated", help="Remove only outdated from recipe packages",
                             default=False, action="store_true")
+        parser.add_argument("-l", "--locks", default=False, action="store_true", help="Remove locks")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
 
@@ -752,6 +753,16 @@ class Command(object):
 
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+
+        if args.locks:
+            if args.pattern:
+                raise ConanException("Specifying a pattern is not supported when removing locks")
+            self._client_cache.remove_locks()
+            self._user_io.out.info("Cache locks removed")
+            return
+        else:
+            if not args.pattern:
+                raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
         return self._conan.remove(pattern=reference or args.pattern, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,

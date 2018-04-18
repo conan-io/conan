@@ -2,6 +2,7 @@ import fasteners
 from conans.util.log import logger
 import time
 from conans.util.files import save, load
+import os
 
 
 class NoLock(object):
@@ -30,6 +31,13 @@ WRITE_BUSY_DELAY = 0.25
 
 
 class Lock(object):
+
+    @staticmethod
+    def clean(folder):
+        if os.path.exists(folder + ".count"):
+            os.remove(folder + ".count")
+        if os.path.exists(folder + ".count.lock"):
+            os.remove(folder + ".count.lock")
 
     def __init__(self, folder, locked_item, output):
         self._count_file = folder + ".count"

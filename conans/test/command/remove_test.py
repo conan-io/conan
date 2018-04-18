@@ -12,6 +12,29 @@ from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDE
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.conanfile import TestConanFile
+
+
+class RemoveLocksTest(unittest.TestCase):
+    def test(self):
+        client = TestClient()
+        client.save({"conanfile.py": str(TestConanFile())})
+        client.run("create . user/testing")
+        ref = ConanFileReference.loads("Hello/0.1@user/testing")
+        conan_folder = client.client_cache.conan(ref)
+        self.assertIn("locks", os.listdir(conan_folder))
+        self.assertTrue(os.path.exists(conan_folder + ".count"))
+        self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
+        error = client.run("remove * --locks", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
+        error = client.run("remove", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
+        client.run("remove --locks")
+        self.assertNotIn("locks", os.listdir(conan_folder))
+        self.assertFalse(os.path.exists(conan_folder + ".count"))
+        self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
 
 
 class RemoveOutdatedTest(unittest.TestCase):
