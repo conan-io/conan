@@ -162,10 +162,12 @@ class MyConan(ConanFile):
     def package(self):
         self.copy(pattern="*.h", dst="include", src="include")
         self.copy(pattern="*.lib")
+        self.copy(pattern="myapp", src="bin", dst="bin")
 """
 
         client.save({"src/include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
+                     "build/bin/myapp": "",
                      CONANFILE: conanfile_template})
         conanfile_folder = client.current_folder
         path = conanfile_folder
@@ -185,9 +187,12 @@ class MyConan(ConanFile):
             client.run('package "{0}" --build-folder="{1}/build" '
                        '--package-folder="{2}" --source-folder="{1}/src"'.
                        format(path, conanfile_folder, package_folder))
+        self.assertNotIn("package(): Copied 1 \'\' file", client.out)
+        self.assertIn("package(): Copied 1 \'[NO EXTENSION]\' file: myapp", client.out)
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),
-                         sorted(["include", "lib", "conaninfo.txt", "conanmanifest.txt"]))
+                         sorted(["include", "lib", "bin", "conaninfo.txt", "conanmanifest.txt"]))
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
+        self.assertEqual(os.listdir(os.path.join(package_folder, "bin")), ["myapp"])
