@@ -187,7 +187,7 @@ class MyConan(ConanFile):
                        '--package-folder="{2}" --source-folder="{1}/src"'.
                        format(path, conanfile_folder, package_folder))
         self.assertNotIn("package(): Copied 1 \'\' file", client.out)
-        self.assertIn("package(): Copied 1 \'[NO EXTENSION]\' file: myapp", client.out)
+        self.assertIn("package(): Copied 1 file: myapp", client.out)
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),

@@ -33,7 +33,8 @@ class HelloPythonConan(ConanFile):
                       client.out)
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg")
-        self.assertIn("Hello/0.1@lasote/stable: WARN: ", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: WARN: No files copied from package folder!",
+                      client.out)
 
     def test_package_folder(self):
         # https://github.com/conan-io/conan/issues/2350

@@ -19,7 +19,7 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
-    copier.report(output, warn=True)
+    copier.report(output, warn="No files copied from package folder!")
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
@@ -29,7 +29,7 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
 
 def create_package(conanfile, source_folder, build_folder, package_folder, install_folder,
                    output, local=False, copy_info=False):
-    """ copies built artifacts, libs, headers, data, etc from build_folder to
+    """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
     """
     mkdir(package_folder)
@@ -54,15 +54,20 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            warn = "No files copied from source folder!" if recipe_has(conanfile, "package") else None
+            if recipe_has(conanfile, "package"):
+                warn = "No files copied from source folder!"
+            else:
+                warn = None
             conanfile.copy.report(package_output, warn=warn)
 
         conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        warn = "No files copied from build folder!" if recipe_has(conanfile, "build") and recipe_has(conanfile, "package") else None
-        # warn = recipe_has(conanfile, "build") and recipe_has(conanfile, "package")
+        if recipe_has(conanfile, "build") and recipe_has(conanfile, "package"):
+                warn = "No files copied from build folder!"
+        else:
+            warn = None
         conanfile.copy.report(package_output, warn=warn)
     except Exception as e:
         if not local:

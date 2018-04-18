@@ -12,14 +12,17 @@ def report_copied_files(copied, output, warn=None):
         _, ext = os.path.splitext(f)
         ext_files[ext].append(os.path.basename(f))
 
-    for ext, files in ext_files.items():
-        files_str = (", ".join(files)) if len(files) < 5 else ""
-        ext = "[NO EXTENSION]" if ext == "" else ext
-        file_or_files = "file" if len(files) == 1 else "files"
-        output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
-
     if warn and not ext_files:
         output.warn(warn)
+        return
+
+    for ext, files in ext_files.items():
+        files_str = (", ".join(files)) if len(files) < 5 else ""
+        file_or_files = "file" if len(files) == 1 else "files"
+        if not ext:
+            output.info("Copied %d %s: %s" % (len(files), file_or_files, files_str))
+        else:
+            output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
 
 
 class FileCopier(object):

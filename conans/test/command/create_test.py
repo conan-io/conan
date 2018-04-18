@@ -66,7 +66,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' file: header.h", client.out)
         # keep the source
         client.save({"conanfile.py": conanfile + " "})
         client.run("create . Pkg/0.1@lasote/testing --keep-source")
