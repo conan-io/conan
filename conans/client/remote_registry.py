@@ -189,6 +189,9 @@ class RemoteRegistry(object):
                 name = name if name != remote_name else new_remote_name
                 new_remotes[name] = info
             remotes = new_remotes
+            for k, v in refs.items():
+                if v == remote_name:
+                    refs[k] = new_remote_name
             self._save(remotes, refs)
 
     def define_remotes(self, remotes):
