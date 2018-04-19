@@ -48,10 +48,11 @@ class DepsGraphBuilder(object):
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
-    def _resolve_deps(self, conanref, conanfile, aliased):
+    def _resolve_deps(self, node, aliased):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RequireResolver are also done in new_reqs, and then propagated!
+        conanfile, conanref = node.conanfile, node.conan_ref
         for _, require in conanfile.requires.items():
             self._resolver.resolve(require, conanref)
 
@@ -83,14 +84,12 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration
-        conanref, conanfile = node
-        new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
-                                                  down_options)
+        new_reqs, new_options = self._config_node(node, down_reqs, down_ref, down_options)
 
-        self._resolve_deps(conanref, conanfile, aliased)
+        self._resolve_deps(node, aliased)
 
         # Expand each one of the current requirements
-        for name, require in conanfile.requires.items():
+        for name, require in node.conanfile.requires.items():
             if require.override:
                 continue
             if require.conan_reference in loop_ancestors:
@@ -107,7 +106,7 @@ class DepsGraphBuilder(object):
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
                                                  aliased, check_updates, update)
                 # RECURSION!
-                self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
+                self._load_deps(new_node, new_reqs, dep_graph, public_deps, node.conan_ref,
                                 new_options, new_loop_ancestors, aliased, check_updates, update)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
@@ -119,7 +118,7 @@ class DepsGraphBuilder(object):
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
                                          "    To change it, override it in your base requirements"
-                                         % (conanref, require.conan_reference,
+                                         % (node.conan_ref, require.conan_reference,
                                             previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
@@ -127,7 +126,7 @@ class DepsGraphBuilder(object):
                     closure = dep_graph.public_closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
-                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
+                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
                                     new_options, new_loop_ancestors, aliased, check_updates, update)
 
     def _recurse(self, closure, new_reqs, new_options):
@@ -147,12 +146,13 @@ class DepsGraphBuilder(object):
                         return True
         return False
 
-    def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
+    def _config_node(self, node, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
         requirement values, cause they can be overriden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
+            conanfile, conanref = node.conanfile, node.conan_ref
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):

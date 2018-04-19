@@ -128,7 +128,7 @@ class ConanHTMLGrapher(object):
         graph_nodes = self._deps_graph.by_levels()
         graph_nodes = reversed([n for level in graph_nodes for n in level])
         for i, node in enumerate(graph_nodes):
-            ref, conanfile = node
+            ref, conanfile = node.conan_ref, node.conanfile
             nodes_map[node] = i
             if ref:
                 label = "%s/%s" % (ref.name, ref.version)

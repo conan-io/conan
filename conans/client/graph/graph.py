@@ -1,15 +1,38 @@
-from collections import namedtuple
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
 from collections import defaultdict
 
 
-class Node(namedtuple("Node", "conan_ref conanfile")):
-    """ The Node of the dependencies graph is defined by:
-    ref: ConanFileReference, if it is a user space one, user=channel=none
-    conanfile: the loaded conanfile object withs its values
-    """
+class Node(object):
+    def __init__(self, conan_ref, conanfile):
+        self.conan_ref = conan_ref
+        self.conanfile = conanfile
+        self.dependencies = set()  # Edges
+        self.dependants = set()  # Edges
+
+    def add_edge(self, edge):
+        if edge.src == self:
+            self.dependencies.add(edge)
+        else:
+            self.dependants.add(edge)
+
+    def neighbors(self):
+        return set(edge.dst for edge in self.dependencies)
+
+    def inverse_neighbors(self):
+        return set(edge.src for edge in self.dependants)
+
+    def __eq__(self, other):
+        return (self.conan_ref == other.conan_ref and
+                self.conanfile == other.conanfile)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.conan_ref, self.conanfile))
+
     def __repr__(self):
         return repr(self.conanfile)
 
@@ -41,9 +64,22 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
         return self.__cmp__(other) in [0, 1]
 
 
+class Edge(object):
+    def __init__(self, src, dst):
+        self.src = src
+        self.dst = dst
+
+    def __eq__(self, other):
+        return self._rc == self.src and self.dst == other.dst
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.src, self.dst))
+
+
 class DepsGraph(object):
-    """ DAG of dependencies
-    """
     def __init__(self):
         self.nodes = set()
         self._neighbors = defaultdict(set)
@@ -71,7 +107,7 @@ class DepsGraph(object):
         """ return nodes with direct reacheability by public dependencies
         """
         neighbors = self._neighbors[node]
-        _, conanfile = node
+        conanfile = node.conanfile
 
         public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
         result = [n for n in neighbors if n.conan_ref in public_requires]
@@ -90,11 +126,12 @@ class DepsGraph(object):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                _, conanfile = node
+                conanfile = node.conanfile
                 neighbors = self._neighbors[node]
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for nref, nconan in neighbors:
+                for neighbor in neighbors:
+                    nref, nconan = neighbor.conan_ref, neighbor.conanfile
                     package_id = nconan.info.package_id()
                     package_reference = PackageReference(nref, package_id)
                     direct_reqs.append(package_reference)
