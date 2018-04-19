@@ -222,7 +222,7 @@ class DepsGraphBuilder(object):
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)
-        dep_graph.add_edge(current_node, new_node)
+        dep_graph.add_edge(current_node, new_node, requirement.private)
         if not requirement.private:
             public_deps[name_req] = new_node, None
         return new_node

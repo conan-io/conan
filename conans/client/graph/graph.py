@@ -19,6 +19,9 @@ class Node(object):
     def neighbors(self):
         return set(edge.dst for edge in self.dependencies)
 
+    def public_neighbors(self):
+        return set(edge.dst for edge in self.dependencies if not edge.private)
+
     def inverse_neighbors(self):
         return set(edge.src for edge in self.dependants)
 
@@ -64,9 +67,10 @@ class Node(object):
 
 
 class Edge(object):
-    def __init__(self, src, dst):
+    def __init__(self, src, dst, private=False):
         self.src = src
         self.dst = dst
+        self.private = private
 
     def __eq__(self, other):
         return self.src == self.src and self.dst == other.dst
@@ -85,21 +89,11 @@ class DepsGraph(object):
     def add_node(self, node):
         self.nodes.add(node)
 
-    def add_edge(self, src, dst):
+    def add_edge(self, src, dst, private=False):
         assert src in self.nodes and dst in self.nodes
-        edge = Edge(src, dst)
+        edge = Edge(src, dst, private)
         src.add_edge(edge)
         dst.add_edge(edge)
-
-    def _public_neigbors(self, node):
-        """ return nodes with direct reacheability by public dependencies
-        """
-        neighbors = node.neighbors()
-        conanfile = node.conanfile
-
-        public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
-        result = [n for n in neighbors if n.conan_ref in public_requires]
-        return result
 
     def propagate_info(self):
         """ takes the exports from upper level and updates the imports
@@ -157,7 +151,7 @@ class DepsGraph(object):
             new_current = set()
             for n in current:
                 closure.add(n)
-                new_neighs = self._public_neigbors(n)
+                new_neighs = n.public_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -172,7 +166,7 @@ class DepsGraph(object):
             new_current = set()
             for n in current:
                 closure[n.conan_ref.name] = n
-                new_neighs = self._public_neigbors(n)
+                new_neighs = n.public_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -246,7 +240,7 @@ class DepsGraph(object):
             new_open_nodes = set()
             for node in open_nodes:
                 if node in built_private_nodes:
-                    neighbors = self._public_neigbors(node)
+                    neighbors = node.public_neighbors()
                 else:
                     neighbors = node.neighbors()
                 new_open_nodes.update(set(neighbors).difference(closure))
