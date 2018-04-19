@@ -193,7 +193,7 @@ class Command(object):
                                  '"None" if test stage needs to be disabled')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Optional. Working directory for the build of the test project.')
-        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
+        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
@@ -703,7 +703,7 @@ class Command(object):
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
-        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
+        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
@@ -958,6 +958,9 @@ class Command(object):
         parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int,
                                 help="insert remote at specific index",
                                 action=OnceArgument)
+        parser_rename = subparsers.add_parser('rename', help='update the remote name')
+        parser_rename.add_argument('remote', help='the old remote name')
+        parser_rename.add_argument('new_remote', help='the new remote name')
 
         subparsers.add_parser('list_ref',
                               help='list the package recipes and its associated remotes')
@@ -979,6 +982,7 @@ class Command(object):
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
         remote = args.remote if hasattr(args, 'remote') else None
+        new_remote = args.new_remote if hasattr(args, 'new_remote') else None
         url = args.url if hasattr(args, 'url') else None
 
         if args.subcommand == "list":
@@ -988,6 +992,8 @@ class Command(object):
             return self._conan.remote_add(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
+        elif args.subcommand == "rename":
+            return self._conan.remote_rename(remote, new_remote)
         elif args.subcommand == "update":
             return self._conan.remote_update(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":

@@ -28,9 +28,8 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 ''' % (conan_ref, conan_ref.name))
 
 
-def get_package(conanfile, package_ref, package_folder, output, recorder, proxy):
+def get_package(conanfile, package_ref, package_folder, output, recorder, proxy, update):
     # TODO: This access to proxy attributes has to be improved
-    update = proxy._update
     remote_manager = proxy._remote_manager
     registry = proxy.registry
     try:
