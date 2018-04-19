@@ -6,7 +6,6 @@ from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_outdated, DiskSearchManager
-from conans.client.remote_registry import RemoteRegistry
 
 
 class DiskRemover(object):
@@ -78,11 +77,12 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_proxy):
+    def __init__(self, client_cache, remote_manager, user_io, remote_proxy, remote_registry):
         self._user_io = user_io
         self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._remote_manager = remote_manager
+        self._registry = remote_registry
 
     def _remote_remove(self, reference, package_ids):
         if package_ids is None:
@@ -100,8 +100,7 @@ class ConanRemover(object):
             remover.remove_packages(reference, package_ids)
         if not src and build_ids is None and package_ids is None:
             remover.remove(reference)
-            registry = self._remote_proxy.registry
-            registry.remove_ref(reference, quiet=True)
+            self._registry.remove_ref(reference, quiet=True)
 
     def remove(self, pattern, remote, src=None, build_ids=None, package_ids_filter=None, force=False,
                packages_query=None, outdated=False):
@@ -118,7 +117,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         if remote:
-            remote = RemoteRegistry(self._client_cache.registry, self._user_io.out).remote(remote)
+            remote = self._registry.remote(remote)
             references = self._remote_manager.search_recipes(remote, pattern)
         else:
             disk_search = DiskSearchManager(self._client_cache)

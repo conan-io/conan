@@ -10,7 +10,7 @@ def conan_python_require(require):
         return _modules[require]
     except KeyError:
         r = ConanFileReference.loads(require)
-        path = _retriever.get_recipe(r)
+        path = _retriever.get_recipe(r, False, False)
         module, _ = _parse_file(path)
         _modules[require] = module
         return module

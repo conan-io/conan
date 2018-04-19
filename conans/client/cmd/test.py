@@ -29,7 +29,7 @@ class PackageTester(object):
             self._manager.install(inject_require=reference,
                                   reference=conanfile_abs_path,
                                   install_folder=test_build_folder,
-                                  remote=remote,
+                                  remote_name=remote,
                                   profile=profile,
                                   update=update,
                                   build_modes=build_modes,
