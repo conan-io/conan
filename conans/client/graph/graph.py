@@ -69,7 +69,7 @@ class Edge(object):
         self.dst = dst
 
     def __eq__(self, other):
-        return self._rc == self.src and self.dst == other.dst
+        return self.src == self.src and self.dst == other.dst
 
     def __ne__(self, other):
         return not self.__eq__(other)
