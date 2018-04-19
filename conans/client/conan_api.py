@@ -198,8 +198,9 @@ class ConanAPIV1(object):
         self._runner = runner
         self._remote_manager = remote_manager
         self.recorder = ActionRecorder()
+        self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     _settings_preprocessor, self.recorder)
+                                     _settings_preprocessor, self.recorder, self._registry)
         if not interactive:
             self._user_io.disable_input()
 
@@ -324,7 +325,7 @@ class ConanAPIV1(object):
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
-                                  remote=remote,
+                                  remote_name=remote,
                                   profile=profile,
                                   build_modes=build_modes,
                                   update=update,
@@ -392,7 +393,7 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote, recipe=recipe)
+        self._manager.download(conan_ref, package, remote_name=remote, recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -413,7 +414,7 @@ class ConanAPIV1(object):
             generators = False
 
         mkdir(install_folder)
-        self._manager.install(reference=reference, install_folder=install_folder, remote=remote,
+        self._manager.install(reference=reference, install_folder=install_folder, remote_name=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -439,7 +440,7 @@ class ConanAPIV1(object):
 
         self._manager.install(reference=conanfile_path,
                               install_folder=install_folder,
-                              remote=remote,
+                              remote_name=remote,
                               profile=profile,
                               build_modes=build,
                               update=update,
@@ -512,7 +513,7 @@ class ConanAPIV1(object):
                        profile_name=None, update=False, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        ret = self._manager.info_get_graph(reference, remote=remote, profile=profile,
+        ret = self._manager.info_get_graph(reference, remote_name=remote, profile=profile,
                                            check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
@@ -591,7 +592,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote=None, outdated=False):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote=remote, packages_query=query,
+                             src=src, force=force, remote_name=remote, packages_query=query,
                              outdated=outdated)
 
     @api_method
@@ -601,16 +602,16 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
+        remote_proxy = self._manager.get_proxy()
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, self.recorder, force=force)
+                 self._user_io, remote_proxy, force=force)
 
     @api_method
     def authenticate(self, name, password, remote=None):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if not remote:
-            remote = registry.default_remote
+            remote = self._registry.default_remote
         else:
-            remote = registry.remote(remote)
+            remote = self._registry.remote(remote)
         if password == "":
             name, password = self._user_io.request_login(remote_name=remote.name,
                                                          username=name)
@@ -618,7 +619,7 @@ class ConanAPIV1(object):
 
     @api_method
     def user_set(self, user, remote_name=None):
-        return user_set(self._client_cache, self._user_io.out, user, remote_name)
+        return user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
 
     @api_method
     def users_clean(self):
@@ -626,18 +627,18 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        users = users_list(self._client_cache, self._user_io.out, remote)
+        users = users_list(self._client_cache, self._registry, remote)
         for remote_name, username in users:
             self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_recipes(pattern, remote, case_sensitive)
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_packages(reference, remote, query=query,
                                       outdated=outdated)
 
@@ -651,49 +652,46 @@ class ConanAPIV1(object):
         if force and no_overwrite:
             raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
 
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote, self.recorder)
+        remote_proxy = self._manager.get_proxy(remote_name=remote)
+        uploader = CmdUpload(self._client_cache, self._user_io, remote_proxy)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
                                skip_upload, integrity_check, no_overwrite)
 
     @api_method
     def remote_list(self):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remotes
+        return self._registry.remotes
 
     @api_method
     def remote_add(self, remote, url, verify_ssl=True, insert=None):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add(remote, url, verify_ssl, insert)
+        return self._registry.add(remote, url, verify_ssl, insert)
 
     @api_method
     def remote_remove(self, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remove(remote)
+        return self._registry.remove(remote)
 
     @api_method
     def remote_update(self, remote, url, verify_ssl=True, insert=None):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.update(remote, url, verify_ssl, insert)
+        return self._registry.update(remote, url, verify_ssl, insert)
+
+    @api_method
+    def remote_rename(self, remote, new_remote):
+        return self._registry.rename(remote, new_remote)
 
     @api_method
     def remote_list_ref(self):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.refs
+        return self._registry.refs
 
     @api_method
     def remote_add_ref(self, reference, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add_ref(reference, remote)
+        return self._registry.add_ref(reference, remote)
 
     @api_method
     def remote_remove_ref(self, reference):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remove_ref(reference)
+        return self._registry.remove_ref(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.update_ref(reference, remote)
+        return self._registry.update_ref(reference, remote)
 
     @api_method
     def profile_list(self):

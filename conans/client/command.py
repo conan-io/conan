@@ -867,20 +867,24 @@ class Command(object):
                                 help='Verify SSL certificated. Default True')
         parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
                                 help="insert remote at specific index")
-        parser_rm = subparsers.add_parser('remove', help='remove a remote')
-        parser_rm.add_argument('remote', help='name of the remote')
-        parser_upd = subparsers.add_parser('update', help='update the remote url')
-        parser_upd.add_argument('remote', help='name of the remote')
+        parser_rm = subparsers.add_parser('remove', help='Remove a remote')
+        parser_rm.add_argument('remote', help='Name of the remote')
+        parser_upd = subparsers.add_parser('update', help='Update the remote url')
+        parser_upd.add_argument('remote', help='Name of the remote')
+
         parser_upd.add_argument('url', help='URL')
         parser_upd.add_argument('verify_ssl', nargs="?", default="True",
                                 help='Verify SSL certificated. Default True')
         parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
-                                help="insert remote at specific index")
+                                help="Insert remote at specific index")
+        parser_rename = subparsers.add_parser('rename', help='Update the remote name')
+        parser_rename.add_argument('remote', help='The old remote name')
+        parser_rename.add_argument('new_remote', help='The new remote name')
 
         subparsers.add_parser('list_ref',
                               help='List the package recipes and its associated remotes')
         parser_padd = subparsers.add_parser('add_ref',
-                                            help="associate a recipe's reference to a remote")
+                                            help="Associate a recipe's reference to a remote")
         parser_padd.add_argument('reference', help='Package recipe reference')
         parser_padd.add_argument('remote', help='Name of the remote')
         parser_prm = subparsers.add_parser('remove_ref',
@@ -897,6 +901,7 @@ class Command(object):
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
         remote = args.remote if hasattr(args, 'remote') else None
+        new_remote = args.new_remote if hasattr(args, 'new_remote') else None
         url = args.url if hasattr(args, 'url') else None
 
         if args.subcommand == "list":
@@ -906,6 +911,8 @@ class Command(object):
             return self._conan.remote_add(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
+        elif args.subcommand == "rename":
+            return self._conan.remote_rename(remote, new_remote)
         elif args.subcommand == "update":
             return self._conan.remote_update(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":

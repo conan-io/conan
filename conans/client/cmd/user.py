@@ -1,11 +1,9 @@
-from conans.client.remote_registry import RemoteRegistry
 from conans.errors import ConanException
 from conans.client.store.localdb import LocalDB
 
 
-def users_list(client_cache, output, remote_name=None):
+def users_list(client_cache, registry, remote_name=None):
     # List all users from required remotes
-    registry = RemoteRegistry(client_cache.registry, output)
     if remote_name:
         remotes = [registry.remote(remote_name)]
     else:
@@ -28,9 +26,8 @@ def users_clean(client_cache):
     localdb.init(clean=True)
 
 
-def user_set(client_cache, output, user, remote_name=None):
+def user_set(client_cache, output, registry, user, remote_name=None):
     localdb = LocalDB(client_cache.localdb)
-    registry = RemoteRegistry(client_cache.registry, output)
     if not remote_name:
         remote = registry.default_remote
     else:
