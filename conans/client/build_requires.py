@@ -73,7 +73,7 @@ class BuildRequires(object):
 
         return conanfile.build_requires
 
-    def install(self, reference, conanfile, installer, profile_build_requires, output):
+    def install(self, reference, conanfile, installer, profile_build_requires, output, update):
         str_ref = str(reference)
         package_build_requires = self._get_recipe_build_requires(conanfile)
 
@@ -88,12 +88,12 @@ class BuildRequires(object):
                             else:  # Profile one
                                 new_profile_build_requires[build_require.name] = build_require
 
-        self._install(conanfile, reference, package_build_requires, installer, profile_build_requires, output)
+        self._install(conanfile, reference, package_build_requires, installer, profile_build_requires, output, update)
         self._install(conanfile, reference, new_profile_build_requires, installer, profile_build_requires,
-                      output, discard=True)
+                      output, update, discard=True)
 
     def _install(self, conanfile, reference, build_requires, installer, profile_build_requires, output,
-                 discard=False):
+                 update, discard=False):
         if isinstance(reference, ConanFileReference):
             build_requires.pop(reference.name, None)
         if not build_requires:
@@ -112,9 +112,9 @@ class BuildRequires(object):
                                             build_requires_options=conanfile.build_requires_options)
 
         # compute and print the graph of transitive build-requires
-        deps_graph = self._graph_builder.load(virtual)
+        deps_graph = self._graph_builder.load_graph(virtual, check_updates=False, update=update)
         Printer(output).print_graph(deps_graph, self._registry)
         # install them, recursively
-        installer.install(deps_graph, profile_build_requires)
+        installer.install(deps_graph, profile_build_requires, update=update)
         _apply_build_requires(deps_graph, conanfile, build_requires)
         output.info("Installed build requirements of: %s" % (reference or "PROJECT"))
