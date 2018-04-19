@@ -26,8 +26,8 @@ class DepsGraphBuilder(object):
         returns a dict of conan_reference: 1 if there is an update,
         0 if don't and -1 if local is newer
         """
-        return {conan_reference: self._retriever.update_available(conan_reference)
-                for conan_reference, _ in deps_graph.nodes}
+        return {node.conan_ref: self._retriever.update_available(node.conan_ref)
+                for node in deps_graph.nodes}
 
     def load_graph(self, conanfile, check_updates, update):
         check_updates = check_updates or update

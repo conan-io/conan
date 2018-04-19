@@ -102,7 +102,7 @@ class ConanGrapher(object):
 
         for node in self._deps_graph.nodes:
             ref = node.conan_ref or self._project_reference
-            depends = self._deps_graph.neighbors(node)
+            depends = node.neighbors()
             if depends:
                 depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
                 graph_lines.append('    "%s" -> {%s}\n' % (str(ref), depends))
@@ -153,7 +153,7 @@ class ConanHTMLGrapher(object):
 
         edges = []
         for node in self._deps_graph.nodes:
-            for node_to in self._deps_graph.neighbors(node):
+            for node_to in node.neighbors():
                 src = nodes_map[node]
                 dst = nodes_map[node_to]
                 edges.append("{ from: %d, to: %d }" % (src, dst))

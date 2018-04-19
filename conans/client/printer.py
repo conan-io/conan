@@ -153,7 +153,7 @@ class Printer(object):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
                                   Color.BRIGHT_GREEN)
 
-            dependants = deps_graph.inverse_neighbors(node)
+            dependants = node.inverse_neighbors()
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
@@ -161,7 +161,7 @@ class Printer(object):
                     self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):
-                depends = deps_graph.neighbors(node)
+                depends = node.neighbors()
                 if depends:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in depends:
