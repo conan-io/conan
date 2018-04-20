@@ -1,6 +1,5 @@
 import unittest
 
-from conans.client.action_recorder import ActionRecorder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os

@@ -229,7 +229,7 @@ class Command(object):
             info = exc.info
             raise
         finally:
-            if args.json:
+            if args.json and info:
                 self._outputer.json_install(info, args.json, cwd)
 
     def download(self, *args):
@@ -322,7 +322,7 @@ class Command(object):
             info = exc.info
             raise
         finally:
-            if args.json:
+            if args.json and info:
                 self._outputer.json_install(info, args.json, cwd)
 
     def config(self, *args):

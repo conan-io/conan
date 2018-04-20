@@ -3,7 +3,6 @@ import os
 
 from collections import namedtuple
 
-from conans.client.action_recorder import ActionRecorder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 from conans.client.deps_builder import DepsGraphBuilder

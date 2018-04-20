@@ -65,7 +65,7 @@ def api_method(f):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
-            the_self.init_manager()
+            the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
                 ret = f(*args, **kwargs)
@@ -212,7 +212,7 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-    def init_manager(self):
+    def _init_manager(self):
         """Every api call gets a new recorder and new manager"""
         self._recorder = ActionRecorder()
         self._manager = ConanManager(self._client_cache, self._user_io, self._runner,
