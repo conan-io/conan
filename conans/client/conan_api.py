@@ -170,10 +170,10 @@ class ConanAPIV1(object):
             # Get the new command instance after migrations have been done
             requester = get_basic_requester(client_cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
-                                                requester,
-                                                client_cache, user_io,
-                                                Version(client_version),
-                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+                requester,
+                client_cache, user_io,
+                Version(client_version),
+                Version(MIN_SERVER_COMPATIBLE_VERSION))
 
             # Adjust global tool variables
             set_global_instances(out, requester)
@@ -330,8 +330,6 @@ class ConanAPIV1(object):
                                   build_modes=build_modes,
                                   update=update,
                                   keep_build=keep_build)
-
-
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
