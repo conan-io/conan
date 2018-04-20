@@ -6,15 +6,14 @@ from collections import defaultdict
 from conans import tools
 
 
-def report_copied_files(copied, output, warn=None):
+def report_copied_files(copied, output):
     ext_files = defaultdict(list)
     for f in copied:
         _, ext = os.path.splitext(f)
         ext_files[ext].append(os.path.basename(f))
 
-    if warn and not ext_files:
-        output.warn(warn)
-        return
+    if not ext_files:
+        return False
 
     for ext, files in ext_files.items():
         files_str = (", ".join(files)) if len(files) < 5 else ""
@@ -23,6 +22,7 @@ def report_copied_files(copied, output, warn=None):
             output.info("Copied %d %s: %s" % (len(files), file_or_files, files_str))
         else:
             output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
+    return True
 
 
 class FileCopier(object):
@@ -47,8 +47,8 @@ class FileCopier(object):
         if excluded:
             self._excluded.append(excluded)
 
-    def report(self, output, warn=False):
-        report_copied_files(self._copied, output, warn)
+    def report(self, output):
+        return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
                  excludes=None, ignore_case=False):

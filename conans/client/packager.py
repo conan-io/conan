@@ -15,11 +15,13 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
     mkdir(package_folder)
 
     output.info("Exporting to cache existing package from user folder")
-    output.info("Package folder %s" % (package_folder))
+    output.info("Package folder %s" % package_folder)
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
-    copier.report(output, warn="No files copied from package folder!")
+
+    if not copier.report(output):
+        output.warn("No files copied from package folder!")
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
@@ -36,7 +38,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
 
     # Make the copy of all the patterns
     output.info("Generating the package")
-    output.info("Package folder %s" % (package_folder))
+    output.info("Package folder %s" % package_folder)
 
     try:
         package_output = ScopedOutput("%s package()" % output.scope, output)
@@ -46,7 +48,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
 
-        def recipe_has(conanfile, attribute):
+        def recipe_has(attribute):
             return attribute in conanfile.__class__.__dict__
 
         if source_folder != build_folder:
@@ -54,21 +56,18 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            if recipe_has(conanfile, "package"):
-                warn = "No files copied from source folder!"
-            else:
-                warn = None
-            conanfile.copy.report(package_output, warn=warn)
+            if (not conanfile.copy.report(package_output) and
+                    recipe_has("package")):
+                output.warn("No files copied from source folder!")
 
         conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        if recipe_has(conanfile, "build") and recipe_has(conanfile, "package"):
-                warn = "No files copied from build folder!"
-        else:
-            warn = None
-        conanfile.copy.report(package_output, warn=warn)
+        if (not conanfile.copy.report(package_output) and
+                recipe_has("build") and
+                recipe_has("package")):
+            output.warn("No files copied from build folder!")
     except Exception as e:
         if not local:
             os.chdir(build_folder)
