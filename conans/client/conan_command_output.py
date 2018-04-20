@@ -78,10 +78,10 @@ class CommandOutputer(object):
 
     def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
         if graph_filename.endswith(".html"):
-            from conans.client.grapher import ConanHTMLGrapher
+            from conans.client.graph.grapher import ConanHTMLGrapher
             grapher = ConanHTMLGrapher(project_reference, deps_graph)
         else:
-            from conans.client.grapher import ConanGrapher
+            from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(project_reference, deps_graph)
 
         cwd = os.path.abspath(cwd or os.getcwd())
@@ -95,7 +95,7 @@ class CommandOutputer(object):
 
     def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query, table):
         if table:
-            from conans.client.grapher import html_binary_graph
+            from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(pattern, ordered_packages, recipe_hash, table)
         else:
             printer = Printer(self.user_io.out)

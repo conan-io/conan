@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
