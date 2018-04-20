@@ -1,15 +1,40 @@
-from collections import namedtuple
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
-from collections import defaultdict
 
 
-class Node(namedtuple("Node", "conan_ref conanfile")):
-    """ The Node of the dependencies graph is defined by:
-    ref: ConanFileReference, if it is a user space one, user=channel=none
-    conanfile: the loaded conanfile object withs its values
-    """
+class Node(object):
+    def __init__(self, conan_ref, conanfile):
+        self.conan_ref = conan_ref
+        self.conanfile = conanfile
+        self.dependencies = set()  # Edges
+        self.dependants = set()  # Edges
+
+    def add_edge(self, edge):
+        if edge.src == self:
+            self.dependencies.add(edge)
+        else:
+            self.dependants.add(edge)
+
+    def neighbors(self):
+        return set(edge.dst for edge in self.dependencies)
+
+    def public_neighbors(self):
+        return set(edge.dst for edge in self.dependencies if not edge.private)
+
+    def inverse_neighbors(self):
+        return set(edge.src for edge in self.dependants)
+
+    def __eq__(self, other):
+        return (self.conan_ref == other.conan_ref and
+                self.conanfile == other.conanfile)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.conan_ref, self.conanfile))
+
     def __repr__(self):
         return repr(self.conanfile)
 
@@ -41,41 +66,34 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
         return self.__cmp__(other) in [0, 1]
 
 
+class Edge(object):
+    def __init__(self, src, dst, private=False):
+        self.src = src
+        self.dst = dst
+        self.private = private
+
+    def __eq__(self, other):
+        return self.src == self.src and self.dst == other.dst
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.src, self.dst))
+
+
 class DepsGraph(object):
-    """ DAG of dependencies
-    """
     def __init__(self):
         self.nodes = set()
-        self._neighbors = defaultdict(set)
-        self._inverse_neighbors = defaultdict(set)
 
     def add_node(self, node):
         self.nodes.add(node)
 
-    def add_edge(self, src, dst):
+    def add_edge(self, src, dst, private=False):
         assert src in self.nodes and dst in self.nodes
-        self._neighbors[src].add(dst)
-        self._inverse_neighbors[dst].add(src)
-
-    def neighbors(self, node):
-        """ return all connected nodes (directionally) to the parameter one
-        """
-        return self._neighbors[node]
-
-    def inverse_neighbors(self, node):
-        """ return all the nodes which has param node has dependency
-        """
-        return self._inverse_neighbors[node]
-
-    def public_neighbors(self, node):
-        """ return nodes with direct reacheability by public dependencies
-        """
-        neighbors = self._neighbors[node]
-        _, conanfile = node
-
-        public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
-        result = [n for n in neighbors if n.conan_ref in public_requires]
-        return result
+        edge = Edge(src, dst, private)
+        src.add_edge(edge)
+        dst.add_edge(edge)
 
     def propagate_info(self):
         """ takes the exports from upper level and updates the imports
@@ -90,11 +108,12 @@ class DepsGraph(object):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                _, conanfile = node
-                neighbors = self._neighbors[node]
+                conanfile = node.conanfile
+                neighbors = node.neighbors()
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for nref, nconan in neighbors:
+                for neighbor in neighbors:
+                    nref, nconan = neighbor.conan_ref, neighbor.conanfile
                     package_id = nconan.info.package_id()
                     package_reference = PackageReference(nref, package_id)
                     direct_reqs.append(package_reference)
@@ -127,12 +146,12 @@ class DepsGraph(object):
 
     def ordered_closure(self, node, flat):
         closure = set()
-        current = self._neighbors[node]
+        current = node.neighbors()
         while current:
             new_current = set()
             for n in current:
                 closure.add(n)
-                new_neighs = self.public_neighbors(n)
+                new_neighs = n.public_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -142,12 +161,12 @@ class DepsGraph(object):
 
     def public_closure(self, node):
         closure = {}
-        current = self._neighbors[node]
+        current = node.neighbors()
         while current:
             new_current = set()
             for n in current:
                 closure[n.conan_ref.name] = n
-                new_neighs = self.public_neighbors(n)
+                new_neighs = n.public_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -162,7 +181,7 @@ class DepsGraph(object):
             new_current = set()
             for n in current:
                 closure.add(n)
-                new_neighs = self._inverse_neighbors[n]
+                new_neighs = n.inverse_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -179,12 +198,12 @@ class DepsGraph(object):
         return result
 
     def by_levels(self):
-        return self._order_levels(self._neighbors)
+        return self._order_levels(True)
 
     def inverse_levels(self):
-        return self._order_levels(self._inverse_neighbors)
+        return self._order_levels(False)
 
-    def _order_levels(self, neighbours):
+    def _order_levels(self, direct):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -196,7 +215,7 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                o_neighs = neighbours[o]
+                o_neighs = o.neighbors() if direct else o.inverse_neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
@@ -221,9 +240,9 @@ class DepsGraph(object):
             new_open_nodes = set()
             for node in open_nodes:
                 if node in built_private_nodes:
-                    neighbors = self.public_neighbors(node)
+                    neighbors = node.public_neighbors()
                 else:
-                    neighbors = self._neighbors[node]
+                    neighbors = node.neighbors()
                 new_open_nodes.update(set(neighbors).difference(closure))
                 closure.update(neighbors)
             open_nodes = new_open_nodes
