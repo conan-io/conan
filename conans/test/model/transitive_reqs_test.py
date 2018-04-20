@@ -115,7 +115,7 @@ def _get_edges(graph):
 
     edges = set()
     for n in graph.nodes:
-        edges.update([Edge(n, neigh) for neigh in graph.neighbors(n)])
+        edges.update([Edge(n, neigh) for neigh in n.neighbors()])
     return edges
 
 

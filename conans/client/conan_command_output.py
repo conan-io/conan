@@ -59,7 +59,8 @@ class CommandOutputer(object):
 
     def _read_dates(self, deps_graph):
         ret = {}
-        for ref, _ in sorted(deps_graph.nodes):
+        for node in sorted(deps_graph.nodes):
+            ref = node.conan_ref
             if ref:
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
