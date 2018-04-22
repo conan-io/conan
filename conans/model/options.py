@@ -430,10 +430,9 @@ class PackageOptions(object):
     def set_local(self, values):
         # For local commands, to restore state from conaninfo it is necessary to remove
         for k in self._data.keys():
-            val = getattr(values, k, None)
-            if val:
-                self._data[k].value = val
-            else:
+            try:
+                self._data[k].value = getattr(values, k)
+            except AttributeError:
                 self._data.pop(k)
 
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
