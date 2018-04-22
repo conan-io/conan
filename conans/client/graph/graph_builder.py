@@ -48,13 +48,13 @@ class DepsGraphBuilder(object):
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
-    def _resolve_deps(self, node, aliased):
+    def _resolve_deps(self, node, aliased, update):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RequireResolver are also done in new_reqs, and then propagated!
         conanfile, conanref = node.conanfile, node.conan_ref
         for _, require in conanfile.requires.items():
-            self._resolver.resolve(require, conanref)
+            self._resolver.resolve(require, conanref, update)
 
         # After resolving ranges,
         for req in conanfile.requires.values():
@@ -86,7 +86,7 @@ class DepsGraphBuilder(object):
         # basic node configuration
         new_reqs, new_options = self._config_node(node, down_reqs, down_ref, down_options)
 
-        self._resolve_deps(node, aliased)
+        self._resolve_deps(node, aliased, update)
 
         # Expand each one of the current requirements
         for name, require in node.conanfile.requires.items():
