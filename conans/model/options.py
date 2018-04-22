@@ -429,7 +429,7 @@ class PackageOptions(object):
 
     def set_local(self, values):
         # For local commands, to restore state from conaninfo it is necessary to remove
-        for k in self._data.keys():
+        for k in list(self._data):
             try:
                 self._data[k].value = values._dict[k]
             except KeyError:
