@@ -431,8 +431,8 @@ class PackageOptions(object):
         # For local commands, to restore state from conaninfo it is necessary to remove
         for k in self._data.keys():
             try:
-                self._data[k].value = getattr(values, k)
-            except AttributeError:
+                self._data[k].value = values._dict[k]
+            except KeyError:
                 self._data.pop(k)
 
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
