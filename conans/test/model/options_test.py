@@ -18,6 +18,9 @@ class OptionsTest(unittest.TestCase):
         package_options.values = values
         self.sut = Options(package_options)
 
+    def test_int(self):
+        self.assertEqual(3, int(self.sut.optimized))
+
     def test_in(self):
         package_options = PackageOptions.loads("{static: [True, False]}")
         sut = Options(package_options)
