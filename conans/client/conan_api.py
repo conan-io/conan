@@ -66,6 +66,7 @@ def api_method(f):
         try:
             log_command(f.__name__, kwargs)
             the_self._init_manager()
+            curdir = os.getcwd()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
                 ret = f(*args, **kwargs)
@@ -81,6 +82,8 @@ def api_method(f):
             if isinstance(exc, ConanException):
                 exc.info = the_self._recorder.get_info()
             raise
+        finally:
+            os.chdir(curdir)
 
     return wrapper
 
