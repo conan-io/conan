@@ -64,9 +64,7 @@ class ToolsTest(ConanFile):
 
 
 class PythonExtendTest(unittest.TestCase):
-
-    def reuse_test(self):
-        client = TestClient()
+    def _define_base(self, client):
         conanfile = """from conans import ConanFile
 class MyConanfileBase(ConanFile):
     def source(self):
@@ -79,11 +77,29 @@ class MyConanfileBase(ConanFile):
         self.output.info("My cool package_info!")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . MyConanfileBase/1.1@user/testing")
+        client.run("export . MyConanfileBase/1.1@user/testing")
+
+    def reuse_test(self):
+        client = TestClient()
+        self._define_base(client)
         reuse = """from conans import ConanFile, conan_python_require
-
 base = conan_python_require("MyConanfileBase/1.1@user/testing")
+class PkgTest(base.MyConanfileBase):
+    pass
+"""
 
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+
+    def reuse_version_ranges_test(self):
+        client = TestClient()
+        self._define_base(client)
+        reuse = """from conans import ConanFile, conan_python_require
+base = conan_python_require("MyConanfileBase/[~1.0]@user/testing")
 class PkgTest(base.MyConanfileBase):
     pass
 """
