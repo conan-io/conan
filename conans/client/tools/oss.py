@@ -262,7 +262,10 @@ class OSInfo(object):
     @staticmethod
     def detect_windows_subsystem():
         from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
-        output = OSInfo.uname()
+        try:
+            output = OSInfo.uname()
+        except ConanException:
+            return None
         if not output:
             return None
         if "cygwin" in output:
