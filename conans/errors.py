@@ -68,7 +68,9 @@ class ConanException(Exception):
     """
          Generic conans exception
     """
-    pass
+    def __init__(self, *args, **kwargs):
+        self.info = None
+        super(ConanException, self).__init__(*args, **kwargs)
 
 
 class NoRemoteAvailable(ConanException):
