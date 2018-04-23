@@ -38,15 +38,13 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def package_available(self, package_ref, short_paths, check_outdated):
+    def package_available(self, package_ref, package_folder, check_outdated):
         """
         Returns True if there is a local or remote package available (and up to date if check_outdated).
         It wont download the package, just check its hash
         """
 
         output = ScopedOutput(str(package_ref.conan), self._out)
-        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-
         remote_info = None
         # No package in local cache
         if not os.path.exists(package_folder):

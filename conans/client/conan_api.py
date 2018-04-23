@@ -65,15 +65,21 @@ def api_method(f):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
+            the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                return f(*args, **kwargs)
+                ret = f(*args, **kwargs)
+                if ret is None:  # FIXME: Probably each method should manage its return
+                    return the_self._recorder.get_info()
+                return ret
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
             except:
                 pass
+            if isinstance(exc, ConanException):
+                exc.info = the_self._recorder.get_info()
             raise
 
     return wrapper
@@ -144,11 +150,21 @@ class ConanAPIV1(object):
     @staticmethod
     def factory(interactive=None):
         """Factory"""
-
-        use_color = get_env("CONAN_COLOR_DISPLAY", 1)
-        if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        # Respect color env setting or check tty if unset
+        color_set = "CONAN_COLOR_DISPLAY" in os.environ
+        if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+                or (not color_set
+                    and hasattr(sys.stdout, "isatty")
+                    and sys.stdout.isatty())):
+            # in PyCharm disable convert/strip
+            if get_env("PYCHARM_HOSTED"):
+                convert = False
+                strip = False
+            else:
+                convert = None
+                strip = None
             import colorama
-            colorama.init()
+            colorama.init(convert=convert, strip=strip)
             color = True
         else:
             color = False
@@ -170,10 +186,10 @@ class ConanAPIV1(object):
             # Get the new command instance after migrations have been done
             requester = get_basic_requester(client_cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
-                                                requester,
-                                                client_cache, user_io,
-                                                Version(client_version),
-                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+                requester,
+                client_cache, user_io,
+                Version(client_version),
+                Version(MIN_SERVER_COMPATIBLE_VERSION))
 
             # Adjust global tool variables
             set_global_instances(out, requester)
@@ -197,12 +213,21 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self.recorder = ActionRecorder()
+        self._search_manager = search_manager
+        self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     _settings_preprocessor, self.recorder, self._registry)
+        self._recorder = None
+        self._manager = None
+
         if not interactive:
             self._user_io.disable_input()
+
+    def _init_manager(self):
+        """Every api call gets a new recorder and new manager"""
+        self._recorder = ActionRecorder()
+        self._manager = ConanManager(self._client_cache, self._user_io, self._runner,
+                                     self._remote_manager, self._search_manager,
+                                     self._settings_preprocessor, self._recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -309,6 +334,7 @@ class ConanAPIV1(object):
                                          "or it doesn't have a conanfile.py" % tf)
 
         test_conanfile_path = get_test_conanfile_path(test_folder)
+        self._recorder.add_recipe_being_developed(reference)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
@@ -330,8 +356,6 @@ class ConanAPIV1(object):
                                   build_modes=build_modes,
                                   update=update,
                                   keep_build=keep_build)
-
-
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
