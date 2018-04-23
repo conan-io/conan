@@ -46,7 +46,7 @@ def config_source(export_folder, export_source_folder, src_folder,
         output.warn("Forced removal of source folder")
         remove_source()
     elif is_dirty(src_folder):
-        output.warn("Trying to remove dirty source folder")
+        output.warn("Trying to remove corrupted source folder")
         remove_source()
     elif conan_file.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
@@ -82,7 +82,7 @@ def config_source(export_folder, export_source_folder, src_folder,
             os.chdir(export_folder)
             # in case source() fails (user error, typically), remove the src_folder
             # and raise to interrupt any other processes (build, package)
-            output.warn("Trying to remove dirty source folder")
+            output.warn("Trying to remove corrupted source folder")
             remove_source(raise_error=False)
             if isinstance(e, ConanExceptionInUserConanfileMethod):
                 raise e

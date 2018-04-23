@@ -46,9 +46,21 @@ class CommandOutputer(object):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
+    def json_install(self, info, json_output, cwd):
+        cwd = os.path.abspath(cwd or os.getcwd())
+        if not os.path.isabs(json_output):
+            json_output = os.path.join(cwd, json_output)
+
+        def date_handler(obj):
+            return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+
+        save(json_output, json.dumps(info, default=date_handler))
+        self.user_io.out.info("json file created at '%s'" % json_output)
+
     def _read_dates(self, deps_graph):
         ret = {}
-        for ref, _ in sorted(deps_graph.nodes):
+        for node in sorted(deps_graph.nodes):
+            ref = node.conan_ref
             if ref:
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
@@ -67,10 +79,10 @@ class CommandOutputer(object):
 
     def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
         if graph_filename.endswith(".html"):
-            from conans.client.grapher import ConanHTMLGrapher
+            from conans.client.graph.grapher import ConanHTMLGrapher
             grapher = ConanHTMLGrapher(project_reference, deps_graph)
         else:
-            from conans.client.grapher import ConanGrapher
+            from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(project_reference, deps_graph)
 
         cwd = os.path.abspath(cwd or os.getcwd())
@@ -84,7 +96,7 @@ class CommandOutputer(object):
 
     def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query, table):
         if table:
-            from conans.client.grapher import html_binary_graph
+            from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(pattern, ordered_packages, recipe_hash, table)
         else:
             printer = Printer(self.user_io.out)
