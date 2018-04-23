@@ -688,7 +688,7 @@ class Command(object):
         specified, the removal will be done by default in the local conan cache.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
-        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
+        parser.add_argument('pattern_or_reference', nargs="?", help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-b', '--builds', nargs="*", action=Extender,
                             help=("By default, remove all the build folders or select one, "
                                   "specifying the package ID"))
