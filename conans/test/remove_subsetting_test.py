@@ -8,6 +8,7 @@ class RemoveSubsettingTest(unittest.TestCase):
 
     def remove_options_test(self):
         # https://github.com/conan-io/conan/issues/2327
+        # https://github.com/conan-io/conan/issues/2781
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -15,13 +16,19 @@ class Pkg(ConanFile):
     default_options = "opt1=True", "opt2=False"
     def config_options(self):
         del self.options.opt2
+    def build(self):
+        assert "opt2" not in self.options
+        self.options.opt2
 """
         client.save({"conanfile.py": conanfile})
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
         client.run("install ..")
-        client.run("build ..")
+        error = client.run("build ..", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ConanException: 'options.opt2' doesn't exist", client.out)
+        self.assertIn("Possible options are ['opt1']", client.out)
 
     def remove_setting_test(self):
         # https://github.com/conan-io/conan/issues/2327
