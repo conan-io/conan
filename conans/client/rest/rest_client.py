@@ -169,7 +169,7 @@ class RestApiClient(object):
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite:
+        if remote_snapshot and no_overwrite:
             if no_overwrite in ("all", "recipe"):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbbiden overwrite")
@@ -205,7 +205,7 @@ class RestApiClient(object):
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite:
+        if no_overwrite and remote_snapshot:
             if no_overwrite in ("all"):
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbbiden overwrite")
