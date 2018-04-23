@@ -13,8 +13,9 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
-from conans.util.files import save, load, normalize
-from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock
+from conans.util.files import save, load, normalize, list_folder_subdirs
+from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
+import shutil
 
 
 CONAN_CONF = 'conan.conf'
@@ -69,6 +70,7 @@ class ClientCache(SimplePaths):
         return WriteLock(self.conan(conan_ref), conan_ref, self._output)
 
     def conanfile_lock_files(self, conan_ref):
+        # Used in ConanRemover
         if self._no_locks():
             return ()
         return WriteLock(self.conan(conan_ref), conan_ref, self._output).files
@@ -256,6 +258,18 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def remove_locks(self):
+        folders = list_folder_subdirs(self._store_folder, 4)
+        for folder in folders:
+            conan_folder = os.path.join(self._store_folder, folder)
+            Lock.clean(conan_folder)
+            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
+    def remove_package_locks(self, reference):
+        conan_folder = self.conan(reference)
+        Lock.clean(conan_folder)
+        shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
     def invalidate(self):
         self._conan_config = None

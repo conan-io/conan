@@ -54,6 +54,7 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
@@ -687,7 +688,7 @@ class Command(object):
         specified, the removal will be done by default in the local conan cache.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
-        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
+        parser.add_argument('pattern_or_reference', nargs="?", help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-b', '--builds', nargs="*", action=Extender,
                             help=("By default, remove all the build folders or select one, "
                                   "specifying the package ID"))
@@ -702,6 +703,8 @@ class Command(object):
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
+        parser.add_argument("-l", "--locks", default=False, action="store_true",
+                            help="Remove locks")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
                                                                   args.query)
@@ -711,6 +714,16 @@ class Command(object):
 
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+
+        if args.locks:
+            if args.pattern_or_reference:
+                raise ConanException("Specifying a pattern is not supported when removing locks")
+            self._client_cache.remove_locks()
+            self._user_io.out.info("Cache locks removed")
+            return
+        else:
+            if not args.pattern_or_reference:
+                raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
         return self._conan.remove(pattern=reference or args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
