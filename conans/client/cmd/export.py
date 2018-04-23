@@ -15,11 +15,9 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
-from conans.client.tools.files import replace_in_file
-from conans.client.tools.git import git_uncommitted, git_origin, git_branch,\
-    git_commit
 from conans.util.files import save, load, rmdir, is_dirty, set_dirty
 from conans.util.log import logger
+from conans.model.scm import capture_export_scm_data
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -84,52 +82,16 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
-def _handle_scm(conanfile_path, dest_folder, conanfile, output):
-    scm = getattr(conanfile, "scm", None)
-    if not scm:
-        return
-
-    user_folder = os.path.dirname(conanfile_path).replace("\\", "/")
-    result_url = scm["url"]
-    cvs_checkout = scm["checkout"]
-    result_checkout = cvs_checkout
-
-    modified = git_uncommitted(user_folder)
-
-    if modified:
-        result_checkout = "source"
-        result_url = user_folder
-    elif scm["url"] == "auto":  # get origin
-        origin = git_origin(user_folder)
-        if origin:
-            result_url = origin
-        else:
-            result_url = user_folder
-
-    if not modified:
-        if cvs_checkout == "branch":
-            result_checkout = git_branch(user_folder)
-        elif cvs_checkout == "commit":
-            result_checkout = git_commit(user_folder)
-
-    final_path = os.path.join(dest_folder, "conanfile.py")
-    if result_checkout != cvs_checkout:
-        # FIXME: very fragile replace
-        replace_in_file(final_path, '"checkout": "%s"' % cvs_checkout,
-                        '"checkout": "%s"' % result_checkout)
-
-    if result_url != scm["url"]:
-        # FIXME: very fragile replace
-        replace_in_file(final_path, '"url": "auto"', '"url": "%s"' % result_url)
-
-
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
     destination_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
     _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
                     output)
-    _handle_scm(conanfile_path, destination_folder, conanfile, output)
+    scm = capture_export_scm_data(conanfile_path, conanfile, output)
+    if scm:
+        final_path = os.path.join(destination_folder, "conanfile.py")
+        scm.replace_in_file(final_path)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 

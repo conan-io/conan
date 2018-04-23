@@ -78,16 +78,17 @@ def config_source(export_folder, export_source_folder, src_folder,
 
 
 def _handle_scm(scm, conanfile, src_folder, output):
-    if scm.source_folder:
-        output.warn("SCM not fetching sources. Copying sources from: %s" % scm.source_folder)
+    if scm.is_source_folder():
+        output.warn("SCM not fetching sources. Copying sources from: %s" % scm.url)
         # Maybe this can be avoided and just point source_folder to user folder?
-        shutil.copytree(scm.source_folder, src_folder, symlinks=True)
+        shutil.copytree(scm.url, src_folder, symlinks=True)
         return
-
-    if scm.type == "git":
-        output.info("Getting sources from: %s - %s" % (scm["url"], cvs_checkout))
-        conanfile.run('git clone "%s" "%s"' % (scm["url"], src_folder))
-        conanfile.run('git checkout "%s"' % cvs_checkout, cwd=src_folder)
+    elif scm.is_git():
+        output.info("Getting sources from: %s - %s" % (scm.url, scm.checkout))
+        conanfile.run('git clone "%s" "%s"' % (scm.url, src_folder))
+        conanfile.run('git checkout "%s"' % scm.checkout, cwd=src_folder)
+    else:
+        raise ConanException("Unknown SCM configuration: %s" % str(scm))
 
 
 def _before_source(conan_file, src_folder, export_folder, export_source_folder, output):

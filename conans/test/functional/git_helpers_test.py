@@ -6,62 +6,33 @@ from conans.model.ref import ConanFileReference
 from conans.util.files import load
 import os
 from conans.test.utils.test_files import temp_folder
+from parameterized import parameterized
 
 
 class GitHelpersTest(unittest.TestCase):
 
-    def copy_local_source_test(self):
+    @parameterized.expand([("", "source"), ("auto", "branch"), ("some_url", "commit")])
+    def copy_local_source_test(self, url, checkout):
         client = TestClient()
-        conanfile = self._conanfile(client.current_folder, "source")
-
-        self._commit(client, conanfile, client.current_folder)
+        conanfile = self._conanfile(url, checkout)
+        client.save({"conanfile.py": conanfile,
+                     "src/mysrc.cpp": "mysource!!"})
 
         client.run("create . Pkg/0.1@user/testing")
-        self.assertNotIn("Cloning into", client.out)
-        self.assertIn("Checkout not defined. Copying sources", client.out)
-        self.assertIn("SOURCE!: mysource!!", client.out)
-
-    def clone_local_source_test(self):
-        client = TestClient()
-        conanfile = self._conanfile(client.current_folder, "master")
-        self._commit(client, conanfile, client.current_folder)
-
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertNotIn("Checkout not defined. Copying sources", client.out)
-        self.assertIn("Cloning into", client.out)
-        self.assertIn("SOURCE!: mysource!!", client.out)
-
-    def use_branch_test(self):
-        client = TestClient()
-        conanfile = self._conanfile("auto", "branch")
-
-        self._commit(client, conanfile, client.current_folder)
-
-        client.run("export . Pkg/0.1@user/testing")
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
         contents = load(os.path.join(client.client_cache.export(ref), "conanfile.py"))
-
-        self.assertIn('"checkout": "master"', contents)
-
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertNotIn("Checkout not defined. Copying sources", client.out)
-        self.assertIn("Cloning into", client.out)
+        self.assertIn('"checkout": "source"', contents)
+        self.assertIn("WARN: SCM not fetching sources. Copying sources from", client.out)
         self.assertIn("SOURCE!: mysource!!", client.out)
 
-    def use_commit_test(self):
+    def local_flow_test(self):
         client = TestClient()
-        conanfile = self._conanfile("auto", "commit")
+        conanfile = self._conanfile("", "source")
+        client.save({"conanfile.py": conanfile,
+                     "src/mysrc.cpp": "mysource!!"})
 
-        self._commit(client, conanfile, client.current_folder)
-
-        client.run("export . Pkg/0.1@user/testing")
-        ref = ConanFileReference.loads("Pkg/0.1@user/testing")
-        contents = load(os.path.join(client.client_cache.export(ref), "conanfile.py"))
-        self.assertNotIn('"checkout": "commit"', contents)
-
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertNotIn("Checkout not defined. Copying sources", client.out)
-        self.assertIn("Cloning into", client.out)
+        client.run("source .")
+        self.assertNotIn("SCM", client.out)
         self.assertIn("SOURCE!: mysource!!", client.out)
 
     def use_remote_test(self):
@@ -79,10 +50,10 @@ class GitHelpersTest(unittest.TestCase):
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
         cache_conanfilepath = os.path.join(client.client_cache.export(ref), "conanfile.py")
         contents = load(cache_conanfilepath)
-        self.assertNotIn('cvs_checkout = "commit"', contents)
+        self.assertNotIn('"checkout": "source"', contents)
 
         client.run("create . Pkg/0.1@user/testing")
-        self.assertNotIn("Checkout not defined. Copying sources", client.out)
+        self.assertNotIn("SCM not fetching sources", client.out)
         self.assertIn("Cloning into", client.out)
         self.assertIn("SOURCE!: mysource!!", client.out)
 
@@ -92,7 +63,7 @@ class GitHelpersTest(unittest.TestCase):
         contents = load(cache_conanfilepath)
         self.assertIn('"checkout": "source"', contents)
 
-        self.assertIn("Checkout not defined. Copying sources", client.out)
+        self.assertIn("SCM not fetching sources", client.out)
         self.assertNotIn("Cloning into", client.out)
         self.assertIn("SOURCE!: mysource2!!", client.out)
 
