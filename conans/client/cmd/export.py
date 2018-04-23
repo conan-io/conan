@@ -146,7 +146,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
     if is_dirty(source):
-        output.info("Source folder is dirty, forcing removal")
+        output.info("Source folder is corrupted, forcing removal")
         remove = True
     elif modified_recipe and not keep_source and os.path.exists(source):
         output.info("Package recipe modified in export, forcing source folder removal")
@@ -159,7 +159,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
             rmdir(source)
         except BaseException as e:
             output.error("Unable to delete source folder. "
-                         "Will be marked as dirty for deletion")
+                         "Will be marked as corrupted for deletion")
             output.warn(str(e))
             set_dirty(source)
 

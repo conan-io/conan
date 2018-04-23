@@ -29,7 +29,7 @@ class Printer(object):
         """
         self._out.writeln("Requirements", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
-            ref, _ = node
+            ref = node.conan_ref
             if not ref:
                 continue
             remote = registry.get_ref(ref)
@@ -37,7 +37,7 @@ class Printer(object):
             self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
         self._out.writeln("Packages", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
-            ref, conanfile = node
+            ref, conanfile = node.conan_ref, node.conanfile
             if not ref:
                 continue
             ref = PackageReference(ref, conanfile.info.package_id())
@@ -89,7 +89,7 @@ class Printer(object):
 
         graph_updates_info = graph_updates_info or {}
         for node in sorted(deps_graph.nodes):
-            ref, conan = node
+            ref, conan = node.conan_ref, node.conanfile
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference
@@ -153,7 +153,7 @@ class Printer(object):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
                                   Color.BRIGHT_GREEN)
 
-            dependants = deps_graph.inverse_neighbors(node)
+            dependants = node.inverse_neighbors()
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
@@ -161,7 +161,7 @@ class Printer(object):
                     self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):
-                depends = deps_graph.neighbors(node)
+                depends = node.neighbors()
                 if depends:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in depends:
