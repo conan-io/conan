@@ -306,6 +306,9 @@ class PackageOption(object):
     def __str__(self):
         return str(self._value)
 
+    def __int__(self):
+        return int(self._value)
+
     def _check_option_value(self, value):
         """ checks that the provided value is allowed by current restrictions
         """
