@@ -205,8 +205,8 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", ignore_error=True)
-        self.assertIn("ERROR: '--table' argument can only be used with a reference in the 'pattern'"
-                      " argument", self.client.user_io.out)
+        self.assertIn("ERROR: '--table' argument can only be used with a reference",
+                      self.client.user_io.out)
 
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
@@ -322,10 +322,10 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                                    "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True AND nonexistant_option=3'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["PlatformIndependantSHA",

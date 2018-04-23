@@ -150,11 +150,21 @@ class ConanAPIV1(object):
     @staticmethod
     def factory(interactive=None):
         """Factory"""
-
-        use_color = get_env("CONAN_COLOR_DISPLAY", 1)
-        if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        # Respect color env setting or check tty if unset
+        color_set = "CONAN_COLOR_DISPLAY" in os.environ
+        if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+                or (not color_set
+                    and hasattr(sys.stdout, "isatty")
+                    and sys.stdout.isatty())):
+            # in PyCharm disable convert/strip
+            if get_env("PYCHARM_HOSTED"):
+                convert = False
+                strip = False
+            else:
+                convert = None
+                strip = None
             import colorama
-            colorama.init()
+            colorama.init(convert=convert, strip=strip)
             color = True
         else:
             color = False
@@ -176,10 +186,10 @@ class ConanAPIV1(object):
             # Get the new command instance after migrations have been done
             requester = get_basic_requester(client_cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
-                                                requester,
-                                                client_cache, user_io,
-                                                Version(client_version),
-                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+                requester,
+                client_cache, user_io,
+                Version(client_version),
+                Version(MIN_SERVER_COMPATIBLE_VERSION))
 
             # Adjust global tool variables
             set_global_instances(out, requester)
@@ -688,6 +698,10 @@ class ConanAPIV1(object):
     @api_method
     def remote_update(self, remote, url, verify_ssl=True, insert=None):
         return self._registry.update(remote, url, verify_ssl, insert)
+
+    @api_method
+    def remote_rename(self, remote, new_remote):
+        return self._registry.rename(remote, new_remote)
 
     @api_method
     def remote_list_ref(self):

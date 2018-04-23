@@ -3,7 +3,7 @@ import unittest
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save, list_folder_subdirs
@@ -11,7 +11,7 @@ from conans.model.settings import Settings
 from conans.model.requires import Requirements
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
-from conans.client.require_resolver import RequireResolver, satisfying
+from conans.client.graph.require_resolver import RequireResolver, satisfying
 import re
 from parameterized import parameterized
 from conans.model.profile import Profile
@@ -153,7 +153,7 @@ Edge = namedtuple("Edge", "src dst")
 def _get_edges(graph):
     edges = set()
     for n in graph.nodes:
-        edges.update([Edge(n, neigh) for neigh in graph.neighbors(n)])
+        edges.update([Edge(n, neigh) for neigh in n.neighbors()])
     return edges
 
 

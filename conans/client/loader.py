@@ -59,7 +59,7 @@ class ConanFileLoader(object):
 
             if consumer:
                 self._user_options.descope_options(result.name)
-                result.options.initialize_upstream(self._user_options)
+                result.options.initialize_upstream(self._user_options, local=local)
                 self._user_options.clear_unscoped_options()
             else:
                 result.in_local_cache = True

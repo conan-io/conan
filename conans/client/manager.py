@@ -3,10 +3,10 @@ import os
 from collections import Counter
 
 from conans.client import packager
-from conans.client.build_requires import BuildRequires
+from conans.client.graph.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import cmd_export, _execute_export
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
 from conans.client.importer import run_imports, undo_imports, run_deploy
@@ -18,7 +18,7 @@ from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
 from conans.client.remover import ConanRemover
-from conans.client.require_resolver import RequireResolver
+from conans.client.graph.require_resolver import RequireResolver
 from conans.client.source import config_source_local
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -187,7 +187,7 @@ class ConanManager(object):
         # this is a bit tricky, but works. The loading of a cache package makes the referenced
         # one, the first of the first level, always existing
         nodes = deps_graph.direct_requires()
-        _, conanfile = nodes[0]
+        conanfile = nodes[0].conanfile
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
         pkg_reference = PackageReference(reference, pkg_id)
