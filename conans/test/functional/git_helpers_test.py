@@ -41,7 +41,7 @@ class GitHelpersTest(unittest.TestCase):
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
         contents = load(os.path.join(client.client_cache.export(ref), "conanfile.py"))
 
-        self.assertIn('cvs_checkout = "master"', contents)
+        self.assertIn('"checkout": "master"', contents)
 
         client.run("create . Pkg/0.1@user/testing")
         self.assertNotIn("Checkout not defined. Copying sources", client.out)
@@ -57,8 +57,7 @@ class GitHelpersTest(unittest.TestCase):
         client.run("export . Pkg/0.1@user/testing")
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
         contents = load(os.path.join(client.client_cache.export(ref), "conanfile.py"))
-
-        self.assertNotIn('cvs_checkout = "commit"', contents)
+        self.assertNotIn('"checkout": "commit"', contents)
 
         client.run("create . Pkg/0.1@user/testing")
         self.assertNotIn("Checkout not defined. Copying sources", client.out)
@@ -91,7 +90,7 @@ class GitHelpersTest(unittest.TestCase):
         client.save({"src/mysrc.cpp": "mysource2!!"})
         client.run("create . Pkg/0.1@user/testing")
         contents = load(cache_conanfilepath)
-        self.assertIn('cvs_checkout = "source"', contents)
+        self.assertIn('"checkout": "source"', contents)
 
         self.assertIn("Checkout not defined. Copying sources", client.out)
         self.assertNotIn("Cloning into", client.out)
@@ -102,8 +101,8 @@ class GitHelpersTest(unittest.TestCase):
         conanfile = """from conans import ConanFile
 from conans.tools import load
 class Pkg(ConanFile):
-    cvs_url = "%s"
-    cvs_checkout = "%s"
+    scm = {"url": "%s",
+           "checkout": "%s"}
 
     def source(self):
         self.output.info("SOURCE!: {}".format(load("src/mysrc.cpp")))
@@ -120,5 +119,3 @@ class Pkg(ConanFile):
             client.runner('git config user.name myname')
             client.runner('git config user.email myname@mycompany.com')
             client.runner('git commit -m "mymsg"')
-
-

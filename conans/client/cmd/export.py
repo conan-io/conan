@@ -84,14 +84,14 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
-def _handle_cvs(conanfile_path, dest_folder, conanfile, output):
-    cvs_url = getattr(conanfile, "cvs_url", None)
-    if not cvs_url:
+def _handle_scm(conanfile_path, dest_folder, conanfile, output):
+    scm = getattr(conanfile, "scm", None)
+    if not scm:
         return
 
     user_folder = os.path.dirname(conanfile_path).replace("\\", "/")
-    result_url = cvs_url
-    cvs_checkout = conanfile.cvs_checkout
+    result_url = scm["url"]
+    cvs_checkout = scm["checkout"]
     result_checkout = cvs_checkout
 
     modified = git_uncommitted(user_folder)
@@ -99,7 +99,7 @@ def _handle_cvs(conanfile_path, dest_folder, conanfile, output):
     if modified:
         result_checkout = "source"
         result_url = user_folder
-    elif cvs_url == "auto":  # get origin
+    elif scm["url"] == "auto":  # get origin
         origin = git_origin(user_folder)
         if origin:
             result_url = origin
@@ -115,12 +115,12 @@ def _handle_cvs(conanfile_path, dest_folder, conanfile, output):
     final_path = os.path.join(dest_folder, "conanfile.py")
     if result_checkout != cvs_checkout:
         # FIXME: very fragile replace
-        replace_in_file(final_path, 'cvs_checkout = "%s"' % cvs_checkout,
-                        'cvs_checkout = "%s"' % result_checkout)
+        replace_in_file(final_path, '"checkout": "%s"' % cvs_checkout,
+                        '"checkout": "%s"' % result_checkout)
 
-    if result_url != cvs_url:
+    if result_url != scm["url"]:
         # FIXME: very fragile replace
-        replace_in_file(final_path, 'cvs_url = "auto"', 'cvs_url = "%s"' % result_url)
+        replace_in_file(final_path, '"url": "auto"', '"url": "%s"' % result_url)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
@@ -129,7 +129,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
     _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
                     output)
-    _handle_cvs(conanfile_path, destination_folder, conanfile, output)
+    _handle_scm(conanfile_path, destination_folder, conanfile, output)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 

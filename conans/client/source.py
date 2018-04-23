@@ -9,6 +9,7 @@ from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
+from conans.model.scm import SCM
 
 
 def merge_directories(src, dst):
@@ -76,18 +77,23 @@ def config_source(export_folder, export_source_folder, src_folder,
             raise ConanException(e)
 
 
+def _handle_scm(scm, conanfile, src_folder, output):
+    if scm.source_folder:
+        output.warn("SCM not fetching sources. Copying sources from: %s" % scm.source_folder)
+        # Maybe this can be avoided and just point source_folder to user folder?
+        shutil.copytree(scm.source_folder, src_folder, symlinks=True)
+        return
+
+    if scm.type == "git":
+        output.info("Getting sources from: %s - %s" % (scm["url"], cvs_checkout))
+        conanfile.run('git clone "%s" "%s"' % (scm["url"], src_folder))
+        conanfile.run('git checkout "%s"' % cvs_checkout, cwd=src_folder)
+
+
 def _before_source(conan_file, src_folder, export_folder, export_source_folder, output):
-    cvs_url = getattr(conan_file, "cvs_url", None)
-    if cvs_url:
-        cvs_checkout = conan_file.cvs_checkout
-        if cvs_checkout == "source":
-            output.warn("Checkout not defined. Copying sources from: %s" % cvs_url)
-            # Maybe this can be avoided and just point source_folder to user folder?
-            shutil.copytree(cvs_url, src_folder, symlinks=True)
-        else:
-            output.info("Getting sources from: %s - %s" % (cvs_url, cvs_checkout))
-            conan_file.run('git clone "%s" "%s"' % (cvs_url, src_folder))
-            conan_file.run('git checkout "%s"' % cvs_checkout, cwd=src_folder)
+    scm = SCM.get_scm(conan_file)
+    if scm is not None:
+        _handle_scm(scm, conan_file, src_folder, output)
         merge_directories(export_folder, src_folder)
     else:
         shutil.copytree(export_folder, src_folder, symlinks=True)
