@@ -1,4 +1,5 @@
 import unittest
+
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os

@@ -65,15 +65,21 @@ def api_method(f):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
+            the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                return f(*args, **kwargs)
+                ret = f(*args, **kwargs)
+                if ret is None:  # FIXME: Probably each method should manage its return
+                    return the_self._recorder.get_info()
+                return ret
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
             except:
                 pass
+            if isinstance(exc, ConanException):
+                exc.info = the_self._recorder.get_info()
             raise
 
     return wrapper
@@ -207,12 +213,21 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self.recorder = ActionRecorder()
+        self._search_manager = search_manager
+        self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     _settings_preprocessor, self.recorder, self._registry)
+        self._recorder = None
+        self._manager = None
+
         if not interactive:
             self._user_io.disable_input()
+
+    def _init_manager(self):
+        """Every api call gets a new recorder and new manager"""
+        self._recorder = ActionRecorder()
+        self._manager = ConanManager(self._client_cache, self._user_io, self._runner,
+                                     self._remote_manager, self._search_manager,
+                                     self._settings_preprocessor, self._recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -319,6 +334,7 @@ class ConanAPIV1(object):
                                          "or it doesn't have a conanfile.py" % tf)
 
         test_conanfile_path = get_test_conanfile_path(test_folder)
+        self._recorder.add_recipe_being_developed(reference)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
