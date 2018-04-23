@@ -144,11 +144,21 @@ class ConanAPIV1(object):
     @staticmethod
     def factory(interactive=None):
         """Factory"""
-
-        use_color = get_env("CONAN_COLOR_DISPLAY", 1)
-        if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        # Respect color env setting or check tty if unset
+        color_set = "CONAN_COLOR_DISPLAY" in os.environ
+        if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+                or (not color_set
+                    and hasattr(sys.stdout, "isatty")
+                    and sys.stdout.isatty())):
+            # in PyCharm disable convert/strip
+            if get_env("PYCHARM_HOSTED"):
+                convert = False
+                strip = False
+            else:
+                convert = None
+                strip = None
             import colorama
-            colorama.init()
+            colorama.init(convert=convert, strip=strip)
             color = True
         else:
             color = False
