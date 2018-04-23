@@ -6,7 +6,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum, save
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -84,7 +84,7 @@ class RestApiClient(object):
     def auth(self):
         return JWTAuth(self.token)
 
-    def get_conan_digest(self, conan_reference):
+    def get_conan_manifest(self, conan_reference):
         """Gets a FileTreeManifest from conans"""
 
         # Obtain the URLs
@@ -97,7 +97,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_package_digest(self, package_reference):
+    def get_package_manifest(self, package_reference):
         """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
@@ -131,21 +131,15 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder, filter_files_function):
+    def get_recipe_urls(self, conan_reference):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_file_to_url_dict(url)
 
-        urls = filter_files_function(urls)
-        if not urls:
-            return None
+        return urls
 
-        # TODO: Get fist an snapshot and compare files and download only required?
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
-
-    def get_package(self, package_reference, dest_folder):
+    def get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
@@ -153,13 +147,11 @@ class RestApiClient(object):
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
-        # TODO: Get fist an snapshot and compare files and download only required?
 
-        # Download the resources
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
+        return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
+                      no_overwrite):
         """
         the_files: dict with relative_path: content
         """
@@ -174,8 +166,13 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all", "recipe"):
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbbiden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 
@@ -191,7 +188,7 @@ class RestApiClient(object):
 
         return files_to_upload or deleted
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -205,8 +202,13 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all"):
+                raise ConanException("Local package is different from the remote package. "
+                                     "Forbbiden overwrite")
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
@@ -450,24 +452,24 @@ class RestApiClient(object):
                 output.writeln("")
             yield os.path.normpath(filename), contents
 
-    def download_files_to_folder(self, file_urls, to_folder, output=None):
+    def download_files_to_folder(self, file_urls, to_folder):
         """
         :param: file_urls is a dict with {filename: abs_path}
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, output, self.verify_ssl)
+        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
-                output.writeln("Downloading %s" % filename)
+            if self._output:
+                self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
             downloader.download(resource_url, abs_path, auth=auth)
-            if output:
-                output.writeln("")
+            if self._output:
+                self._output.writeln("")
             ret[filename] = abs_path
         return ret
 

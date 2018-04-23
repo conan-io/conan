@@ -394,10 +394,12 @@ build_type: [ Release]
         if platform.system() == "Windows":
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
-        # Now activate cross build and check sysroot
-        with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android"})):
+        # Now activate cross build and check sysroot and system processor
+        with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android",
+                                       "CONAN_CMAKE_SYSTEM_PROCESSOR": "somevalue"})):
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and

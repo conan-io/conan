@@ -5,6 +5,7 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
+from conans.client.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -38,15 +39,25 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
+from conans.client.cmd.user import users_clean, users_list, user_set
 
 
 default_manifest_folder = '.conan_manifests'
 
 
+def get_request_timeout():
+    timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+    try:
+        return float(timeout) if timeout is not None else None
+    except ValueError:
+        raise ConanException("Specify a numeric parameter for 'request_timeout'")
+
+
 def get_basic_requester(client_cache):
     requester = requests.Session()
     # Manage the verify and the client certificates and setup proxies
-    return ConanRequester(requester, client_cache)
+
+    return ConanRequester(requester, client_cache, get_request_timeout())
 
 
 def api_method(f):
@@ -54,15 +65,21 @@ def api_method(f):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
+            the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                return f(*args, **kwargs)
+                ret = f(*args, **kwargs)
+                if ret is None:  # FIXME: Probably each method should manage its return
+                    return the_self._recorder.get_info()
+                return ret
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
             except:
                 pass
+            if isinstance(exc, ConanException):
+                exc.info = the_self._recorder.get_info()
             raise
 
     return wrapper
@@ -131,13 +148,23 @@ class ConanAPIV1(object):
         return localdb, rest_api_client, remote_manager
 
     @staticmethod
-    def factory():
+    def factory(interactive=None):
         """Factory"""
-
-        use_color = get_env("CONAN_COLOR_DISPLAY", 1)
-        if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        # Respect color env setting or check tty if unset
+        color_set = "CONAN_COLOR_DISPLAY" in os.environ
+        if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+                or (not color_set
+                    and hasattr(sys.stdout, "isatty")
+                    and sys.stdout.isatty())):
+            # in PyCharm disable convert/strip
+            if get_env("PYCHARM_HOSTED"):
+                convert = False
+                strip = False
+            else:
+                convert = None
+                strip = None
             import colorama
-            colorama.init()
+            colorama.init(convert=convert, strip=strip)
             color = True
         else:
             color = False
@@ -159,10 +186,10 @@ class ConanAPIV1(object):
             # Get the new command instance after migrations have been done
             requester = get_basic_requester(client_cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
-                                                requester,
-                                                client_cache, user_io,
-                                                Version(client_version),
-                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+                requester,
+                client_cache, user_io,
+                Version(client_version),
+                Version(MIN_SERVER_COMPATIBLE_VERSION))
 
             # Adjust global tool variables
             set_global_instances(out, requester)
@@ -171,21 +198,36 @@ class ConanAPIV1(object):
             search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
+            if interactive is None:
+                interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor)
+                          settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
     def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
-                 settings_preprocessor):
+                 _settings_preprocessor, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     settings_preprocessor)
+        self._search_manager = search_manager
+        self._settings_preprocessor = _settings_preprocessor
+        self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        self._recorder = None
+        self._manager = None
+
+        if not interactive:
+            self._user_io.disable_input()
+
+    def _init_manager(self):
+        """Every api call gets a new recorder and new manager"""
+        self._recorder = ActionRecorder()
+        self._manager = ConanManager(self._client_cache, self._user_io, self._runner,
+                                     self._remote_manager, self._search_manager,
+                                     self._settings_preprocessor, self._recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -292,6 +334,7 @@ class ConanAPIV1(object):
                                          "or it doesn't have a conanfile.py" % tf)
 
         test_conanfile_path = get_test_conanfile_path(test_folder)
+        self._recorder.add_recipe_being_developed(reference)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
@@ -308,7 +351,7 @@ class ConanAPIV1(object):
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
-                                  remote=remote,
+                                  remote_name=remote,
                                   profile=profile,
                                   build_modes=build_modes,
                                   update=update,
@@ -376,7 +419,7 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote, recipe=recipe)
+        self._manager.download(conan_ref, package, remote_name=remote, recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -397,7 +440,7 @@ class ConanAPIV1(object):
             generators = False
 
         mkdir(install_folder)
-        self._manager.install(reference=reference, install_folder=install_folder, remote=remote,
+        self._manager.install(reference=reference, install_folder=install_folder, remote_name=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -423,7 +466,7 @@ class ConanAPIV1(object):
 
         self._manager.install(reference=conanfile_path,
                               install_folder=install_folder,
-                              remote=remote,
+                              remote_name=remote,
                               profile=profile,
                               build_modes=build,
                               update=update,
@@ -496,7 +539,7 @@ class ConanAPIV1(object):
                        profile_name=None, update=False, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        ret = self._manager.info_get_graph(reference, remote=remote, profile=profile,
+        ret = self._manager.info_get_graph(reference, remote_name=remote, profile=profile,
                                            check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
@@ -575,7 +618,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote=None, outdated=False):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote=remote, packages_query=query,
+                             src=src, force=force, remote_name=remote, packages_query=query,
                              outdated=outdated)
 
     @api_method
@@ -585,78 +628,96 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
+        remote_proxy = self._manager.get_proxy()
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, force=force)
+                 self._user_io, remote_proxy, force=force)
 
     @api_method
-    def user(self, name=None, clean=False, remote=None, password=None):
-        if clean:
-            localdb = LocalDB(self._client_cache.localdb)
-            localdb.init(clean=True)
-            self._user_io.out.success("Deleted user data")
-            return
-        self._manager.user(remote, name, password)
+    def authenticate(self, name, password, remote=None):
+        if not remote:
+            remote = self._registry.default_remote
+        else:
+            remote = self._registry.remote(remote)
+        if password == "":
+            name, password = self._user_io.request_login(remote_name=remote.name,
+                                                         username=name)
+        self._remote_manager.authenticate(remote, name, password)
+
+    @api_method
+    def user_set(self, user, remote_name=None):
+        return user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
+
+    @api_method
+    def users_clean(self):
+        return users_clean(self._client_cache)
+
+    @api_method
+    def users_list(self, remote=None):
+        users = users_list(self._client_cache, self._registry, remote)
+        for remote_name, username in users:
+            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_recipes(pattern, remote, case_sensitive)
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
-        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
         return search.search_packages(reference, remote, query=query,
                                       outdated=outdated)
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
-               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
+               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False,
+               no_overwrite=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             remote)
-        return uploader.upload(pattern, package, all_packages, force, confirm, retry,
-                               retry_wait, skip_upload, integrity_check)
+
+        if force and no_overwrite:
+            raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
+
+        remote_proxy = self._manager.get_proxy(remote_name=remote)
+        uploader = CmdUpload(self._client_cache, self._user_io, remote_proxy)
+        return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
+                               skip_upload, integrity_check, no_overwrite)
 
     @api_method
     def remote_list(self):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remotes
+        return self._registry.remotes
 
     @api_method
     def remote_add(self, remote, url, verify_ssl=True, insert=None):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add(remote, url, verify_ssl, insert)
+        return self._registry.add(remote, url, verify_ssl, insert)
 
     @api_method
     def remote_remove(self, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remove(remote)
+        return self._registry.remove(remote)
 
     @api_method
     def remote_update(self, remote, url, verify_ssl=True, insert=None):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.update(remote, url, verify_ssl, insert)
+        return self._registry.update(remote, url, verify_ssl, insert)
+
+    @api_method
+    def remote_rename(self, remote, new_remote):
+        return self._registry.rename(remote, new_remote)
 
     @api_method
     def remote_list_ref(self):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.refs
+        return self._registry.refs
 
     @api_method
     def remote_add_ref(self, reference, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add_ref(reference, remote)
+        return self._registry.add_ref(reference, remote)
 
     @api_method
     def remote_remove_ref(self, reference):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.remove_ref(reference)
+        return self._registry.remove_ref(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote):
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.update_ref(reference, remote)
+        return self._registry.update_ref(reference, remote)
 
     @api_method
     def profile_list(self):
