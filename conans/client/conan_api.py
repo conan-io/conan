@@ -64,9 +64,9 @@ def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
+            curdir = os.getcwd()
             log_command(f.__name__, kwargs)
             the_self._init_manager()
-            curdir = os.getcwd()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
                 ret = f(*args, **kwargs)

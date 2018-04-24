@@ -3,12 +3,13 @@ import os
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
+from conans.test.utils.test_files import temp_folder
 
 
 class CurdirKeptTest(unittest.TestCase):
 
     def curdir_test(self):
-        tmp_folder = os.path.realpath(os.path.expanduser(tools.mkdir_tmp()))
+        tmp_folder = temp_folder(tools.mkdir_tmp())
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     name = "lib"
