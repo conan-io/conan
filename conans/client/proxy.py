@@ -3,7 +3,6 @@ import os
 from requests.exceptions import RequestException
 
 from conans.client.loader_parse import load_conanfile_class
-from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
@@ -329,13 +328,6 @@ class ConanProxy(object):
             raise ConanException("Cannot remove, remote not defined")
         remote = self._registry.remote(self._remote_name)
         return self._remote_manager.remove_packages(conan_ref, remove_ids, remote)
-
-    def get_path(self, conan_ref, package_id, path):
-        if not self._remote_name:
-            return get_path(self._client_cache, conan_ref, package_id, path)
-        else:
-            remote = self._registry.remote(self._remote_name)
-            return self._remote_manager.get_path(conan_ref, package_id, path, remote)
 
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))

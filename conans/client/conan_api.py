@@ -40,6 +40,8 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
+from conans.client.importer import undo_imports
+from conans.client.cmd.export import cmd_export, export_alias
 
 
 default_manifest_folder = '.conan_manifests'
@@ -156,15 +158,11 @@ class ConanAPIV1(object):
                 or (not color_set
                     and hasattr(sys.stdout, "isatty")
                     and sys.stdout.isatty())):
-            # in PyCharm disable convert/strip
-            if get_env("PYCHARM_HOSTED"):
-                convert = False
-                strip = False
-            else:
-                convert = None
-                strip = None
             import colorama
-            colorama.init(convert=convert, strip=strip)
+            if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+                colorama.init(convert=False, strip=False)
+            else:
+                colorama.init()
             color = True
         else:
             color = False
@@ -200,8 +198,8 @@ class ConanAPIV1(object):
             # Settings preprocessor
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor, interactive=interactive)
+            conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
+                               settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
@@ -304,7 +302,8 @@ class ConanAPIV1(object):
         # Forcing an export!
         if not not_export:
             scoped_output.highlight("Exporting package recipe")
-            self._manager.export(conanfile_path, name, version, user, channel, keep_source)
+            cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                       self._user_io.out, self._client_cache)
 
         if build_modes is None:  # Not specified, force build the tested library
             build_modes = [name]
@@ -402,7 +401,8 @@ class ConanAPIV1(object):
            (version and conanfile.version and conanfile.version != version):
             raise ConanException("Specified name/version doesn't match with the "
                                  "name/version in the conanfile")
-        self._manager.export(conanfile_path, name, version, user, channel)
+        cmd_export(conanfile_path, name, version, user, channel, False,
+                   self._user_io.out, self._client_cache)
 
         if not (name and version):
             name = conanfile.name
@@ -607,12 +607,13 @@ class ConanAPIV1(object):
     def imports_undo(self, manifest_path):
         cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
-        self._manager.imports_undo(manifest_path)
+        undo_imports(manifest_path, self._user_io.out)
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        self._manager.export(conanfile_path, name, version, user, channel, keep_source)
+        cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                   self._user_io.out, self._client_cache)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -747,14 +748,22 @@ class ConanAPIV1(object):
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote=None):
+        from conans.client.local_file_getter import get_path
         reference = ConanFileReference.loads(str(reference))
-        return self._manager.get_path(reference, package_id, path, remote)
+        if not path:
+            path = "conanfile.py" if not package_id else "conaninfo.txt"
+
+        if not remote:
+            return get_path(self._client_cache, reference, package_id, path)
+        else:
+            remote = self._registry.remote(remote)
+            return self._remote_manager.get_path(reference, package_id, path, remote)
 
     @api_method
     def export_alias(self, reference, target_reference):
         reference = ConanFileReference.loads(str(reference))
         target_reference = ConanFileReference.loads(str(target_reference))
-        return self._manager.export_alias(reference, target_reference)
+        return export_alias(reference, target_reference, self._client_cache)
 
 
 Conan = ConanAPIV1

@@ -1,6 +1,7 @@
 import re
+import os
 
-from abc import ABCMeta, abstractmethod
+
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
@@ -8,59 +9,8 @@ from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.log import logger
-import os
 from conans.search.query_parse import infix_to_postfix, evaluate_postfix
-
-
-class SearchAdapterABC(object):
-    """Methods that allows access to disk or s3 or whatever to make a search"""
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def list_folder_subdirs(self, basedir, level):
-        pass
-
-    @abstractmethod
-    def path_exists(self, path):
-        pass
-
-    @abstractmethod
-    def load(self, filepath):
-        pass
-
-    @abstractmethod
-    def join_paths(self, *args):
-        pass
-
-
-class DiskSearchAdapter(SearchAdapterABC):
-
-    def list_folder_subdirs(self, basedir, level):
-        from conans.util.files import list_folder_subdirs
-        return list_folder_subdirs(basedir, level)
-
-    def path_exists(self, path):
-        return os.path.exists(path)
-
-    def load(self, filepath):
-        from conans.util.files import load
-        return load(filepath)
-
-    def join_paths(self, *args):
-        return os.path.join(*args)
-
-
-class SearchManagerABC(object):
-    """Methods that allows access to disk or s3 or whatever to make a search"""
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def search_recipes(self, pattern=None, ignorecase=True):
-        pass
-
-    @abstractmethod
-    def search_packages(self, reference, query):
-        pass
+from conans.util.files import list_folder_subdirs, load
 
 
 def filter_outdated(packages_infos, recipe_hash):
@@ -124,13 +74,12 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     return False
 
 
-class DiskSearchManager(SearchManagerABC):
+class DiskSearchManager(object):
     """Will search recipes and packages using a file system.
     Can be used with a SearchAdapter"""
 
-    def __init__(self, paths, disk_search_adapter=None):
+    def __init__(self, paths):
         self._paths = paths
-        self._adapter = disk_search_adapter or DiskSearchAdapter()
 
     def search_recipes(self, pattern=None, ignorecase=True):
         # Conan references in main storage
@@ -140,7 +89,7 @@ class DiskSearchManager(SearchManagerABC):
             pattern = translate(pattern)
             pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-        subdirs = self._adapter.list_folder_subdirs(basedir=self._paths.store, level=4)
+        subdirs = list_folder_subdirs(basedir=self._paths.store, level=4)
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:
@@ -166,17 +115,16 @@ class DiskSearchManager(SearchManagerABC):
     def _get_local_infos_min(self, reference):
         result = {}
         packages_path = self._paths.packages(reference)
-        subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
+        subdirs = list_folder_subdirs(packages_path, level=4)
         for package_id in subdirs:
             # Read conaninfo
             try:
                 package_reference = PackageReference(reference, package_id)
-                info_path = self._adapter.join_paths(self._paths.package(package_reference,
-                                                                         short_paths=None),
-                                                     CONANINFO)
-                if not self._adapter.path_exists(info_path):
+                info_path = os.path.join(self._paths.package(package_reference,
+                                                             short_paths=None), CONANINFO)
+                if not os.path.exists(info_path):
                     raise NotFoundException("")
-                conan_info_content = self._adapter.load(info_path)
+                conan_info_content = load(info_path)
                 conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
                 result[package_id] = conan_vars_info
 

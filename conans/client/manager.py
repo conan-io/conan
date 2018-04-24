@@ -5,11 +5,11 @@ from collections import Counter
 from conans.client import packager
 from conans.client.graph.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
-from conans.client.cmd.export import cmd_export, _execute_export
+from conans.client.cmd.export import _execute_export
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
-from conans.client.importer import run_imports, undo_imports, run_deploy
+from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
@@ -24,9 +24,8 @@ from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
-from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
+from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
@@ -157,10 +156,6 @@ class ConanManager(object):
         else:
             self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
-
-    def export(self, conanfile_path, name, version, user, channel,  keep_source=False):
-        cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                   self._user_io.out, self._client_cache)
 
     def get_proxy(self, remote_name=None, manifest_manager=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
@@ -433,9 +428,6 @@ class ConanManager(object):
                             source_folder, output)
         config_source_local(source_folder, conanfile, output)
 
-    def imports_undo(self, current_path):
-        undo_imports(current_path, self._user_io.out)
-
     def imports(self, conan_file_path, dest_folder, info_folder):
         """
         :param conan_file_path: Abs path to a conanfile
@@ -530,30 +522,6 @@ class ConanManager(object):
                                self._registry)
         remover.remove(pattern, remote_name, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
-
-    def get_path(self, reference, package_id=None, path=None, remote_name=None):
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        if not path and not package_id:
-            path = "conanfile.py"
-        elif not path and package_id:
-            path = "conaninfo.txt"
-        return remote_proxy.get_path(reference, package_id, path), path
-
-    def export_alias(self, reference, target_reference):
-
-        conanfile = """
-from conans import ConanFile
-
-class AliasConanfile(ConanFile):
-    alias = "%s"
-""" % str(target_reference)
-
-        export_path = self._client_cache.export(reference)
-        mkdir(export_path)
-        save(os.path.join(export_path, CONANFILE), conanfile)
-        mkdir(self._client_cache.export_sources(reference))
-        digest = FileTreeManifest.create(export_path)
-        save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
 
 
 def _load_deps_info(current_path, conanfile, required):
