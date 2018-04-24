@@ -1,3 +1,4 @@
+import os
 from conans.model import Generator
 
 """
@@ -26,13 +27,17 @@ def single_pc_file_contents(name, cpp_info):
     lines = ['prefix=%s' % cpp_info.rootpath.replace("\\", "/")]
     libdir_vars = []
     for i, libdir in enumerate(cpp_info.libdirs):
+        libdir = libdir.replace("\\", "/")
         varname = "libdir" if i == 0 else "libdir%d" % (i + 2)
-        lines.append("%s=${prefix}/%s" % (varname, libdir))
+        prefix = "${prefix}/" if _with_prefix(libdir) else ""
+        lines.append("%s=%s%s" % (varname, prefix, libdir))
         libdir_vars.append(varname)
     include_dir_vars = []
     for i, includedir in enumerate(cpp_info.includedirs):
+        includedir = includedir.replace("\\", "/")
         varname = "includedir" if i == 0 else "includedir%d" % (i + 2)
-        lines.append("%s=${prefix}/%s" % (varname, includedir))
+        prefix = "${prefix}/" if _with_prefix(includedir) else ""
+        lines.append("%s=%s%s" % (varname, prefix, includedir))
         include_dir_vars.append(varname)
     lines.append("")
     lines.append("Name: %s" % name)
@@ -55,6 +60,10 @@ def single_pc_file_contents(name, cpp_info):
         public_deps = " ".join(cpp_info.public_deps)
         lines.append("Requires: %s" % public_deps)
     return "\n".join(lines) + "\n"
+
+
+def _with_prefix(path):
+    return not os.path.isabs(path)
 
 
 class PkgConfigGenerator(Generator):

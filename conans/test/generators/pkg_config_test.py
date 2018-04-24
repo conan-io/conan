@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from conans.client.generators.pkg_config import PkgConfigGenerator
@@ -5,6 +6,8 @@ from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class PkgGeneratorTest(unittest.TestCase):
@@ -55,3 +58,48 @@ Version: 1.3
 Libs: -L${libdir}
 Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 """)
+
+    def pkg_config_dirs_test(self):
+        # https://github.com/conan-io/conan/issues/2756
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    short_paths = True
+
+    def package_info(self):
+        self.cpp_info.includedirs = []
+        self.cpp_info.libdirs = []
+        self.cpp_info.bindirs = []
+        self.cpp_info.libs = []
+        libname = "mylib"
+        fake_dir = os.path.abspath(os.path.join("my_absoulte_path", "fake"))
+        include_dir = os.path.join(fake_dir, libname, "include")
+        lib_dir = os.path.join(fake_dir, libname, "lib")
+        self.cpp_info.includedirs.append(include_dir)
+        self.cpp_info.libdirs.append(lib_dir)
+        self.cpp_info.libs.extend(tools.collect_libs(self, lib_dir))
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . danimtb/testing")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config")
+
+        pc_path = os.path.join(client.current_folder, "MyLib.pc")
+        self.assertTrue(os.path.exists(pc_path))
+        pc_content = load(pc_path)
+        self.assertNotIn("${prefix}", pc_content)
+
+        def assert_is_abs(path):
+            self.assertTrue(os.path.isabs(path))
+
+        for line in pc_content.splitlines():
+            if line.startswith("includedir="):
+                assert_is_abs(line[len("includedir="):])
+                self.assertTrue(line.endswith("include"))
+            elif line.startswith("libdir="):
+                assert_is_abs(line[len("libdir="):])
+                self.assertTrue(line.endswith("lib"))
