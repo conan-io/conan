@@ -685,3 +685,10 @@ class MyConan(ConanFile):
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
 
+    def detect_windows_subsystem_test(self):
+        # Dont raise test
+        result = tools.os_info.detect_windows_subsystem()
+        if not tools.os_info.bash_path or platform.system() != "Windows":
+            self.assertEqual(None, result)
+        else:
+            self.assertEqual(str, type(result))
