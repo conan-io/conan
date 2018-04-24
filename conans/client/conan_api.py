@@ -629,9 +629,8 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
-        remote_proxy = self._manager.get_proxy()
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, remote_proxy, force=force)
+                 self._user_io, self._remote_manager, self._registry, force=force)
 
     @api_method
     def authenticate(self, name, password, remote=None):
@@ -679,10 +678,9 @@ class ConanAPIV1(object):
         if force and no_overwrite:
             raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
 
-        remote_proxy = self._manager.get_proxy(remote_name=remote)
-        uploader = CmdUpload(self._client_cache, self._user_io, remote_proxy)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, self._registry)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
-                               skip_upload, integrity_check, no_overwrite)
+                               skip_upload, integrity_check, no_overwrite, remote)
 
     @api_method
     def remote_list(self):

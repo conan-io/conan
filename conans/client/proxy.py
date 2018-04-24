@@ -8,10 +8,9 @@ from conans.client.remover import DiskRemover
 from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
+from conans.client.source import complete_recipe_sources
 
 
 class ConanProxy(object):
@@ -71,20 +70,6 @@ class ConanProxy(object):
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
-    def get_recipe_sources(self, conan_reference, short_paths=False):
-        export_path = self._client_cache.export(conan_reference)
-        sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
-        if os.path.exists(sources_folder):
-            return
-
-        current_remote = self._registry.get_ref(conan_reference)
-        if not current_remote:
-            raise ConanException("Error while trying to get recipe sources for %s. "
-                                 "No remote defined" % str(conan_reference))
-        else:
-            self._remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
-                                                    current_remote)
-
     def get_recipe(self, conan_reference, check_updates, update):
         with self._client_cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference, check_updates, update)
@@ -135,7 +120,9 @@ class ConanProxy(object):
         if self._manifest_manager:
             # Just make sure that the recipe sources are there to check
             conanfile = load_conanfile_class(conanfile_path)
-            self.get_recipe_sources(conan_reference, conanfile.short_paths)
+            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                    conanfile, conan_reference)
+
             remote = self._registry.get_ref(conan_reference)
             self._manifest_manager.check_recipe(conan_reference, remote)
 
@@ -207,73 +194,14 @@ class ConanProxy(object):
 
         raise ConanException("No remote defined")
 
-    def complete_recipe_sources(self, conanfile, conan_reference, force_complete=True, short_paths=False):
-        sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
-        if not hasattr(conanfile, "exports_sources"):
-            mkdir(sources_folder)
-            return None
-
-        ignore_deleted_file = None
-        if not os.path.exists(sources_folder):
-            # If not path to sources exists, we have a problem, at least an empty folder
-            # should be there
-            upload_remote, current_remote = self._get_remote(conan_reference)
-            if not current_remote:
-                raise ConanException("Trying to upload a package recipe without sources, "
-                                     "and the remote for the sources no longer exists")
-            if force_complete or current_remote != upload_remote:
-                # If uploading to a different remote than the one from which the recipe
-                # was retrieved, we definitely need to get the sources, so the recipe is complete
-                self.get_recipe_sources(conan_reference, short_paths=short_paths)
-            else:
-                # But if same remote, no need to upload again the TGZ, it is already in the server
-                # But the upload API needs to know it to not remove the server file.
-                ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
-        return ignore_deleted_file
-
-    def upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite):
-        """ upload to defined remote in (-r=remote), to current remote
-        or to default remote, in that order.
-        If the remote is not set, set it
-        """
-        conan_file_path = self._client_cache.conanfile(conan_reference)
-        conanfile = load_conanfile_class(conan_file_path)
-        ignore_deleted_file = self.complete_recipe_sources(conanfile, conan_reference,
-                                                           force_complete=False,
-                                                           short_paths=conanfile.short_paths)
-        remote, ref_remote = self._get_remote(conan_reference)
-
-        result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                    ignore_deleted_file=ignore_deleted_file,
-                                                    skip_upload=skip_upload,
-                                                    no_overwrite=no_overwrite)
-        if not ref_remote and not skip_upload:
-            self._registry.set_ref(conan_reference, remote)
-        return result
-
     def _get_remote(self, conan_ref=None):
         # Prioritize -r , then reference registry and then the default remote
         ref_remote = self._registry.get_ref(conan_ref) if conan_ref else None
         if self._remote_name:
             remote = self._registry.remote(self._remote_name)
         else:
-            if ref_remote:
-                remote = ref_remote
-            else:
-                remote = self._registry.default_remote
+            remote = ref_remote or self._registry.default_remote
         return remote, ref_remote
-
-    def upload_package(self, package_ref, retry, retry_wait, skip_upload, integrity_check,
-                       no_overwrite):
-        remote, current_remote = self._get_remote(package_ref.conan)
-        if not current_remote:
-            self._out.warn("Remote for '%s' not defined, uploading to %s"
-                           % (str(package_ref.conan), remote.name))
-        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
-                                                     skip_upload, integrity_check, no_overwrite)
-        if not current_remote and not skip_upload:
-            self._registry.set_ref(package_ref.conan, remote)
-        return result
 
     def get_conan_manifest(self, conan_ref):
         """ used by update to check the date of packages, require force if older

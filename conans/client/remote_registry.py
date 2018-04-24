@@ -99,6 +99,14 @@ class RemoteRegistry(object):
                                              for ref, (remote, verify_ssl) in remotes.items()])
         return self._remotes
 
+    def get_remotes(self, conan_reference, remote_name):
+        ref_remote = self.get_ref(conan_reference)
+        if remote_name:
+            remote = self.remote(remote_name)
+        else:
+            remote = ref_remote or self.default_remote
+        return remote, ref_remote
+
     @property
     def refs(self):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):

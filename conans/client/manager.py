@@ -19,7 +19,7 @@ from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
 from conans.client.remover import ConanRemover
 from conans.client.graph.require_resolver import RequireResolver
-from conans.client.source import config_source_local
+from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
@@ -229,8 +229,8 @@ class ConanManager(object):
         # Download the sources too, don't be lazy
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
-        remote_proxy.complete_recipe_sources(conanfile, reference,
-                                             short_paths=conanfile.short_paths)
+        complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                conanfile, reference)
 
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
