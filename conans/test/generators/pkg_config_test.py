@@ -63,12 +63,11 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
         # https://github.com/conan-io/conan/issues/2756
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conans import ConanFile
 
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
-    short_paths = True
 
     def package_info(self):
         self.cpp_info.includedirs = []
@@ -81,7 +80,6 @@ class PkgConfigConan(ConanFile):
         lib_dir = os.path.join(fake_dir, libname, "lib")
         self.cpp_info.includedirs.append(include_dir)
         self.cpp_info.libdirs.append(lib_dir)
-        self.cpp_info.libs.extend(tools.collect_libs(self, lib_dir))
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
