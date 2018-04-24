@@ -754,10 +754,10 @@ class ConanAPIV1(object):
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote:
-            return get_path(self._client_cache, reference, package_id, path)
+            return get_path(self._client_cache, reference, package_id, path), path
         else:
             remote = self._registry.remote(remote)
-            return self._remote_manager.get_path(reference, package_id, path, remote)
+            return self._remote_manager.get_path(reference, package_id, path, remote), path
 
     @api_method
     def export_alias(self, reference, target_reference):

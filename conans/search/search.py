@@ -115,7 +115,7 @@ class DiskSearchManager(object):
     def _get_local_infos_min(self, reference):
         result = {}
         packages_path = self._paths.packages(reference)
-        subdirs = list_folder_subdirs(packages_path, level=4)
+        subdirs = list_folder_subdirs(packages_path, level=1)
         for package_id in subdirs:
             # Read conaninfo
             try:

@@ -313,22 +313,6 @@ class ConanProxy(object):
             if search_result:
                 return search_result
 
-    def remove(self, conan_ref):
-        if not self._remote_name:
-            raise ConanException("Cannot remove, remote not defined")
-        remote = self._registry.remote(self._remote_name)
-        result = self._remote_manager.remove(conan_ref, remote)
-        current_remote = self._registry.get_ref(conan_ref)
-        if current_remote == remote:
-            self._registry.remove_ref(conan_ref)
-        return result
-
-    def remove_packages(self, conan_ref, remove_ids):
-        if not self._remote_name:
-            raise ConanException("Cannot remove, remote not defined")
-        remote = self._registry.remote(self._remote_name)
-        return self._remote_manager.remove_packages(conan_ref, remove_ids, remote)
-
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))
         remote, _ = self._get_remote(reference)

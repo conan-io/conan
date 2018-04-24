@@ -24,7 +24,7 @@ def export_alias(reference, target_reference, client_cache):
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
-alias = "%s"
+    alias = "%s"
 """ % str(target_reference)
 
     export_path = client_cache.export(reference)
