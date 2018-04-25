@@ -20,7 +20,8 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
 
-    if not copier.report(output):
+    copy_done = copier.report(output)
+    if not copy_done:
         output.warn("No files copied from package folder!")
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
@@ -56,17 +57,16 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            if (not conanfile.copy.report(package_output) and
-                    recipe_has("package")):
+            copy_done = conanfile.copy.report(package_output)
+            if not copy_done and recipe_has("package"):
                 output.warn("No files copied from source folder!")
 
         conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        if (not conanfile.copy.report(package_output) and
-                recipe_has("build") and
-                recipe_has("package")):
+        copy_done = conanfile.copy.report(package_output)
+        if not copy_done and recipe_has("build") and recipe_has("package"):
             output.warn("No files copied from build folder!")
     except Exception as e:
         if not local:
