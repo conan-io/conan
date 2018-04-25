@@ -71,15 +71,20 @@ class CmdUpload(object):
                 integrity_check, no_overwrite, remote_name):
         """Uploads the recipes and binaries identified by conan_ref"""
 
-        remote, ref_remote = self._registry.get_remotes(conan_ref, remote_name)
-        if not ref_remote:
-            self._user_io.out.warn("Remote for '%s' not defined, uploading to %s"
-                                   % (str(conan_ref), remote.name))
-        if not force:
-            self._check_recipe_date(conan_ref, remote)
+        defined_remote = self._registry.get_ref(conan_ref)
+        if remote_name:  # If remote_name is given, use it
+            upload_remote = self.remote(remote_name)
+        elif defined_remote:  # Else, if the package had defined a remote, use it
+            upload_remote = defined_remote
+        else:  # Or use the default otherwise
+            upload_remote = self.default_remote
 
-        self._user_io.out.info("Uploading %s" % str(conan_ref))
-        self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, remote)
+        if not force:
+            self._check_recipe_date(conan_ref, upload_remote)
+
+        self._user_io.out.info("Uploading '%s' to remote '%s'"
+                               % (str(conan_ref), upload_remote.name))
+        self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, upload_remote)
 
         if packages_ids:
             # Can't use build_policy_always here because it's not loaded (only load_class)
@@ -90,10 +95,10 @@ class CmdUpload(object):
             for index, package_id in enumerate(packages_ids):
                 self._upload_package(PackageReference(conan_ref, package_id), index + 1, total,
                                      retry, retry_wait, skip_upload, integrity_check, no_overwrite,
-                                     remote)
+                                     upload_remote)
 
-        if not ref_remote and not skip_upload:
-            self._registry.set_ref(conan_ref, remote)
+        if not defined_remote and not skip_upload:
+            self._registry.set_ref(conan_ref, upload_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)
