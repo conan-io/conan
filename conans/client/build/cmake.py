@@ -349,7 +349,7 @@ class CMake(object):
         return source_ret, build_ret
 
     def _run(self, command):
-        if self._compiler == 'Visual Studio' and 'Visual Studio' not in self.generator:
+        if self._compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
             with tools.vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
