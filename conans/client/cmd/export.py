@@ -17,6 +17,7 @@ from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
 from conans.util.files import save, load, rmdir, is_dirty, set_dirty
 from conans.util.log import logger
+from conans.model.scm import capture_export_scm_data
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -87,6 +88,10 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
     _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
                     output)
+    scm = capture_export_scm_data(conanfile_path, conanfile, output)
+    if scm:
+        final_path = os.path.join(destination_folder, "conanfile.py")
+        scm.replace_in_file(final_path)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 

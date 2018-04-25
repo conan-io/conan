@@ -9,6 +9,7 @@ from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
+from conans.model.scm import SCM
 
 
 def merge_directories(src, dst):
@@ -54,21 +55,8 @@ def config_source(export_folder, export_source_folder, src_folder,
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
-        shutil.copytree(export_folder, src_folder, symlinks=True)
-        # Now move the export-sources to the right location
-        merge_directories(export_source_folder, src_folder)
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-                  CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
-            try:
-                os.remove(os.path.join(src_folder, f))
-            except OSError:
-                pass
-        try:
-            shutil.rmtree(os.path.join(src_folder, "__pycache__"))
-        except OSError:
-            pass
-
         set_dirty(src_folder)
+        _before_source(conan_file, src_folder, export_folder, export_source_folder, output)
         os.chdir(src_folder)
         conan_file.source_folder = src_folder
         try:
@@ -87,6 +75,42 @@ def config_source(export_folder, export_source_folder, src_folder,
             if isinstance(e, ConanExceptionInUserConanfileMethod):
                 raise e
             raise ConanException(e)
+
+
+def _handle_scm(scm, conanfile, src_folder, output):
+    if scm.is_source_folder():
+        output.warn("SCM not fetching sources. Copying sources from: %s" % scm.url)
+        # Maybe this can be avoided and just point source_folder to user folder?
+        shutil.copytree(scm.url, src_folder, symlinks=True)
+        return
+    elif scm.is_git():
+        output.info("Getting sources from: %s - %s" % (scm.url, scm.checkout))
+        conanfile.run('git clone "%s" "%s"' % (scm.url, src_folder))
+        conanfile.run('git checkout "%s"' % scm.checkout, cwd=src_folder)
+    else:
+        raise ConanException("Unknown SCM configuration: %s" % str(scm))
+
+
+def _before_source(conan_file, src_folder, export_folder, export_source_folder, output):
+    scm = SCM.get_scm(conan_file)
+    if scm is not None:
+        _handle_scm(scm, conan_file, src_folder, output)
+        merge_directories(export_folder, src_folder)
+    else:
+        shutil.copytree(export_folder, src_folder, symlinks=True)
+    # Now move the export-sources to the right location
+    merge_directories(export_source_folder, src_folder)
+    # Clean stuff
+    for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
+              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
+        try:
+            os.remove(os.path.join(src_folder, f))
+        except OSError:
+            pass
+    try:
+        shutil.rmtree(os.path.join(src_folder, "__pycache__"))
+    except OSError:
+        pass
 
 
 def config_source_local(dest_dir, conan_file, output):
