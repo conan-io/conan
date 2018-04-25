@@ -685,6 +685,126 @@ class MyConan(ConanFile):
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
 
+    def get_gnu_triplet_test(self):
+        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
+            build = tools.get_gnu_triplet(this_os, this_arch, compiler)
+            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
+            return build, host
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86", "Linux", "armv7hf")
+        self.assertEquals(build, "x86-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "x86")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86-linux-gnu")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "x86")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "x86_64")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86_64-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv8")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "aarch64-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86_64-w64-mingw32")
+
+        build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Darwin", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Darwin", "x86_64", "Macos", "x86")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "i686-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "iOS", "armv7")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "watchOS", "armv7k")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        for os in ["Windows", "Linux"]:
+            for arch in ["x86_64", "x86"]:
+                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+
+                output = ""
+                if arch == "x86_64":
+                    output += "x86_64"
+                else:
+                    output += "i686" if os != "Linux" else "x86"
+
+                output += "-"
+                if os == "Windows":
+                    output += "w64-mingw32"
+                else:
+                    output += "linux-gnu"
+
+                self.assertIn(output, triplet)
+
+        # Compiler not specified for os="Windows"
+        with self.assertRaises(ConanException):
+            tools.get_gnu_triplet("Windows", "x86")
+
     def detect_windows_subsystem_test(self):
         # Dont raise test
         result = tools.os_info.detect_windows_subsystem()
