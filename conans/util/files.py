@@ -67,7 +67,7 @@ def md5(content):
     if isinstance(content, bytes):
         tmp = content
     else:
-        tmp = content.encode()
+        tmp = content.encode('UTF-8')
     md5alg.update(tmp)
     return md5alg.hexdigest()
 
