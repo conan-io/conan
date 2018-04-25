@@ -12,7 +12,7 @@ from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
-                          detected_architecture)
+                          detected_architecture, get_gnu_triplet)
 
 
 class AutoToolsBuildEnvironment(object):
@@ -57,68 +57,32 @@ class AutoToolsBuildEnvironment(object):
         # Not declared by default
         self.fpic = None
 
-    def _get_triplet(self, the_arch, the_os):
-        """
-        machine-vendor-op_system, But vendor can be omitted in practice
-        """
+        # Precalculate build, host, target triplets
+        self.build, self.host, self.target = self._get_host_build_target_flags()
 
-        # Calculate the arch
-        machine = {"x86": "i686" if the_os != "Linux" else "x86",
-                   "x86_64": "x86_64",
-                   "armv6": "arm",
-                   "armv7": "arm",
-                   "armv7s": "arm",
-                   "armv7k": "arm",
-                   "armv7hf": "arm",
-                   "armv8": "aarch64"}.get(the_arch, None)
-        if machine is None:
-            self._conanfile.output.warn("Unknown '%s' machine, Conan doesn't know how to "
-                                        "translate it to the GNU triplet, please report at "
-                                        " https://github.com/conan-io/conan/issues" % the_arch)
-            return "unknown"
-
-        # Calculate the OS
-        compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler == "gcc":
-            windows_op = "w64-mingw32"
-        elif compiler == "Visual Studio":
-            windows_op = "windows-msvc"
-        else:
-            windows_op = "windows"
-
-        op_system = {"Windows": windows_op,
-                     "Linux": "linux-gnu",
-                     "Darwin": "apple-darwin",
-                     "Android": "linux-android",
-                     "Macos": "apple-darwin",
-                     "iOS": "apple-darwin",
-                     "watchOS": "apple-darwin",
-                     "tvOS": "apple-darwin"}.get(the_os, the_os.lower())
-
-        if the_os in ("Linux", "Android"):
-            if "arm" in the_arch and the_arch != "armv8":
-                op_system += "eabi"
-
-            if the_arch == "armv7hf" and the_os == "Linux":
-                op_system += "hf"
-
-        return "%s-%s" % (machine, op_system)
-
-    def _get_host_build_target_flags(self, arch_detected, os_detected):
+    def _get_host_build_target_flags(self):
         """Based on google search for build/host triplets, it could need a lot
         and complex verification"""
 
+        arch_detected = detected_architecture() or platform.machine()
+        os_detected = platform.system()
+        arch_settings = self._conanfile.settings.get_safe("arch")
+        os_settings = self._conanfile.settings.get_safe("os")
+        compiler = self._conanfile.settings.get_safe("compiler")
+
+        if (os_detected is None or arch_detected is None or arch_settings is None or
+                os_settings is None):
+            return False, False, False
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        build = self._get_triplet(arch_detected, os_detected)
-        host = self._get_triplet(self._conanfile.settings.get_safe("arch"),
-                                 self._conanfile.settings.get_safe("os"))
+        build = get_gnu_triplet(os_detected, arch_detected, compiler)
+        host = get_gnu_triplet(os_settings, arch_settings, compiler)
 
         return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
-                  pkg_config_paths=None):
+                  pkg_config_paths=None, vars=None):
         """
         :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
@@ -141,25 +105,20 @@ class AutoToolsBuildEnvironment(object):
             configure_dir = configure_dir.rstrip("/")
         else:
             configure_dir = "."
-        auto_build, auto_host, auto_target = None, None, None
-        if build is None or host is None or target is None:
-            arch_detected = detected_architecture() or platform.machine()
-            os_detected = platform.system()
-            flags = self._get_host_build_target_flags(arch_detected, os_detected)
-            auto_build, auto_host, auto_target = flags
+
         triplet_args = []
 
         if build is not False:  # Skipped by user
-            if build or auto_build:  # User specified value or automatic
-                triplet_args.append("--build=%s" % (build or auto_build))
+            if build or self.build:  # User specified value or automatic
+                triplet_args.append("--build=%s" % (build or self.build))
 
         if host is not False:   # Skipped by user
-            if host or auto_host:  # User specified value or automatic
-                triplet_args.append("--host=%s" % (host or auto_host))
+            if host or self.host:  # User specified value or automatic
+                triplet_args.append("--host=%s" % (host or self.host))
 
         if target is not False:  # Skipped by user
-            if target or auto_target:  # User specified value or automatic
-                triplet_args.append("--target=%s" % (target or auto_target))
+            if target or self.target:  # User specified value or automatic
+                triplet_args.append("--target=%s" % (target or self.target))
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH": os.pathsep.join(pkg_config_paths)}
@@ -169,8 +128,14 @@ class AutoToolsBuildEnvironment(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.build_folder} \
                 if "pkg_config" in self._conanfile.generators else {}
 
+        if self._conanfile.package_folder is not None:
+            if not args:
+                args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
+            elif not any(["--prefix=" in arg for arg in args]):
+                args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
+
         with environment_append(pkg_env):
-            with environment_append(self.vars):
+            with environment_append(vars or self.vars):
                 configure_dir = self._adjust_path(configure_dir)
                 command = '%s/configure %s %s' % (configure_dir,
                                                   args_to_string(args), " ".join(triplet_args))
@@ -184,16 +149,19 @@ class AutoToolsBuildEnvironment(object):
             path = unix_path(path, path_flavor=self.subsystem)
         return '"%s"' % path if " " in path else path
 
-    def make(self, args="", make_program=None, target=None):
+    def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
-        with environment_append(self.vars):
+        with environment_append(vars or self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
+
+    def install(self, args="", make_program=None, vars=None):
+        self.make(args=args, make_program=make_program, target="install", vars=vars)
 
     def _configure_link_flags(self):
         """Not the -L"""
@@ -313,7 +281,6 @@ class AutoToolsBuildEnvironment(object):
 
     @property
     def vars(self):
-
         ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
         cpp_flags = " ".join(cpp_flags) + _environ_value_prefix("CPPFLAGS")
@@ -328,7 +295,6 @@ class AutoToolsBuildEnvironment(object):
                "LDFLAGS": ldflags.strip(),
                "LIBS": libs.strip(),
                }
-
         return ret
 
 
