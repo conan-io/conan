@@ -5,7 +5,7 @@ from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -101,3 +101,51 @@ class PkgConfigConan(ConanFile):
             elif line.startswith("libdir="):
                 assert_is_abs(line[len("libdir="):])
                 self.assertTrue(line.endswith("lib"))
+
+    def pkg_config_rpaths_test(self):
+        # rpath flags are only generated for gcc and clang
+        profile = """
+[settings]
+os=Linux
+os_build=Linux
+arch=x86_64
+arch_build=x86_64
+compiler=gcc
+compiler.version=7
+compiler.libcxx=libstdc++
+build_type=Release
+[options]
+[build_requires]
+[env]
+"""
+        conanfile = """
+import os
+from conans import ConanFile
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "os", "compiler", "arch", "build_type"
+    exports = "mylib.so"
+    
+    def package(self):
+        self.copy("mylib.so", dst="lib")
+
+    def package_info(self):
+        self.cpp_info.libs = ["mylib"]
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "linux_gcc": profile,
+                     "mylib.so": "fake lib content"})
+        client.run("create . danimtb/testing -pr=linux_gcc")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config -pr=linux_gcc")
+
+        pc_path = os.path.join(client.current_folder, "MyLib.pc")
+        self.assertTrue(os.path.exists(pc_path))
+        pc_content = load(pc_path)
+        conan_ref = ConanFileReference.loads("MyLib/0.1@danimtb/testing")
+        package_dir = client.paths.package(
+            PackageReference(conan_ref, "0ab9fcf606068d4347207cc29edd400ceccbc944"))
+        correct_path = os.path.join(package_dir, "lib").replace("\\", "/")
+        self.assertIn("-Wl,-rpath=\"%s\"" % correct_path, pc_content)
