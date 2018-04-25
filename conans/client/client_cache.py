@@ -16,6 +16,7 @@ from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS, get_cwd
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 import shutil
+import six
 
 
 CONAN_CONF = 'conan.conf'
@@ -43,6 +44,9 @@ class ClientCache(SimplePaths):
         self._settings = None
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
+        if six.PY2 and isinstance(self._store_folder, str):
+            self._store_folder = self._store_folder.decode("utf8")
+
         self._default_profile = None
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))

@@ -25,7 +25,7 @@ def wait_until_removed(folder):
 
 
 def temp_folder(path_with_spaces=True):
-    t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+    t = tempfile.mkdtemp(suffix=u'conans', dir=CONAN_TEST_FOLDER)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
     # FreeBSD and Solaris do not use GNU Make as a the default 'make' program which has trouble

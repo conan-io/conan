@@ -52,7 +52,10 @@ DEFAULT_PROFILE_NAME = "default"
 
 
 def get_conan_user_home():
-    tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
+    user_home = os.getenv("CONAN_USER_HOME", "~")
+    if six.PY2 and isinstance(user_home, str):
+        user_home = user_home.decode("utf8")
+    tmp = conan_expand_user(user_home)
     if not os.path.isabs(tmp):
         raise Exception("Invalid CONAN_USER_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
@@ -94,6 +97,10 @@ class SimplePaths(object):
     path logic responsability
     """
     def __init__(self, store_folder):
+        if six.PY2:
+            assert isinstance(store_folder, unicode)
+        else:
+            assert isinstance(store_folder, str)
         self._store_folder = store_folder
 
     @property
@@ -162,4 +169,3 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
-
