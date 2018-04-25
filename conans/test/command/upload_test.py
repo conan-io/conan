@@ -225,7 +225,11 @@ class MyPkg(ConanFile):
                      "hello.h": "",
                      "hello.cpp": ""})
         client.run("create . frodo/stable")
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # First time upload
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
+        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # CASE: Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
@@ -287,7 +291,11 @@ class MyPkg(ConanFile):
                      "hello.h": "",
                      "hello.cpp": ""})
         client.run("create . frodo/stable")
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # First time upload
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
