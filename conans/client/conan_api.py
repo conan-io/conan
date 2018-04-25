@@ -40,6 +40,7 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
+import six
 
 
 default_manifest_folder = '.conan_manifests'
@@ -780,7 +781,8 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
         manifest_interactive = manifests_interactive is not None
     else:
         manifest_verify = manifest_interactive = False
-
+    if six.PY2 and isinstance(manifest_folder, str):
+        manifest_folder = manifest_folder.decode("utf8")
     return manifest_folder, manifest_interactive, manifest_verify
 
 
