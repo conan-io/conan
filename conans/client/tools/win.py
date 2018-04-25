@@ -13,6 +13,7 @@ from conans.client.tools.oss import detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
+from conans.paths import get_cwd
 
 _global_output = None
 
@@ -434,9 +435,9 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
-            cwd = os.path.join(os.getcwd(), cwd)
+            cwd = os.path.join(get_cwd(), cwd)
 
-        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
+        curdir = unix_path(cwd or get_cwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = os_info.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path

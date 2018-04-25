@@ -12,7 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
+from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS, get_cwd
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 import shutil
@@ -163,7 +163,7 @@ class ClientCache(SimplePaths):
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
-                self._default_profile, _ = read_profile(self.default_profile_path, os.getcwd(),
+                self._default_profile, _ = read_profile(self.default_profile_path, get_cwd(),
                                                         self.profiles_path)
 
             # Mix profile settings with environment

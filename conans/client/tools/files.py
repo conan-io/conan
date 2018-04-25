@@ -9,6 +9,7 @@ from patch import fromfile, fromstring
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
+from conans.paths import get_cwd
 
 
 _global_output = None
@@ -18,7 +19,7 @@ UNIT_SIZE = 1000.0
 
 @contextmanager
 def chdir(newdir):
-    old_path = os.getcwd()
+    old_path = get_cwd()
     os.chdir(newdir)
     try:
         yield
@@ -64,7 +65,7 @@ def unzip(filename, destination=".", keep_permissions=False):
             filename.endswith(".tar")):
         return untargz(filename, destination)
     import zipfile
-    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+    full_path = os.path.normpath(os.path.join(get_cwd(), destination))
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):

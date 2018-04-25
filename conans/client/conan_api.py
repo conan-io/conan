@@ -26,7 +26,7 @@ from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
-from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
+from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO, get_cwd
 from conans.search.search import DiskSearchManager
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
@@ -64,7 +64,7 @@ def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
-            curdir = os.getcwd()
+            curdir = get_cwd()
             log_command(f.__name__, kwargs)
             the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
@@ -92,7 +92,7 @@ def _make_abs_path(path, cwd=None, default=None):
     """convert 'path' to absolute if necessary (could be already absolute)
     if not defined (empty, or None), will return 'default' one or 'cwd'
     """
-    cwd = cwd or os.getcwd()
+    cwd = cwd or get_cwd()
     if not path:
         return default or cwd
     if os.path.isabs(path):
@@ -238,7 +238,7 @@ class ConanAPIV1(object):
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None):
         from conans.client.cmd.new import cmd_new
-        cwd = os.path.abspath(cwd or os.getcwd())
+        cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,
                         visual_versions=visual_versions,
@@ -262,7 +262,7 @@ class ConanAPIV1(object):
         env = env or []
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
         reference = ConanFileReference.loads(reference)
@@ -290,7 +290,7 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
         if not name or not version:
@@ -368,7 +368,7 @@ class ConanAPIV1(object):
         settings = settings or []
         options = options or []
         env = env or []
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
@@ -430,7 +430,7 @@ class ConanAPIV1(object):
                           manifests_interactive=None, build=None, profile_name=None,
                           update=False, generators=None, install_folder=None, cwd=None):
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         install_folder = _make_abs_path(install_folder, cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
@@ -457,7 +457,7 @@ class ConanAPIV1(object):
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         install_folder = _make_abs_path(install_folder, cwd)
         conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
@@ -503,7 +503,7 @@ class ConanAPIV1(object):
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
@@ -551,7 +551,7 @@ class ConanAPIV1(object):
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -565,7 +565,7 @@ class ConanAPIV1(object):
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -578,7 +578,7 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
@@ -598,7 +598,7 @@ class ConanAPIV1(object):
         :param cwd: Current working directory
         :return: None
         """
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
@@ -608,7 +608,7 @@ class ConanAPIV1(object):
 
     @api_method
     def imports_undo(self, manifest_path):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         self._manager.imports_undo(manifest_path)
 
@@ -745,7 +745,7 @@ class ConanAPIV1(object):
 
     @api_method
     def read_profile(self, profile=None):
-        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        p, _ = read_profile(profile, get_cwd(), self._client_cache.profiles_path)
         return p
 
     @api_method

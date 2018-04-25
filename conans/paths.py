@@ -4,8 +4,10 @@ from os.path import join, normpath
 import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
+import six
 
 
+get_cwd = six.moves.getcwd
 if platform.system() == "Windows":
     from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
 else:
