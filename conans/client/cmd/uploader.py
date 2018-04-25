@@ -73,11 +73,11 @@ class CmdUpload(object):
 
         defined_remote = self._registry.get_ref(conan_ref)
         if remote_name:  # If remote_name is given, use it
-            upload_remote = self.remote(remote_name)
+            upload_remote = self._registry.remote(remote_name)
         elif defined_remote:  # Else, if the package had defined a remote, use it
             upload_remote = defined_remote
         else:  # Or use the default otherwise
-            upload_remote = self.default_remote
+            upload_remote = self._registry.default_remote
 
         if not force:
             self._check_recipe_date(conan_ref, upload_remote)
