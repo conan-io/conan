@@ -6,8 +6,9 @@ from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 from conans.util.files import save, load, md5
 from conans.model.ref import PackageReference
-from conans.paths import CONANFILE, SimplePaths
+from conans.paths import CONANFILE, SimplePaths, CONAN_MANIFEST
 from conans.test.utils.test_files import temp_folder
+from conans.model.manifest import FileTreeManifest
 
 
 class ManifestValidationTest(unittest.TestCase):
@@ -229,11 +230,11 @@ class ConanFileTest(ConanFile):
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        manifest = client.paths.load_package_manifest(package_reference)
+        package_folder = client.paths.package(package_reference)
+        manifest = FileTreeManifest.loads(load(os.path.join(package_folder, CONAN_MANIFEST)))
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         save(client.paths.digestfile_package(package_reference), str(manifest))
 
-        manifest = client.paths.load_package_manifest(package_reference)
         client.run("upload %s --all" % str(self.reference))
 
         # now verify, with update

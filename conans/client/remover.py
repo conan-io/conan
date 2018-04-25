@@ -6,7 +6,6 @@ from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_outdated, DiskSearchManager
-from conans.client.remote_registry import RemoteRegistry
 
 
 class DiskRemover(object):
@@ -24,7 +23,7 @@ class DiskRemover(object):
 
     def _remove_file(self, path, conan_ref, msg=""):
         try:
-            logger.debug("Removing folder %s" % path)
+            logger.debug("Removing file %s" % path)
             if os.path.exists(path):
                 os.remove(path)
         except OSError:
@@ -63,6 +62,7 @@ class DiskRemover(object):
     def remove_packages(self, conan_ref, ids_filter=None):
         if not ids_filter:  # Remove all
             path = self._paths.packages(conan_ref)
+            # Necessary for short_paths removal
             for package in self._paths.conan_packages(conan_ref):
                 self._remove(os.path.join(path, package), conan_ref, "package folder:%s" % package)
             self._remove(path, conan_ref, "packages")
@@ -70,7 +70,9 @@ class DiskRemover(object):
         else:
             for id_ in ids_filter:  # remove just the specified packages
                 package_ref = PackageReference(conan_ref, id_)
-                self._remove(self._paths.package(package_ref), conan_ref, "package:%s" % id_)
+                pkg_folder = self._paths.package(package_ref)
+                self._remove(pkg_folder, conan_ref, "package:%s" % id_)
+                self._remove_file(pkg_folder + ".dirty", conan_ref, "dirty flag")
                 self._remove_file(self._paths.system_reqs_package(package_ref),
                                   conan_ref, "%s/%s" % (id_, SYSTEM_REQS))
 
@@ -78,11 +80,12 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_proxy):
+    def __init__(self, client_cache, remote_manager, user_io, remote_proxy, remote_registry):
         self._user_io = user_io
         self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._remote_manager = remote_manager
+        self._registry = remote_registry
 
     def _remote_remove(self, reference, package_ids):
         if package_ids is None:
@@ -91,6 +94,8 @@ class ConanRemover(object):
             self._remote_proxy.remove_packages(reference, package_ids)
 
     def _local_remove(self, reference, src, build_ids, package_ids):
+        # Make sure to clean the locks too
+        self._client_cache.remove_package_locks(reference)
         remover = DiskRemover(self._client_cache)
         if src:
             remover.remove_src(reference)
@@ -100,8 +105,7 @@ class ConanRemover(object):
             remover.remove_packages(reference, package_ids)
         if not src and build_ids is None and package_ids is None:
             remover.remove(reference)
-            registry = self._remote_proxy.registry
-            registry.remove_ref(reference, quiet=True)
+            self._registry.remove_ref(reference, quiet=True)
 
     def remove(self, pattern, remote, src=None, build_ids=None, package_ids_filter=None, force=False,
                packages_query=None, outdated=False):
@@ -118,7 +122,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         if remote:
-            remote = RemoteRegistry(self._client_cache.registry, self._user_io.out).remote(remote)
+            remote = self._registry.remote(remote)
             references = self._remote_manager.search_recipes(remote, pattern)
         else:
             disk_search = DiskSearchManager(self._client_cache)
@@ -139,7 +143,7 @@ class ConanRemover(object):
                     packages = disk_search.search_packages(reference, packages_query)
                 if outdated:
                     if remote:
-                        recipe_hash = self._remote_proxy.get_conan_digest(reference).summary_hash
+                        recipe_hash = self._remote_proxy.get_conan_manifest(reference).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)

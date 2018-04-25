@@ -45,7 +45,7 @@ class HelloConan(ConanFile):
         self.assertTrue(error)
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                    '-s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
 
         files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
@@ -64,18 +64,18 @@ class HelloConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
         self.assertIn("Release|x64", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
 
         # Try with x86
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
         self.assertIn("Release|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
 
         # Try with x86 debug
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)

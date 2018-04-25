@@ -43,8 +43,7 @@ class ConfigTest(unittest.TestCase):
 
         error = self.client.run('config set proxies.http:Value', ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Please specify key=value",
-                      self.client.user_io.out)
+        self.assertIn("Please specify 'key=value'", self.client.user_io.out)
 
     def define_test(self):
         self.client.run("config set general.fakeos=Linux")

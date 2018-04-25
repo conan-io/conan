@@ -804,3 +804,11 @@ class MyConan(ConanFile):
         # Compiler not specified for os="Windows"
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
+
+    def detect_windows_subsystem_test(self):
+        # Dont raise test
+        result = tools.os_info.detect_windows_subsystem()
+        if not tools.os_info.bash_path or platform.system() != "Windows":
+            self.assertEqual(None, result)
+        else:
+            self.assertEqual(str, type(result))
