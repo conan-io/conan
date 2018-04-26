@@ -181,7 +181,8 @@ class SettingsItem(object):
             raise undefined_value(self._name)
 
         if isinstance(self._definition, dict):
-            self._definition[self._value].validate()
+            key = "None" if self._value is None else self._value
+            self._definition[key].validate()
 
     def remove_undefined(self):
         if isinstance(self._definition, dict):

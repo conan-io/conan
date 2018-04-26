@@ -3,6 +3,22 @@ import unittest
 from conans.model.settings import Settings, bad_value_msg, undefined_value, undefined_field
 
 
+class SettingsLoadsTest(unittest.TestCase):
+    def test(self):
+        yml = """os:
+    None:
+    Windows:
+        subsystem: [None, cygwin, msys, msys2, wsl]
+    WindowsStore:
+        version: ["8.1", "10.0"]
+    Linux:
+"""
+        settings = Settings.loads(yml)
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertEqual("", settings.values.dumps())
+
+
 class SettingsTest(unittest.TestCase):
 
     def setUp(self):
