@@ -97,10 +97,12 @@ def _make_abs_path(path, cwd=None, default=None):
     """
     cwd = cwd or get_cwd()
     if not path:
-        return default or cwd
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(os.path.join(cwd, path))
+        result = default or cwd
+    elif os.path.isabs(path):
+        result = path
+    else:
+        result = os.path.normpath(os.path.join(cwd, path))
+    return make_unicode(result)
 
 
 def _get_conanfile_path(path, cwd, py):

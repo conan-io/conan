@@ -12,6 +12,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
 from conans.util.files import save, md5sum, load
+from conans.unicode import make_unicode
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -148,7 +149,7 @@ class _FileImporter(object):
                             which files will be copied. Default: all packages in deps
         """
         if os.path.isabs(dst):
-            real_dst_folder = dst
+            real_dst_folder = make_unicode(dst)
         else:
             real_dst_folder = os.path.normpath(os.path.join(self._dst_folder, dst))
 
