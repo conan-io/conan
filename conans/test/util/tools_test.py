@@ -546,35 +546,46 @@ class HelloConan(ConanFile):
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
 
+    def vcvars_raises_when_not_found_test(self):
+            text = """os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["5"]
+            """
+            settings = Settings.loads(text)
+            settings.os = "Windows"
+            settings.compiler = "Visual Studio"
+            settings.compiler.version = "5"
+            with self.assertRaisesRegexp(ConanException, "VS non-existing installation: Visual Studio 5"):
+                tools.vcvars_command(settings)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_constrained_test(self):
-        text = """os: [Windows]
+            text = """os: [Windows]
 compiler:
     Visual Studio:
         version: ["14"]
-        """
-        settings = Settings.loads(text)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        with self.assertRaisesRegexp(ConanException,
-                                     "compiler.version setting required for vcvars not defined"):
-            tools.vcvars_command(settings)
+            """
+            settings = Settings.loads(text)
+            settings.os = "Windows"
+            settings.compiler = "Visual Studio"
+            with self.assertRaisesRegexp(ConanException,
+                                         "compiler.version setting required for vcvars not defined"):
+                tools.vcvars_command(settings)
 
-        new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
-        settings.compiler.version = "14"
-        with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            tools.vcvars_command(settings)
-            if platform.system() != "Windows":
-                self.assertIn("VS non-existing installation", new_out.getvalue())
+            new_out = StringIO()
+            tools.set_global_instances(ConanOutput(new_out), None)
+            settings.compiler.version = "14"
+            with tools.environment_append({"vs140comntools": "path/to/fake"}):
+                tools.vcvars_command(settings)
+                with tools.environment_append({"VisualStudioVersion": "12"}):
+                    with self.assertRaisesRegexp(ConanException,
+                                                 "Error, Visual environment already set to 12"):
+                        tools.vcvars_command(settings)
 
-            with tools.environment_append({"VisualStudioVersion": "12"}):
-                with self.assertRaisesRegexp(ConanException,
-                                             "Error, Visual environment already set to 12"):
-                    tools.vcvars_command(settings)
-
-            with tools.environment_append({"VisualStudioVersion": "12"}):
-                # Not raising
-                tools.vcvars_command(settings, force=True)
+                with tools.environment_append({"VisualStudioVersion": "12"}):
+                    # Not raising
+                    tools.vcvars_command(settings, force=True)
 
     def vcvars_context_manager_test(self):
         conanfile = """
