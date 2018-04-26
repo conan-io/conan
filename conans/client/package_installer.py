@@ -75,8 +75,7 @@ def _remove_if_outdated(package_folder, package_ref, proxy, output):
         except NoRemoteAvailable:
             output.warn("Can't update, no remote defined")
         else:
-            read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
-                                                                     CONAN_MANIFEST)))
+            read_manifest = FileTreeManifest.load(package_folder)
             if upstream_manifest != read_manifest:
                 if upstream_manifest.time > read_manifest.time:
                     output.warn("Current package is older than remote upstream one")

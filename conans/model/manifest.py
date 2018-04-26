@@ -1,7 +1,7 @@
 import os
 import calendar
 import time
-from conans.util.files import md5sum, md5, save
+from conans.util.files import md5sum, md5, save, load
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
 from conans.errors import ConanException
 import datetime
@@ -71,6 +71,11 @@ class FileTreeManifest(object):
                 if not discarded_file(filename):
                     file_sums[filename] = file_md5
         return FileTreeManifest(time, file_sums)
+
+    @staticmethod
+    def load(folder):
+        text = load(os.path.join(folder, CONAN_MANIFEST))
+        return FileTreeManifest.loads(text)
 
     def save(self, folder, filename=CONAN_MANIFEST):
         ret = [u"%s" % (self.time)]

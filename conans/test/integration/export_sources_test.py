@@ -388,11 +388,10 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server_path = self.server.paths.export(self.reference)
         save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest_path = os.path.join(server_path, "conanmanifest.txt")
-        manifest = FileTreeManifest.loads(load(manifest_path))
+        manifest = FileTreeManifest.load(server_path)
         manifest.time += 1
         manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        save(manifest_path, str(manifest))
+        manifest.save(server_path)
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)

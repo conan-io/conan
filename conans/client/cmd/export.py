@@ -15,7 +15,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
 
 
@@ -143,8 +143,7 @@ def _init_export_folder(destination_folder, destination_src_folder):
     try:
         if os.path.exists(destination_folder):
             if os.path.exists(os.path.join(destination_folder, CONAN_MANIFEST)):
-                manifest_content = load(os.path.join(destination_folder, CONAN_MANIFEST))
-                previous_digest = FileTreeManifest.loads(manifest_content)
+                previous_digest = FileTreeManifest.load(destination_folder)
             # Maybe here we want to invalidate cache
             rmdir(destination_folder)
         os.makedirs(destination_folder)
