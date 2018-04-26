@@ -81,8 +81,10 @@ def api_method(f):
                 log_exception(exc, msg)
             except:
                 pass
-            if isinstance(exc, ConanException):
-                exc.info = the_self._recorder.get_info()
+
+            if isinstance(exc, ConanException) and f.__name__ != "upload":
+                 # FIXME: Probably each method should manage its return
+                 exc.info = the_self._recorder.get_info()
             raise
         finally:
             os.chdir(curdir)

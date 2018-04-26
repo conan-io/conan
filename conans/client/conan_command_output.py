@@ -46,7 +46,7 @@ class CommandOutputer(object):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
-    def json_install(self, info, json_output, cwd):
+    def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):
             json_output = os.path.join(cwd, json_output)
