@@ -3,6 +3,7 @@ import subprocess
 
 from conans.util.files import load, mkdir, save, rmdir
 import tempfile
+from conans.unicode import make_unicode
 
 
 CONAN_LINK = ".conan_link"
@@ -49,6 +50,7 @@ def path_shortener(path, short_paths):
     if not short_home:
         drive = os.path.splitdrive(path)[0]
         short_home = drive + "/.conan"
+    short_home = make_unicode(short_home)
     mkdir(short_home)
 
     # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
