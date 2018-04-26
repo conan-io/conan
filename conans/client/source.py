@@ -8,7 +8,28 @@ from conans.model.conan_file import get_env_context_manager
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
-from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
+from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
+
+
+def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
+    sources_folder = client_cache.export_sources(conan_reference, conanfile.short_paths)
+    if os.path.exists(sources_folder):
+        return None
+
+    if not hasattr(conanfile, "exports_sources"):
+        mkdir(sources_folder)
+        return None
+
+    # If not path to sources exists, we have a problem, at least an empty folder
+    # should be there
+    current_remote = registry.get_ref(conan_reference)
+    if not current_remote:
+        raise ConanException("Error while trying to get recipe sources for %s. "
+                             "No remote defined" % str(conan_reference))
+
+    export_path = client_cache.export(conan_reference)
+    remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
+                                      current_remote)
 
 
 def merge_directories(src, dst):
