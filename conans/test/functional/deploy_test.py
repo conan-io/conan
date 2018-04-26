@@ -55,9 +55,9 @@ class Pkg(ConanFile):
             client.current_folder = temp_folder()
             client.run("install Pkg/0.1@user/testing --install-folder=%s" % folder)
 
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' files: mylib.dll",
+            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
                           client.out)
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' files: myapp.exe",
+            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
                           client.out)
             deploy_manifest = FileTreeManifest.loads(load(os.path.join(client.current_folder,
                                                                        folder,

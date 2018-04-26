@@ -22,13 +22,12 @@ def satisfying(list_versions, versionexpr, output):
 
 class RequireResolver(object):
 
-    def __init__(self, output, local_search, remote_search, update):
+    def __init__(self, output, local_search, remote_search):
         self._output = output
         self._local_search = local_search
         self._remote_search = remote_search
-        self._update = update
 
-    def resolve(self, require, base_conanref):
+    def resolve(self, require, base_conanref, update):
         version_range = require.version_range
         if version_range is None:
             return
@@ -50,7 +49,7 @@ class RequireResolver(object):
         # The search pattern must be a string
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
 
-        if self._update:
+        if update:
             searches = (self._resolve_remote, self._resolve_local)
         else:
             searches = (self._resolve_local, self._resolve_remote)
@@ -82,7 +81,7 @@ class RequireResolver(object):
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 
-    def _resolve_version(self, version_range, local_found):
-        versions = {ref.version: ref for ref in local_found}
+    def _resolve_version(self, version_range, refs_found):
+        versions = {ref.version: ref for ref in refs_found}
         result = satisfying(versions, version_range, self._output)
         return versions.get(result)
