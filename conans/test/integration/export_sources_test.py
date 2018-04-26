@@ -198,6 +198,7 @@ class ExportsSourcesTest(unittest.TestCase):
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
+
         if mode == "exports_sources":
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
