@@ -73,7 +73,7 @@ def md5(content):
     if isinstance(content, bytes):
         tmp = content
     else:
-        tmp = content.encode()
+        tmp = content.encode("utf8")
     md5alg.update(tmp)
     return md5alg.hexdigest()
 
@@ -102,21 +102,29 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save(path, content, append=False):
-    """
-    Saves a file with given content
-    Params:
-        path: path to write file to
-        load: contents to save in the file
-    """
+def save_append(path, content):
     try:
         os.makedirs(os.path.dirname(path))
     except:
         pass
 
-    mode = 'wb' if not append else 'ab'
-    with open(path, mode) as handle:
+    with open(path, 'ab') as handle:
         handle.write(to_file_bytes(content))
+
+
+def save(path, content):
+    try:
+        os.makedirs(os.path.dirname(path))
+    except:
+        pass
+
+    if six.PY3:
+        if isinstance(content, str):
+            content = content.encode("utf8")
+    elif isinstance(content, unicode):
+        content = content.encode("utf8")
+    with open(path, 'wb') as handle:
+        handle.write(content)
 
 
 def mkdir_tmp():

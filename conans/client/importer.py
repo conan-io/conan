@@ -11,7 +11,7 @@ from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
-from conans.util.files import save, md5sum, load
+from conans.util.files import  md5sum, load
 from conans.unicode import make_unicode
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
@@ -61,7 +61,7 @@ def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
             abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(dest_folder, manifest_name), str(manifest))
+        manifest.save(dest_folder, manifest_name)
 
 
 def _make_files_writable(file_names):

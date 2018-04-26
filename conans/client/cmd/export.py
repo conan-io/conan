@@ -32,7 +32,7 @@ class AliasConanfile(ConanFile):
     save(os.path.join(export_path, CONANFILE), conanfile)
     mkdir(client_cache.export_sources(reference))
     digest = FileTreeManifest.create(export_path)
-    save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
+    digest.save(export_path)
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -115,7 +115,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
 
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
+    digest.save(destination_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
