@@ -109,7 +109,7 @@ class NewTest(unittest.TestCase):
 
     def new_ci_test(self):
         client = TestClient()
-        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciglg -ciglc -ciu=myurl')
+        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciglg -ciglc -ciccg -ciccc -cicco -ciu=myurl')
         root = client.current_folder
         build_py = load(os.path.join(root, "build.py"))
         self.assertIn('builder.add_common_builds(shared_option_name="MyPackage:shared")',
@@ -120,6 +120,9 @@ class NewTest(unittest.TestCase):
         self.assertNotIn('apple_clang_versions=', build_py)
         self.assertNotIn('gitlab_gcc_versions=', build_py)
         self.assertNotIn('gitlab_clang_versions=', build_py)
+        self.assertNotIn('circleci_gcc_versions=', build_py)
+        self.assertNotIn('circleci_clang_versions=', build_py)
+        self.assertNotIn('circleci_osx_versions=', build_py)
 
         appveyor = load(os.path.join(root, "appveyor.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", appveyor)
@@ -145,6 +148,13 @@ class NewTest(unittest.TestCase):
         self.assertIn('CONAN_CHANNEL: "testing"', gitlab)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', gitlab)
 
+        circleci = load(os.path.join(root, ".circleci", "config.yml"))
+        self.assertIn("CONAN_UPLOAD: \"myurl\"", circleci)
+        self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', circleci)
+        self.assertIn('CONAN_USERNAME: "myuser"', circleci)
+        self.assertIn('CONAN_CHANNEL: "testing"', circleci)
+        self.assertIn('CONAN_GCC_VERSIONS: "5"', circleci)
+
     def new_ci_test_partial(self):
         client = TestClient()
         root = client.current_folder
@@ -158,6 +168,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
         self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".circleci/config.yml")))
 
         client = TestClient()
         root = client.current_folder
@@ -168,6 +179,7 @@ class NewTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertTrue(os.path.exists(os.path.join(root, "appveyor.yml")))
         self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".circleci/config.yml")))
 
         client = TestClient()
         root = client.current_folder
@@ -178,6 +190,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
         self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".circleci/config.yml")))
 
         client = TestClient()
         root = client.current_folder
@@ -193,12 +206,40 @@ class NewTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".circleci/config.yml")))
 
         client = TestClient()
         root = client.current_folder
         client.run('new MyPackage/1.3@myuser/testing -ciglc')
         self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
         self.assertTrue(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".circleci/config.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -ciccg')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/config.yml")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/install.sh")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -ciccc')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/config.yml")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/install.sh")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".circleci/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
