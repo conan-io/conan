@@ -5,7 +5,7 @@ import os
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.files import save
-from conans.paths import get_cwd
+from conans.unicode import get_cwd
 
 
 class CommandOutputer(object):

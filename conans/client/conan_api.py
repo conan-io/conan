@@ -26,7 +26,7 @@ from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
-from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO, get_cwd
+from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
@@ -40,7 +40,7 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
-import six
+from conans.unicode import get_cwd, make_unicode
 
 
 default_manifest_folder = '.conan_manifests'
@@ -781,8 +781,7 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
         manifest_interactive = manifests_interactive is not None
     else:
         manifest_verify = manifest_interactive = False
-    if six.PY2 and isinstance(manifest_folder, str):
-        manifest_folder = manifest_folder.decode("utf8")
+    manifest_folder = make_unicode(manifest_folder)
     return manifest_folder, manifest_interactive, manifest_verify
 
 

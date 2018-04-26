@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 from conans.util.files import decode_text
 from conans.errors import ConanException
 import six
-from conans.paths import get_cwd
+from conans.unicode import get_cwd
 
 
 class ConanRunner(object):

@@ -9,6 +9,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
+from conans.unicode import assert_unicode
 
 
 class ConanFileLoader(object):
@@ -34,6 +35,7 @@ class ConanFileLoader(object):
     def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
+        assert_unicode(conanfile_path)
         result = load_conanfile_class(conanfile_path)
         try:
             # Prepare the settings for the loaded conanfile

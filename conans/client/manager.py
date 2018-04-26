@@ -26,7 +26,8 @@ from conans.errors import NotFoundException, ConanException, conanfile_exception
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
+from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO,\
+    make_unicode
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
@@ -138,6 +139,7 @@ class ConanManager(object):
             conanfile = loader.load_virtual([reference_or_path])
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
+            reference_or_path = make_unicode(reference_or_path)
             if reference_or_path.endswith(".py"):
                 conanfile = loader.load_conan(reference_or_path, output, consumer=True)
             else:
@@ -391,6 +393,7 @@ class ConanManager(object):
         build_mode.report_matches()
 
         if install_folder:
+            install_folder = make_unicode(install_folder)
             # Write generators
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators

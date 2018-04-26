@@ -4,10 +4,9 @@ from os.path import join, normpath
 import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
-import six
+from conans.unicode import make_unicode, assert_unicode
 
 
-get_cwd = six.moves.getcwd
 if platform.system() == "Windows":
     from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
 else:
@@ -53,8 +52,7 @@ DEFAULT_PROFILE_NAME = "default"
 
 def get_conan_user_home():
     user_home = os.getenv("CONAN_USER_HOME", "~")
-    if six.PY2 and isinstance(user_home, str):
-        user_home = user_home.decode("utf8")
+    user_home = make_unicode(user_home)
     tmp = conan_expand_user(user_home)
     if not os.path.isabs(tmp):
         raise Exception("Invalid CONAN_USER_HOME value '%s', "
@@ -97,10 +95,7 @@ class SimplePaths(object):
     path logic responsability
     """
     def __init__(self, store_folder):
-        if six.PY2:
-            assert isinstance(store_folder, unicode)
-        else:
-            assert isinstance(store_folder, str)
+        assert_unicode(store_folder)
         self._store_folder = store_folder
 
     @property

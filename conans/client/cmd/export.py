@@ -98,6 +98,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
+
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     source = paths.source(conan_ref, conanfile.short_paths)

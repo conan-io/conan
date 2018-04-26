@@ -7,6 +7,7 @@ from conans.errors import ConanException, ConanConnectionError, NotFoundExceptio
 from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
+from conans.unicode import assert_unicode
 
 
 class Uploader(object):
@@ -18,6 +19,7 @@ class Uploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+        assert_unicode(abs_path)
         if dedup:
             dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
             if headers:

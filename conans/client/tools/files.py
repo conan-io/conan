@@ -9,7 +9,7 @@ from patch import fromfile, fromstring
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
-from conans.paths import get_cwd
+from conans.unicode import get_cwd
 
 
 _global_output = None

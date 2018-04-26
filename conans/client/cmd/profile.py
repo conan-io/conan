@@ -6,7 +6,7 @@ from conans.util.files import save
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.client.conf.detect import detect_defaults_settings
-from conans.paths import get_cwd
+from conans.unicode import get_cwd
 
 
 def _get_profile_keys(key):
