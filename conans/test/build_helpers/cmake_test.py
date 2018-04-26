@@ -572,7 +572,7 @@ build_type: [ Release]
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        settings.compiler.version = "12"
+        settings.compiler.version = "14"
         settings.compiler.runtime = "MDd"
         settings.arch = "x86"
         settings.build_type = None
