@@ -96,7 +96,13 @@ class Meson(object):
             pc_paths = self._conanfile.install_folder
 
         mkdir(self.build_dir)
-        build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()
+
+        bt = {"RelWithDebInfo": "debugoptimized",
+              "MinSizeRel": "",
+              "Debug": "debug",
+              "Release": "release"}.get(str(self.build_type), "")
+
+        build_type = "--buildtype=%s" % bt
         arg_list = join_arguments([
             "--backend=%s" % self.backend,
             args_to_string(args),

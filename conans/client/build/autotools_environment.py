@@ -189,7 +189,8 @@ class AutoToolsBuildEnvironment(object):
         arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
-        btf = build_type_flag(compiler=self._compiler, build_type=self._build_type)
+        btf = build_type_flag(compiler=self._compiler, build_type=self._build_type,
+                              vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
         if btf:
             ret.append(btf)
         srf = sysroot_flag(self._deps_cpp_info.sysroot, win_bash=self._win_bash,

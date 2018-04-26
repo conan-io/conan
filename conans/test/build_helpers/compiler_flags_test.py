@@ -88,24 +88,77 @@ class CompilerFlagsTest(unittest.TestCase):
 
     def test_build_type_flags(self):
         flags = build_type_flag(compiler='Visual Studio', build_type='Debug')
-        self.assertEquals(flags, '-Zi')
+        self.assertEquals(flags, '-Zi -Ob0 -Od')
 
         flags = build_type_flag(compiler='Visual Studio', build_type='Release')
-        self.assertEquals(flags, "")
+        self.assertEquals(flags, "-O2 -Ob2")
+
+        flags = build_type_flag(compiler='Visual Studio', build_type='RelWithDebInfo')
+        self.assertEquals(flags, '-Zi -O2 -Ob1')
+
+        flags = build_type_flag(compiler='Visual Studio', build_type='MinSizeRel')
+        self.assertEquals(flags, '-O1 -Ob1')
+
+        # With clang toolset
+        flags = build_type_flag(compiler='Visual Studio', build_type='Debug',
+                                vs_toolset="v140_clang_c2")
+        self.assertEquals(flags, '-gline-tables-only -fno-inline -O0')
+
+        flags = build_type_flag(compiler='Visual Studio', build_type='Release',
+                                vs_toolset="v140_clang_c2")
+        self.assertEquals(flags, "-O2")
+
+        flags = build_type_flag(compiler='Visual Studio', build_type='RelWithDebInfo',
+                                vs_toolset="v140_clang_c2")
+        self.assertEquals(flags, '-gline-tables-only -O2 -fno-inline')
+
+        flags = build_type_flag(compiler='Visual Studio', build_type='MinSizeRel',
+                                vs_toolset="v140_clang_c2")
+        self.assertEquals(flags, '')
+
+        # GCC
 
         flags = build_type_flag(compiler='gcc', build_type='Debug')
         self.assertEquals(flags, '-g')
 
         flags = build_type_flag(compiler='gcc', build_type='Release')
-        self.assertEquals(flags, '-s')
-        define = build_type_define(build_type='Release')
-        self.assertEquals(define, 'NDEBUG')
+        self.assertEquals(flags, '-O3 -s')
+
+        flags = build_type_flag(compiler='gcc', build_type='RelWithDebInfo')
+        self.assertEquals(flags, '-O2 -g')
+
+        flags = build_type_flag(compiler='gcc', build_type='MinSizeRel')
+        self.assertEquals(flags, '-Os')
 
         flags = build_type_flag(compiler='clang', build_type='Debug')
         self.assertEquals(flags, '-g')
 
         flags = build_type_flag(compiler='clang', build_type='Release')
-        self.assertEquals(flags, '')
+        self.assertEquals(flags, '-O3')
+
+        flags = build_type_flag(compiler='clang', build_type='RelWithDebInfo')
+        self.assertEquals(flags, '-O2 -g')
+
+        flags = build_type_flag(compiler='clang', build_type='MinSizeRel')
+        self.assertEquals(flags, '-Os')
+
+        # SUN CC
+
+        flags = build_type_flag(compiler='sun-cc', build_type='Debug')
+        self.assertEquals(flags, '-g')
+
+        flags = build_type_flag(compiler='sun-cc', build_type='Release')
+        self.assertEquals(flags, '-xO3')
+
+        flags = build_type_flag(compiler='sun-cc', build_type='RelWithDebInfo')
+        self.assertEquals(flags, '-xO2 -g')
+
+        flags = build_type_flag(compiler='sun-cc', build_type='MinSizeRel')
+        self.assertEquals(flags, '-xO2 -xspace')
+
+        # Define
+        define = build_type_define(build_type='Release')
+        self.assertEquals(define, 'NDEBUG')
 
     def test_adjust_path(self):
         self.assertEquals('home/www', adjust_path('home\\www'))

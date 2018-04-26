@@ -29,7 +29,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-MDd',
                    '-mycflag',
                    '-mycflag2',
-                   '-Zi',
+                   '-Zi -Ob0 -Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -48,7 +48,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-MDd',
                    '-mycflag',
                    '-mycflag2',
-                   '-Zi',
+                   '-Zi -Ob0 -Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -65,7 +65,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-MDd',
                        '-mycflag',
                        '-mycflag2',
-                       '-Zi',
+                       '-Zi -Ob0 -Od',
                        '-mycppflag',
                        '-mycppflag2',
                        '-myexelinkflag',
@@ -76,7 +76,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
             self.assertEquals(tool.vars, {
                 "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
-                      '-mycflag -mycflag2 -Zi '
+                      '-mycflag -mycflag2 -Zi -Ob0 -Od '
                       '-mycppflag -mycppflag2 -myexelinkflag -mysharedlinkflag '
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",

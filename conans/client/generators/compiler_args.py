@@ -38,7 +38,8 @@ class CompilerArgsGenerator(Generator):
             flags.append(arch_flag)
 
         build_type = self.conanfile.settings.get_safe("build_type")
-        btf = build_type_flag(compiler=self.compiler, build_type=build_type)
+        btf = build_type_flag(compiler=self.compiler, build_type=build_type,
+                              vs_toolset=self.conanfile.settings.get_safe("compiler.toolset"))
         if btf:
             flags.append(btf)
         btd = build_type_define(build_type=build_type)

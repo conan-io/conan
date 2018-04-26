@@ -103,7 +103,8 @@ def vs_build_type_flags(settings):
     btd = build_type_define(build_type=build_type)
     if btd:
         ret.extend(format_defines([btd], compiler="Visual Studio"))
-    btf = build_type_flag("Visual Studio", build_type=build_type)
+    btf = build_type_flag("Visual Studio", build_type=build_type,
+                          vs_toolset=settings.get_safe("compiler.toolset"))
     if btf:
         ret.append(btf)
 
