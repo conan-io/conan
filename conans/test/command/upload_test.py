@@ -239,7 +239,7 @@ class MyPkg(ConanFile):
 
         # CASE: Without changes
         client.run("create . frodo/stable")
-        ## upload recipe and packages
+        # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.all_output)
         self.assertIn("Package is up to date, upload skipped", client.out)
@@ -250,18 +250,18 @@ class MyPkg(ConanFile):
                                            "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
-        ## upload recipe and packages
+        # upload recipe and packages
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Forbbiden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
-         # CASE: When package changes
+        # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")
         with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
-        ## upload recipe and packages
+        # upload recipe and packages
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
@@ -315,7 +315,7 @@ class MyPkg(ConanFile):
                                            "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
-        ## upload recipe and packages
+        # upload recipe and packages
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
                            ignore_error=True)
         self.assertTrue(error)
@@ -326,7 +326,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all")
         with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
-        ## upload recipe and packages
+        # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
@@ -403,7 +403,7 @@ class Pkg(ConanFile):
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
-        
+
     def upload_login_prompt_disabled_user_not_authenticated_test(self):
         """ When a user is not authenticated, uploads should fail when login prompt has been disabled.
         """
@@ -420,7 +420,7 @@ class Pkg(ConanFile):
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
-        
+
     def upload_login_prompt_disabled_user_authenticated_test(self):
         """ When a user is authenticated, uploads should work even when login prompt has been disabled.
         """

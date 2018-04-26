@@ -15,8 +15,24 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty
+from conans.util.files import save, load, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
+
+
+def export_alias(reference, target_reference, client_cache):
+    conanfile = """
+from conans import ConanFile
+
+class AliasConanfile(ConanFile):
+    alias = "%s"
+""" % str(target_reference)
+
+    export_path = client_cache.export(reference)
+    mkdir(export_path)
+    save(os.path.join(export_path, CONANFILE), conanfile)
+    mkdir(client_cache.export_sources(reference))
+    digest = FileTreeManifest.create(export_path)
+    save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,

@@ -239,16 +239,16 @@ class TestConan(ConanFile):
         self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
         self.assertIn("Uploading conanmanifest.txt", self.client.user_io.out)
 
+    def single_binary_test(self):
+        """ basic installation of a new conans
+        """
+        # Try to upload an package without upload conans first
+        self.client.run('upload %s -p %s' % (self.conan_ref, str(self.package_ref.package_id)))
+        self.assertIn("Uploaded conan recipe '%s'" % str(self.conan_ref), self.client.out)
+
     def simple_test(self):
         """ basic installation of a new conans
         """
-
-        # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.conan_ref, str(self.package_ref.package_id)),
-                        ignore_error=True)
-        self.assertIn("There are no remote conanfiles like %s" % str(self.conan_ref),
-                      self.client.user_io.out)
-
         # Upload conans
         self.client.run('upload %s' % str(self.conan_ref))
         self.assertTrue(os.path.exists(self.server_reg_folder))
@@ -305,7 +305,7 @@ class TestConan(ConanFile):
         self.client.run('upload %s --all' % str(self.conan_ref))
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
-        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable",
+        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable to remote 'default'",
                                  "Uploading conanmanifest.txt",
                                  "Uploading conanfile.py",
                                  "Uploading conan_export.tgz",
