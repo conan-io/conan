@@ -98,7 +98,7 @@ class Meson(object):
         mkdir(self.build_dir)
 
         bt = {"RelWithDebInfo": "debugoptimized",
-              "MinSizeRel": "",
+              "MinSizeRel": "release",
               "Debug": "debug",
               "Release": "release"}.get(str(self.build_type), "")
 

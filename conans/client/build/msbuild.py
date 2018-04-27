@@ -56,6 +56,9 @@ class MSBuild(object):
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
+
+
+
         command += "msbuild %s /p:Configuration=%s" % (project_file, build_type)
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
