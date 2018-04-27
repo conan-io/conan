@@ -323,6 +323,14 @@ class CMake(object):
                 cpus = tools.cpu_count()
                 ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
+
+        # fpic
+        if str(self._os) not in ["Windows", "WindowsStore"]:
+            fpic = self._conanfile.options.get_safe("fPIC")
+            if fpic is not None:
+                shared = self._conanfile.options.get_safe("shared")
+                ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
+
         return ret
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):

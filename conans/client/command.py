@@ -143,6 +143,15 @@ class Command(object):
         parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux clang')
+        parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for linux gcc')
+        parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for linux clang')
+        parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
@@ -158,7 +167,10 @@ class Command(object):
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
                         upload_url=args.ci_upload_url,
                         gitlab_gcc_versions=args.ci_gitlab_gcc,
-                        gitlab_clang_versions=args.ci_gitlab_clang)
+                        gitlab_clang_versions=args.ci_gitlab_clang,
+                        circleci_gcc_versions=args.ci_circleci_gcc,
+                        circleci_clang_versions=args.ci_circleci_clang,
+                        circleci_osx_versions=args.ci_circleci_osx)
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method. This command

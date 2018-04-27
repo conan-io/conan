@@ -267,7 +267,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
         vs_path = vs_installation_path(str(compiler_version))
 
         if not vs_path or not os.path.isdir(vs_path):
-            _global_output.warn("VS non-existing installation")
+            raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
         else:
             vcvars_path = ""
             if int(compiler_version) > 14:
