@@ -38,19 +38,30 @@ class PkgConfigGenerator(Generator):
         return ret
 
     def single_pc_file_contents(self, name, cpp_info):
-        lines = ['prefix=%s' % cpp_info.rootpath.replace("\\", "/")]
+        prefix_path = cpp_info.rootpath.replace("\\", "/")
+        lines = ['prefix=%s' % prefix_path]
         libdir_vars = []
         for i, libdir in enumerate(cpp_info.libdirs):
             libdir = libdir.replace("\\", "/")
             varname = "libdir" if i == 0 else "libdir%d" % (i + 2)
-            prefix = "${prefix}/" if not os.path.isabs(libdir) else ""
+            prefix = ""
+            if not os.path.isabs(libdir):
+                prefix = "${prefix}/"
+            elif prefix_path in libdir:
+                prefix = "${prefix}"
+                libdir = libdir.replace(prefix_path, "")
             lines.append("%s=%s%s" % (varname, prefix, libdir))
             libdir_vars.append(varname)
         include_dir_vars = []
         for i, includedir in enumerate(cpp_info.includedirs):
             includedir = includedir.replace("\\", "/")
             varname = "includedir" if i == 0 else "includedir%d" % (i + 2)
-            prefix = "${prefix}/" if not os.path.isabs(libdir) else ""
+            prefix = ""
+            if not os.path.isabs(libdir):
+                prefix = "${prefix}/"
+            elif prefix_path in libdir:
+                prefix = "${prefix}"
+                libdir = libdir.replace(prefix_path, "")
             lines.append("%s=%s%s" % (varname, prefix, includedir))
             include_dir_vars.append(varname)
         lines.append("")

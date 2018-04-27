@@ -75,11 +75,13 @@ class PkgConfigConan(ConanFile):
         self.cpp_info.bindirs = []
         self.cpp_info.libs = []
         libname = "mylib"
-        fake_dir = os.path.abspath(os.path.join("my_absoulte_path", "fake"))
+        fake_dir = os.path.join("/", "my_absoulte_path", "fake")
         include_dir = os.path.join(fake_dir, libname, "include")
         lib_dir = os.path.join(fake_dir, libname, "lib")
+        lib_dir2 = os.path.join(self.package_folder, "lib2")
         self.cpp_info.includedirs.append(include_dir)
         self.cpp_info.libdirs.append(lib_dir)
+        self.cpp_info.libdirs.append(lib_dir2)
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -89,7 +91,8 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertNotIn("${prefix}", pc_content)
+        self.assertNotIn("libdir=${prefix}//my_absoulte_path/fake/mylib/lib", pc_content)
+        self.assertNotIn("includedir=${prefix}/my_absoulte_path/fake/mylib/include", pc_content)
 
         def assert_is_abs(path):
             self.assertTrue(os.path.isabs(path))
@@ -101,6 +104,8 @@ class PkgConfigConan(ConanFile):
             elif line.startswith("libdir="):
                 assert_is_abs(line[len("libdir="):])
                 self.assertTrue(line.endswith("lib"))
+            elif line.startswith("libdir3="):
+                self.assertIn("${prefix}/lib2", line)
 
     def pkg_config_rpaths_test(self):
         # rpath flags are only generated for gcc and clang
