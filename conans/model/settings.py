@@ -191,6 +191,8 @@ class SettingsItem(object):
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+        if parent_value == "None" and definition:
+            raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86

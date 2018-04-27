@@ -4,19 +4,56 @@ from conans.model.settings import Settings, bad_value_msg, undefined_value, unde
 
 
 class SettingsLoadsTest(unittest.TestCase):
-    def test(self):
+
+    def test_none_value(self):
+        yml = "os: [None, Windows]"
+        settings = Settings.loads(yml)
+        # Same sha as if settings were empty
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertTrue(settings.os == None)
+        self.assertEqual("", settings.values.dumps())
+        settings.os = "None"
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertTrue(settings.os == "None")
+        self.assertEqual("os=None", settings.values.dumps())
+        settings.os = "Windows"
+        self.assertTrue(settings.os == "Windows")
+        self.assertEqual("os=Windows", settings.values.dumps())
+
+    def test_none_subsetting(self):
         yml = """os:
     None:
     Windows:
-        subsystem: [None, cygwin, msys, msys2, wsl]
-    WindowsStore:
-        version: ["8.1", "10.0"]
-    Linux:
+        subsystem: [None, cygwin]
 """
         settings = Settings.loads(yml)
+        # Same sha as if settings were empty
         self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
+        self.assertTrue(settings.os == None)
         self.assertEqual("", settings.values.dumps())
+        settings.os = "None"
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertTrue(settings.os == "None")
+        self.assertEqual("os=None", settings.values.dumps())
+        settings.os = "Windows"
+        self.assertTrue(settings.os.subsystem == None)
+        self.assertEqual("os=Windows", settings.values.dumps())
+        settings.os.subsystem = "cygwin"
+        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.values.dumps())
+
+    def test_none__sub_subsetting(self):
+        yml = """os:
+    None:
+        subsystem: [None, cygwin]
+    Windows:
+"""
+        with self.assertRaisesRegexp(ConanException,
+                                     "settings.yml: None setting can't have subsettings"):
+            Settings.loads(yml)
 
 
 class SettingsTest(unittest.TestCase):
