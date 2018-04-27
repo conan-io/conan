@@ -90,7 +90,7 @@ class ConanRunner(object):
             return os.system(command)
         else:
             try:
-                old_dir = os.getcwd()
+                old_dir = get_cwd()
                 os.chdir(cwd)
                 result = os.system(command)
             except Exception as e:

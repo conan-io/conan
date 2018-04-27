@@ -5,6 +5,7 @@ import os
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.files import save
+from conans.unicode import get_cwd
 
 
 class CommandOutputer(object):
@@ -41,13 +42,13 @@ class CommandOutputer(object):
         if json_output is True:  # To the output
             self.user_io.out.write(json_str)
         else:  # Path to a file
-            cwd = os.path.abspath(cwd or os.getcwd())
+            cwd = os.path.abspath(cwd or get_cwd())
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
     def json_install(self, info, json_output, cwd):
-        cwd = os.path.abspath(cwd or os.getcwd())
+        cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(json_output):
             json_output = os.path.join(cwd, json_output)
 
@@ -85,7 +86,7 @@ class CommandOutputer(object):
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(project_reference, deps_graph)
 
-        cwd = os.path.abspath(cwd or os.getcwd())
+        cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
