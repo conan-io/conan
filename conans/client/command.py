@@ -882,7 +882,6 @@ class Command(object):
             info = exc.info
             raise
         finally:
-            print(info)
             if args.json and info:
                 self._outputer.json_output(info, args.json, cwd)
 
