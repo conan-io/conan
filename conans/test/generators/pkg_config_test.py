@@ -91,8 +91,16 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertNotIn("libdir=${prefix}//my_absoulte_path/fake/mylib/lib", pc_content)
-        self.assertNotIn("includedir=${prefix}/my_absoulte_path/fake/mylib/include", pc_content)
+        self.assertEquals("\n".join(pc_content.splitlines()[1:]),
+                          """libdir=/my_absoulte_path/fake/mylib/lib
+libdir3=${prefix}/lib2
+includedir=/my_absoulte_path/fake/mylib/include
+
+Name: MyLib
+Description: Conan package: MyLib
+Version: 0.1
+Libs: -L${libdir}
+Cflags: -I${includedir}""")
 
         def assert_is_abs(path):
             self.assertTrue(os.path.isabs(path))
