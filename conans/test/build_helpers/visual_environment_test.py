@@ -9,7 +9,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
     def test_visual(self):
         settings = MockSettings({"build_type": "Debug",
-                                 "compier": "Visual Studio",
+                                 "compiler": "Visual Studio",
                                  "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         conanfile.deps_cpp_info.include_paths.append("/one/include/path")
@@ -29,7 +29,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-MDd',
                    '-mycflag',
                    '-mycflag2',
-                   '-Zi -Ob0 -Od',
+                   '-Zi',
+                   '-Ob0',
+                   '-Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -48,7 +50,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-MDd',
                    '-mycflag',
                    '-mycflag2',
-                   '-Zi -Ob0 -Od',
+                   '-Zi',
+                   '-Ob0',
+                   '-Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -65,7 +69,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-MDd',
                        '-mycflag',
                        '-mycflag2',
-                       '-Zi -Ob0 -Od',
+                       '-Zi',
+                       '-Ob0',
+                       '-Od',
                        '-mycppflag',
                        '-mycppflag2',
                        '-myexelinkflag',

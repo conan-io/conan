@@ -20,7 +20,6 @@ import os
 @attr('visual_studio')
 class BuildSLNCommandTest(unittest.TestCase):
 
-
     def no_configuration_test(self):
         dummy = """GlobalSection
             EndGlobalSection

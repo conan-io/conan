@@ -6,7 +6,7 @@ from conans.client import join_arguments
 from conans.client.build.compiler_flags import (architecture_flag, format_libraries,
                                                 format_library_paths, format_defines,
                                                 sysroot_flag, format_include_paths,
-                                                build_type_flag, libcxx_flag, build_type_define,
+                                                build_type_flags, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
@@ -189,10 +189,10 @@ class AutoToolsBuildEnvironment(object):
         arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
-        btf = build_type_flag(compiler=self._compiler, build_type=self._build_type,
-                              vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
-        if btf:
-            ret.append(btf)
+        btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
+                               vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
+        if btfs:
+            ret.extend(btfs)
         srf = sysroot_flag(self._deps_cpp_info.sysroot, win_bash=self._win_bash,
                            subsystem=self.subsystem,
                            compiler=self._compiler)
@@ -240,7 +240,7 @@ class AutoToolsBuildEnvironment(object):
                                              subsystem=self.subsystem, compiler=self._compiler)
 
         ld_flags = append(self.link_flags, lib_paths)
-        cpp_flags = append(include_paths, format_defines(self.defines, self._compiler))
+        cpp_flags = append(include_paths, format_defines(self.defines))
         libs = format_libraries(self.libs, compiler=self._compiler)
 
         tmp_compilation_flags = copy.copy(self.flags)

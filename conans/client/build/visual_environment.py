@@ -1,7 +1,7 @@
 import copy
 import os
 
-from conans.client.build.compiler_flags import build_type_define, build_type_flag, visual_runtime, format_defines, \
+from conans.client.build.compiler_flags import build_type_define, build_type_flags, visual_runtime, format_defines, \
     include_path_option
 from conans.client.build.cppstd_flags import cppstd_flag
 
@@ -56,7 +56,7 @@ class VisualStudioBuildEnvironment(object):
         if runtime:
             ret.append(runtime)
 
-        ret.extend(format_defines(self.defines, "Visual Studio"))
+        ret.extend(format_defines(self.defines))
         ret.extend(self.flags)
         ret.extend(self.cxx_flags)
         ret.extend(self.link_flags)
@@ -102,11 +102,11 @@ def vs_build_type_flags(settings):
     ret = []
     btd = build_type_define(build_type=build_type)
     if btd:
-        ret.extend(format_defines([btd], compiler="Visual Studio"))
-    btf = build_type_flag("Visual Studio", build_type=build_type,
-                          vs_toolset=settings.get_safe("compiler.toolset"))
-    if btf:
-        ret.append(btf)
+        ret.extend(format_defines([btd]))
+    btfs = build_type_flags("Visual Studio", build_type=build_type,
+                            vs_toolset=settings.get_safe("compiler.toolset"))
+    if btfs:
+        ret.extend(btfs)
 
     return ret
 

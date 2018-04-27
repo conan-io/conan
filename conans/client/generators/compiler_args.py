@@ -4,7 +4,7 @@ from conans.paths import BUILD_INFO_COMPILER_ARGS
 from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
                                                 format_defines, format_include_paths,
                                                 format_library_paths, format_libraries,
-                                                build_type_flag, build_type_define, libcxx_flag,
+                                                build_type_flags, build_type_define, libcxx_flag,
                                                 libcxx_define, rpath_flags, visual_runtime,
                                                 visual_linker_option_separator)
 
@@ -27,7 +27,7 @@ class CompilerArgsGenerator(Generator):
         $ cl /EHsc main.c @conanbuildinfo.args
         """
         flags = []
-        flags.extend(format_defines(self._deps_build_info.defines, compiler=self.compiler))
+        flags.extend(format_defines(self._deps_build_info.defines))
         flags.extend(format_include_paths(self._deps_build_info.include_paths, compiler=self.compiler))
 
         flags.extend(self._deps_build_info.cppflags)
@@ -38,13 +38,13 @@ class CompilerArgsGenerator(Generator):
             flags.append(arch_flag)
 
         build_type = self.conanfile.settings.get_safe("build_type")
-        btf = build_type_flag(compiler=self.compiler, build_type=build_type,
-                              vs_toolset=self.conanfile.settings.get_safe("compiler.toolset"))
-        if btf:
-            flags.append(btf)
+        btfs = build_type_flags(compiler=self.compiler, build_type=build_type,
+                                vs_toolset=self.conanfile.settings.get_safe("compiler.toolset"))
+        if btfs:
+            flags.extend(btfs)
         btd = build_type_define(build_type=build_type)
         if btd:
-            flags.extend(format_defines([btd], self.compiler))
+            flags.extend(format_defines([btd]))
 
         if self.compiler == "Visual Studio":
             runtime = visual_runtime(self.conanfile.settings.get_safe("compiler.runtime"))
@@ -77,7 +77,7 @@ class CompilerArgsGenerator(Generator):
         lib_flags = []
         if libcxx:
             stdlib_define = libcxx_define(compiler=compiler, libcxx=libcxx)
-            lib_flags.extend(format_defines([stdlib_define], compiler=compiler))
+            lib_flags.extend(format_defines([stdlib_define]))
             cxxf = libcxx_flag(compiler=compiler, libcxx=libcxx)
             if cxxf:
                 lib_flags.append(cxxf)
