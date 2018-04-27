@@ -166,7 +166,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         conan_set_std()
     endif()
     if(NOT ARGUMENTS_SKIP_FPIC)
-        message(STATUS "Conan: Adjusting fPIC flag")
         conan_set_fpic()
     endif()
     conan_set_vs_runtime()
