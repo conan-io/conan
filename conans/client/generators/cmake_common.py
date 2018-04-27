@@ -625,6 +625,7 @@ macro(conan_basic_setup)
     conan_set_vs_runtime()
     conan_set_libcxx()
     conan_set_find_paths()
+    conan_set_fpic()
 endmacro()
 
 macro(conan_set_vs_runtime)
