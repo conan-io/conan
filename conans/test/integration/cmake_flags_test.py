@@ -4,6 +4,7 @@ import os
 
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
+from parameterized.parameterized import parameterized
 
 
 conanfile_py = """
@@ -16,6 +17,7 @@ class HelloConan(ConanFile):
     def package_info(self):
         self.cpp_info.cppflags = ["MyFlag1", "MyFlag2"]
         self.cpp_info.cflags = ["-load", "C:\some\path"]
+        self.cpp_info.defines = ['MY_DEF=My" \string', 'MY_DEF2=My${} other \string']
 """
 
 chatconanfile_py = """
@@ -48,6 +50,8 @@ message(STATUS "CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
 message(STATUS "CONAN_C_FLAGS=${CONAN_C_FLAGS}")
 message(STATUS "HELLO_CXX_FLAGS=${HELLO_FLAGS}")
 message(STATUS "CHAT_CXX_FLAGS=${CHAT_FLAGS}")
+message(STATUS "CONAN_DEFINES_HELLO=${CONAN_DEFINES_HELLO}")
+message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 """
 
 
@@ -63,6 +67,59 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn('"', flags)
         return flags
 
+    @parameterized.expand([(True, ), (False, )])
+    def build_app_test(self, targets):
+        client = TestClient()
+        conanfile_py = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def package_info(self):
+        self.cpp_info.defines = [r'MY_DEF=My${} $string', r'MY_DEF2=My$ other string']
+"""
+        client.save({"conanfile.py": conanfile_py})
+        client.run("create . lasote/testing")
+        consumer = """from conans import ConanFile, CMake
+import os
+class App(ConanFile):
+    settings = "os", "compiler", "arch", "build_type"
+    requires = "Hello/0.1@lasote/testing"
+    generators = "cmake"
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+        self.run(os.sep.join([".", "bin", "myapp"]))
+"""
+        cmake_app = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(%s)
+add_executable(myapp myapp.cpp)
+conan_target_link_libraries(myapp)
+""" % ("TARGETS" if targets else "")
+
+        myapp = r"""#include <iostream>
+#define STRINGIFY(x) #x
+#define STRINGIFYMACRO(y) STRINGIFY(y)
+int main(){
+    std::cout << "Msg1: " << STRINGIFYMACRO(MY_DEF) << "\n";
+    std::cout << "Msg2: " << STRINGIFYMACRO(MY_DEF2) << "\n";
+}"""
+        client.save({"conanfile.py": consumer,
+                     "CMakeLists.txt": cmake_app,
+                     "myapp.cpp": myapp
+                     }, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("Msg1: My${} $string", client.out)
+        self.assertIn("Msg2: My$ other string", client.out)
+
     def flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
@@ -77,6 +134,8 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
         self.assertIn("CMAKE_C_FLAGS= -load C:\some\path", client.out)
         self.assertIn("CONAN_C_FLAGS=-load C:\some\path ", client.out)
+        self.assertIn('CONAN_DEFINES_HELLO=-DMY_DEF=My" \string;-DMY_DEF2=My${} other \string',
+                      client.out)
 
     def transitive_flags_test(self):
         client = TestClient()
@@ -101,19 +160,22 @@ class CMakeFlagsTest(unittest.TestCase):
         cmake_targets = cmake.replace("conan_basic_setup()",
                                       "conan_basic_setup(TARGETS)\n"
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
-                                      " INTERFACE_COMPILE_OPTIONS)")
+                                      " INTERFACE_COMPILE_OPTIONS)\n"
+                                      "get_target_property(HELLO_DEFINES CONAN_PKG::Hello"
+                                      " INTERFACE_COMPILE_DEFINITIONS)")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
 
         client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
-        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
-        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
+        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
         self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
+        self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
     def targets_own_flags_test(self):
         client = TestClient()
@@ -124,7 +186,9 @@ class CMakeFlagsTest(unittest.TestCase):
         cmake_targets = cmake.replace("conan_basic_setup()",
                                       "conan_basic_setup(TARGETS)\n"
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
-                                      " INTERFACE_COMPILE_OPTIONS)")
+                                      " INTERFACE_COMPILE_OPTIONS)\n"
+                                      "get_target_property(HELLO_DEFINES CONAN_PKG::Hello"
+                                      " INTERFACE_COMPILE_DEFINITIONS)")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
@@ -138,6 +202,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
+        self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
     def transitive_targets_flags_test(self):
         client = TestClient()
@@ -150,7 +215,9 @@ class CMakeFlagsTest(unittest.TestCase):
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
                                       " INTERFACE_COMPILE_OPTIONS)\n"
                                       "get_target_property(CHAT_FLAGS CONAN_PKG::Chat"
-                                      " INTERFACE_COMPILE_OPTIONS)\n")
+                                      " INTERFACE_COMPILE_OPTIONS)\n"
+                                      "get_target_property(HELLO_DEFINES CONAN_PKG::Hello"
+                                      " INTERFACE_COMPILE_DEFINITIONS)")
         client.save({"conanfile.txt": conanfile.replace("Hello", "Chat"),
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
@@ -168,6 +235,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("CHAT_CXX_FLAGS=MyChatFlag1;MyChatFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
+        self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
     def cmake_test_needed_settings(self):
         conanfile = """

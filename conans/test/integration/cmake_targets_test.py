@@ -89,7 +89,6 @@ class CMakeTargetsTest(unittest.TestCase):
         if platform.system() != "Darwin":
             return
 
-
         client = TestClient()
         conanfile_fr = conanfile_py + '''
     def package_info(self):

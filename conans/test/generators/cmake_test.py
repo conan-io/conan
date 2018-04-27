@@ -36,10 +36,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
-        self.assertIn("set(CONAN_DEFINES_MYPKG -DMYDEFINE1)", cmake_lines)
-        self.assertIn("set(CONAN_DEFINES_MYPKG2 -DMYDEFINE2)", cmake_lines)
-        self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG MYDEFINE1)", cmake_lines)
-        self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG2 MYDEFINE2)", cmake_lines)
+        self.assertIn('set(CONAN_DEFINES_MYPKG "-DMYDEFINE1")', cmake_lines)
+        self.assertIn('set(CONAN_DEFINES_MYPKG2 "-DMYDEFINE2")', cmake_lines)
+        self.assertIn('set(CONAN_COMPILE_DEFINITIONS_MYPKG "MYDEFINE1")', cmake_lines)
+        self.assertIn('set(CONAN_COMPILE_DEFINITIONS_MYPKG2 "MYDEFINE2")', cmake_lines)
 
         self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
@@ -117,12 +117,15 @@ class CMakeGeneratorTest(unittest.TestCase):
         cpp_info.includedirs.append("other_include_dir")
         cpp_info.cppflags = ["-load", r"C:\foo\bar.dll"]
         cpp_info.cflags = ["-load", r"C:\foo\bar2.dll"]
+        cpp_info.defines = ['MY_DEF=My string', 'MY_DEF2=My other string']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
         self.assertIn(r'set(CONAN_C_FLAGS_MYPKG "-load C:\\foo\\bar2.dll")', cmake_lines)
         self.assertIn(r'set(CONAN_CXX_FLAGS_MYPKG "-load C:\\foo\\bar.dll")', cmake_lines)
+        self.assertIn(r'set(CONAN_DEFINES_MYPKG "-DMY_DEF=My string"', cmake_lines)
+        self.assertIn('\t\t\t"-DMY_DEF2=My other string")', cmake_lines)
 
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
