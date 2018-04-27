@@ -40,30 +40,19 @@ class PkgConfigGenerator(Generator):
     def single_pc_file_contents(self, name, cpp_info):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
+
         libdir_vars = []
-        for i, libdir in enumerate(cpp_info.libdirs):
-            libdir = libdir.replace("\\", "/")
-            varname = "libdir" if i == 0 else "libdir%d" % (i + 2)
-            prefix = ""
-            if not os.path.isabs(libdir):
-                prefix = "${prefix}/"
-            elif prefix_path in libdir:
-                prefix = "${prefix}"
-                libdir = libdir.replace(prefix_path, "")
-            lines.append("%s=%s%s" % (varname, prefix, libdir))
-            libdir_vars.append(varname)
-        include_dir_vars = []
-        for i, includedir in enumerate(cpp_info.includedirs):
-            includedir = includedir.replace("\\", "/")
-            varname = "includedir" if i == 0 else "includedir%d" % (i + 2)
-            prefix = ""
-            if not os.path.isabs(libdir):
-                prefix = "${prefix}/"
-            elif prefix_path in libdir:
-                prefix = "${prefix}"
-                libdir = libdir.replace(prefix_path, "")
-            lines.append("%s=%s%s" % (varname, prefix, includedir))
-            include_dir_vars.append(varname)
+        varname = "libdir"
+        dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.libdirs)
+        libdir_vars.append(varname)
+        lines.extend(dir_lines)
+
+        includedir_vars = []
+        varname = "includedir"
+        dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.includedirs)
+        includedir_vars.append(varname)
+        lines.extend(dir_lines)
+
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
@@ -75,13 +64,13 @@ class PkgConfigGenerator(Generator):
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))
         rpaths = rpath_flags(the_os, self.compiler, self._deps_build_info.lib_paths)
-        lines.append("Libs: %s" % self._concat_if_not_empty([libdirs_flags,
-                                                             libnames_flags,
-                                                             shared_flags,
-                                                             rpaths]))
-        include_dirs_flags = ["-I${%s}" % name for name in include_dir_vars]
+        lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
+                                                        libnames_flags,
+                                                        shared_flags,
+                                                        rpaths]))
+        include_dirs_flags = ["-I${%s}" % name for name in includedir_vars]
 
-        lines.append("Cflags: %s" % self._concat_if_not_empty(
+        lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
              cpp_info.cppflags,
              cpp_info.cflags,
@@ -92,5 +81,21 @@ class PkgConfigGenerator(Generator):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
-    def _concat_if_not_empty(self, groups):
-        return " ".join([param for group in groups for param in group if param and param.strip()])
+
+def _concat_if_not_empty(groups):
+    return " ".join([param for group in groups for param in group if param and param.strip()])
+
+
+def _generate_dir_lines(prefix_path, varname, dirs):
+    lines = []
+    for i, directory in enumerate(dirs):
+        directory = os.path.normpath(directory).replace("\\", "/")
+        varname = varname if i == 0 else "%s%d" % (varname, (i + 2))
+        prefix = ""
+        if not os.path.isabs(directory):
+            prefix = "${prefix}/"
+        elif directory.startswith(prefix_path):
+            prefix = "${prefix}/"
+            directory = os.path.relpath(directory, prefix_path)
+        lines.append("%s=%s%s" % (varname, prefix, directory))
+    return lines
