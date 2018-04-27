@@ -107,25 +107,17 @@ class PkgConfigConan(ConanFile):
         profile = """
 [settings]
 os=Linux
-os_build=Linux
-arch=x86_64
-arch_build=x86_64
 compiler=gcc
 compiler.version=7
 compiler.libcxx=libstdc++
-build_type=Release
-[options]
-[build_requires]
-[env]
 """
         conanfile = """
-import os
 from conans import ConanFile
 
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
-    settings = "os", "compiler", "arch", "build_type"
+    settings = "os", "compiler"
     exports = "mylib.so"
     
     def package(self):
@@ -146,6 +138,6 @@ class PkgConfigConan(ConanFile):
         pc_content = load(pc_path)
         conan_ref = ConanFileReference.loads("MyLib/0.1@danimtb/testing")
         package_dir = client.paths.package(
-            PackageReference(conan_ref, "0ab9fcf606068d4347207cc29edd400ceccbc944"))
+            PackageReference(conan_ref, "ea61221ce137c6bac82570628201a6e1ecb34adc"))
         correct_path = os.path.join(package_dir, "lib").replace("\\", "/")
         self.assertIn("-Wl,-rpath=\"%s\"" % correct_path, pc_content)

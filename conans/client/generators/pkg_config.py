@@ -43,14 +43,14 @@ class PkgConfigGenerator(Generator):
         for i, libdir in enumerate(cpp_info.libdirs):
             libdir = libdir.replace("\\", "/")
             varname = "libdir" if i == 0 else "libdir%d" % (i + 2)
-            prefix = "${prefix}/" if self._with_prefix(libdir) else ""
+            prefix = "${prefix}/" if not os.path.isabs(libdir) else ""
             lines.append("%s=%s%s" % (varname, prefix, libdir))
             libdir_vars.append(varname)
         include_dir_vars = []
         for i, includedir in enumerate(cpp_info.includedirs):
             includedir = includedir.replace("\\", "/")
             varname = "includedir" if i == 0 else "includedir%d" % (i + 2)
-            prefix = "${prefix}/" if self._with_prefix(includedir) else ""
+            prefix = "${prefix}/" if not os.path.isabs(libdir) else ""
             lines.append("%s=%s%s" % (varname, prefix, includedir))
             include_dir_vars.append(varname)
         lines.append("")
@@ -83,6 +83,3 @@ class PkgConfigGenerator(Generator):
 
     def _concat_if_not_empty(self, groups):
         return " ".join([param for group in groups for param in group if param and param.strip()])
-
-    def _with_prefix(self, path):
-        return not os.path.isabs(path)
