@@ -340,3 +340,49 @@ target_link_libraries(mylib ${CONAN_LIBS})
         libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
+
+    def fpic_applied_test(self):
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "arch", "compiler"
+    options = {"fPIC": [True, False]}
+    default_options = "fPIC=False"
+    generators = "cmake"
+    exports_sources = "CMakeLists.txt"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+"""
+        cmakelists = """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run("create . user/channel -o MyLib:fPIC=True")
+        self.assertIn("Conan: Adjusting fPIC flag (ON)", client.out)
+
+        client.run("create . user/channel -o MyLib:fPIC=False")
+        self.assertIn("Conan: Adjusting fPIC flag (OFF)", client.out)
+
+        client.save({"conanfile.py": conanfile.replace("fPIC", "fpic")}, clean_first=False)
+        client.run("create . user/channel -o MyLib:fpic=True")
+        self.assertNotIn("Conan: Adjusting fPIC flag (ON)", client.out)
+
+        # Skip fpic adjustements in basic setup
+        tmp = cmakelists.replace("conan_basic_setup()", "conan_basic_setup(SKIP_FPIC)")
+        client.save({"CMakeLists.txt": tmp, "conanfile.py": conanfile}, clean_first=True)
+        client.run("create . user/channel -o MyLib:fPIC=True")
+        self.assertNotIn("Conan: Adjusting fPIC flag (ON)", client.out)

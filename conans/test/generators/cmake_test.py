@@ -135,7 +135,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -164,6 +164,9 @@ class CMakeGeneratorTest(unittest.TestCase):
     if(NOT ARGUMENTS_SKIP_STD)
         message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
+    endif()
+    if(NOT ARGUMENTS_SKIP_FPIC)
+        conan_set_fpic()
     endif()
     conan_set_vs_runtime()
     conan_set_libcxx()
