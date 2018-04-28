@@ -42,7 +42,7 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports
 from conans.client.cmd.export import cmd_export, export_alias
-from conans.paths import get_cwd
+from conans.unicode import get_cwd
 
 
 default_manifest_folder = '.conan_manifests'

@@ -9,6 +9,7 @@ from patch import fromfile, fromstring
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
+from conans.unicode import get_cwd
 
 
 _global_output = None
@@ -18,7 +19,6 @@ UNIT_SIZE = 1000.0
 
 @contextmanager
 def chdir(newdir):
-    from conans.paths import get_cwd
     old_path = get_cwd()
     os.chdir(newdir)
     try:
@@ -60,7 +60,6 @@ def unzip(filename, destination=".", keep_permissions=False):
     zip was created correctly.
     :return:
     """
-    from conans.paths import get_cwd
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):

@@ -5,7 +5,6 @@ import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
 
-get_cwd = os.getcwd
 
 if platform.system() == "Windows":
     from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
