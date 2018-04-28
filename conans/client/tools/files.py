@@ -9,7 +9,6 @@ from patch import fromfile, fromstring
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
-from conans.unicode import get_cwd
 
 
 _global_output = None
@@ -19,6 +18,7 @@ UNIT_SIZE = 1000.0
 
 @contextmanager
 def chdir(newdir):
+    from conans.paths import get_cwd
     old_path = get_cwd()
     os.chdir(newdir)
     try:
@@ -60,6 +60,7 @@ def unzip(filename, destination=".", keep_permissions=False):
     zip was created correctly.
     :return:
     """
+    from conans.paths import get_cwd
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
@@ -258,7 +259,7 @@ def which(filename):
         return None
 
     def _get_possible_filenames(filename):
-        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if not "." in filename else []
+        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if "." not in filename else []
         extensions = [".sh"] if platform.system() != "Windows" else extensions_win
         extensions.insert(1, "")  # No extension
         return ["%s%s" % (filename, entry.lower()) for entry in extensions]
@@ -271,7 +272,8 @@ def which(filename):
                 return filepath
             if platform.system() == "Windows":
                 filepath = filepath.lower()
-                if "system32" in filepath:  # python return False for os.path.exists of exes in System32 but with SysNative
+                if "system32" in filepath:
+                    # python return False for os.path.exists of exes in System32 but with SysNative
                     trick_path = filepath.replace("system32", "sysnative")
                     if verify(trick_path):
                         return trick_path

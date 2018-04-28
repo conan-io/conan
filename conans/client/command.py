@@ -14,7 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 from conans.util.files import exception_message_safe
-from conans.unicode import get_cwd
+from conans.paths import get_cwd
 
 
 class Extender(argparse.Action):

@@ -42,7 +42,7 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports
 from conans.client.cmd.export import cmd_export, export_alias
-from conans.unicode import get_cwd
+from conans.paths import get_cwd
 
 
 default_manifest_folder = '.conan_manifests'
@@ -97,10 +97,12 @@ def _make_abs_path(path, cwd=None, default=None):
     """
     cwd = cwd or get_cwd()
     if not path:
-        return default or cwd
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(os.path.join(cwd, path))
+        abs_path = default or cwd
+    elif os.path.isabs(path):
+        abs_path = path
+    else:
+        abs_path = os.path.normpath(os.path.join(cwd, path))
+    return abs_path
 
 
 def _get_conanfile_path(path, cwd, py):

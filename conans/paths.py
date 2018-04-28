@@ -5,6 +5,7 @@ import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
 
+get_cwd = os.getcwd
 
 if platform.system() == "Windows":
     from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
@@ -50,7 +51,8 @@ DEFAULT_PROFILE_NAME = "default"
 
 
 def get_conan_user_home():
-    tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
+    user_home = os.getenv("CONAN_USER_HOME", "~")
+    tmp = conan_expand_user(user_home)
     if not os.path.isabs(tmp):
         raise Exception("Invalid CONAN_USER_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
