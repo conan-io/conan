@@ -13,6 +13,7 @@ from conans.client.tools.oss import detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
+from conans.paths import get_cwd
 
 _global_output = None
 
