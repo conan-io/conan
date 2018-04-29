@@ -686,8 +686,9 @@ class ConanAPIV1(object):
         output = {"error": True, "uploaded": []}
 
         if force and no_overwrite:
-            raise ConanException("'no_overwrite' argument cannot be used together with 'force'",
-                                 info=output)
+            exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")
+            exc.info = output
+            raise exc
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry)

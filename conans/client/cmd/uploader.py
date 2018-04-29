@@ -57,7 +57,7 @@ class CmdUpload(object):
                     conanfile_path = self._client_cache.conanfile(conan_ref)
                     conan_file = load_conanfile_class(conanfile_path)
                 except NotFoundException:
-                    raise ConanException(("There is no local conanfile exported as %s" %
+                    raise NotFoundException(("There is no local conanfile exported as %s" %
                                           str(conan_ref)))
                 if all_packages:
                     packages_ids = self._client_cache.conan_packages(conan_ref)
