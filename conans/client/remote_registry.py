@@ -155,7 +155,43 @@ class RemoteRegistry(object):
             refs[conan_reference] = remote
             self._save(remotes, refs)
 
-    def add(self, remote_name, remote, verify_ssl=True, insert=None):
+    def _upsert(self, remote_name, remote, verify_ssl, insert):
+        self._remotes = None  # invalidate cached remotes
+        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
+            remotes, refs = self._load()
+            # Remove duplicates
+            remotes.pop(remote_name, None)
+            remotes_list = []
+            renamed = None
+            for name, r in remotes.items():
+                if r[0] != remote:
+                    remotes_list.append((name, r))
+                else:
+                    renamed = name
+
+            if insert is not None:
+                try:
+                    insert_index = int(insert)
+                except ValueError:
+                    raise ConanException("insert argument must be an integer")
+
+            if insert is not None:
+                remotes_list.insert(insert_index, (remote_name, (remote, verify_ssl)))
+                remotes = OrderedDict(remotes_list)
+            else:
+                remotes = OrderedDict(remotes_list)
+                remotes[remote_name] = (remote, verify_ssl)
+
+            if renamed:
+                for k, v in refs.items():
+                    if v == renamed:
+                        refs[k] = remote_name
+            self._save(remotes, refs)
+
+    def add(self, remote_name, remote, verify_ssl=True, insert=None, force=None):
+        if force:
+            return self._upsert(remote_name, remote, verify_ssl, insert)
+
         def exists_function(remotes):
             if remote_name in remotes:
                 raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
