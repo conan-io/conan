@@ -4,7 +4,7 @@ import traceback
 
 import conans.tools
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
-from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -147,7 +147,7 @@ class Downloader(object):
                     total_length = len(response.content)
                     progress = human_readable_progress(total_length, total_length)
                     print_progress(self.output, 50, progress)
-                    save(file_path, response.content, append=True)
+                    save_append(file_path, response.content)
             else:
                 total_length = int(total_length)
                 encoding = response.headers.get('content-encoding')

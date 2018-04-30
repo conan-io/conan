@@ -198,6 +198,7 @@ class ExportsSourcesTest(unittest.TestCase):
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
+
         if mode == "exports_sources":
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
@@ -387,11 +388,10 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server_path = self.server.paths.export(self.reference)
         save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest_path = os.path.join(server_path, "conanmanifest.txt")
-        manifest = FileTreeManifest.loads(load(manifest_path))
+        manifest = FileTreeManifest.load(server_path)
         manifest.time += 1
         manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        save(manifest_path, str(manifest))
+        manifest.save(server_path)
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
