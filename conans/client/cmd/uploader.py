@@ -27,9 +27,9 @@ class CmdUpload(object):
         self._registry = registry
         self._cache_search = DiskSearchManager(self._client_cache)
 
-    def upload(self, reference_or_pattern, package_id=None, all_packages=None,
+    def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False, no_overwrite=None, remote_name=None, recorder=None):
+               integrity_check=False, no_overwrite=None, remote_name=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         if package_id and not _is_a_reference(reference_or_pattern):

@@ -702,8 +702,8 @@ class ConanAPIV1(object):
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry)
         try:
-            uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
-                            skip_upload, integrity_check, no_overwrite, remote, recorder)
+            uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
+                            retry_wait, skip_upload, integrity_check, no_overwrite, remote)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
