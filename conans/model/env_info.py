@@ -142,7 +142,6 @@ class EnvValues(object):
             # DepsEnvInfo. the OLD values are always kept, never overwrite,
             elif isinstance(env_obj, DepsEnvInfo):
                 for (name, value) in env_obj.vars.items():
-                    name = name.upper() if name.lower() == "path" else name
                     self.add(name, value)
             else:
                 raise ConanException("unknown env type: %s" % env_obj)
@@ -197,10 +196,17 @@ class EnvInfo(object):
     def __init__(self):
         self._values_ = {}
 
+    @staticmethod
+    def _adjust_casing(name):
+        """We don't want to mix "path" with "PATH", actually we don`t want to mix anything
+        with different casing. Furthermore in Windows all is uppercase, but managing all in
+        upper case will be breaking."""
+        return name.upper() if name.lower() == "path" else name
+
     def __getattr__(self, name):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__getattr__(name)
-
+        name = self._adjust_casing(name)
         attr = self._values_.get(name)
         if not attr:
             self._values_[name] = []
@@ -209,6 +215,7 @@ class EnvInfo(object):
     def __setattr__(self, name, value):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__setattr__(name, value)
+        name = self._adjust_casing(name)
         self._values_[name] = value
 
     @property
