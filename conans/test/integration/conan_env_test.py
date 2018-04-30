@@ -626,6 +626,45 @@ class Hello2Conan(ConanFile):
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>bestvalue*", client.user_io.out)
 
+    def mix_path_case_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libB"
+    version = "1.0"
+
+    def package_info(self):
+        self.env_info.path = ["path_from_B"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/channel")
+
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libA"
+    version = "1.0"
+    requires = "libB/1.0@user/channel"
+
+    def package_info(self):
+        self.env_info.PATH.extend(["path_from_A"])
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/channel")
+
+        conanfile = """
+[requires]
+libA/1.0@user/channel
+"""
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install .")
+        info = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        self.assertIn("""
+[ENV_libA]
+PATH=["path_from_A"]
+[ENV_libB]
+PATH=["path_from_B"]""", info)
 
     def check_conaninfo_completion_test(self):
         """
