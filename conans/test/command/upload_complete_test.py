@@ -395,8 +395,6 @@ class TestConan(ConanFile):
                                    "packages": [
                                        {
                                            "id": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                                           "remote_url": "unknown",
-                                           "remote_name": "default",
                                            "time": "unknown"
                                        }
                                    ]
@@ -412,5 +410,3 @@ class TestConan(ConanFile):
             for j, subitem in enumerate(item["packages"]):
                 self.assertEqual(output_expected["uploaded"][i]["packages"][j]["id"],
                                  subitem["id"])
-                self.assertEqual(output_expected["uploaded"][i]["packages"][j]["remote_name"],
-                                 subitem["remote_name"])

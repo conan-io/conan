@@ -5,7 +5,8 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
-from conans.client.action_recorder import ActionRecorder
+from conans.client.cmd.create import create
+from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -13,6 +14,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
+from conans.client.recorder.upload_recoder import UploadRecoder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -61,7 +63,9 @@ def get_basic_requester(client_cache):
 
     return ConanRequester(requester, client_cache, get_request_timeout())
 
+
 recorder_methods = ["install", "install_reference", "create"]
+
 
 def api_method(f):
     def wrapper(*args, **kwargs):
@@ -315,51 +319,13 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env,
                                     cwd, self._client_cache)
 
-        def get_test_conanfile_path(tf):
-            """Searches in the declared test_folder or in the standard locations"""
-
-            if tf is False:
-                # Look up for testing conanfile can be disabled if tf (test folder) is False
-                return None
-
-            test_folders = [tf] if tf else ["test_package", "test"]
-            base_folder = os.path.dirname(conanfile_path)
-            for test_folder_name in test_folders:
-                test_folder = os.path.join(base_folder, test_folder_name)
-                test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-                if os.path.exists(test_conanfile_path):
-                    return test_conanfile_path
-            else:
-                if tf:
-                    raise ConanException("test folder '%s' not available, "
-                                         "or it doesn't have a conanfile.py" % tf)
-
-        test_conanfile_path = get_test_conanfile_path(test_folder)
         self._recorder.add_recipe_being_developed(reference)
 
-        ret = None
-        if test_conanfile_path:
-            pt = PackageTester(self._manager, self._user_io)
-            ret = pt.install_build_and_test(test_conanfile_path, reference, profile,
-                                            remote, update, build_modes=build_modes,
-                                            manifest_folder=manifest_folder,
-                                            manifest_verify=manifest_verify,
-                                            manifest_interactive=manifest_interactive,
-                                            keep_build=keep_build,
-                                            test_build_folder=test_build_folder)
-        else:
-            ret = self._manager.install(reference=reference,
-                                        install_folder=None,  # Not output anything
-                                        manifest_folder=manifest_folder,
-                                        manifest_verify=manifest_verify,
-                                        manifest_interactive=manifest_interactive,
-                                        remote_name=remote,
-                                        profile=profile,
-                                        build_modes=build_modes,
-                                        update=update,
-                                        keep_build=keep_build)
-        if ret is None:
-            return self._recorder.get_info()
+        create(reference, self._manager, self._user_io, profile, remote, update, build_modes,
+               manifest_folder, manifest_verify, manifest_interactive, keep_build,
+               test_build_folder, test_folder, conanfile_path)
+
+        return self._recorder.get_info()
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -445,14 +411,13 @@ class ConanAPIV1(object):
             generators = False
 
         mkdir(install_folder)
-        ret = self._manager.install(reference=reference, install_folder=install_folder,
-                                    remote_name=remote, profile=profile, build_modes=build,
-                                    update=update, manifest_folder=manifest_folder,
-                                    manifest_verify=manifest_verify,
-                                    manifest_interactive=manifest_interactive,
-                                    generators=generators, install_reference=True)
-        if ret is None:
-            return self._recorder.get_info()
+        self._manager.install(reference=reference, install_folder=install_folder,
+                              remote_name=remote, profile=profile, build_modes=build,
+                              update=update, manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              generators=generators, install_reference=True)
+        return self._recorder.get_info()
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None,
@@ -470,19 +435,18 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
-        ret = self._manager.install(reference=conanfile_path,
-                                    install_folder=install_folder,
-                                    remote_name=remote,
-                                    profile=profile,
-                                    build_modes=build,
-                                    update=update,
-                                    manifest_folder=manifest_folder,
-                                    manifest_verify=manifest_verify,
-                                    manifest_interactive=manifest_interactive,
-                                    generators=generators,
-                                    no_imports=no_imports)
-        if ret is None:
-            return self._recorder.get_info()
+        self._manager.install(reference=conanfile_path,
+                              install_folder=install_folder,
+                              remote_name=remote,
+                              profile=profile,
+                              build_modes=build,
+                              update=update,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              generators=generators,
+                              no_imports=no_imports)
+        return self._recorder.get_info()
 
     @api_method
     def config_get(self, item):
@@ -683,21 +647,23 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
-        output = {"error": True, "uploaded": []}
+        recorder = UploadRecoder()
 
         if force and no_overwrite:
             exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")
-            exc.info = output
+            recorder.error = True
+            exc.info = recorder.get_info()
             raise exc
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry)
         try:
-            return uploader.upload(pattern, package, all_packages, force, confirm, retry,
-                                   retry_wait, skip_upload, integrity_check, no_overwrite, remote,
-                                   output)
+            uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
+                            skip_upload, integrity_check, no_overwrite, remote, recorder)
+            return recorder.get_info()
         except ConanException as exc:
-            exc.info = output
+            recorder.error = True
+            exc.info = recorder.get_info()
             raise
 
     @api_method

@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
@@ -30,7 +29,7 @@ class CmdUpload(object):
 
     def upload(self, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False, no_overwrite=None, remote_name=None, output=None):
+               integrity_check=False, no_overwrite=None, remote_name=None, recorder=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         if package_id and not _is_a_reference(reference_or_pattern):
@@ -44,8 +43,8 @@ class CmdUpload(object):
         else:
             references = self._cache_search.search_recipes(reference_or_pattern)
             if not references:
-                raise ConanException(("No packages found matching pattern '%s'" %
-                                      reference_or_pattern))
+                raise NotFoundException(("No packages found matching pattern '%s'" %
+                                         reference_or_pattern))
 
         for conan_ref in references:
             upload = True
@@ -66,14 +65,12 @@ class CmdUpload(object):
                 else:
                     packages_ids = []
                 self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
-                             skip_upload, integrity_check, no_overwrite, remote_name, output)
+                             skip_upload, integrity_check, no_overwrite, remote_name, recorder)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
-        output["error"] = False
-        return output
 
     def _upload(self, conan_file, conan_ref, force, packages_ids, retry, retry_wait, skip_upload,
-                integrity_check, no_overwrite, remote_name, output):
+                integrity_check, no_overwrite, remote_name, recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
 
         defined_remote = self._registry.get_ref(conan_ref)
@@ -89,16 +86,9 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'"
                                % (str(conan_ref), upload_remote.name))
-        ret_upload_recipe = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload,
-                                                no_overwrite, upload_remote)
+        self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, upload_remote)
 
-        recipe_output = None
-        if ret_upload_recipe:
-            recipe_output = {"id": str(conan_ref),
-                             "remote_url": upload_remote.url,
-                             "remote_name": upload_remote.name,
-                             "time": str(datetime.utcnow())}
-        output["uploaded"].append({"recipe": recipe_output, "packages": []})
+        recorder.add_recipe(str(conan_ref), upload_remote.name, upload_remote.url)
 
         if packages_ids:
             # Can't use build_policy_always here because it's not loaded (only load_class)
@@ -112,10 +102,8 @@ class CmdUpload(object):
                                                           skip_upload, integrity_check,
                                                           no_overwrite, upload_remote)
                 if ret_upload_package:
-                    output["uploaded"][-1]["packages"].append({"id": package_id,
-                                                               "remote_url": upload_remote.url,
-                                                                "remote_name": upload_remote.name,
-                                                                "time": str(datetime.utcnow())})
+                    recorder.add_package(str(conan_ref), package_id)
+
         if not defined_remote and not skip_upload:
             self._registry.set_ref(conan_ref, upload_remote)
 
