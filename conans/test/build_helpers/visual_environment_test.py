@@ -9,7 +9,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
     def test_visual(self):
         settings = MockSettings({"build_type": "Debug",
-                                 "compier": "Visual Studio",
+                                 "compiler": "Visual Studio",
                                  "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         conanfile.deps_cpp_info.include_paths.append("/one/include/path")
@@ -30,6 +30,8 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycflag',
                    '-mycflag2',
                    '-Zi',
+                   '-Ob0',
+                   '-Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -49,6 +51,8 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycflag',
                    '-mycflag2',
                    '-Zi',
+                   '-Ob0',
+                   '-Od',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -66,6 +70,8 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-mycflag',
                        '-mycflag2',
                        '-Zi',
+                       '-Ob0',
+                       '-Od',
                        '-mycppflag',
                        '-mycppflag2',
                        '-myexelinkflag',
@@ -76,7 +82,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
             self.assertEquals(tool.vars, {
                 "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
-                      '-mycflag -mycflag2 -Zi '
+                      '-mycflag -mycflag2 -Zi -Ob0 -Od '
                       '-mycppflag -mycppflag2 -myexelinkflag -mysharedlinkflag '
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",

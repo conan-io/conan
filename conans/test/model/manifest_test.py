@@ -20,9 +20,8 @@ class ManifestTest(unittest.TestCase):
 
         manifest = FileTreeManifest.create(tmp_dir)
 
-        save(os.path.join(tmp_dir, "THEMANIFEST.txt"), str(manifest))
-
-        readed_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "THEMANIFEST.txt")))
+        manifest.save(tmp_dir)
+        readed_manifest = FileTreeManifest.load(tmp_dir)
 
         self.assertEqual(readed_manifest.time, manifest.time)
         self.assertEqual(readed_manifest, manifest)
@@ -38,8 +37,8 @@ class ManifestTest(unittest.TestCase):
         tmp_dir = temp_folder()
         save(os.path.join(tmp_dir, "man.txt"), "1478122267\nconanfile.pyc: "
                                                "2bcac725a0e6843ef351f4d18cf867ec\n"
-                                               "conanfile.py: 2bcac725a0e6843ef351f4d18cf867ec",
-                                               "conanfile.pyo: 2bcac725a0e6843ef351f4d18cf867ec")
+                                               "conanfile.py: 2bcac725a0e6843ef351f4d18cf867ec\n"
+                                               "conanfile.pyo: 2bcac725a0e6843ef351f4d18cf867ec\n")
 
         read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
         # Not included the pycs or pyo

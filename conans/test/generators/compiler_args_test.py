@@ -44,7 +44,7 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         gcc = GCCGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s -DNDEBUG '
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG '
                           '-Wl,-rpath="path/to/lib1" '
                           '-Lpath/to/lib1 -lmylib -std=gnu++1z', gcc.content)
 
@@ -72,7 +72,7 @@ class CompilerArgsTest(unittest.TestCase):
         settings.build_type = "Release"
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s '
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s '
                           '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib',
                           gcc.content)
 
@@ -86,7 +86,7 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath\\to\\include1 cxx_flag1 c_flag1 -DNDEBUG '
+        self.assertEquals('-Dmydefine1 -Ipath\\to\\include1 cxx_flag1 c_flag1 -O2 -Ob2 -DNDEBUG '
                           '-link -LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
@@ -97,7 +97,7 @@ class CompilerArgsTest(unittest.TestCase):
         settings.build_type = "Release"
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -DNDEBUG '
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
                           '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
@@ -110,6 +110,6 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         args = CompilerArgsGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -DNDEBUG '
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
                           '-Wl,-rpath,"path/to/lib1" '
                           '-Lpath/to/lib1 -lmylib', args.content)

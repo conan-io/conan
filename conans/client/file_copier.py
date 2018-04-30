@@ -6,18 +6,23 @@ from collections import defaultdict
 from conans import tools
 
 
-def report_copied_files(copied, output, warn=False):
+def report_copied_files(copied, output):
     ext_files = defaultdict(list)
     for f in copied:
         _, ext = os.path.splitext(f)
         ext_files[ext].append(os.path.basename(f))
 
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        output.info("Copied %d '%s' files%s" % (len(files), ext, files_str))
+    if not ext_files:
+        return False
 
-    if warn and not ext_files:
-        output.warn("No files copied!")
+    for ext, files in ext_files.items():
+        files_str = (", ".join(files)) if len(files) < 5 else ""
+        file_or_files = "file" if len(files) == 1 else "files"
+        if not ext:
+            output.info("Copied %d %s: %s" % (len(files), file_or_files, files_str))
+        else:
+            output.info("Copied %d '%s' %s: %s" % (len(files), ext, file_or_files, files_str))
+    return True
 
 
 class FileCopier(object):
@@ -42,8 +47,8 @@ class FileCopier(object):
         if excluded:
             self._excluded.append(excluded)
 
-    def report(self, output, warn=False):
-        report_copied_files(self._copied, output, warn)
+    def report(self, output):
+        return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
                  excludes=None, ignore_case=False):

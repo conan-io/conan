@@ -55,6 +55,12 @@ def touch(fname, times=None):
     os.utime(fname, times)
 
 
+def touch_folder(folder):
+    for dirname, _, filenames in os.walk(folder):
+        for fname in filenames:
+            os.utime(os.path.join(dirname, fname), None)
+
+
 def normalize(text):
     if platform.system() == "Windows":
         return re.sub("\r?\n", "\r\n", text)
@@ -96,7 +102,17 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save(path, content, append=False):
+def save_append(path, content):
+    try:
+        os.makedirs(os.path.dirname(path))
+    except:
+        pass
+
+    with open(path, "ab") as handle:
+        handle.write(to_file_bytes(content))
+
+
+def save(path, content):
     """
     Saves a file with given content
     Params:
@@ -108,8 +124,7 @@ def save(path, content, append=False):
     except:
         pass
 
-    mode = 'wb' if not append else 'ab'
-    with open(path, mode) as handle:
+    with open(path, "wb") as handle:
         handle.write(to_file_bytes(content))
 
 
