@@ -11,8 +11,9 @@ from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
-from conans.util.files import  md5sum, load
 from conans.unicode import make_unicode
+from conans.util.files import md5sum, load
+
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 

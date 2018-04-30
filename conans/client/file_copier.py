@@ -4,7 +4,6 @@ import shutil
 from collections import defaultdict
 
 from conans import tools
-from conans.unicode import assert_unicode
 
 
 def report_copied_files(copied, output):
@@ -41,8 +40,6 @@ class FileCopier(object):
         param root_destination_folder: The base folder to copy things to, typicall the
                                        store package folder
         """
-        assert_unicode(root_source_folder)
-        assert_unicode(root_destination_folder)
         self._base_src = root_source_folder
         self._base_dst = root_destination_folder
         self._copied = []

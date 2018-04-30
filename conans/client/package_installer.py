@@ -3,8 +3,7 @@ import os
 from conans.client.action_recorder import INSTALL_ERROR_MISSING
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import CONAN_MANIFEST
-from conans.util.files import rmdir, load, make_read_only
+from conans.util.files import rmdir, make_read_only
 from conans.util.tracer import log_package_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env

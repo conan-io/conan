@@ -108,7 +108,7 @@ def save_append(path, content):
     except:
         pass
 
-    with open(path, 'ab') as handle:
+    with open(path, "ab") as handle:
         handle.write(to_file_bytes(content))
 
 

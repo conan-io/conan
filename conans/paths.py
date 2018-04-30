@@ -4,7 +4,7 @@ from os.path import join, normpath
 import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
-from conans.unicode import make_unicode, assert_unicode
+from conans.unicode import make_unicode
 
 
 if platform.system() == "Windows":
@@ -95,7 +95,6 @@ class SimplePaths(object):
     path logic responsability
     """
     def __init__(self, store_folder):
-        assert_unicode(store_folder)
         self._store_folder = store_folder
 
     @property

@@ -24,7 +24,6 @@ from .boostbuild import BoostBuildGenerator
 from .json_generator import JsonGenerator
 import traceback
 from conans.util.env_reader import get_env
-from conans.unicode import assert_unicode
 
 
 class _GeneratorManager(object):
@@ -72,7 +71,6 @@ registered_generators.add("json", JsonGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-    assert_unicode(path)
     for generator_name in conanfile.generators:
         try:
             generator_class = registered_generators[generator_name]

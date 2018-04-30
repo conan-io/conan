@@ -258,7 +258,7 @@ def which(filename):
         return None
 
     def _get_possible_filenames(filename):
-        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if not "." in filename else []
+        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if "." not in filename else []
         extensions = [".sh"] if platform.system() != "Windows" else extensions_win
         extensions.insert(1, "")  # No extension
         return ["%s%s" % (filename, entry.lower()) for entry in extensions]
@@ -271,7 +271,8 @@ def which(filename):
                 return filepath
             if platform.system() == "Windows":
                 filepath = filepath.lower()
-                if "system32" in filepath:  # python return False for os.path.exists of exes in System32 but with SysNative
+                if "system32" in filepath:
+                    # python return False for os.path.exists of exes in System32 but with SysNative
                     trick_path = filepath.replace("system32", "sysnative")
                     if verify(trick_path):
                         return trick_path

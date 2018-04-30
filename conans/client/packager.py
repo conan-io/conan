@@ -9,12 +9,9 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, c
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
-from conans.unicode import assert_unicode
 
 
 def export_pkg(conanfile, src_package_folder, package_folder, output):
-    assert_unicode(src_package_folder)
-    assert_unicode(package_folder)
     mkdir(package_folder)
 
     output.info("Exporting to cache existing package from user folder")
@@ -38,10 +35,6 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
     """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
     """
-    assert_unicode(source_folder)
-    assert_unicode(build_folder)
-    assert_unicode(package_folder)
-    assert_unicode(install_folder)
     mkdir(package_folder)
 
     # Make the copy of all the patterns
