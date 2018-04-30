@@ -656,6 +656,8 @@ class LibConan(ConanFile):
         conanfile = """
 [requires]
 libA/1.0@user/channel
+[generators]
+virtualenv
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
@@ -665,6 +667,13 @@ libA/1.0@user/channel
 PATH=["path_from_A"]
 [ENV_libB]
 PATH=["path_from_B"]""", info)
+        if platform.system() != "Windows":
+            activate = load(os.path.join(client.current_folder, "activate.sh"))
+            self.assertIn('PATH="path_from_A":"path_from_B":$PATH', activate)
+        else:
+            activate = load(os.path.join(client.current_folder, "activate.bat"))
+            self.assertIn('PATH=path_from_A;path_from_B;%PATH%"', activate)
+
 
     def check_conaninfo_completion_test(self):
         """
