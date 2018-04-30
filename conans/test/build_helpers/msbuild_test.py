@@ -4,12 +4,32 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans import tools
+from conans.client.build.msbuild import MSBuild
 from conans.paths import CONANFILE
+from conans.test.utils.conanfile import MockSettings, MockConanfile
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
 
 
 class MSBuildTest(unittest.TestCase):
+
+    def dont_mess_with_build_type_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        self.assertEquals(msbuild.build_env.flags, ["-Zi", "-Ob0", "-Od"])
+        template = msbuild._get_props_file_contents()
+
+        self.assertIn("-Ob0", template)
+        self.assertIn("-Od", template)
+
+        msbuild.build_env.flags = ["-Zi"]
+        template = msbuild._get_props_file_contents()
+
+        self.assertNotIn("-Ob0", template)
+        self.assertNotIn("-Od", template)
 
     @attr('slow')
     def build_vs_project_test(self):

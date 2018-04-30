@@ -21,6 +21,7 @@ class MSBuild(object):
             self.build_env = VisualStudioBuildEnvironment(self._conanfile)
         else:  # backwards compatible with build_sln_command
             self._settings = conanfile
+            self.build_env = None
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None):
@@ -49,12 +50,15 @@ class MSBuild(object):
         else:
             self._output.info("Skipped sln project upgrade")
 
-        build_type = build_type or self._settings.build_type
-        arch = arch or self._settings.arch
+        build_type = build_type or self._settings.get_safe("build_type")
+        arch = arch or self._settings.get_safe("arch")
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
+
+
+
         command += "msbuild %s /p:Configuration=%s" % (project_file, build_type)
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
@@ -106,8 +110,13 @@ class MSBuild(object):
                            "MD": "MultiThreadedDLL",
                            "MDd": "MultiThreadedDebugDLL"}.get(self._settings.get_safe("compiler.runtime"), "")
 
-        flags = vs_build_type_flags(self._settings)
-        flags.append(vs_std_cpp(self._settings))
+        if self.build_env:
+            # Take the flags from the build env, the user was able to alter them if needed
+            flags = self.build_env.flags
+            flags.append(self.build_env.std)
+        else:  # To be removed when build_sln_command is deprecated
+            flags = vs_build_type_flags(self._settings)
+            flags.append(vs_std_cpp(self._settings))
 
         template = """<?xml version="1.0" encoding="utf-8"?>
     <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
