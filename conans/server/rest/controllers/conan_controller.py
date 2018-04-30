@@ -15,7 +15,7 @@ class ConanController(Controller):
     """
     def attach_to(self, app):
 
-        conan_route = '%s/:conanname/:version/:username/:channel' % self.route
+        conan_route = '%s/<conanname>/<version>/<username>/<channel>' % self.route
 
         @app.route("/ping", method=["GET"])
         def ping():
@@ -25,7 +25,7 @@ class ConanController(Controller):
             return
 
         @app.route("%s/digest" % conan_route, method=["GET"])
-        def get_conan_digest_url(conanname, version, username, channel, auth_user):
+        def get_conan_manifest_url(conanname, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -36,8 +36,8 @@ class ConanController(Controller):
                 raise NotFoundException("No digest found")
             return urls
 
-        @app.route("%s/packages/:package_id/digest" % conan_route, method=["GET"])
-        def get_package_digest_url(conanname, version, username, channel, package_id, auth_user):
+        @app.route("%s/packages/<package_id>/digest" % conan_route, method=["GET"])
+        def get_package_manifest_url(conanname, version, username, channel, package_id, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -63,7 +63,7 @@ class ConanController(Controller):
                              for filename, the_md5 in snapshot.items()}
             return snapshot_norm
 
-        @app.route('%s/packages/:package_id' % conan_route, method=["GET"])
+        @app.route('%s/packages/<package_id>' % conan_route, method=["GET"])
         def get_package_snapshot(conanname, version, username, channel, package_id, auth_user):
             """
             Get a dictionary with all files and their each md5s
@@ -87,7 +87,7 @@ class ConanController(Controller):
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
-        @app.route('%s/packages/:package_id/download_urls' % conan_route, method=["GET"])
+        @app.route('%s/packages/<package_id>/download_urls' % conan_route, method=["GET"])
         def get_package_download_urls(conanname, version, username, channel, package_id,
                                       auth_user):
             """
@@ -113,7 +113,7 @@ class ConanController(Controller):
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
-        @app.route('%s/packages/:package_id/upload_urls' % conan_route, method=["POST"])
+        @app.route('%s/packages/<package_id>/upload_urls' % conan_route, method=["POST"])
         def get_package_upload_urls(conanname, version, username, channel, package_id, auth_user):
             """
             Get a dict with all files and the upload url

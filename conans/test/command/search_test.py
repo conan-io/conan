@@ -132,12 +132,11 @@ class SearchTest(unittest.TestCase):
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        self.client.save({os.path.join(self.root_folder1, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder2, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder3, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder4, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          },
-                         self.client.paths.store)
+        fake_manifest.save(os.path.join(self.client.paths.store, self.root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder2, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder3, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder4, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
@@ -205,8 +204,8 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", ignore_error=True)
-        self.assertIn("ERROR: '--table' argument can only be used with a reference in the 'pattern'"
-                      " argument", self.client.user_io.out)
+        self.assertIn("ERROR: '--table' argument can only be used with a reference",
+                      self.client.user_io.out)
 
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
@@ -322,10 +321,10 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                                    "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True AND nonexistant_option=3'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["PlatformIndependantSHA",
