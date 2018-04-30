@@ -20,7 +20,6 @@ import os
 @attr('visual_studio')
 class BuildSLNCommandTest(unittest.TestCase):
 
-
     def no_configuration_test(self):
         dummy = """GlobalSection
             EndGlobalSection
@@ -142,5 +141,5 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(path_tmp))
         contents = load(path_tmp)
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
-        self.assertIn("<AdditionalOptions>-Zi /std:c++17 %(AdditionalOptions)</AdditionalOptions>",
+        self.assertIn("<AdditionalOptions>-Zi -Ob0 -Od /std:c++17 %(AdditionalOptions)</AdditionalOptions>",
                       contents)

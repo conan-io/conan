@@ -16,6 +16,7 @@ from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 import shutil
+from conans.unicode import get_cwd
 
 
 CONAN_CONF = 'conan.conf'
@@ -163,7 +164,7 @@ class ClientCache(SimplePaths):
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
-                self._default_profile, _ = read_profile(self.default_profile_path, os.getcwd(),
+                self._default_profile, _ = read_profile(self.default_profile_path, get_cwd(),
                                                         self.profiles_path)
 
             # Mix profile settings with environment
