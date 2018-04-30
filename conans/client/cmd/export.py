@@ -15,7 +15,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import DiskSearchManager
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
 
 
@@ -32,7 +32,7 @@ class AliasConanfile(ConanFile):
     save(os.path.join(export_path, CONANFILE), conanfile)
     mkdir(client_cache.export_sources(reference))
     digest = FileTreeManifest.create(export_path)
-    save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
+    digest.save(export_path)
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -114,7 +114,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
+    digest.save(destination_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
@@ -142,8 +142,7 @@ def _init_export_folder(destination_folder, destination_src_folder):
     try:
         if os.path.exists(destination_folder):
             if os.path.exists(os.path.join(destination_folder, CONAN_MANIFEST)):
-                manifest_content = load(os.path.join(destination_folder, CONAN_MANIFEST))
-                previous_digest = FileTreeManifest.loads(manifest_content)
+                previous_digest = FileTreeManifest.load(destination_folder)
             # Maybe here we want to invalidate cache
             rmdir(destination_folder)
         os.makedirs(destination_folder)

@@ -227,7 +227,8 @@ test_package/build
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None,
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -284,5 +285,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     files.update(ci_get_files(name, version, user, channel, visual_versions,
                               linux_gcc_versions, linux_clang_versions,
                               osx_clang_versions, shared, upload_url,
-                              gitlab_gcc_versions, gitlab_clang_versions))
+                              gitlab_gcc_versions, gitlab_clang_versions,
+                              circleci_gcc_versions, circleci_clang_versions,
+                              circleci_osx_versions))
     return files

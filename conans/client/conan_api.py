@@ -44,6 +44,7 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports
 from conans.client.cmd.export import cmd_export, export_alias
+from conans.unicode import get_cwd
 
 
 default_manifest_folder = '.conan_manifests'
@@ -68,7 +69,7 @@ def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
-            curdir = os.getcwd()
+            curdir = get_cwd()
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
@@ -90,12 +91,14 @@ def _make_abs_path(path, cwd=None, default=None):
     """convert 'path' to absolute if necessary (could be already absolute)
     if not defined (empty, or None), will return 'default' one or 'cwd'
     """
-    cwd = cwd or os.getcwd()
+    cwd = cwd or get_cwd()
     if not path:
-        return default or cwd
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(os.path.join(cwd, path))
+        abs_path = default or cwd
+    elif os.path.isabs(path):
+        abs_path = path
+    else:
+        abs_path = os.path.normpath(os.path.join(cwd, path))
+    return abs_path
 
 
 def _get_conanfile_path(path, cwd, py):
@@ -227,9 +230,10 @@ class ConanAPIV1(object):
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
-            gitlab_gcc_versions=None, gitlab_clang_versions=None):
+            gitlab_gcc_versions=None, gitlab_clang_versions=None,
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
         from conans.client.cmd.new import cmd_new
-        cwd = os.path.abspath(cwd or os.getcwd())
+        cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,
                         visual_versions=visual_versions,
@@ -238,7 +242,10 @@ class ConanAPIV1(object):
                         osx_clang_versions=osx_clang_versions, shared=shared,
                         upload_url=upload_url, gitignore=gitignore,
                         gitlab_gcc_versions=gitlab_gcc_versions,
-                        gitlab_clang_versions=gitlab_clang_versions)
+                        gitlab_clang_versions=gitlab_clang_versions,
+                        circleci_gcc_versions=circleci_gcc_versions,
+                        circleci_clang_versions=circleci_clang_versions,
+                        circleci_osx_versions=circleci_osx_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -253,7 +260,7 @@ class ConanAPIV1(object):
         env = env or []
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
         reference = ConanFileReference.loads(reference)
@@ -335,7 +342,7 @@ class ConanAPIV1(object):
         settings = settings or []
         options = options or []
         env = env or []
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
@@ -489,7 +496,7 @@ class ConanAPIV1(object):
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
@@ -546,7 +553,7 @@ class ConanAPIV1(object):
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -562,7 +569,7 @@ class ConanAPIV1(object):
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -577,7 +584,7 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
@@ -599,7 +606,7 @@ class ConanAPIV1(object):
         :param cwd: Current working directory
         :return: None
         """
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
@@ -611,7 +618,7 @@ class ConanAPIV1(object):
 
     @api_method
     def imports_undo(self, manifest_path):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path, self._user_io.out)
 
@@ -762,7 +769,7 @@ class ConanAPIV1(object):
 
     @api_method
     def read_profile(self, profile=None):
-        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        p, _ = read_profile(profile, get_cwd(), self._client_cache.profiles_path)
         return p
 
     @api_method

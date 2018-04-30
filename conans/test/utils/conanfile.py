@@ -1,3 +1,4 @@
+from conans.model.conan_file import ConanFile
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -27,7 +28,7 @@ class MockDepsCppInfo(object):
         self.sysroot = ""
 
 
-class MockConanfile(object):
+class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()

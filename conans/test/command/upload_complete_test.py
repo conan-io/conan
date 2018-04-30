@@ -79,11 +79,11 @@ class UploadTest(unittest.TestCase):
         files = hello_source_files()
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: myconan1,
-                          CONAN_MANIFEST: str(conan_digest),
                           "include/math/lib1.h": "//copy",
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
+        conan_digest.save(reg_folder)
         mkdir(self.client.client_cache.export_sources(self.conan_ref))
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
@@ -104,7 +104,7 @@ class UploadTest(unittest.TestCase):
 
         digest_path = self.client.client_cache.digestfile_package(self.package_ref)
         expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
+        expected_manifest.save(package_folder)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
@@ -212,7 +212,7 @@ class UploadTest(unittest.TestCase):
         pack_path = self.client.paths.package(self.package_ref)
         digest_path = self.client.client_cache.digestfile_package(self.package_ref)
         expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+        expected_manifest.save(pack_path)
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
         self.assertIn("Compressing recipe", self.client.user_io.out)
@@ -326,11 +326,10 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
         # Fake datetime from exported date and upload again
-        digest_path = os.path.join(self.client.paths.export(self.conan_ref), CONAN_MANIFEST)
         old_digest = self.client.paths.load_manifest(self.conan_ref)
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
-        save(digest_path, str(fake_digest))
+        fake_digest.save(self.client.paths.export(self.conan_ref))
 
         self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
         self.assertIn("Remote recipe is newer than local recipe", self.client.user_io.out)

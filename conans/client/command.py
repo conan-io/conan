@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 from conans.util.files import exception_message_safe
+from conans.unicode import get_cwd
 
 
 class Extender(argparse.Action):
@@ -142,6 +143,15 @@ class Command(object):
         parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux clang')
+        parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for linux gcc')
+        parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for linux clang')
+        parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
+                            default=False,
+                            help='Generate CicleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
@@ -157,7 +167,10 @@ class Command(object):
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
                         upload_url=args.ci_upload_url,
                         gitlab_gcc_versions=args.ci_gitlab_gcc,
-                        gitlab_clang_versions=args.ci_gitlab_clang)
+                        gitlab_clang_versions=args.ci_gitlab_clang,
+                        circleci_gcc_versions=args.ci_circleci_gcc,
+                        circleci_clang_versions=args.ci_circleci_clang,
+                        circleci_osx_versions=args.ci_circleci_osx)
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method. This command
@@ -219,7 +232,7 @@ class Command(object):
             # Now if parameter --test-folder=None (string None) we have to skip tests
             args.test_folder = False
 
-        cwd = os.getcwd()
+        cwd = get_cwd()
 
         info = None
         try:
@@ -292,7 +305,7 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
-        cwd = os.getcwd()
+        cwd = get_cwd()
 
         info = None
         try:
@@ -424,7 +437,7 @@ class Command(object):
                                                install_folder=args.install_folder)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(ret, json_arg, os.getcwd())
+                self._outputer.json_build_order(ret, json_arg, get_cwd())
             else:
                 self._outputer.build_order(ret)
 
@@ -464,7 +477,7 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference, os.getcwd())
+                self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
             else:
                 self._outputer.info(deps_graph, graph_updates_info, only, args.remote,
                                     args.package_filter, args.paths, project_reference)
@@ -1259,7 +1272,7 @@ def main(args):
 
     outputer = CommandOutputer(user_io, client_cache)
     command = Command(conan_api, client_cache, user_io, outputer)
-    current_dir = os.getcwd()
+    current_dir = get_cwd()
     try:
         import signal
 
