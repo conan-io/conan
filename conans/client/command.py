@@ -901,6 +901,8 @@ class Command(object):
                                 help='Verify SSL certificated. Default True')
         parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
                                 help="insert remote at specific index")
+        parser_add.add_argument("-f", "--force", default=False, action='store_true',
+                                help="Force addition, will update if existing")
         parser_rm = subparsers.add_parser('remove', help='Remove a remote')
         parser_rm.add_argument('remote', help='Name of the remote')
         parser_upd = subparsers.add_parser('update', help='Update the remote url')
@@ -942,7 +944,7 @@ class Command(object):
             remotes = self._conan.remote_list()
             self._outputer.remote_list(remotes)
         elif args.subcommand == "add":
-            return self._conan.remote_add(remote, url, verify_ssl, args.insert)
+            return self._conan.remote_add(remote, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
         elif args.subcommand == "rename":
