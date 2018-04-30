@@ -662,6 +662,7 @@ virtualenv
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
         info = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        info = info.replace("\r\n", "\n")
         self.assertIn("""
 [ENV_libA]
 PATH=["path_from_A"]
@@ -673,7 +674,6 @@ PATH=["path_from_B"]""", info)
         else:
             activate = load(os.path.join(client.current_folder, "activate.bat"))
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%"', activate)
-
 
     def check_conaninfo_completion_test(self):
         """
