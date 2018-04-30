@@ -1,7 +1,7 @@
 import os
 from conans.paths import SimplePaths
 from conans.model.manifest import FileTreeManifest
-from conans.util.files import load, save
+from conans.util.files import load
 from conans.errors import ConanException
 
 
@@ -32,7 +32,7 @@ class ManifestManager(object):
             ok = True
 
         if ok:
-            save(path, str(manifest))
+            manifest.save(os.path.dirname(path), os.path.basename(path))
             self._log.append("Installed manifest for '%s' from %s" % (str(reference), remote))
         else:
             raise ConanException("Installation of '%s' rejected!" % str(reference))

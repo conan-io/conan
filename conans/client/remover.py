@@ -87,11 +87,15 @@ class ConanRemover(object):
         self._remote_manager = remote_manager
         self._registry = remote_registry
 
-    def _remote_remove(self, reference, package_ids):
+    def _remote_remove(self, reference, package_ids, remote):
         if package_ids is None:
-            self._remote_proxy.remove(reference)
+            result = self._remote_manager.remove(reference, remote)
+            current_remote = self._registry.get_ref(reference)
+            if current_remote == remote:
+                self._registry.remove_ref(reference)
+            return result
         else:
-            self._remote_proxy.remove_packages(reference, package_ids)
+            return self._remote_manager.remove_packages(reference, package_ids, remote)
 
     def _local_remove(self, reference, src, build_ids, package_ids):
         # Make sure to clean the locks too
@@ -159,7 +163,7 @@ class ConanRemover(object):
             if self._ask_permission(reference, src, build_ids, package_ids, force):
                 deleted_refs.append(reference)
                 if remote:
-                    self._remote_remove(reference, package_ids)
+                    self._remote_remove(reference, package_ids, remote)
                 else:
                     deleted_refs.append(reference)
                     self._local_remove(reference, src, build_ids, package_ids)

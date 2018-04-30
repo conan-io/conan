@@ -5,6 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 from conans.util.files import decode_text
 from conans.errors import ConanException
 import six
+from conans.unicode import get_cwd
 
 
 class ConanRunner(object):
@@ -90,7 +91,7 @@ class ConanRunner(object):
             return os.system(command)
         else:
             try:
-                old_dir = os.getcwd()
+                old_dir = get_cwd()
                 os.chdir(cwd)
                 result = os.system(command)
             except Exception as e:

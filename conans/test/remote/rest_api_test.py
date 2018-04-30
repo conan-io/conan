@@ -281,7 +281,6 @@ class MyConan(ConanFile):
         files[CONANFILE] = content
         files_md5s = {filename: md5(content) for filename, content in files.items()}
         conan_digest = FileTreeManifest(123123123, files_md5s)
-        files[CONAN_MANIFEST] = str(conan_digest)
 
         tmp_dir = temp_folder()
         abs_paths = {}
@@ -289,5 +288,7 @@ class MyConan(ConanFile):
             abs_path = os.path.join(tmp_dir, filename)
             save(abs_path, content)
             abs_paths[filename] = abs_path
+        abs_paths[CONAN_MANIFEST] = os.path.join(tmp_dir, CONAN_MANIFEST)
+        conan_digest.save(tmp_dir)
 
         self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False, None)

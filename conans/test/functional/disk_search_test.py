@@ -3,7 +3,7 @@ import unittest
 from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, SimplePaths, CONANINFO)
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager
 from conans.util.files import save
 from conans.model.info import ConanInfo
 
@@ -13,8 +13,7 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         folder = temp_folder()
         paths = SimplePaths(folder)
-        search_adapter = DiskSearchAdapter()
-        self.search_manager = DiskSearchManager(paths, search_adapter)
+        self.search_manager = DiskSearchManager(paths)
         os.chdir(paths.store)
         self.paths = paths
 
@@ -63,8 +62,7 @@ class SearchTest(unittest.TestCase):
         conan_ref5 = ConanFileReference.loads("SDL_fake/1.10@lasote/testing")
         os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
         # Case insensitive searches
-        search_adapter = DiskSearchAdapter()
-        search_manager = DiskSearchManager(self.paths, search_adapter)
+        search_manager = DiskSearchManager(self.paths)
 
         reg_conans = sorted([str(_reg) for _reg in search_manager.search_recipes("*")])
         self.assertEqual(reg_conans, [str(conan_ref5),
