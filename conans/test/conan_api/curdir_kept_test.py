@@ -9,7 +9,7 @@ from conans.test.utils.test_files import temp_folder
 class CurdirKeptTest(unittest.TestCase):
 
     def curdir_test(self):
-        tmp_folder = temp_folder(tools.mkdir_tmp())
+        tmp_folder = temp_folder()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     name = "lib"
