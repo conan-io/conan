@@ -44,4 +44,4 @@ class UploadRecoder(object):
             packages_info = [package.to_dict() for package in item["packages"]]
             info["uploaded"].append({"recipe": recipe_info, "packages": packages_info})
 
-        return info
+        return infoUpload
