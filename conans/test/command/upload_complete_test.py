@@ -102,8 +102,8 @@ class UploadTest(unittest.TestCase):
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
-        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        package_path = self.client.client_cache.package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(package_folder)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
@@ -210,8 +210,8 @@ class UploadTest(unittest.TestCase):
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package
         pack_path = self.client.paths.package(self.package_ref)
-        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        package_path = self.client.client_cache.package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(pack_path)
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)

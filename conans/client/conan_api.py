@@ -45,6 +45,7 @@ from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.unicode import get_cwd
+from conans.client.remover import ConanRemover
 
 
 default_manifest_folder = '.conan_manifests'
@@ -631,12 +632,9 @@ class ConanAPIV1(object):
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote=None, outdated=False):
-
-        recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                       src=src, force=force, remote_name=remote, packages_query=query,
-                       outdated=outdated)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, self._registry)
+        remover.remove(pattern, remote, src, builds, packages, force=force,
+                       packages_query=query, outdated=outdated)
 
     @api_method
     def copy(self, reference, user_channel, force=False, packages=None):

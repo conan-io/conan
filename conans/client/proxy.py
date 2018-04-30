@@ -136,7 +136,8 @@ class ConanProxy(object):
         read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
         if read_manifest:
             try:  # get_conan_manifest can fail, not in server
-                upstream_manifest = self.get_conan_manifest(conan_reference)
+                remote, _ = self._get_remote(conan_reference)
+                upstream_manifest = self._remote_manager.get_conan_manifest(conan_reference, remote)
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404
@@ -202,15 +203,6 @@ class ConanProxy(object):
         else:
             remote = ref_remote or self._registry.default_remote
         return remote, ref_remote
-
-    def get_conan_manifest(self, conan_ref):
-        """ used by update to check the date of packages, require force if older
-        """
-        remote, current_remote = self._get_remote(conan_ref)
-        result = self._remote_manager.get_conan_manifest(conan_ref, remote)
-        if not current_remote:
-            self._registry.set_ref(conan_ref, remote)
-        return result
 
     def get_package_manifest(self, package_ref):
         """ used by update to check the date of packages, require force if older

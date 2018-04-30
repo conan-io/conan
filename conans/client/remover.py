@@ -80,9 +80,8 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_proxy, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
         self._user_io = user_io
-        self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._remote_manager = remote_manager
         self._registry = remote_registry
@@ -147,7 +146,7 @@ class ConanRemover(object):
                     packages = disk_search.search_packages(reference, packages_query)
                 if outdated:
                     if remote:
-                        recipe_hash = self._remote_proxy.get_conan_manifest(reference).summary_hash
+                        recipe_hash = self._remote_manager.get_conan_manifest(reference, remote).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)
