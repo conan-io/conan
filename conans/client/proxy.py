@@ -45,7 +45,9 @@ class ConanProxy(object):
         # No package in local cache
         if not os.path.exists(package_folder):
             try:
-                remote_info = self.get_package_info(package_ref)
+                # NOTE This call can associate a recently exported recipe, with anything
+                # to a remote containing the recipe reference
+                remote_info = self._get_package_info(package_ref)
             except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
                 return False
 
@@ -213,7 +215,7 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def get_package_info(self, package_ref):
+    def _get_package_info(self, package_ref):
         """ Gets the package info to check if outdated
         """
         remote, ref_remote = self._get_remote(package_ref.conan)
