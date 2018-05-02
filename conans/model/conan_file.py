@@ -259,6 +259,7 @@ class ConanFile(object):
         if not win_bash:
             retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
         else:
+            # FIXME: run in windows bash is not using output
             retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                                 msys_mingw=msys_mingw)
 

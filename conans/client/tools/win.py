@@ -443,4 +443,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-        return conanfile.run(wincmd, win_bash=False)
+        # Using the trick of output=False to force not using os.system calls
+        # so bash with pats also works
+        return conanfile.run(wincmd, output=False, win_bash=False)
