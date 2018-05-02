@@ -76,8 +76,8 @@ class AutoToolsBuildEnvironment(object):
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        build = get_gnu_triplet(os_detected, arch_detected, compiler)
-        host = get_gnu_triplet(os_settings, arch_settings, compiler)
+        build = get_gnu_triplet(os_detected, arch_detected, compiler, self._conanfile.output)
+        host = get_gnu_triplet(os_settings, arch_settings, compiler, self._conanfile.output)
 
         return build, host, None
 
