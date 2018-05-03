@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 from conans.client.generators.pkg_config import PkgConfigGenerator
@@ -91,16 +92,21 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertEquals("\n".join(pc_content.splitlines()[1:]),
-                          """libdir=/my_absoulte_path/fake/mylib/lib
+        expected_rpaths = ""
+        if platform.system() == "Linux":
+            expected_rpaths = " -Wl,-rpath=${libdir} -Wl,-rpath=${libdir3}"
+        elif platform.system() == "Darwin":
+            expected_rpaths = " -Wl,-rpath,${libdir} -Wl,-rpath,${libdir3}"
+        expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir3=${prefix}/lib2
 includedir=/my_absoulte_path/fake/mylib/include
 
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L${libdir}
-Cflags: -I${includedir}""")
+Libs: -L${libdir} -L${libdir3}%s
+Cflags: -I${includedir}""" % expected_rpaths
+        self.assertEquals("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
             self.assertTrue(os.path.isabs(path))
@@ -180,8 +186,4 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        conan_ref = ConanFileReference.loads("MyLib/0.1@danimtb/testing")
-        package_dir = client.paths.package(
-            PackageReference(conan_ref, "ea61221ce137c6bac82570628201a6e1ecb34adc"))
-        correct_path = os.path.join(package_dir, "lib").replace("\\", "/")
-        self.assertIn("-Wl,-rpath=\"%s\"" % correct_path, pc_content)
+        self.assertIn("-Wl,-rpath=${libdir}", pc_content)
