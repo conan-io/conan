@@ -79,7 +79,7 @@ def pic_flag(compiler=None):
     return '-fPIC'
 
 
-def build_type_flag(compiler, build_type):
+def build_type_flags(compiler, build_type, vs_toolset=None):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
@@ -87,14 +87,47 @@ def build_type_flag(compiler, build_type):
     if not compiler or not build_type:
         return ""
 
+    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+    # Modules/Platform/Windows-MSVC.cmake
     if str(compiler) == 'Visual Studio':
-        if build_type == 'Debug':
-            return '-Zi'
+        if vs_toolset and "clang" in str(vs_toolset):
+            flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
+                     "Release": ["-O2"],
+                     "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],
+                     "MinSizeRel": []
+                     }.get(build_type, ["-O2", "-Ob2"])
+        elif not vs_toolset:
+            flags = {"Debug": ["-Zi", "-Ob0", "-Od"],
+                     "Release": ["-O2", "-Ob2"],
+                     "RelWithDebInfo": ["-Zi", "-O2", "-Ob1"],
+                     "MinSizeRel": ["-O1", "-Ob1"],
+                     }.get(build_type, [])
+        return flags
     else:
-        if build_type == 'Debug':
-            return '-g'
-        elif build_type == 'Release' and str(compiler) == 'gcc':
-            return '-s'
+        # https://github.com/Kitware/CMake/blob/f3bbb37b253a1f4a26809d6f132b3996aa2e16fc/
+        # Modules/Compiler/GNU.cmake
+        # clang include the gnu (overriding some things, but not build type) and apple clang
+        # overrides clang but it doesn't touch clang either
+        if str(compiler) in ["clang", "gcc", "apple-clang"]:
+            # FIXME: It is not clear that the "-s" is something related with the build type
+            # cmake is not adjusting it
+            # -s: Remove all symbol table and relocation information from the executable.
+            flags = {"Debug": ["-g"],
+                     "Release": ["-O3", "-s"] if str(compiler) == "gcc" else ["-O3"],
+                     "RelWithDebInfo": ["-O2", "-g"],
+                     "MinSizeRel": ["-Os"],
+                     }.get(build_type, [])
+            return flags
+        elif str(compiler) == "sun-cc":
+            # https://github.com/Kitware/CMake/blob/f3bbb37b253a1f4a26809d6f132b3996aa2e16fc/
+            # Modules/Compiler/SunPro-CXX.cmake
+            flags = {"Debug": ["-g"],
+                     "Release": ["-xO3"],
+                     "RelWithDebInfo": ["-xO2", "-g"],
+                     "MinSizeRel": ["-xO2", "-xspace"],
+                     }.get(build_type, [])
+            return flags
+
     return ""
 
 
@@ -135,7 +168,7 @@ def visual_runtime(runtime):
     return ""
 
 
-def format_defines(defines, compiler):
+def format_defines(defines):
     return ["-D%s" % define for define in defines if define]
 
 

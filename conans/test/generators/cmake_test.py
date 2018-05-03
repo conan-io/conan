@@ -36,10 +36,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
-        self.assertIn("set(CONAN_DEFINES_MYPKG -DMYDEFINE1)", cmake_lines)
-        self.assertIn("set(CONAN_DEFINES_MYPKG2 -DMYDEFINE2)", cmake_lines)
-        self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG MYDEFINE1)", cmake_lines)
-        self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG2 MYDEFINE2)", cmake_lines)
+        self.assertIn('set(CONAN_DEFINES_MYPKG "-DMYDEFINE1")', cmake_lines)
+        self.assertIn('set(CONAN_DEFINES_MYPKG2 "-DMYDEFINE2")', cmake_lines)
+        self.assertIn('set(CONAN_COMPILE_DEFINITIONS_MYPKG "MYDEFINE1")', cmake_lines)
+        self.assertIn('set(CONAN_COMPILE_DEFINITIONS_MYPKG2 "MYDEFINE2")', cmake_lines)
 
         self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
@@ -117,12 +117,15 @@ class CMakeGeneratorTest(unittest.TestCase):
         cpp_info.includedirs.append("other_include_dir")
         cpp_info.cppflags = ["-load", r"C:\foo\bar.dll"]
         cpp_info.cflags = ["-load", r"C:\foo\bar2.dll"]
+        cpp_info.defines = ['MY_DEF=My string', 'MY_DEF2=My other string']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
         self.assertIn(r'set(CONAN_C_FLAGS_MYPKG "-load C:\\foo\\bar2.dll")', cmake_lines)
         self.assertIn(r'set(CONAN_CXX_FLAGS_MYPKG "-load C:\\foo\\bar.dll")', cmake_lines)
+        self.assertIn(r'set(CONAN_DEFINES_MYPKG "-DMY_DEF=My string"', cmake_lines)
+        self.assertIn('\t\t\t"-DMY_DEF2=My other string")', cmake_lines)
 
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
@@ -132,7 +135,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -161,6 +164,9 @@ class CMakeGeneratorTest(unittest.TestCase):
     if(NOT ARGUMENTS_SKIP_STD)
         message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
+    endif()
+    if(NOT ARGUMENTS_SKIP_FPIC)
+        conan_set_fpic()
     endif()
     conan_set_vs_runtime()
     conan_set_libcxx()
