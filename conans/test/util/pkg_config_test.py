@@ -84,16 +84,15 @@ class PkgConfigTest(unittest.TestCase):
         if platform.system() == "Windows":
             return
         pc_content = """prefix=/my_prefix/path
-        libdir=/my_absoulte_path/fake/mylib/lib
-        libdir3=${prefix}/lib2
-        includedir=/my_absoulte_path/fake/mylib/include
+libdir=/my_absoulte_path/fake/mylib/lib
+libdir3=${prefix}/lib2
+includedir=/my_absoulte_path/fake/mylib/include
 
-        Name: MyLib
-        Description: Conan package: MyLib
-        Version: 0.1
-        Libs: -L${libdir} -L${libdir3} -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"
-        Cflags: -I${includedir}"""
-
+Name: MyLib
+Description: Conan package: MyLib
+Version: 0.1
+Libs: -L${libdir} -L${libdir3} -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"
+Cflags: -I${includedir}"""
         tmp_dir = temp_folder()
         filename = os.path.join(tmp_dir, 'MyLib.pc')
         with open(filename, 'w') as f:
