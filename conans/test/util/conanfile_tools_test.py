@@ -24,6 +24,7 @@ class ConanFileToolsTest(ConanFile):
 class ConanfileToolsTest(unittest.TestCase):
 
     def save_append_test(self):
+        # https://github.com/conan-io/conan/issues/2841 (regression)
         client = TestClient()
         conanfile = """from conans import ConanFile
 from conans.tools import save
