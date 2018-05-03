@@ -44,14 +44,16 @@ class PkgConfigGenerator(Generator):
         libdir_vars = []
         varname = "libdir"
         dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.libdirs)
-        libdir_vars.append(varname)
-        lines.extend(dir_lines)
+        if dir_lines:
+            libdir_vars.append(varname)
+            lines.extend(dir_lines)
 
         includedir_vars = []
         varname = "includedir"
         dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.includedirs)
-        includedir_vars.append(varname)
-        lines.extend(dir_lines)
+        if dir_lines:
+            includedir_vars.append(varname)
+            lines.extend(dir_lines)
 
         lines.append("")
         lines.append("Name: %s" % name)

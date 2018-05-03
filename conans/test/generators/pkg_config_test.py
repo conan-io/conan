@@ -115,6 +115,37 @@ Cflags: -I${includedir}""")
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
 
+    def pkg_config_without_libdir_test(self):
+        conanfile = """
+import os
+from conans import ConanFile
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+
+    def package_info(self):
+        self.cpp_info.includedirs = []
+        self.cpp_info.libdirs = []
+        self.cpp_info.bindirs = []
+        self.cpp_info.libs = []
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . danimtb/testing")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config")
+
+        pc_path = os.path.join(client.current_folder, "MyLib.pc")
+        self.assertTrue(os.path.exists(pc_path))
+        pc_content = load(pc_path)
+        self.assertEquals("\n".join(pc_content.splitlines()[1:]),
+                          """
+Name: MyLib
+Description: Conan package: MyLib
+Version: 0.1
+Libs: 
+Cflags: """)
+
     def pkg_config_rpaths_test(self):
         # rpath flags are only generated for gcc and clang
         profile = """
