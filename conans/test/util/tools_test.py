@@ -699,9 +699,8 @@ class MyConan(ConanFile):
 
     def get_gnu_triplet_test(self):
         def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
-            out = TestBufferConanOutput()
-            build = tools.get_gnu_triplet(this_os, this_arch, compiler, out)
-            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler, out)
+            build = tools.get_gnu_triplet(this_os, this_arch, compiler)
+            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
             return build, host
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
@@ -798,8 +797,7 @@ class MyConan(ConanFile):
 
         for os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
-                out = TestBufferConanOutput()
-                triplet = tools.get_gnu_triplet(os, arch, "gcc", out)
+                triplet = tools.get_gnu_triplet(os, arch, "gcc")
 
                 output = ""
                 if arch == "x86_64":
@@ -817,7 +815,7 @@ class MyConan(ConanFile):
 
         # Compiler not specified for os="Windows"
         with self.assertRaises(ConanException):
-            tools.get_gnu_triplet("Windows", "x86", None, None)
+            tools.get_gnu_triplet("Windows", "x86", None)
 
     def detect_windows_subsystem_test(self):
         # Dont raise test

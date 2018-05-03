@@ -307,7 +307,7 @@ def get_cross_building_settings(settings, self_os=None, self_arch=None):
     return build_os, build_arch, host_os, host_arch
 
 
-def get_gnu_triplet(os, arch, compiler, output):
+def get_gnu_triplet(os, arch, compiler=None):
     """
     Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
 

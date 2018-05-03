@@ -78,11 +78,11 @@ class AutoToolsBuildEnvironment(object):
             return False, False, False
 
         try:
-            build = get_gnu_triplet(os_detected, arch_detected, compiler, self._conanfile.output)
+            build = get_gnu_triplet(os_detected, arch_detected, compiler)
         except ConanException:
             build = None
         try:
-            host = get_gnu_triplet(os_settings, arch_settings, compiler, self._conanfile.output)
+            host = get_gnu_triplet(os_settings, arch_settings, compiler)
         except ConanException:
             host = None
         return build, host, None
@@ -196,7 +196,7 @@ class AutoToolsBuildEnvironment(object):
         if arch_flag:
             ret.append(arch_flag)
         btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
-                               vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
+                                vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
         if btfs:
             ret.extend(btfs)
         srf = sysroot_flag(self._deps_cpp_info.sysroot, win_bash=self._win_bash,
