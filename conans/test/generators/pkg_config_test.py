@@ -6,8 +6,9 @@ from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
+from conans.tools import PkgConfig, environment_append
 from conans.util.files import load
 
 
@@ -120,6 +121,11 @@ Cflags: -I${includedir}""" % expected_rpaths
                 self.assertTrue(line.endswith("lib"))
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
+        if platform.system() == "Windows":
+            return
+        with environment_append({'PKG_CONFIG_PATH': client.current_folder}):
+            pkg_config = PkgConfig("MyLib")
+            print(pkg_config.libs)
 
     def pkg_config_without_libdir_test(self):
         conanfile = """
