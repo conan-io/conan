@@ -617,33 +617,35 @@ class MyConan(ConanFile):
 
         class MockConanfile(object):
             def __init__(self):
-                self.command = ""
+
                 self.output = namedtuple("output", "info")(lambda x: None)  # @UnusedVariable
                 self.env = {"PATH": "/path/to/somewhere"}
 
-            def run(self, command, win_bash=False, output=True):  # @UnusedVariable
-                self.command = command
+                class MyRun(object):
+                    def __call__(self, command, win_bash=False, subprocess=False):  # @UnusedVariable
+                        self.command = command
+                self._runner = MyRun()
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile.command)
-        self.assertIn("--login -c", conanfile.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile.command)
+        self.assertIn("bash", conanfile._runner.command)
+        self.assertIn("--login -c", conanfile._runner.command)
+        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
                                                                                        "MYVAR": "34"})
         self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile.command)
+                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
