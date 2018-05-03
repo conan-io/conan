@@ -1,11 +1,12 @@
 import os
+import platform
 import unittest
 
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -91,16 +92,21 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertEquals("\n".join(pc_content.splitlines()[1:]),
-                          """libdir=/my_absoulte_path/fake/mylib/lib
+        expected_rpaths = ""
+        if platform.system() == "Linux":
+            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"'
+        elif platform.system() == "Darwin":
+            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir3}"'
+        expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir3=${prefix}/lib2
 includedir=/my_absoulte_path/fake/mylib/include
 
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L${libdir}
-Cflags: -I${includedir}""")
+Libs: -L${libdir} -L${libdir3}%s
+Cflags: -I${includedir}""" % expected_rpaths
+        self.assertEquals("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
             self.assertTrue(os.path.isabs(path))
@@ -114,6 +120,37 @@ Cflags: -I${includedir}""")
                 self.assertTrue(line.endswith("lib"))
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
+
+    def pkg_config_without_libdir_test(self):
+        conanfile = """
+import os
+from conans import ConanFile
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+
+    def package_info(self):
+        self.cpp_info.includedirs = []
+        self.cpp_info.libdirs = []
+        self.cpp_info.bindirs = []
+        self.cpp_info.libs = []
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . danimtb/testing")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config")
+
+        pc_path = os.path.join(client.current_folder, "MyLib.pc")
+        self.assertTrue(os.path.exists(pc_path))
+        pc_content = load(pc_path)
+        self.assertEquals("\n".join(pc_content.splitlines()[1:]),
+                          """
+Name: MyLib
+Description: Conan package: MyLib
+Version: 0.1
+Libs: 
+Cflags: """)
 
     def pkg_config_rpaths_test(self):
         # rpath flags are only generated for gcc and clang
@@ -149,8 +186,4 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        conan_ref = ConanFileReference.loads("MyLib/0.1@danimtb/testing")
-        package_dir = client.paths.package(
-            PackageReference(conan_ref, "ea61221ce137c6bac82570628201a6e1ecb34adc"))
-        correct_path = os.path.join(package_dir, "lib").replace("\\", "/")
-        self.assertIn("-Wl,-rpath=\"%s\"" % correct_path, pc_content)
+        self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
