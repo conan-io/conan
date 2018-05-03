@@ -121,11 +121,18 @@ Cflags: -I${includedir}""" % expected_rpaths
                 self.assertTrue(line.endswith("lib"))
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
+
+        # Test pkg-config return libs
         if platform.system() == "Windows":
             return
         with environment_append({'PKG_CONFIG_PATH': client.current_folder}):
             pkg_config = PkgConfig("MyLib")
-            print(pkg_config.libs)
+            libs = "-L${libdir} -L${libdir3}" + expected_rpaths
+            prefix = pc_content.splitlines()[1].replace("prefix=", "")
+            libdir = "/my_absoulte_path/fake/mylib/lib"
+            libdir3 = os.path.join(prefix, "lib2")
+            expected = libs.replace("${libdir}", libdir).replace("${libdir3}", libdir3)
+            self.assertIn(expected, " ".join(lib for lib in pkg_config.libs))
 
     def pkg_config_without_libdir_test(self):
         conanfile = """
@@ -192,4 +199,4 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertIn("-Wl,-rpath=${libdir}", pc_content)
+        self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)

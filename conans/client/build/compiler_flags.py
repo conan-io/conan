@@ -20,11 +20,7 @@ def rpath_flags(os_build, compiler, lib_paths):
         rpath_separator = "," if os_build in ["Macos", "iOS", "watchOS", "tvOS"] else "="
         for lib in lib_paths:
             lib = lib.replace("\\", "/")
-            if "/" in lib:  # Checks if it is actually a path
-                rpath_flag = '-Wl,-rpath%s"%s"'
-            else:
-                rpath_flag = '-Wl,-rpath%s%s'
-            flags.append(rpath_flag % (rpath_separator, lib))
+            flags.append('-Wl,-rpath%s"%s"' % (rpath_separator, lib))
     return flags
 
 
