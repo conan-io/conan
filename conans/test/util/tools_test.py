@@ -31,7 +31,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -267,26 +267,24 @@ class HelloConan(ConanFile):
             spt.update()
             self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
 
-            
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo yum install -y a_package")
-            
+
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
                 self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
-                
+
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "dpkg -s a_package")
 
-            
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
@@ -318,7 +316,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
 
@@ -384,7 +383,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
@@ -425,7 +425,7 @@ class HelloConan(ConanFile):
                 self.calls = 0
                 self.expected = expected
 
-            def __call__(self, command, *args, **kwargs):
+            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
                 self.calls += 1
                 return 0 if command in self.expected else 1
 
@@ -618,10 +618,10 @@ class MyConan(ConanFile):
         class MockConanfile(object):
             def __init__(self):
                 self.command = ""
-                self.output = namedtuple("output", "info")(lambda x: None)
+                self.output = namedtuple("output", "info")(lambda x: None)  # @UnusedVariable
                 self.env = {"PATH": "/path/to/somewhere"}
 
-            def run(self, command, win_bash=False):
+            def run(self, command, win_bash=False, output=True):  # @UnusedVariable
                 self.command = command
 
         conanfile = MockConanfile()
