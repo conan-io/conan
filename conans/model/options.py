@@ -69,6 +69,11 @@ class PackageOptionValues(object):
             return None
         return self._dict[attr]
 
+    def __delattr__(self, attr):
+        if attr not in self._dict:
+            return
+        del self._dict[attr]
+
     def clear(self):
         self._dict.clear()
 
@@ -225,6 +230,9 @@ class OptionsValues(object):
         if attr[0] == "_":
             return super(OptionsValues, self).__setattr__(attr, value)
         return setattr(self._package_values, attr, value)
+
+    def __delattr__(self, attr):
+        delattr(self._package_values, attr)
 
     def clear_indirect(self):
         for v in self._reqs_options.values():
