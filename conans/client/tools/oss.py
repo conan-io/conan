@@ -330,10 +330,9 @@ def get_gnu_triplet(os, arch, compiler, output):
                "armv7hf": "arm",
                "armv8": "aarch64"}.get(arch, None)
     if machine is None:
-        output.warn("Unknown '%s' machine, Conan doesn't know how to "
-                    "translate it to the GNU triplet, please report at "
-                    " https://github.com/conan-io/conan/issues" % arch)
-        return "unknown"
+        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
+                             "translate it to the GNU triplet, please report at "
+                             " https://github.com/conan-io/conan/issues" % arch)
 
     # Calculate the OS
     if compiler == "gcc":
