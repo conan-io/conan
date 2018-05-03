@@ -39,8 +39,10 @@ class ConanRunner(object):
 
         # No output has to be redirected to logs or buffer or omitted
         if output is True and not log_filepath and self._log_run_to_output:
+            print "RUNNING SIMPLE OS CALL"
             return self._simple_os_call(command, cwd)
         elif log_filepath:
+            print "RUNNING log_filepath PIPED CALL"
             if stream_output:
                 stream_output.write("Logging command output to file '%s'\n" % log_filepath)
             with open(log_filepath, "a+") as log_handler:
@@ -48,6 +50,7 @@ class ConanRunner(object):
                     log_handler.write(call_message)
                 return self._pipe_os_call(command, stream_output, log_handler, cwd)
         else:
+            print "RUNNING PIPED CALL"
             return self._pipe_os_call(command, stream_output, None, cwd)
 
     def _pipe_os_call(self, command, stream_output, log_handler, cwd):

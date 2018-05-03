@@ -23,6 +23,20 @@ class ConanFileToolsTest(ConanFile):
 
 class ConanfileToolsTest(unittest.TestCase):
 
+    def save_append_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+class Pkg(ConanFile):
+    def source(self):
+        save("myfile.txt", "Hello", append=True)
+"""
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "World"})
+        client.run("source .")
+        self.assertEqual("WorldHello",
+                         load(os.path.join(client.current_folder, "myfile.txt")))
+
     def test_untar(self):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "example.txt")
