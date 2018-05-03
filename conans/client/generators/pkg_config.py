@@ -13,7 +13,7 @@ includedir=${prefix}/include
 Name: my-project
 Description: Some brief but informative description
 Version: 1.2.3
-Libs: -L${libdir} -lmy-project-1 -linkerflag
+Libs: -L${libdir} -lmy-project-1 -linkerflag -Wl,-rpath=${libdir}
 Cflags: -I${includedir}/my-project-1
 Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
 Requires.private: gthread-2.0 >= 2.40
@@ -42,16 +42,16 @@ class PkgConfigGenerator(Generator):
         lines = ['prefix=%s' % prefix_path]
 
         libdir_vars = []
-        varname = "libdir"
-        dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.libdirs)
-        libdir_vars.append(varname)
-        lines.extend(dir_lines)
+        dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
+        if dir_lines:
+            libdir_vars = varnames
+            lines.extend(dir_lines)
 
         includedir_vars = []
-        varname = "includedir"
-        dir_lines = _generate_dir_lines(prefix_path, varname, cpp_info.includedirs)
-        includedir_vars.append(varname)
-        lines.extend(dir_lines)
+        dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir", cpp_info.includedirs)
+        if dir_lines:
+            includedir_vars = varnames
+            lines.extend(dir_lines)
 
         lines.append("")
         lines.append("Name: %s" % name)
@@ -63,7 +63,7 @@ class PkgConfigGenerator(Generator):
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))
-        rpaths = rpath_flags(the_os, self.compiler, self._deps_build_info.lib_paths)
+        rpaths = rpath_flags(the_os, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
@@ -88,6 +88,7 @@ def _concat_if_not_empty(groups):
 
 def _generate_dir_lines(prefix_path, varname, dirs):
     lines = []
+    varnames = []
     for i, directory in enumerate(dirs):
         directory = os.path.normpath(directory).replace("\\", "/")
         varname = varname if i == 0 else "%s%d" % (varname, (i + 2))
@@ -98,4 +99,5 @@ def _generate_dir_lines(prefix_path, varname, dirs):
             prefix = "${prefix}/"
             directory = os.path.relpath(directory, prefix_path)
         lines.append("%s=%s%s" % (varname, prefix, directory))
-    return lines
+        varnames.append(varname)
+    return lines, varnames
