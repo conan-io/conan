@@ -9,19 +9,18 @@
     #   -LIBPATH, -D, -I, -ZI and so on.
 
 """
+
 from conans.tools import unix_path
 
 
 def rpath_flags(os_build, compiler, lib_paths):
-    flags = []
     if not os_build:
-        return flags
+        return []
     if compiler in ("clang", "apple-clang", "gcc"):
         rpath_separator = "," if os_build in ["Macos", "iOS", "watchOS", "tvOS"] else "="
-        for lib in lib_paths:
-            lib = lib.replace("\\", "/")
-            flags.append('-Wl,-rpath%s"%s"' % (rpath_separator, lib))
-    return flags
+        return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
+                for x in lib_paths if x]
+    return []
 
 
 def architecture_flag(compiler, arch):
