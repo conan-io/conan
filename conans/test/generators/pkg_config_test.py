@@ -128,10 +128,11 @@ Cflags: -I${includedir}""" % expected_rpaths
         with environment_append({'PKG_CONFIG_PATH': client.current_folder}):
             pkg_config = PkgConfig("MyLib")
             libs = "-L${libdir} -L${libdir3}" + expected_rpaths
-            prefix = pc_content.splitlines()[1].replace("prefix=", "")
+            prefix = pc_content.splitlines()[0].replace("prefix=", "")
             libdir = "/my_absoulte_path/fake/mylib/lib"
             libdir3 = os.path.join(prefix, "lib2")
-            expected = libs.replace("${libdir}", libdir).replace("${libdir3}", libdir3)
+            expected = libs.replace('"', '')
+            expected = expected.replace("${libdir3}", libdir3).replace("${libdir}", libdir)
             self.assertIn(expected, " ".join(lib for lib in pkg_config.libs))
 
     def pkg_config_without_libdir_test(self):
