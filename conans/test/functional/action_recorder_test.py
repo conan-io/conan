@@ -1,7 +1,7 @@
 import unittest
 
-from conans.client.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING,
-                                           INSTALL_ERROR_NETWORK)
+from conans.client.recorder.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING,
+                                                    INSTALL_ERROR_NETWORK)
 from conans.model.ref import ConanFileReference, PackageReference
 
 

@@ -5,7 +5,7 @@ from requests.exceptions import RequestException
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.client.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.util.log import logger

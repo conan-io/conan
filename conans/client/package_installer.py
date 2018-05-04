@@ -1,6 +1,6 @@
 import os
 
-from conans.client.action_recorder import INSTALL_ERROR_MISSING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir, make_read_only

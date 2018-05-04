@@ -248,7 +248,7 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_install(info, args.json, cwd)
+                self._outputer.json_output(info, args.json, cwd)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings. It works
@@ -338,7 +338,7 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_install(info, args.json, cwd)
+                self._outputer.json_output(info, args.json, cwd)
 
     def config(self, *args):
         """Manages Conan configuration. Edits the conan.conf or installs config files.
@@ -877,14 +877,26 @@ class Command(object):
         parser.add_argument("-no", "--no-overwrite", nargs="?", type=str, choices=["all", "recipe"],
                             action=OnceArgument, const="all",
                             help="Uploads package only if recipe is the same as the remote one")
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the install information will be written to')
 
         args = parser.parse_args(*args)
 
-        return self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
-                                  remote=args.remote, all_packages=args.all, force=args.force,
-                                  confirm=args.confirm, retry=args.retry,
-                                  retry_wait=args.retry_wait, skip_upload=args.skip_upload,
-                                  integrity_check=args.check, no_overwrite=args.no_overwrite)
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
+                                      remote=args.remote, all_packages=args.all, force=args.force,
+                                      confirm=args.confirm, retry=args.retry,
+                                      retry_wait=args.retry_wait, skip_upload=args.skip_upload,
+                                      integrity_check=args.check, no_overwrite=args.no_overwrite)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def remote(self, *args):
         """Manages the remote list and the package recipes associated to a remote.
@@ -901,6 +913,8 @@ class Command(object):
                                 help='Verify SSL certificated. Default True')
         parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
                                 help="insert remote at specific index")
+        parser_add.add_argument("-f", "--force", default=False, action='store_true',
+                                help="Force addition, will update if existing")
         parser_rm = subparsers.add_parser('remove', help='Remove a remote')
         parser_rm.add_argument('remote', help='Name of the remote')
         parser_upd = subparsers.add_parser('update', help='Update the remote url')
@@ -942,7 +956,7 @@ class Command(object):
             remotes = self._conan.remote_list()
             self._outputer.remote_list(remotes)
         elif args.subcommand == "add":
-            return self._conan.remote_add(remote, url, verify_ssl, args.insert)
+            return self._conan.remote_add(remote, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
         elif args.subcommand == "rename":
