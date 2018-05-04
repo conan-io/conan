@@ -16,7 +16,8 @@ class MSBuildTest(unittest.TestCase):
     def dont_mess_with_build_type_test(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
-                                 "arch": "x86_64"})
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
         self.assertEquals(msbuild.build_env.flags, ["-Zi", "-Ob0", "-Od"])
@@ -30,6 +31,16 @@ class MSBuildTest(unittest.TestCase):
 
         self.assertNotIn("-Ob0", template)
         self.assertNotIn("-Od", template)
+        self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", template)
+
+    def without_runtime_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents()
+        self.assertNotIn("<RuntimeLibrary>", template)
 
     @attr('slow')
     def build_vs_project_test(self):
