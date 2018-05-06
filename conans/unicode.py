@@ -1,7 +1,11 @@
 import six
+import os
 
 
-get_cwd = six.moves.getcwd
+if six.PY2:
+    get_cwd = os.getcwdu
+else:
+    get_cwd = os.getcwd
 
 
 def make_unicode(v):
