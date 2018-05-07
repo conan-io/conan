@@ -123,6 +123,9 @@ def save(path, content):
             content = content.encode("utf8")
     elif isinstance(content, unicode):
         content = content.encode("utf8")
+    print(path)
+    print(sys.getfilesystemencoding())
+    print(sys.getdefaultencoding())
     with open(path, 'wb') as handle:
         handle.write(content)
 
