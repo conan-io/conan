@@ -12,6 +12,7 @@ import six
 from conans.util.log import logger
 import tarfile
 import stat
+from conans.unicode import make_byte_str
 
 
 def make_read_only(path):
@@ -68,13 +69,10 @@ def normalize(text):
         return text
 
 
-def md5(content):
+def md5(content, encoding=None):
     md5alg = hashlib.md5()
-    if isinstance(content, bytes):
-        tmp = content
-    else:
-        tmp = content.encode("utf8")
-    md5alg.update(tmp)
+    content = make_byte_str(content, encoding)
+    md5alg.update(content)
     return md5alg.hexdigest()
 
 
@@ -118,11 +116,7 @@ def save(path, content):
     except:
         pass
 
-    if six.PY3:
-        if isinstance(content, str):
-            content = content.encode("utf8")
-    elif isinstance(content, unicode):
-        content = content.encode("utf8")
+    content = make_byte_str(content, "utf8")
     with open(path, 'wb') as handle:
         handle.write(content)
 

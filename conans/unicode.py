@@ -8,6 +8,15 @@ else:
     get_cwd = os.getcwd
 
 
+def make_byte_str(v, encoding=None):
+    if six.PY3:
+        if isinstance(v, str):
+            return v.encode(encoding)
+    elif isinstance(v, unicode):
+        return v.encode(encoding)
+    return v
+
+
 def make_unicode(v):
     if six.PY2:
         if isinstance(v, str):

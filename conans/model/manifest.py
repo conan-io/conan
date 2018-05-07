@@ -51,7 +51,7 @@ class FileTreeManifest(object):
     def summary_hash(self):
         s = ["%s: %s" % (f, fmd5) for f, fmd5 in sorted(self.file_sums.items())]
         s.append("")
-        return md5("\n".join(s))
+        return md5("\n".join(s), "utf8")
 
     @property
     def time_str(self):
@@ -78,9 +78,9 @@ class FileTreeManifest(object):
         return FileTreeManifest.loads(text)
 
     def save(self, folder, filename=CONAN_MANIFEST):
-        ret = [u"%s" % (self.time)]
+        ret = ["%s" % (self.time)]
         for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret.append(u"%s: %s" % (filepath, file_md5))
+            ret.append("%s: %s" % (filepath, file_md5))
         ret.append("")
         content = "\n".join(ret)
         path = os.path.join(folder, filename)
