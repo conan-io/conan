@@ -96,7 +96,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],
                      "MinSizeRel": []
                      }.get(build_type, ["-O2", "-Ob2"])
-        elif not vs_toolset:
+        else:
             flags = {"Debug": ["-Zi", "-Ob0", "-Od"],
                      "Release": ["-O2", "-Ob2"],
                      "RelWithDebInfo": ["-Zi", "-O2", "-Ob1"],

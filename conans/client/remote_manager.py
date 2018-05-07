@@ -21,6 +21,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_package_download)
 from conans.client.source import merge_directories
 from conans.client.package_installer import raise_package_not_found_error
+import stat
 
 
 class RemoteManager(object):
@@ -214,7 +215,7 @@ class RemoteManager(object):
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, package_reference, dest_folder, remote, output):
+    def get_package(self, conanfile, package_reference, dest_folder, remote, output, recorder):
         package_id = package_reference.package_id
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
@@ -225,7 +226,7 @@ class RemoteManager(object):
         except NotFoundException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             raise_package_not_found_error(conanfile, package_reference.conan,
-                                          package_id, output, remote.url)
+                                          package_id, output, recorder, remote.url)
         else:
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
@@ -321,16 +322,17 @@ def compress_files(files, symlinks, name, dest_dir):
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-        for filename, dest in symlinks.items():
+        for filename, dest in sorted(symlinks.items()):
             info = tarfile.TarInfo(name=filename)
             info.type = tarfile.SYMTYPE
             info.linkname = dest
             tgz.addfile(tarinfo=info)
 
-        for filename, abs_path in files.items():
+        mask = ~(stat.S_IWOTH | stat.S_IWGRP)
+        for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
-            info.mode = os.stat(abs_path).st_mode
+            info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
                 info.linkname = os.readlink(abs_path)  # @UndefinedVariable

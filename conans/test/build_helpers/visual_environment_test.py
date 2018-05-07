@@ -3,6 +3,7 @@ import unittest
 from conans import tools
 from conans.test.utils.conanfile import MockConanfile, MockSettings
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
+from conans.test.utils.tools import TestClient
 
 
 class VisualStudioBuildEnvironmentTest(unittest.TestCase):
@@ -87,3 +88,63 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
             })
+
+    def build_type_toolset_test(self):
+        profile = """
+[settings]
+os=Windows
+compiler=Visual Studio
+compiler.version=15
+build_type=Release
+"""
+        profile_toolset = """
+[settings]
+os=Windows
+compiler=Visual Studio
+compiler.version=15
+compiler.toolset=v141
+build_type=Release
+"""
+        profile_toolset_clang = """
+[settings]
+os=Windows
+compiler=Visual Studio
+compiler.version=15
+build_type=Release
+compiler.toolset=v141_clang_c2
+"""
+        conanfile = """
+from conans import ConanFile, VisualStudioBuildEnvironment
+
+class TestConan(ConanFile):
+    name = "testlib"
+    version = "1.0"
+    settings = "compiler", "build_type", "os"
+
+    def build(self):
+        env_build = VisualStudioBuildEnvironment(self)
+        self.output.info(env_build.flags)
+        """
+        client = TestClient()
+        client.save({"profile": profile,
+                     "profile_toolset": profile_toolset,
+                     "profile_toolset_clang": profile_toolset_clang,
+                     "conanfile.py": conanfile})
+
+        result = {"Debug": "['-Zi', '-Ob0', '-Od']",
+                  "Release": "['-DNDEBUG', '-O2', '-Ob2']",
+                  "RelWithDebInfo": "['-Zi', '-O2', '-Ob1']",
+                  "MinSizeRel": "['-O1', '-Ob1']"}
+        result_toolset_clang = {"Debug": "['-gline-tables-only', '-fno-inline', '-O0']",
+                                "Release": "['-DNDEBUG', '-O2']",
+                                "RelWithDebInfo": "['-gline-tables-only', '-O2', '-fno-inline']",
+                                "MinSizeRel": "[]"}
+
+        for build_type in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"]:
+            client.run("create . danimtb/testing -pr=profile -s build_type=%s" % build_type)
+            self.assertIn(result[build_type], client.out)
+            client.run("create . danimtb/testing -pr=profile_toolset -s build_type=%s" % build_type)
+            self.assertIn(result[build_type], client.out)
+            client.run("create . danimtb/testing -pr=profile_toolset_clang -s build_type=%s" %
+                       build_type)
+            self.assertIn(result_toolset_clang[build_type], client.out)

@@ -322,17 +322,17 @@ def get_gnu_triplet(os, arch, compiler=None):
 
     # Calculate the arch
     machine = {"x86": "i686" if os != "Linux" else "x86",
-                "x86_64": "x86_64",
-                "armv6": "arm",
-                "armv7": "arm",
-                "armv7s": "arm",
-                "armv7k": "arm",
-                "armv7hf": "arm",
-                "armv8": "aarch64"}.get(arch, None)
+               "x86_64": "x86_64",
+               "armv6": "arm",
+               "armv7": "arm",
+               "armv7s": "arm",
+               "armv7k": "arm",
+               "armv7hf": "arm",
+               "armv8": "aarch64"}.get(arch, None)
     if machine is None:
-        raise ConanException("Unknown '%s' machine. Conan doesn't know how to "
-                                "translate it to the GNU triplet, please report at "
-                                "https://github.com/conan-io/conan/issues" % arch)
+        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
+                             "translate it to the GNU triplet, please report at "
+                             " https://github.com/conan-io/conan/issues" % arch)
 
     # Calculate the OS
     if compiler == "gcc":

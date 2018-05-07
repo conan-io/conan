@@ -13,6 +13,7 @@ from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
                           detected_architecture, get_gnu_triplet)
+from conans.errors import ConanException
 
 
 class AutoToolsBuildEnvironment(object):
@@ -76,9 +77,14 @@ class AutoToolsBuildEnvironment(object):
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        build = get_gnu_triplet(os_detected, arch_detected, compiler)
-        host = get_gnu_triplet(os_settings, arch_settings, compiler)
-
+        try:
+            build = get_gnu_triplet(os_detected, arch_detected, compiler)
+        except ConanException:
+            build = None
+        try:
+            host = get_gnu_triplet(os_settings, arch_settings, compiler)
+        except ConanException:
+            host = None
         return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
@@ -190,7 +196,7 @@ class AutoToolsBuildEnvironment(object):
         if arch_flag:
             ret.append(arch_flag)
         btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
-                               vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
+                                vs_toolset=self._conanfile.settings.get_safe("compiler.toolset"))
         if btfs:
             ret.extend(btfs)
         srf = sysroot_flag(self._deps_cpp_info.sysroot, win_bash=self._win_bash,
