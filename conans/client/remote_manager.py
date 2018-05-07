@@ -21,6 +21,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_package_download)
 from conans.client.source import merge_directories
 from conans.client.package_installer import raise_package_not_found_error
+import stat
 
 
 class RemoteManager(object):
@@ -321,16 +322,17 @@ def compress_files(files, symlinks, name, dest_dir):
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-        for filename, dest in symlinks.items():
+        for filename, dest in sorted(symlinks.items()):
             info = tarfile.TarInfo(name=filename)
             info.type = tarfile.SYMTYPE
             info.linkname = dest
             tgz.addfile(tarinfo=info)
 
-        for filename, abs_path in files.items():
+        mask = ~(stat.S_IWOTH | stat.S_IWGRP)
+        for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
-            info.mode = os.stat(abs_path).st_mode
+            info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
                 info.linkname = os.readlink(abs_path)  # @UndefinedVariable
