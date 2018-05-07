@@ -214,7 +214,7 @@ class RemoteManager(object):
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, package_reference, dest_folder, remote, output):
+    def get_package(self, conanfile, package_reference, dest_folder, remote, output, recorder):
         package_id = package_reference.package_id
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
@@ -225,7 +225,7 @@ class RemoteManager(object):
         except NotFoundException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             raise_package_not_found_error(conanfile, package_reference.conan,
-                                          package_id, output, remote.url)
+                                          package_id, output, recorder, remote.url)
         else:
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
