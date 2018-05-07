@@ -7,7 +7,7 @@ import sys
 try:
     u"dataüäïñç.txt".encode(sys.getfilesystemencoding())
     good_file_system = True
-except UnicodeDecodeError:
+except UnicodeEncodeError:
     good_file_system = False
 
 
