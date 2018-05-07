@@ -9,6 +9,7 @@ class Node(object):
         self.conanfile = conanfile
         self.dependencies = set()  # Edges
         self.dependants = set()  # Edges
+        self.binary = None
 
     def add_edge(self, edge):
         if edge.src == self:
