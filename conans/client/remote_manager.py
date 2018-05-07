@@ -332,6 +332,7 @@ def compress_files(files, symlinks, name, dest_dir):
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
+            print("File ", filename, " mode ", os.stat(abs_path).st_mode)
             info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
