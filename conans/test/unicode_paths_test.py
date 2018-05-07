@@ -2,10 +2,18 @@
 
 import unittest
 from conans.test.utils.tools import TestClient
+import sys
+
+try:
+    u"dataüäïñç.txt".encode(sys.getfilesystemencoding())
+    good_file_system = True
+except UnicodeDecodeError:
+    good_file_system = False
 
 
 class UnicodePathTest(unittest.TestCase):
 
+    @unittest.skipUnless(good_file_system, "Requires Filesystem encoding")
     def basic_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
