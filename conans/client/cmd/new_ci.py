@@ -265,9 +265,10 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
         for clang in linux_clang_versions:
             config.append(linux_config_clang.format(version=clang, name=clang.replace(".", "")))
 
-    xcode_map = {"8.1": "8.3",
-                 "7.3": "7.3",
-                 "9.0": "9.2"}
+    xcode_map = {"7.3": "7.3",
+                 "8.1": "8.3",
+                 "9.0": "9.2",
+                 "9.1": "9.3"}
     for apple_clang in osx_clang_versions:
         xcode = xcode_map[apple_clang]
         config.append(osx_config.format(xcode=xcode, version=apple_clang))
@@ -331,8 +332,9 @@ def get_circleci(name, version, user, channel, linux_gcc_versions, linux_clang_v
             config.append(circleci_config_clang.format(version=clang, name=clang_name))
             jobs.append(circleci_job.format(job='clang-{}'.format(clang_name)))
 
-    xcode_map = {"8.1": "8.3.3",
-                 "9.0": "9.0"}
+    xcode_map = {"7.3": "7.3",
+                 "8.1": "8.3.3",
+                 "9.0": "9.2"}
     for apple_clang in osx_clang_versions:
         osx_name = xcode_map[apple_clang]
         config.append(circleci_config_osx.format(name=osx_name, version=apple_clang))
@@ -376,9 +378,9 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
     if circleci_clang_versions is True:
         circleci_clang_versions = clang_versions
     if osx_clang_versions is True:
-        osx_clang_versions = ["7.3", "8.1", "9.0"]
+        osx_clang_versions = ["7.3", "8.1", "9.0", "9.1"]
     if circleci_osx_versions is True:
-        circleci_osx_versions = ["8.1", "9.0"]
+        circleci_osx_versions = ["7.3", "8.1", "9.0"]
     if not visual_versions:
         visual_versions = []
     if not linux_gcc_versions:

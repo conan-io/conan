@@ -43,7 +43,7 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy,
         else:
             remote = registry.get_ref(package_ref.conan)
             # remote will be defined, as package availability has been checked from installer
-            remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)
+            remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, recorder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
             recorder.package_downloaded(package_ref, remote.url)
