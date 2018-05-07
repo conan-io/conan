@@ -25,7 +25,7 @@ class TgzMd5Test(unittest.TestCase):
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
-        self.assertEqual(md5_a, "deee921f4a9bc1f46aeaadef4d8eff5d")
+        self.assertEqual(md5_a, "2c650731265176bbd538b06828561138")
 
         time.sleep(1)  # Timestamps change
 
