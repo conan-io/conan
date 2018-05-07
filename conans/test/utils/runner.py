@@ -11,5 +11,6 @@ class TestRunner(object):
                                             generate_run_log_file=True,
                                             log_run_to_output=True)
 
-    def __call__(self, command, output=None, log_filepath=None, cwd=None):
-        return self.runner(command, output=self._output, log_filepath=log_filepath, cwd=cwd)
+    def __call__(self, command, output=None, log_filepath=None, cwd=None, subprocess=False):
+        return self.runner(command, output=self._output, log_filepath=log_filepath, cwd=cwd,
+                           subprocess=subprocess)
