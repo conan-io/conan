@@ -622,7 +622,7 @@ class MyConan(ConanFile):
                 self.env = {"PATH": "/path/to/somewhere"}
 
                 class MyRun(object):
-                    def __call__(self, command, win_bash=False, subprocess=False):  # @UnusedVariable
+                    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
                 self._runner = MyRun()
 

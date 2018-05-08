@@ -137,3 +137,20 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(client.paths.conanfile(ref)))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
+
+    def test_download_wrong_id(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/0.1@lasote/stable")
+        client.run("upload pkg/0.1@lasote/stable")
+        client.run("remove pkg/0.1@lasote/stable -f")
+
+        error = client.run("download pkg/0.1@lasote/stable -p=wrong", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/stable'", client.out)
+        self.assertIn("Package ID: wrong", client.out)
