@@ -110,7 +110,7 @@ class MSBuild(object):
 
         if self.build_env:
             # Take the flags from the build env, the user was able to alter them if needed
-            flags = self.build_env.flags
+            flags = self.build_env.flags.copy()
             flags.append(self.build_env.std)
         else:  # To be removed when build_sln_command is deprecated
             flags = vs_build_type_flags(self._settings)
