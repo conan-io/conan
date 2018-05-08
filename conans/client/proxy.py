@@ -35,39 +35,6 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def package_available(self, package_ref, package_folder, check_outdated):
-        """
-        Returns True if there is a local or remote package available (and up to date if check_outdated).
-        It wont download the package, just check its hash
-        """
-
-        output = ScopedOutput(str(package_ref.conan), self._out)
-        remote_info = None
-        # No package in local cache
-        if not os.path.exists(package_folder):
-            try:
-                # NOTE This call can associate a recently exported recipe, with anything
-                # to a remote containing the recipe reference
-                remote_info = self._get_package_info(package_ref)
-            except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
-                return False
-
-        # Maybe we have the package (locally or in remote) but it's outdated
-        if check_outdated:
-            if remote_info:
-                package_hash = remote_info.recipe_hash
-            else:
-                package_hash = self._client_cache.read_package_recipe_hash(package_folder)
-            local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
-            up_to_date = local_recipe_hash == package_hash
-            if not up_to_date:
-                output.info("Outdated package!")
-            else:
-                output.info("Package is up to date")
-            return up_to_date
-
-        return True
-
     def handle_package_manifest(self, package_ref):
         if self._manifest_manager:
             remote = self._registry.get_ref(package_ref.conan)
@@ -206,24 +173,6 @@ class ConanProxy(object):
         else:
             remote = ref_remote or self._registry.default_remote
         return remote, ref_remote
-
-    def get_package_manifest(self, package_ref):
-        """ used by update to check the date of packages, require force if older
-        """
-        remote, ref_remote = self._get_remote(package_ref.conan)
-        result = self._remote_manager.get_package_manifest(package_ref, remote)
-        if not ref_remote:
-            self._registry.set_ref(package_ref.conan, remote)
-        return result
-
-    def _get_package_info(self, package_ref):
-        """ Gets the package info to check if outdated
-        """
-        remote, ref_remote = self._get_remote(package_ref.conan)
-        result = self._remote_manager.get_package_info(package_ref, remote)
-        if not ref_remote:
-            self._registry.set_ref(package_ref.conan, remote)
-        return result
 
     def search_remotes(self, pattern=None, ignorecase=True):
         if self._remote_name:

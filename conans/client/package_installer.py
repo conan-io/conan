@@ -1,11 +1,7 @@
-import os
-
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING
-from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
+from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir, make_read_only
-from conans.util.tracer import log_package_got_from_local_cache
-from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
 
 
@@ -27,27 +23,14 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 ''' % (conan_ref, conan_ref.name))
 
 
-def get_package(conanfile, package_ref, package_folder, output, recorder, proxy, update):
-    # TODO: This access to proxy attributes has to be improved
-    remote_manager = proxy._remote_manager
-    registry = proxy.registry
+def get_package(conanfile, package_ref, package_folder, output, recorder, remote_manager, remote):
     try:
-        if update:
-            _remove_if_outdated(package_folder, package_ref, proxy, output)
-        local_package = os.path.exists(package_folder)
-        if local_package:
-            output.success('Already installed!')
-            log_package_got_from_local_cache(package_ref)
-            recorder.package_fetched_from_cache(package_ref)
-            return False
-        else:
-            remote = registry.get_ref(package_ref.conan)
-            # remote will be defined, as package availability has been checked from installer
-            remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, recorder)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
-            recorder.package_downloaded(package_ref, remote.url)
-            return True
+        # remote will be defined, as package availability has been checked from installer
+        remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, recorder)
+        if get_env("CONAN_READ_ONLY_CACHE", False):
+            make_read_only(package_folder)
+        recorder.package_downloaded(package_ref, remote.url)
+        return True
     except BaseException as e:
         output.error("Exception while getting package: %s" % str(package_ref.package_id))
         output.error("Exception: %s %s" % (type(e), str(e)))
@@ -62,23 +45,3 @@ def _clean_package(package_folder, output):
     except OSError as e:
         raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
                              "using it, and retry" % (str(e), package_folder))
-
-
-def _remove_if_outdated(package_folder, package_ref, proxy, output):
-    if os.path.exists(package_folder):
-        try:  # get_conan_digest can fail, not in server
-            # FIXME: This can iterate remotes to get and associate in registry
-            upstream_manifest = proxy.get_package_manifest(package_ref)
-        except NotFoundException:
-            output.warn("Can't update, no package in remote")
-        except NoRemoteAvailable:
-            output.warn("Can't update, no remote defined")
-        else:
-            read_manifest = FileTreeManifest.load(package_folder)
-            if upstream_manifest != read_manifest:
-                if upstream_manifest.time > read_manifest.time:
-                    output.warn("Current package is older than remote upstream one")
-                    output.warn("Removing it to retrieve or build an updated one")
-                    rmdir(package_folder)
-                else:
-                    output.warn("Current package is newer than remote upstream one")

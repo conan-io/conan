@@ -10,6 +10,7 @@ class Node(object):
         self.dependencies = set()  # Edges
         self.dependants = set()  # Edges
         self.binary = None
+        self.remote = None
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -249,7 +250,5 @@ class DepsGraph(object):
             open_nodes = new_open_nodes
 
         private_nodes = self.nodes.difference(closure)
-        result = []
         for node in private_nodes:
-            result.append(node)
-        return result
+            node.binary = "SKIP"

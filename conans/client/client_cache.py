@@ -224,12 +224,6 @@ class ClientCache(SimplePaths):
         package_folder = self.package(package_reference, short_paths=None)
         return FileTreeManifest.load(package_folder)
 
-    @staticmethod
-    def read_package_recipe_hash(package_folder):
-        filename = join(package_folder, CONANINFO)
-        info = ConanInfo.loads(load(filename))
-        return info.recipe_hash
-
     def conan_manifests(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
         export_folder = self.export(conan_reference)

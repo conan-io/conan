@@ -1,65 +1,52 @@
+import os
+
 from conans.util.files import rmdir, is_dirty
 from conans.model.ref import PackageReference
 from conans.client.output import ScopedOutput
 from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.manifest import FileTreeManifest
-import os
+from conans.model.info import ConanInfo
+from conans.paths import CONANINFO
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_proxy):
+    def __init__(self, client_cache, output, remote_manager, registry):
         self._client_cache = client_cache
         self._out = output
-        self._remote_proxy = remote_proxy
+        self._remote_manager = remote_manager
+        self._registry = registry
 
-    def evaluate_graph(self, deps_graph, build_mode, update=False):
-        package_references = set()
-        for node in deps_graph.nodes:
-            conan_ref, conanfile = node.conan_ref, node.conanfile
-            if not conan_ref:
-                continue
-            if build_mode.forced(conanfile, conan_ref):
-                node.binary = "BUILD"
-                continue
+    def print_output(self, deps_graph):
+        by_level = deps_graph.by_levels()
+        for level in by_level:
+            for node in level:
+                if node.conan_ref:
+                    self._out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
 
-            package_id = conanfile.info.package_id()
-            package_ref = PackageReference(conan_ref, package_id)
-            package_folder = self._client_cache.package(package_ref,
-                                                        short_paths=conanfile.short_paths)
+    def _get_remote(self, conan_ref, remote_name, allow_none=False):
+        if remote_name:
+            return self._registry.remote(remote_name)
+        remote = self._registry.get_ref(conan_ref)
+        if remote:
+            return remote
+        if allow_none:
+            try:
+                return self._registry.default_remote
+            except NoRemoteAvailable:
+                return None
+        return self._registry.default_remote
 
-            with self._client_cache.package_lock(package_ref):
-                if is_dirty(package_folder):
-                    output = ScopedOutput(str(conan_ref), self._out)
-                    output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                    rmdir(package_folder)
+    def _get_package_info(self, package_ref, remote):
+        try:
+            remote_info = self._remote_manager.get_package_info(package_ref, remote)
+            return remote_info
+        except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
+            return False
 
-            if os.path.exists(package_folder):
-                if update and self._check_update(package_folder, package_ref):
-                    node.binary = "UPDATE"
-                else:
-                    node.binary = "INSTALLED"
-            else:
-                # check if remote exists
-                if get_package_info(package_ref):
-                    node.binary = "DOWNLOAD"  # SET REMOTE?
-                else:
-                    node.binary = "MISSING"
-                    
-            if build_mode.outdated:
-                pass
-            
-            if MISSING then check build_allowed:
-                node.binary = "BUILD"
-                
-            if node.binary in ("UPDATE", "INSTALLED", "DOWNLOAD"):
-                # check if private
-                if [r for r in conanfile.requires.values() if r.private]:
-                continue
-
-    def _check_update(self, package_folder, package_ref):
+    def _check_update(self, package_folder, package_ref, remote):
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
-            upstream_manifest = self._remote_proxy.get_package_manifest(package_ref)
+            upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
         except NotFoundException:
             self._out.warn("Can't update, no package in remote")
         except NoRemoteAvailable:
@@ -73,37 +60,85 @@ class GraphBinariesAnalyzer(object):
                 else:
                     self._out.warn("Current package is newer than remote upstream one")
 
-    def _compute_private_nodes(self, deps_graph, build_mode):
-        """ computes a list of nodes that are not required to be built, as they are
-        private requirements of already available shared libraries as binaries.
+    def _evaluate_node(self, node, build_mode, update, remote_name, evaluated_references):
+        conan_ref, conanfile = node.conan_ref, node.conanfile
+        package_id = conanfile.info.package_id()
+        package_ref = PackageReference(conan_ref, package_id)
+        # Check that this same reference hasn't already been checked
+        previous_node = evaluated_references.get(package_ref)
+        if previous_node:
+            node.binary = previous_node.binary
+            node.remote = previous_node.remote
+            return
+        evaluated_references[package_ref] = node
 
-        If the package requiring a private node has an up to date binary package,
-        the private node is not retrieved nor built
-        """
-        skip_nodes = set()  # Nodes that require private packages but are already built
+        package_folder = self._client_cache.package(package_ref,
+                                                    short_paths=conanfile.short_paths)
+        output = ScopedOutput(str(conan_ref), self._out)
+
+        # Check if dirty, to remove it
+        with self._client_cache.package_lock(package_ref):
+            if is_dirty(package_folder):
+                output.warn("Package is corrupted, removing folder: %s" % package_folder)
+                rmdir(package_folder)
+
+        if os.path.exists(package_folder):
+            if update:
+                remote = self._get_remote(conan_ref, remote_name)
+                if self._check_update(package_folder, package_ref, remote):
+                    node.binary = "UPDATE"
+                    node.remote = remote
+                    if build_mode.outdated:
+                        package_hash = self._get_package_info(package_ref, remote).recipe_hash
+            if not node.binary:
+                node.binary = "INSTALLED"
+                package_hash = ConanInfo.loads(os.path.join(package_folder, CONANINFO)).recipe_hash
+        else:  # Binary does NOT exist locally
+            remote = self._get_remote(conan_ref, remote_name, allow_none=True)
+            remote_info = None
+            if remote:
+                remote_info = self._get_package_info(package_ref, remote)
+            if remote_info:
+                node.binary = "DOWNLOAD"
+                node.remote = remote
+                package_hash = remote_info.recipe_hash
+            else:
+                if build_mode.allowed(conanfile):
+                    node.binary = "BUILD"
+                else:
+                    node.binary = "MISSING"
+
+        if build_mode.outdated and node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
+            local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
+            if local_recipe_hash != package_hash:
+                output.info("Outdated package!")
+                node.binary = "BUILD"
+            else:
+                output.info("Package is up to date")
+
+    def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
+        skip_nodes = set()
+        evaluated_references = {}
         for node in deps_graph.nodes:
             conan_ref, conanfile = node.conan_ref, node.conanfile
-            if not [r for r in conanfile.requires.values() if r.private]:
+            if not conan_ref:
+                continue
+            output = ScopedOutput(str(conan_ref), self._out)
+            if build_mode.forced(conanfile, conan_ref):
+                output.warn('Forced build from source')
+                node.binary = "BUILD"
                 continue
 
-            build_forced = build_mode.forced(conanfile, conan_ref)
-            if build_forced:
+            if [r for r in conanfile.requires.values() if r.private]:
+                self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
+                if node.binary != "BUILD":
+                    skip_nodes.add(node)
+
+        deps_graph.private_nodes(skip_nodes)
+        for node in deps_graph.nodes:
+            if node.binary or not node.conan_ref:
                 continue
-
-            package_id = conanfile.info.package_id()
-            package_reference = PackageReference(conan_ref, package_id)
-            check_outdated = build_mode.outdated
-
-            package_folder = self._client_cache.package(package_reference,
-                                                        short_paths=conanfile.short_paths)
-            if self._remote_proxy.package_available(package_reference,
-                                                    package_folder,
-                                                    check_outdated):
-                skip_nodes.add(node)
-
-        # Get the private nodes
-        skippable_private_nodes = deps_graph.private_nodes(skip_nodes)
-        return skippable_private_nodes
+            self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
 
     def nodes_to_build(self, deps_graph):
         """Called from info command when a build policy is used in build_order parameter"""
@@ -114,47 +149,3 @@ class GraphBinariesAnalyzer(object):
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes)
         return [(PackageReference(node.conan_ref, package_id), node.conanfile)
                 for node, package_id, build in nodes if build]
-
-    def _get_nodes(self, nodes_by_level):
-        """Compute a list of (conan_ref, package_id, conan_file, build_node)
-        defining what to do with each node
-        """
-
-        nodes_to_build = []
-        # Now build each level, starting from the most independent one
-        package_references = set()
-        for level in nodes_by_level:
-            for node in level:
-                if node in skip_nodes:
-                    continue
-                conan_ref, conan_file = node.conan_ref, node.conanfile
-                build_node = False
-                package_id = conan_file.info.package_id()
-                package_reference = PackageReference(conan_ref, package_id)
-                # Avoid processing twice the same package reference
-                if package_reference not in package_references:
-                    package_references.add(package_reference)
-                    package_folder = self._client_cache.package(package_reference,
-                                                                short_paths=conan_file.short_paths)
-
-                    with self._client_cache.package_lock(package_reference):
-                        if is_dirty(package_folder):
-                            output = ScopedOutput(str(conan_ref), self._out)
-                            output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                            rmdir(package_folder)
-                    check_outdated = self._build_mode.outdated
-                    if self._build_mode.forced(conan_file, conan_ref):
-                        build_node = True
-                    else:
-                        available = self._remote_proxy.package_available(package_reference, package_folder,
-                                                                         check_outdated)
-                        build_node = not available
-
-                nodes_to_build.append((node, package_id, build_node))
-
-        # A check to be sure that if introduced a pattern, something is going to be built
-        if self._build_mode.patterns:
-            to_build = [str(n[0].conan_ref.name) for n in nodes_to_build if n[2]]
-            self._build_mode.check_matches(to_build)
-
-        return nodes_to_build

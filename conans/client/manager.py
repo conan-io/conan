@@ -28,6 +28,7 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
+from conans.client.graph_binaries import GraphBinariesAnalyzer
 
 
 class BuildMode(object):
@@ -79,18 +80,17 @@ class BuildMode(object):
 
         ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
-        return force_build
+        for pattern in self.patterns:
+            if fnmatch.fnmatch(ref, pattern):
+                try:
+                    self._unused_patterns.remove(pattern)
+                except:
+                    pass
+                return True
+        return False
 
-    def allowed(self, conan_file, reference):
-        return (self.missing or self.outdated or self.forced(conan_file, reference) or
-                conan_file.build_policy_missing)
-
-    def check_matches(self, references):
-        for pattern in list(self._unused_patterns):
-            matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if matched:
-                self._unused_patterns.remove(pattern)
+    def allowed(self, conan_file):
+        return self.missing or conan_file.build_policy_missing
 
     def report_matches(self):
         for pattern in self._unused_patterns:
@@ -373,8 +373,12 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
+        binaries_graph = GraphBinariesAnalyzer(self._client_cache, self._user_io.out,
+                                               self._remote_manager, self._registry)
+        binaries_graph.evaluate_graph(deps_graph, build_mode, update, remote_name)
+        binaries_graph.print_output(deps_graph)
         build_requires = BuildRequires(loader, graph_builder, self._registry)
-        installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
+        installer = ConanInstaller(self._client_cache, output, remote_proxy,
                                    build_requires, recorder=self._recorder)
 
         # Apply build_requires to consumer conanfile
