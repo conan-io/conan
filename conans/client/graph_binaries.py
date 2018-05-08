@@ -13,9 +13,7 @@ class GraphBinariesAnalyzer(object):
         self._remote_proxy = remote_proxy
 
     def evaluate_graph(self, deps_graph, build_mode, update=False):
-        """ given a DepsGraph object, build necessary nodes or retrieve them
-        """
-        # order by levels and separate the root node (conan_ref=None) from the rest
+        package_references = set()
         for node in deps_graph.nodes:
             conan_ref, conanfile = node.conan_ref, node.conanfile
             if not conan_ref:
@@ -49,6 +47,14 @@ class GraphBinariesAnalyzer(object):
                     
             if build_mode.outdated:
                 pass
+            
+            if MISSING then check build_allowed:
+                node.binary = "BUILD"
+                
+            if node.binary in ("UPDATE", "INSTALLED", "DOWNLOAD"):
+                # check if private
+                if [r for r in conanfile.requires.values() if r.private]:
+                continue
 
     def _check_update(self, package_folder, package_ref):
         try:  # get_conan_digest can fail, not in server
