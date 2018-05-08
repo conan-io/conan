@@ -43,7 +43,8 @@ class UserIO(object):
         user_input = ''
         while not username:
             try:
-                self.out.write("Remote '%s' username: " % remote_name)
+                if self._interactive:
+                    self.out.write("Remote '%s' username: " % remote_name)
                 user_input = self.get_username(remote_name)
                 username = Username(user_input)
             except InvalidNameException:
