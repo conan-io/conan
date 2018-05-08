@@ -124,7 +124,7 @@ class HelloConan(ConanFile):
         self.output.info("build() completed")
 """
         client = TestClient()
-        files = get_vs_project_files(std="cpp17_2015")
+        files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
