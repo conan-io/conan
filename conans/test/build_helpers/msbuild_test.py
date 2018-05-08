@@ -121,7 +121,7 @@ class HelloConan(ConanFile):
         msbuild = MSBuild(self)
         msbuild.build("MyProject.sln", build_type="Release")
         msbuild.build("MyProject.sln", build_type="Debug")
-        self.output.info("build() completed)
+        self.output.info("build() completed")
 """
         client = TestClient()
         files = get_vs_project_files(std="cpp17_2017")
