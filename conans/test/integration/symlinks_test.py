@@ -1,9 +1,10 @@
+import os
+import platform
 import unittest
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
-import os
-import platform
 
 conanfile = """
 from conans import ConanFile
@@ -37,7 +38,7 @@ Hello/0.1@lasote/stable
 ., * -> .
 """
 
-
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -66,9 +67,6 @@ class SymLinksTest(unittest.TestCase):
             self.assertEqual("Hello2", file1)
 
     def basic_test(self):
-        if platform.system() == "Windows":
-            return
-
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
@@ -84,9 +82,6 @@ class SymLinksTest(unittest.TestCase):
         self._check(client, ref)
 
     def package_files_test(self):
-        if platform.system() == "Windows":
-            return
-
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -115,9 +110,6 @@ class TestConan(ConanFile):
         self._check(client, ref, build=False)
 
     def export_and_copy_test(self):
-        if platform.system() == "Windows":
-            return
-
         lib_name = "libtest.so.2"
         lib_contents = "TestLib"
         link_name = "libtest.so"
@@ -153,9 +145,6 @@ class TestConan(ConanFile):
         self._check(client, package_ref)
 
     def upload_test(self):
-        if platform.system() == "Windows":
-            return
-
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})

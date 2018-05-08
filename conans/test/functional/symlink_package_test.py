@@ -6,10 +6,8 @@ from conans.test.utils.tools import TestClient
 
 class SymlinkPackageTest(unittest.TestCase):
 
+    @unittest.skipUnless(platform.system() in ("Linux", "Darwin"), "Requires Symlinks")
     def test_symlink_created(self):
-        if platform.system() != "Linux" and platform.system() != "Darwin":
-            return
-
         conanfile = """from conans import ConanFile
 import os
 
