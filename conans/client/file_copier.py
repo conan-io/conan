@@ -136,24 +136,23 @@ class FileCopier(object):
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
-        with tools.chdir(dst):
-            for linked_folder in linked_folders:
-                link = os.readlink(os.path.join(src, linked_folder))
-                try:
-                    # Remove the previous symlink
-                    os.remove(linked_folder)
-                except OSError:
-                    pass
-                # link is a string relative to linked_folder
-                # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-                os.symlink(link, linked_folder)
-            # Remove empty links
-            for linked_folder in linked_folders:
-                link = os.readlink(linked_folder)
-                dest_dir = os.path.join(os.path.dirname(linked_folder), link)
-                abs_path = os.path.join(dst, dest_dir)
-                if not os.path.exists(abs_path):
-                    os.remove(linked_folder)
+        for linked_folder in linked_folders:
+            link = os.readlink(os.path.join(src, linked_folder))
+            dst_link = os.path.join(dst, linked_folder)
+            try:
+                # Remove the previous symlink
+                os.remove(dst_link)
+            except OSError:
+                pass
+            # link is a string relative to linked_folder
+            # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+            os.symlink(link, dst_link)
+        # Remove empty links
+        for linked_folder in linked_folders:
+            dst_link = os.path.join(dst, linked_folder)
+            abs_path = os.path.realpath(dst_link)
+            if not os.path.exists(abs_path):
+                os.remove(dst_link)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):
