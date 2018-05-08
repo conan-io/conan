@@ -81,7 +81,7 @@ class FileCopierTest(unittest.TestCase):
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)
         copier("*.cpp", links=True)
-        self.assertEqual(len(os.listdir(folder2)), 0)
+        self.assertEqual(os.listdir(folder2), [])
         copier("*.txt", links=True)
         self.assertEqual(sorted(os.listdir(folder2)), sorted(["subdir1", "subdir2"]))
         self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")), "subdir1")
@@ -94,7 +94,6 @@ class FileCopierTest(unittest.TestCase):
 
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "foo/other/file")
-        os.makedirs(sub1)
         save(os.path.join(sub1, "file.txt"), "Hello")
         sub2 = os.path.join(folder1, "foo/symlink")
         os.symlink("other/file", sub2)

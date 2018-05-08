@@ -20,6 +20,10 @@ class HelloConan(ConanFile):
         os.symlink("file1.txt", "file1.txt.1")
         save("version1/file2.txt", "Hello2")
         os.symlink("version1", "latest")
+        os.symlink("latest", "edge")
+        os.symlink("empty_folder", "broken_link")
+        os.makedirs("other_empty_folder")
+        os.symlink("other_empty_folder", "other_link")
 
     def package(self):
         self.copy("*.txt*", links=True)
@@ -55,6 +59,9 @@ class SymLinksTest(unittest.TestCase):
             link = os.path.join(base, "latest")
             self.assertEqual(os.readlink(link), "version1")
             filepath = os.path.join(base, "latest/file2.txt")
+            file1 = load(filepath)
+            self.assertEqual("Hello2", file1)
+            filepath = os.path.join(base, "edge/file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
 
@@ -95,10 +102,12 @@ class TestConan(ConanFile):
         file2 = os.path.join(client.current_folder, "version1/file2.txt")
         file11 = os.path.join(client.current_folder, "file1.txt.1")
         latest = os.path.join(client.current_folder, "latest")
+        edge = os.path.join(client.current_folder, "edge")
         save(file1, "Hello1")
         os.symlink("file1.txt", file11)
         save(file2, "Hello2")
         os.symlink("version1", latest)
+        os.symlink("latest", edge)
         client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
