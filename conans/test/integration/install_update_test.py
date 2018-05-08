@@ -6,6 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
 from time import sleep
 import time
+from conans.paths import CONAN_MANIFEST
 
 
 class InstallUpdateTest(unittest.TestCase):
@@ -99,8 +100,10 @@ class Pkg(ConanFile):
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
-        recipe_manifest = self.client.client_cache.digestfile_conanfile(ref)
-        package_manifest = self.client.client_cache.digestfile_package(package_ref)
+        export_folder = self.client.client_cache.export(ref)
+        recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
+        package_folder = self.client.client_cache.package(package_ref)
+        package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
         def timestamps():
             recipe_timestamp = load(recipe_manifest).splitlines()[0]

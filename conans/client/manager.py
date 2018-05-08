@@ -17,7 +17,6 @@ from conans.client.output import ScopedOutput, Color
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
-from conans.client.remover import ConanRemover
 from conans.client.graph.require_resolver import RequireResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
@@ -505,23 +504,6 @@ class ConanManager(object):
             import traceback
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
-
-    def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
-               remote_name=None, packages_query=None, outdated=False):
-        """ Remove conans and/or packages
-        @param pattern: string to match packages
-        @param src: Remove src folder
-        @param package_ids_filter: list of ids or [] for all list
-        @param build_ids: list of ids or [] for all list
-        @param remote: search on another origin to get packages info
-        @param force: if True, it will be deleted without requesting anything
-        @param packages_query: Only if src is a reference. Query settings and options
-        """
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy,
-                               self._registry)
-        remover.remove(pattern, remote_name, src, build_ids, package_ids_filter, force=force,
-                       packages_query=packages_query, outdated=outdated)
 
 
 def _load_deps_info(current_path, conanfile, required):
