@@ -28,7 +28,7 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
-from conans.client.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 
 
 class BuildMode(object):

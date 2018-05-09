@@ -92,7 +92,7 @@ class GraphBinariesAnalyzer(object):
                         package_hash = self._get_package_info(package_ref, remote).recipe_hash
             if not node.binary:
                 node.binary = "INSTALLED"
-                package_hash = ConanInfo.loads(os.path.join(package_folder, CONANINFO)).recipe_hash
+                package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
         else:  # Binary does NOT exist locally
             remote = self._get_remote(conan_ref, remote_name, allow_none=True)
             remote_info = None

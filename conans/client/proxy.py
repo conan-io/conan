@@ -11,7 +11,6 @@ from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.client.source import complete_recipe_sources
-from conans.model.info import ConanInfo
 
 
 class ConanProxy(object):
@@ -192,8 +191,6 @@ class ConanProxy(object):
         if not os.path.exists(conanfile_path):
             raise Exception("Download recipe first")
         conanfile = load_conanfile_class(conanfile_path)
-        # FIXME: This is a hack to provide a info object in case it fails and raise_package_not_found_error doesnt fail
-        conanfile.info = ConanInfo.loads("")
         short_paths = conanfile.short_paths
         self._registry.set_ref(reference, remote)
         output = ScopedOutput(str(reference), self._out)
@@ -201,4 +198,4 @@ class ConanProxy(object):
             package_ref = PackageReference(reference, package_id)
             package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
             self._out.info("Downloading %s" % str(package_ref))
-            self._remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, self._recorder)
+            self._remote_manager.get_package(package_ref, package_folder, remote, output, self._recorder)

@@ -4,7 +4,8 @@ import shutil
 import platform
 
 from conans.client import tools
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING,\
+    INSTALL_ERROR_MISSING
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
@@ -26,8 +27,6 @@ from conans.client.importer import remove_imports
 from conans.util.tracer import log_package_built,\
     log_package_got_from_local_cache
 from conans.client.tools.env import pythonpath
-from conans.client.package_installer import raise_package_not_found_error,\
-    get_package
 
 
 def build_id(conan_file):
@@ -215,6 +214,24 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
+def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder, remote_url):
+    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
+    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
+
+    msg = '''Can't find a '%s' package for the specified options and settings:
+- Settings: %s
+- Options: %s
+- Package ID: %s
+''' % (conan_ref, settings_text, options_text, package_id)
+    out.warn(msg)
+    recorder.package_install_error(PackageReference(conan_ref, package_id),
+                                   INSTALL_ERROR_MISSING, msg, remote=remote_url)
+    raise ConanException('''Missing prebuilt package for '%s'
+Try to build it from sources with "--build %s"
+Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+''' % (conan_ref, conan_ref.name))
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -227,22 +244,13 @@ class ConanInstaller(object):
         self._recorder = recorder
 
     def install(self, deps_graph, profile_build_requires, keep_build=False, update=False):
-        """ given a DepsGraph object, build necessary nodes or retrieve them
-        """
-        t1 = time.time()
-
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
-        logger.debug("Install-Process buildinfo %s", (time.time() - t1))
-        t1 = time.time()
-        logger.debug("Install-Process private %s", (time.time() - t1))
-        t1 = time.time()
         # Get the nodes in order and if we have to build them
         self._build(nodes_by_level, deps_graph, profile_build_requires, keep_build,
                     root_node, update)
-        logger.debug("Install-build %s", (time.time() - t1))
 
     def nodes_to_build(self, deps_graph):
         """Called from info command when a build policy is used in build_order parameter"""
@@ -286,7 +294,7 @@ class ConanInstaller(object):
                             self._build_package(node, package_id, package_ref, output,
                                                 keep_build, profile_build_requires, flat, deps_graph, update)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
-                            self._get_existing_package(conan_file, package_ref, output, package_folder)
+                            self._download_package(conan_file, package_ref, output, package_folder)
                             self._propagate_info(node, flat, deps_graph)
                         elif node.binary == "INSTALLED":
                             self._propagate_info(node, flat, deps_graph)
@@ -303,13 +311,10 @@ class ConanInstaller(object):
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, flat, deps_graph)
 
-    def _get_existing_package(self, conan_file, package_reference, output, package_folder, remote):
-        installed = get_package(conan_file, package_reference, package_folder, output,
-                                self._recorder, self._remote_manager, remote)
+    def _download_package(self, conan_file, package_reference, output, package_folder, remote):
+        self._remote_manager.get_package(package_reference, package_folder, remote, output, self._recorder)
         self._remote_proxy.handle_package_manifest(package_reference)
-        if installed:
-            _handle_system_requirements(conan_file, package_reference,
-                                        self._client_cache, output)
+        _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_id, package_ref, output, keep_build,
                        profile_build_requires, flat, deps_graph, update):
