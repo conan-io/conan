@@ -32,6 +32,7 @@ if(NOT TARGET {name}::{name})
         endif()
     endforeach()
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES}})
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.defines})
 endif()
 """
 
