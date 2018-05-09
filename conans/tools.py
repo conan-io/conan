@@ -7,8 +7,25 @@ from conans.client.tools import *
 # noinspection PyUnresolvedReferences
 from conans.util.env_reader import get_env
 # noinspection PyUnresolvedReferences
-from conans.util.files import (_generic_algorithm_sum, load, save, sha256sum,
-                               sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir)
+from conans.util.files import (_generic_algorithm_sum, load, sha256sum,
+                               sha1sum, md5sum, md5, touch, relative_dirs,
+                               rmdir, mkdir, to_file_bytes)
+
+
+def save(path, content, append=False):
+    """
+    This method is duplicated to the conans.util.files, because the
+    intent is to modify the internally used save() methods for unicode
+    encodings
+    """
+    try:
+        os.makedirs(os.path.dirname(path))
+    except:
+        pass
+
+    mode = "ab" if append else "wb"
+    with open(path, mode) as handle:
+        handle.write(to_file_bytes(content))
 
 
 # Global instances

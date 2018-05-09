@@ -132,12 +132,11 @@ class SearchTest(unittest.TestCase):
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        self.client.save({os.path.join(self.root_folder1, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder2, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder3, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          os.path.join(root_folder4, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
-                          },
-                         self.client.paths.store)
+        fake_manifest.save(os.path.join(self.client.paths.store, self.root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder2, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder3, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder4, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)

@@ -4,7 +4,7 @@ import shutil
 from conans.client import tools
 from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
-from conans.paths import CONANINFO, CONAN_MANIFEST
+from conans.paths import CONANINFO
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
@@ -26,7 +26,7 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
-    save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+    digest.save(package_folder)
     output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
@@ -102,4 +102,4 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
 
     # Create the digest for the package
     digest = FileTreeManifest.create(package_folder)
-    save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+    digest.save(package_folder)

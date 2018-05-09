@@ -6,7 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load, save
 from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
-from conans.paths import EXPORT_TGZ_NAME, CONAN_MANIFEST, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.tools import untargz
 from conans.model.manifest import FileTreeManifest
 
@@ -117,6 +117,5 @@ class SynchronizeTest(unittest.TestCase):
     def _create_manifest(self, package_reference):
         # Create the manifest to be able to upload the package
         pack_path = self.client.paths.package(package_reference)
-        digest_path = self.client.client_cache.digestfile_package(package_reference)
-        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
-        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+        expected_manifest = FileTreeManifest.create(pack_path)
+        expected_manifest.save(pack_path)

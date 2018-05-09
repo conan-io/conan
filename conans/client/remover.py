@@ -80,18 +80,21 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_proxy, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
         self._user_io = user_io
-        self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._remote_manager = remote_manager
         self._registry = remote_registry
 
-    def _remote_remove(self, reference, package_ids):
+    def _remote_remove(self, reference, package_ids, remote):
         if package_ids is None:
-            self._remote_proxy.remove(reference)
+            result = self._remote_manager.remove(reference, remote)
+            current_remote = self._registry.get_ref(reference)
+            if current_remote == remote:
+                self._registry.remove_ref(reference)
+            return result
         else:
-            self._remote_proxy.remove_packages(reference, package_ids)
+            return self._remote_manager.remove_packages(reference, package_ids, remote)
 
     def _local_remove(self, reference, src, build_ids, package_ids):
         # Make sure to clean the locks too
@@ -143,7 +146,7 @@ class ConanRemover(object):
                     packages = disk_search.search_packages(reference, packages_query)
                 if outdated:
                     if remote:
-                        recipe_hash = self._remote_proxy.get_conan_manifest(reference).summary_hash
+                        recipe_hash = self._remote_manager.get_conan_manifest(reference, remote).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)
@@ -159,7 +162,7 @@ class ConanRemover(object):
             if self._ask_permission(reference, src, build_ids, package_ids, force):
                 deleted_refs.append(reference)
                 if remote:
-                    self._remote_remove(reference, package_ids)
+                    self._remote_remove(reference, package_ids, remote)
                 else:
                     deleted_refs.append(reference)
                     self._local_remove(reference, src, build_ids, package_ids)

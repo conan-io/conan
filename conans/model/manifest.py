@@ -1,7 +1,7 @@
 import os
 import calendar
 import time
-from conans.util.files import md5sum, md5
+from conans.util.files import md5sum, md5, save, load
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
 from conans.errors import ConanException
 import datetime
@@ -44,21 +44,14 @@ class FileTreeManifest(object):
         self.time = time
         self.file_sums = file_sums
 
-    def __repr__(self):
-        ret = "%s\n" % (self.time)
-        for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret += "%s: %s\n" % (filepath, file_md5)
-        return ret
-
     def files(self):
         return self.file_sums.keys()
 
     @property
     def summary_hash(self):
-        ret = ""  # Do not include the timestamp in the summary hash
-        for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret += "%s: %s\n" % (filepath, file_md5)
-        return md5(ret)
+        s = ["%s: %s" % (f, fmd5) for f, fmd5 in sorted(self.file_sums.items())]
+        s.append("")
+        return md5("\n".join(s))
 
     @property
     def time_str(self):
@@ -78,6 +71,20 @@ class FileTreeManifest(object):
                 if not discarded_file(filename):
                     file_sums[filename] = file_md5
         return FileTreeManifest(time, file_sums)
+
+    @staticmethod
+    def load(folder):
+        text = load(os.path.join(folder, CONAN_MANIFEST))
+        return FileTreeManifest.loads(text)
+
+    def save(self, folder, filename=CONAN_MANIFEST):
+        ret = ["%s" % (self.time)]
+        for filepath, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s: %s" % (filepath, file_md5))
+        ret.append("")
+        content = "\n".join(ret)
+        path = os.path.join(folder, filename)
+        save(path, content)
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):

@@ -69,6 +69,11 @@ class PackageOptionValues(object):
             return None
         return self._dict[attr]
 
+    def __delattr__(self, attr):
+        if attr not in self._dict:
+            return
+        del self._dict[attr]
+
     def clear(self):
         self._dict.clear()
 
@@ -226,6 +231,9 @@ class OptionsValues(object):
             return super(OptionsValues, self).__setattr__(attr, value)
         return setattr(self._package_values, attr, value)
 
+    def __delattr__(self, attr):
+        delattr(self._package_values, attr)
+
     def clear_indirect(self):
         for v in self._reqs_options.values():
             v.clear()
@@ -364,6 +372,11 @@ class PackageOptions(object):
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
+
+    def get_safe(self, field):
+        if field not in self._data:
+            return None
+        return self._data[field]
 
     def validate(self):
         for child in self._data.values():
