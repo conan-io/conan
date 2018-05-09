@@ -420,6 +420,7 @@ class Pkg(ConanFile):
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
+        self.assertNotIn("Please enter a password for \"lasote\" account:", client.out)
 
     def upload_login_prompt_disabled_user_authenticated_test(self):
         """ When a user is authenticated, uploads should work even when login prompt has been disabled.

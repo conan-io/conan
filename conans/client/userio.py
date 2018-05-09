@@ -40,17 +40,17 @@ class UserIO(object):
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
-        self._raise_if_non_interactive()
         user_input = ''
         while not username:
             try:
-                self.out.write("Remote '%s' username: " % remote_name)
+                if self._interactive:
+                    self.out.write("Remote '%s' username: " % remote_name)
                 user_input = self.get_username(remote_name)
                 username = Username(user_input)
             except InvalidNameException:
                 self.out.error('%s is not a valid username' % user_input)
-
-        self.out.write('Please enter a password for "%s" account: ' % username)
+        if self._interactive:
+            self.out.write('Please enter a password for "%s" account: ' % username)
         try:
             pwd = self.get_password(remote_name)
         except ConanException:
