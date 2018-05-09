@@ -28,11 +28,13 @@ class CMakePathsGeneratorTest(unittest.TestCase):
                        for s in generator.content.splitlines()]
         self.assertEquals('set(CMAKE_MODULE_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[0])
-        self.assertEquals('"%s" ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
+        self.assertEquals('"%s" ${CMAKE_MODULE_PATH} ${CMAKE_ROOT}/Modules '
+                          '${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
                           cmake_lines[1])
         self.assertEquals('set(CMAKE_PREFIX_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[2])
-        self.assertEquals('"%s" ${CMAKE_PREFIX_PATH} ${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
+        self.assertEquals('"%s" ${CMAKE_PREFIX_PATH} '
+                          '${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
                           cmake_lines[3])
 
     def cmake_paths_integration_test(self):
@@ -101,3 +103,77 @@ find_package(Hello0 REQUIRED)
         ret = client.runner("cmake .. ", cwd=build_dir)
         self.assertEqual(ret, 0)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
+
+    def find_package_priority_test(self):
+        """A package findXXX has priority over the CMake installation one and the curdir one"""
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Zlib"
+    version = "0.1"
+    exports = "*"
+
+    def package(self):
+        self.copy(pattern="*", keep_path=False)
+
+"""
+        files = {"conanfile.py": conanfile,
+                 "FindZLIB.cmake": 'MESSAGE("HELLO FROM THE PACKAGE FIND PACKAGE!")'}
+        client.save(files)
+        client.run("create . user/channel")
+
+        files = {"CMakeLists.txt": """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8)
+include(${CMAKE_BINARY_DIR}/../conan_paths.cmake)
+
+find_package(ZLIB REQUIRED)
+
+"""}
+        build_dir = os.path.join(client.current_folder, "build")
+        files["FindZLIB.cmake"] = 'MESSAGE("HELLO FROM THE INSTALL FOLDER!")'
+        client.save(files, clean_first=True)
+        os.mkdir(build_dir)
+        client.run("install Zlib/0.1@user/channel -g cmake_paths")
+        ret = client.runner("cmake .. ", cwd=build_dir)
+        self.assertEquals(ret, 0)
+        self.assertIn("HELLO FROM THE PACKAGE FIND PACKAGE!", client.out)
+
+    def find_package_priority2_test(self):
+        """A system findXXX has priority over the install folder one, the zlib package do not package
+        findZLIB.cmake"""
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Zlib"
+    version = "0.1"
+    exports = "*"
+
+    def package(self):
+        self.copy(pattern="*", keep_path=False)
+
+"""
+        files = {"conanfile.py": conanfile}
+        client.save(files)
+        client.run("create . user/channel")
+
+        files = {"CMakeLists.txt": """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8)
+include(${CMAKE_BINARY_DIR}/../conan_paths.cmake)
+
+find_package(ZLIB REQUIRED)
+
+"""}
+        build_dir = os.path.join(client.current_folder, "build")
+        files["FindZLIB.cmake"] = 'MESSAGE("HELLO FROM THE INSTALL FOLDER!")'
+        client.save(files, clean_first=True)
+        os.mkdir(build_dir)
+        client.run("install Zlib/0.1@user/channel -g cmake_paths")
+        ret = client.runner("cmake .. ", cwd=build_dir)
+        self.assertEquals(ret, 0)
+        self.assertNotIn("HELLO FROM THE INSTALL FOLDER!", client.out)
