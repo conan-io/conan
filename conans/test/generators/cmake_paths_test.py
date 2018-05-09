@@ -175,5 +175,7 @@ find_package(ZLIB REQUIRED)
         os.mkdir(build_dir)
         client.run("install Zlib/0.1@user/channel -g cmake_paths")
         ret = client.runner("cmake .. ", cwd=build_dir)
-        self.assertEquals(ret, 0)
-        self.assertNotIn("HELLO FROM THE INSTALL FOLDER!", client.out)
+        if ret == 0:  # Not windows, findZLIB works
+            self.assertIn("HELLO FROM2 THE INSTALL FOLDER!", client.out)
+        else:  # Windows, ensure failed with the cmake installation one
+            self.assertIn("Could NOT find ZLIB", client.out)
