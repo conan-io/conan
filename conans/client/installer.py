@@ -4,7 +4,7 @@ import shutil
 import platform
 
 from conans.client import tools
-from conans.client.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
@@ -19,7 +19,7 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from conans.client.source import config_source
+from conans.client.source import config_source, complete_recipe_sources
 from conans.util.env_reader import get_env
 from conans.client.importer import remove_imports
 
@@ -362,7 +362,8 @@ class ConanInstaller(object):
                 raise ConanException(msg)
         else:
             with self._client_cache.conanfile_write_lock(conan_ref):
-                self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
+                complete_recipe_sources(self._remote_proxy._remote_manager, self._client_cache,
+                                        self._remote_proxy.registry, conan_file, conan_ref)
                 builder.prepare_build()
 
         with self._client_cache.conanfile_read_lock(conan_ref):

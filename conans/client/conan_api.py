@@ -5,7 +5,8 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
-from conans.client.action_recorder import ActionRecorder
+from conans.client.cmd.create import create
+from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -13,6 +14,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
+from conans.client.recorder.upload_recoder import UploadRecoder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -40,6 +42,10 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
+from conans.client.importer import undo_imports
+from conans.client.cmd.export import cmd_export, export_alias
+from conans.unicode import get_cwd
+from conans.client.remover import ConanRemover
 
 
 default_manifest_folder = '.conan_manifests'
@@ -64,23 +70,17 @@ def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
-            curdir = os.getcwd()
+            curdir = get_cwd()
             log_command(f.__name__, kwargs)
-            the_self._init_manager()
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                ret = f(*args, **kwargs)
-                if ret is None:  # FIXME: Probably each method should manage its return
-                    return the_self._recorder.get_info()
-                return ret
+                return f(*args, **kwargs)
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
             except:
                 pass
-            if isinstance(exc, ConanException):
-                exc.info = the_self._recorder.get_info()
             raise
         finally:
             os.chdir(curdir)
@@ -92,12 +92,14 @@ def _make_abs_path(path, cwd=None, default=None):
     """convert 'path' to absolute if necessary (could be already absolute)
     if not defined (empty, or None), will return 'default' one or 'cwd'
     """
-    cwd = cwd or os.getcwd()
+    cwd = cwd or get_cwd()
     if not path:
-        return default or cwd
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(os.path.join(cwd, path))
+        abs_path = default or cwd
+    elif os.path.isabs(path):
+        abs_path = path
+    else:
+        abs_path = os.path.normpath(os.path.join(cwd, path))
+    return abs_path
 
 
 def _get_conanfile_path(path, cwd, py):
@@ -159,15 +161,11 @@ class ConanAPIV1(object):
                 or (not color_set
                     and hasattr(sys.stdout, "isatty")
                     and sys.stdout.isatty())):
-            # in PyCharm disable convert/strip
-            if get_env("PYCHARM_HOSTED"):
-                convert = False
-                strip = False
-            else:
-                convert = None
-                strip = None
             import colorama
-            colorama.init(convert=convert, strip=strip)
+            if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+                colorama.init(convert=False, strip=False)
+            else:
+                colorama.init()
             color = True
         else:
             color = False
@@ -203,8 +201,8 @@ class ConanAPIV1(object):
             # Settings preprocessor
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor, interactive=interactive)
+            conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
+                               settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
@@ -219,26 +217,24 @@ class ConanAPIV1(object):
         self._search_manager = search_manager
         self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        self._recorder = None
-        self._manager = None
 
         if not interactive:
             self._user_io.disable_input()
 
-    def _init_manager(self):
+    def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
-        self._recorder = ActionRecorder()
-        self._manager = ConanManager(self._client_cache, self._user_io, self._runner,
-                                     self._remote_manager, self._search_manager,
-                                     self._settings_preprocessor, self._recorder, self._registry)
+        return ConanManager(self._client_cache, self._user_io, self._runner,
+                            self._remote_manager, self._search_manager,
+                            self._settings_preprocessor, action_recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
-            gitlab_gcc_versions=None, gitlab_clang_versions=None):
+            gitlab_gcc_versions=None, gitlab_clang_versions=None,
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
         from conans.client.cmd.new import cmd_new
-        cwd = os.path.abspath(cwd or os.getcwd())
+        cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,
                         visual_versions=visual_versions,
@@ -247,7 +243,10 @@ class ConanAPIV1(object):
                         osx_clang_versions=osx_clang_versions, shared=shared,
                         upload_url=upload_url, gitignore=gitignore,
                         gitlab_gcc_versions=gitlab_gcc_versions,
-                        gitlab_clang_versions=gitlab_clang_versions)
+                        gitlab_clang_versions=gitlab_clang_versions,
+                        circleci_gcc_versions=circleci_gcc_versions,
+                        circleci_clang_versions=circleci_clang_versions,
+                        circleci_osx_versions=circleci_osx_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -262,11 +261,13 @@ class ConanAPIV1(object):
         env = env or []
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
         reference = ConanFileReference.loads(reference)
-        pt = PackageTester(self._manager, self._user_io)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        pt = PackageTester(manager, self._user_io)
         pt.install_build_and_test(conanfile_path, reference, profile, remote,
                                   update, build_modes=build_modes,
                                   test_build_folder=test_build_folder)
@@ -290,75 +291,49 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
-        cwd = cwd or os.getcwd()
-        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+        try:
+            cwd = cwd or os.getcwd()
+            recorder = ActionRecorder()
+            conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-        if not name or not version:
-            conanfile = load_conanfile_class(conanfile_path)
-            name, version = conanfile.name, conanfile.version
             if not name or not version:
-                raise ConanException("conanfile.py doesn't declare package name or version")
+                conanfile = load_conanfile_class(conanfile_path)
+                name, version = conanfile.name, conanfile.version
+                if not name or not version:
+                    raise ConanException("conanfile.py doesn't declare package name or version")
 
-        reference = ConanFileReference(name, version, user, channel)
-        scoped_output = ScopedOutput(str(reference), self._user_io.out)
-        # Make sure keep_source is set for keep_build
-        if keep_build:
-            keep_source = True
-        # Forcing an export!
-        if not not_export:
-            scoped_output.highlight("Exporting package recipe")
-            self._manager.export(conanfile_path, name, version, user, channel, keep_source)
+            reference = ConanFileReference(name, version, user, channel)
+            scoped_output = ScopedOutput(str(reference), self._user_io.out)
+            # Make sure keep_source is set for keep_build
+            if keep_build:
+                keep_source = True
+            # Forcing an export!
+            if not not_export:
+                scoped_output.highlight("Exporting package recipe")
+                cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                           self._user_io.out, self._client_cache)
 
-        if build_modes is None:  # Not specified, force build the tested library
-            build_modes = [name]
+            if build_modes is None:  # Not specified, force build the tested library
+                build_modes = [name]
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-        manifest_folder, manifest_interactive, manifest_verify = manifests
-        profile = profile_from_args(profile_name, settings, options, env,
-                                    cwd, self._client_cache)
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+            manifest_folder, manifest_interactive, manifest_verify = manifests
+            profile = profile_from_args(profile_name, settings, options, env,
+                                        cwd, self._client_cache)
 
-        def get_test_conanfile_path(tf):
-            """Searches in the declared test_folder or in the standard locations"""
+            manager = self._init_manager(recorder)
+            recorder.add_recipe_being_developed(reference)
 
-            if tf is False:
-                # Look up for testing conanfile can be disabled if tf (test folder) is False
-                return None
+            create(reference, manager, self._user_io, profile, remote, update, build_modes,
+                   manifest_folder, manifest_verify, manifest_interactive, keep_build,
+                   test_build_folder, test_folder, conanfile_path)
 
-            test_folders = [tf] if tf else ["test_package", "test"]
-            base_folder = os.path.dirname(conanfile_path)
-            for test_folder_name in test_folders:
-                test_folder = os.path.join(base_folder, test_folder_name)
-                test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-                if os.path.exists(test_conanfile_path):
-                    return test_conanfile_path
-            else:
-                if tf:
-                    raise ConanException("test folder '%s' not available, "
-                                         "or it doesn't have a conanfile.py" % tf)
+            return recorder.get_info()
 
-        test_conanfile_path = get_test_conanfile_path(test_folder)
-        self._recorder.add_recipe_being_developed(reference)
-
-        if test_conanfile_path:
-            pt = PackageTester(self._manager, self._user_io)
-            pt.install_build_and_test(test_conanfile_path, reference, profile,
-                                      remote, update, build_modes=build_modes,
-                                      manifest_folder=manifest_folder,
-                                      manifest_verify=manifest_verify,
-                                      manifest_interactive=manifest_interactive,
-                                      keep_build=keep_build,
-                                      test_build_folder=test_build_folder)
-        else:
-            self._manager.install(reference=reference,
-                                  install_folder=None,  # Not output anything
-                                  manifest_folder=manifest_folder,
-                                  manifest_verify=manifest_verify,
-                                  manifest_interactive=manifest_interactive,
-                                  remote_name=remote,
-                                  profile=profile,
-                                  build_modes=build_modes,
-                                  update=update,
-                                  keep_build=keep_build)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -368,7 +343,7 @@ class ConanAPIV1(object):
         settings = settings or []
         options = options or []
         env = env or []
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
@@ -405,16 +380,19 @@ class ConanAPIV1(object):
            (version and conanfile.version and conanfile.version != version):
             raise ConanException("Specified name/version doesn't match with the "
                                  "name/version in the conanfile")
-        self._manager.export(conanfile_path, name, version, user, channel)
+        cmd_export(conanfile_path, name, version, user, channel, False,
+                   self._user_io.out, self._client_cache)
 
         if not (name and version):
             name = conanfile.name
             version = conanfile.version
 
         reference = ConanFileReference(name, version, user, channel)
-        self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 package_folder=package_folder, install_folder=install_folder,
-                                 profile=profile, force=force)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
+                           package_folder=package_folder, install_folder=install_folder,
+                           profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None, recipe=False):
@@ -422,7 +400,9 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote_name=remote, recipe=recipe)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.download(conan_ref, package, remote_name=remote, recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -430,26 +410,33 @@ class ConanAPIV1(object):
                           manifests_interactive=None, build=None, profile_name=None,
                           update=False, generators=None, install_folder=None, cwd=None):
 
-        cwd = cwd or os.getcwd()
-        install_folder = _make_abs_path(install_folder, cwd)
+        try:
+            recorder = ActionRecorder()
+            cwd = cwd or os.getcwd()
+            install_folder = _make_abs_path(install_folder, cwd)
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-        manifest_folder, manifest_interactive, manifest_verify = manifests
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+            manifest_folder, manifest_interactive, manifest_verify = manifests
 
-        profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                    self._client_cache)
+            profile = profile_from_args(profile_name, settings, options, env, cwd,
+                                        self._client_cache)
 
-        if not generators:  # We don't want the default txt
-            generators = False
+            if not generators:  # We don't want the default txt
+                generators = False
 
-        mkdir(install_folder)
-        self._manager.install(reference=reference, install_folder=install_folder, remote_name=remote,
-                              profile=profile, build_modes=build, update=update,
-                              manifest_folder=manifest_folder,
-                              manifest_verify=manifest_verify,
-                              manifest_interactive=manifest_interactive,
-                              generators=generators,
-                              install_reference=True)
+            mkdir(install_folder)
+            manager = self._init_manager(recorder)
+            manager.install(reference=reference, install_folder=install_folder,
+                            remote_name=remote, profile=profile, build_modes=build,
+                            update=update, manifest_folder=manifest_folder,
+                            manifest_verify=manifest_verify,
+                            manifest_interactive=manifest_interactive,
+                            generators=generators, install_reference=True)
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None,
@@ -457,27 +444,34 @@ class ConanAPIV1(object):
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
 
-        cwd = cwd or os.getcwd()
-        install_folder = _make_abs_path(install_folder, cwd)
-        conanfile_path = _get_conanfile_path(path, cwd, py=None)
+        try:
+            recorder = ActionRecorder()
+            cwd = cwd or os.getcwd()
+            install_folder = _make_abs_path(install_folder, cwd)
+            conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-        manifest_folder, manifest_interactive, manifest_verify = manifests
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+            manifest_folder, manifest_interactive, manifest_verify = manifests
 
-        profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                    self._client_cache)
-
-        self._manager.install(reference=conanfile_path,
-                              install_folder=install_folder,
-                              remote_name=remote,
-                              profile=profile,
-                              build_modes=build,
-                              update=update,
-                              manifest_folder=manifest_folder,
-                              manifest_verify=manifest_verify,
-                              manifest_interactive=manifest_interactive,
-                              generators=generators,
-                              no_imports=no_imports)
+            profile = profile_from_args(profile_name, settings, options, env, cwd,
+                                        self._client_cache)
+            manager = self._init_manager(recorder)
+            manager.install(reference=conanfile_path,
+                            install_folder=install_folder,
+                            remote_name=remote,
+                            profile=profile,
+                            build_modes=build,
+                            update=update,
+                            manifest_folder=manifest_folder,
+                            manifest_verify=manifest_verify,
+                            manifest_interactive=manifest_interactive,
+                            generators=generators,
+                            no_imports=no_imports)
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def config_get(self, item):
@@ -503,7 +497,7 @@ class ConanAPIV1(object):
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
@@ -524,7 +518,10 @@ class ConanAPIV1(object):
                          install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
+
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        graph = manager.info_build_order(reference, profile, build_order, remote, check_updates)
         return graph
 
     @api_method
@@ -532,8 +529,11 @@ class ConanAPIV1(object):
                             profile_name=None, remote=None, check_updates=None, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
-                                                check_updates)
+
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        ret = manager.info_nodes_to_build(reference, profile, build_modes, remote,
+                                          check_updates)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
@@ -542,8 +542,11 @@ class ConanAPIV1(object):
                        profile_name=None, update=False, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-        ret = self._manager.info_get_graph(reference, remote_name=remote, profile=profile,
-                                           check_updates=update)
+
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        ret = manager.info_get_graph(reference, remote_name=remote, profile=profile,
+                                     check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
 
@@ -551,7 +554,7 @@ class ConanAPIV1(object):
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
 
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -559,13 +562,15 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        self._manager.build(conanfile_path, source_folder, build_folder, package_folder,
-                            install_folder, should_configure=should_configure, should_build=should_build,
-                            should_install=should_install)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.build(conanfile_path, source_folder, build_folder, package_folder,
+                      install_folder, should_configure=should_configure, should_build=should_build,
+                      should_install=should_install)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -573,12 +578,14 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        self._manager.local_package(package_folder, conanfile_path, build_folder, source_folder,
-                                    install_folder)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.local_package(package_folder, conanfile_path, build_folder, source_folder,
+                              install_folder)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
@@ -587,7 +594,9 @@ class ConanAPIV1(object):
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
-        self._manager.source(conanfile_path, source_folder, info_folder)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.source(conanfile_path, source_folder, info_folder)
 
     @api_method
     def imports(self, path, dest=None, info_folder=None, cwd=None):
@@ -598,31 +607,34 @@ class ConanAPIV1(object):
         :param cwd: Current working directory
         :return: None
         """
-        cwd = cwd or os.getcwd()
+        cwd = cwd or get_cwd()
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
         mkdir(dest)
         conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
-        self._manager.imports(conanfile_abs_path, dest, info_folder)
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.imports(conanfile_abs_path, dest, info_folder)
 
     @api_method
     def imports_undo(self, manifest_path):
-        cwd = os.getcwd()
+        cwd = get_cwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
-        self._manager.imports_undo(manifest_path)
+        undo_imports(manifest_path, self._user_io.out)
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        self._manager.export(conanfile_path, name, version, user, channel, keep_source)
+        cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                   self._user_io.out, self._client_cache)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote=None, outdated=False):
-        self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote_name=remote, packages_query=query,
-                             outdated=outdated)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, self._registry)
+        remover.remove(pattern, remote, src, builds, packages, force=force,
+                       packages_query=query, outdated=outdated)
 
     @api_method
     def copy(self, reference, user_channel, force=False, packages=None):
@@ -631,9 +643,8 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
-        remote_proxy = self._manager.get_proxy()
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, remote_proxy, force=force)
+                 self._user_io, self._remote_manager, self._registry, force=force)
 
     @api_method
     def authenticate(self, name, password, remote=None):
@@ -678,21 +689,32 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
-        if force and no_overwrite:
-            raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
+        recorder = UploadRecoder()
 
-        remote_proxy = self._manager.get_proxy(remote_name=remote)
-        uploader = CmdUpload(self._client_cache, self._user_io, remote_proxy)
-        return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
-                               skip_upload, integrity_check, no_overwrite)
+        if force and no_overwrite:
+            exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise exc
+
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
+                             self._registry)
+        try:
+            uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
+                            retry_wait, skip_upload, integrity_check, no_overwrite, remote)
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def remote_list(self):
         return self._registry.remotes
 
     @api_method
-    def remote_add(self, remote, url, verify_ssl=True, insert=None):
-        return self._registry.add(remote, url, verify_ssl, insert)
+    def remote_add(self, remote, url, verify_ssl=True, insert=None, force=None):
+        return self._registry.add(remote, url, verify_ssl, insert, force)
 
     @api_method
     def remote_remove(self, remote):
@@ -745,19 +767,27 @@ class ConanAPIV1(object):
 
     @api_method
     def read_profile(self, profile=None):
-        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        p, _ = read_profile(profile, get_cwd(), self._client_cache.profiles_path)
         return p
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote=None):
+        from conans.client.local_file_getter import get_path
         reference = ConanFileReference.loads(str(reference))
-        return self._manager.get_path(reference, package_id, path, remote)
+        if not path:
+            path = "conanfile.py" if not package_id else "conaninfo.txt"
+
+        if not remote:
+            return get_path(self._client_cache, reference, package_id, path), path
+        else:
+            remote = self._registry.remote(remote)
+            return self._remote_manager.get_path(reference, package_id, path, remote), path
 
     @api_method
     def export_alias(self, reference, target_reference):
         reference = ConanFileReference.loads(str(reference))
         target_reference = ConanFileReference.loads(str(target_reference))
-        return self._manager.export_alias(reference, target_reference)
+        return export_alias(reference, target_reference, self._client_cache)
 
 
 Conan = ConanAPIV1

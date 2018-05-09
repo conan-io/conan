@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.action_recorder import ActionRecorder
+from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.proxy import ConanProxy
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference

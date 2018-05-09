@@ -1,6 +1,6 @@
 import unittest
 import os
-from conans.util.files import load
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
@@ -19,7 +19,7 @@ class ExportPathTest(unittest.TestCase):
         client.save(files, path=source_folder)
         client.run("export source lasote/stable")
         reg_path = client.paths.export(conan_ref)
-        manif = FileTreeManifest.loads(load(client.paths.digestfile_conanfile(conan_ref)))
+        manif = FileTreeManifest.load(client.paths.export(conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
                       client.user_io.out)
@@ -48,7 +48,7 @@ class ExportPathTest(unittest.TestCase):
         client.save(files, path=source_folder)
         client.run("export ../source lasote/stable")
         reg_path = client.paths.export(conan_ref)
-        manif = FileTreeManifest.loads(load(client.paths.digestfile_conanfile(conan_ref)))
+        manif = FileTreeManifest.load(client.paths.export(conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
                       client.user_io.out)
@@ -80,7 +80,7 @@ class ExportPathTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         reg_path = client.paths.export(conan_ref)
-        manif = FileTreeManifest.loads(load(client.paths.digestfile_conanfile(conan_ref)))
+        manif = FileTreeManifest.load(client.paths.export(conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
                       client.user_io.out)
@@ -117,7 +117,7 @@ class ExportPathTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile}, path=conanfile_folder)
         client.run("export ../conan lasote/stable")
         reg_path = client.paths.export(conan_ref)
-        manif = FileTreeManifest.loads(load(client.paths.digestfile_conanfile(conan_ref)))
+        manif = FileTreeManifest.load(client.paths.export(conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
                       client.user_io.out)

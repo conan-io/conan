@@ -181,7 +181,8 @@ class SettingsItem(object):
             raise undefined_value(self._name)
 
         if isinstance(self._definition, dict):
-            self._definition[self._value].validate()
+            key = "None" if self._value is None else self._value
+            self._definition[key].validate()
 
     def remove_undefined(self):
         if isinstance(self._definition, dict):
@@ -190,6 +191,8 @@ class SettingsItem(object):
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+        if parent_value == "None" and definition:
+            raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86

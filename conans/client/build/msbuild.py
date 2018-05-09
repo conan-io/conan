@@ -1,3 +1,4 @@
+import copy
 import re
 
 from conans import tools
@@ -21,9 +22,10 @@ class MSBuild(object):
             self.build_env = VisualStudioBuildEnvironment(self._conanfile)
         else:  # backwards compatible with build_sln_command
             self._settings = conanfile
+            self.build_env = None
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
-              parallel=True, force_vcvars=False, toolset=None, platforms=None):
+              parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents()
@@ -33,7 +35,7 @@ class MSBuild(object):
                                            targets=targets, upgrade_project=upgrade_project,
                                            build_type=build_type, arch=arch, parallel=parallel,
                                            toolset=toolset, platforms=platforms,
-                                           use_env=True)
+                                           use_env=use_env)
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
 
@@ -42,20 +44,21 @@ class MSBuild(object):
                     use_env=False):
 
         targets = targets or []
-        command = ""
+        command = []
 
         if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-            command += "devenv %s /upgrade && " % project_file
+            command.append("devenv %s /upgrade &&" % project_file)
         else:
             self._output.info("Skipped sln project upgrade")
 
-        build_type = build_type or self._settings.build_type
-        arch = arch or self._settings.arch
+        build_type = build_type or self._settings.get_safe("build_type")
+        arch = arch or self._settings.get_safe("arch")
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
-        command += "msbuild %s /p:Configuration=%s" % (project_file, build_type)
+
+        command.append("msbuild %s /p:Configuration=%s" % (project_file, build_type))
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
                      'armv7': 'ARM',
@@ -79,24 +82,24 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if use_env:
-            command += ' /p:UseEnv=true'
+            command.append('/p:UseEnv=true')
 
         if msvc_arch:
-            command += ' /p:Platform="%s"' % msvc_arch
+            command.append('/p:Platform="%s"' % msvc_arch)
 
         if parallel:
-            command += ' /m:%s' % cpu_count()
+            command.append('/m:%s' % cpu_count())
 
         if targets:
-            command += " /target:%s" % ";".join(targets)
+            command.append("/target:%s" % ";".join(targets))
 
         if toolset:
-            command += " /p:PlatformToolset=%s" % toolset
+            command.append("/p:PlatformToolset=%s" % toolset)
 
         if props_file_path:
-            command += ' /p:ForceImportBeforeCppTargets="%s"' % props_file_path
+            command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
 
-        return command
+        return " ".join(command)
 
     def _get_props_file_contents(self):
         # how to specify runtime in command line:
@@ -106,8 +109,13 @@ class MSBuild(object):
                            "MD": "MultiThreadedDLL",
                            "MDd": "MultiThreadedDebugDLL"}.get(self._settings.get_safe("compiler.runtime"), "")
 
-        flags = vs_build_type_flags(self._settings)
-        flags.append(vs_std_cpp(self._settings))
+        if self.build_env:
+            # Take the flags from the build env, the user was able to alter them if needed
+            flags = copy.copy(self.build_env.flags)
+            flags.append(self.build_env.std)
+        else:  # To be removed when build_sln_command is deprecated
+            flags = vs_build_type_flags(self._settings)
+            flags.append(vs_std_cpp(self._settings))
 
         template = """<?xml version="1.0" encoding="utf-8"?>
     <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">

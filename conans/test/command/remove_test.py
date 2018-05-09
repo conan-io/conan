@@ -99,8 +99,8 @@ class RemoveTest(unittest.TestCase):
 
         # Create the manifests to be able to upload
         for pack_ref in pack_refs:
-            digest_path = client.client_cache.digestfile_package(pack_ref)
-            expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+            pkg_folder = client.client_cache.package(pack_ref)
+            expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % ("/".join(pack_ref.conan),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,

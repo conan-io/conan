@@ -1,10 +1,9 @@
 import os
 
-from conans.client.action_recorder import INSTALL_ERROR_MISSING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.model.ref import PackageReference
-from conans.paths import CONAN_MANIFEST
-from conans.util.files import rmdir, load, make_read_only
+from conans.util.files import rmdir, make_read_only
 from conans.util.tracer import log_package_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
@@ -44,7 +43,7 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy,
         else:
             remote = registry.get_ref(package_ref.conan)
             # remote will be defined, as package availability has been checked from installer
-            remote_manager.get_package(conanfile, package_ref, package_folder, remote, output)
+            remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, recorder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
             recorder.package_downloaded(package_ref, remote.url)
@@ -75,8 +74,7 @@ def _remove_if_outdated(package_folder, package_ref, proxy, output):
         except NoRemoteAvailable:
             output.warn("Can't update, no remote defined")
         else:
-            read_manifest = FileTreeManifest.loads(load(os.path.join(package_folder,
-                                                                     CONAN_MANIFEST)))
+            read_manifest = FileTreeManifest.load(package_folder)
             if upstream_manifest != read_manifest:
                 if upstream_manifest.time > read_manifest.time:
                     output.warn("Current package is older than remote upstream one")

@@ -13,6 +13,7 @@ from conans.client.tools.oss import detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
+from conans.unicode import get_cwd
 
 _global_output = None
 
@@ -266,7 +267,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
         vs_path = vs_installation_path(str(compiler_version))
 
         if not vs_path or not os.path.isdir(vs_path):
-            _global_output.warn("VS non-existing installation")
+            raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
         else:
             vcvars_path = ""
             if int(compiler_version) > 14:
@@ -434,12 +435,13 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
-            cwd = os.path.join(os.getcwd(), cwd)
+            cwd = os.path.join(get_cwd(), cwd)
 
-        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
+        curdir = unix_path(cwd or get_cwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = os_info.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-        return conanfile.run(wincmd, win_bash=False)
+        # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
+        return conanfile._runner(wincmd, output=conanfile.output, subprocess=True)
