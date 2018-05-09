@@ -7,23 +7,25 @@ class Node(object):
     def __init__(self, conan_ref, conanfile):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
-        self.dependencies = set()  # Edges
-        self.dependants = set()  # Edges
+        self.dependencies = []  # Ordered Edges
+        self.dependants = []  # Edges
 
     def add_edge(self, edge):
         if edge.src == self:
-            self.dependencies.add(edge)
+            if edge not in self.dependencies:
+                self.dependencies.append(edge)
         else:
-            self.dependants.add(edge)
+            if edge not in self.dependants:
+                self.dependants.append(edge)
 
     def neighbors(self):
-        return set(edge.dst for edge in self.dependencies)
+        return [edge.dst for edge in self.dependencies]
 
     def public_neighbors(self):
-        return set(edge.dst for edge in self.dependencies if not edge.private)
+        return [edge.dst for edge in self.dependencies if not edge.private]
 
     def inverse_neighbors(self):
-        return set(edge.src for edge in self.dependants)
+        return [edge.src for edge in self.dependants]
 
     def __eq__(self, other):
         return (self.conan_ref == other.conan_ref and
@@ -85,8 +87,11 @@ class Edge(object):
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
+        self._root = None
 
     def add_node(self, node):
+        if not self.nodes:
+            self._root = node
         self.nodes.add(node)
 
     def add_edge(self, src, dst, private=False):
@@ -145,12 +150,13 @@ class DepsGraph(object):
         return open_nodes
 
     def ordered_closure(self, node, flat):
-        closure = set()
+        closure = []
         current = node.neighbors()
         while current:
             new_current = set()
             for n in current:
-                closure.add(n)
+                if n not in closure:
+                    closure.add(n)
                 new_neighs = n.public_neighbors()
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
@@ -233,8 +239,7 @@ class DepsGraph(object):
         together with the list of nodes that privately require it
         """
         closure = set()
-        nodes_by_level = self.by_levels()
-        open_nodes = nodes_by_level[-1]
+        open_nodes = [self._root]
         closure.update(open_nodes)
         while open_nodes:
             new_open_nodes = set()
