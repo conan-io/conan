@@ -73,7 +73,7 @@ def md5(content):
     if isinstance(content, bytes):
         tmp = content
     else:
-        tmp = content.encode()
+        tmp = content.encode("utf-8")
     md5alg.update(tmp)
     return md5alg.hexdigest()
 
@@ -153,6 +153,8 @@ def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
             content = bytes(content, "utf-8")
+    elif isinstance(content, unicode):
+        content = content.encode("utf-8")
     return content
 
 
