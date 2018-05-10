@@ -4,8 +4,19 @@
 import unittest
 import platform
 import os
-from nose.plugins.attrib import attr
 from conans import tools
+
+
+class FakeSettings(object):
+    def __init__(self, _os, _arch):
+        self._os = _os
+        self._arch = _arch
+
+    def get_safe(self, name):
+        if name == 'os':
+            return self._os
+        elif name == 'arch':
+            return self._arch
 
 
 class AppleTest(unittest.TestCase):
@@ -28,16 +39,6 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(tools.to_apple_arch('mips'))
 
     def test_apple_sdk_name(self):
-        class FakeSettings(object):
-            def __init__(self, _os, _arch):
-                self._os = _os
-                self._arch = _arch
-
-            def get_safe(self, name):
-                if name == 'os':
-                    return self._os
-                elif name == 'arch':
-                    return self._arch
 
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86')), 'macosx')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86_64')), 'macosx')
@@ -50,31 +51,60 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(tools.apple_sdk_name(FakeSettings('Windows', 'x86')))
 
     def test_deployment_target_env_name(self):
-        self.assertEqual(tools.apple_deployment_target_env_name('Macos'), 'MACOSX_DEPLOYMENT_TARGET')
-        self.assertEqual(tools.apple_deployment_target_env_name('iOS'), 'IOS_DEPLOYMENT_TARGET')
-        self.assertEqual(tools.apple_deployment_target_env_name('watchOS'), 'WATCHOS_DEPLOYMENT_TARGET')
-        self.assertEqual(tools.apple_deployment_target_env_name('tvOS'), 'TVOS_DEPLOYMENT_TARGET')
-        self.assertIsNone(tools.apple_deployment_target_env_name('Linux'))
+        self.assertEqual(tools.apple_deployment_target_env('Macos', "10.1"),
+                         {"MACOSX_DEPLOYMENT_TARGET": "10.1"})
+        self.assertEqual(tools.apple_deployment_target_env('iOS', "10.1"),
+                         {"IOS_DEPLOYMENT_TARGET": "10.1"})
+        self.assertEqual(tools.apple_deployment_target_env('watchOS', "10.1"),
+                         {"WATCHOS_DEPLOYMENT_TARGET": "10.1"})
+        self.assertEqual(tools.apple_deployment_target_env('tvOS', "10.1"),
+                         {"TVOS_DEPLOYMENT_TARGET": "10.1"})
+        self.assertEqual(tools.apple_deployment_target_env('Linux', "10.1"), {})
 
     def test_deployment_target_flag_name(self):
-        self.assertEqual(tools.apple_deployment_target_flag_name('Macos'), '-mmacosx-version-min')
-        self.assertEqual(tools.apple_deployment_target_flag_name('iOS'), '-mios-version-min')
-        self.assertEqual(tools.apple_deployment_target_flag_name('watchOS'), '-mwatchos-version-min')
-        self.assertEqual(tools.apple_deployment_target_flag_name('tvOS'), '-mappletvos-version-min')
-        self.assertIsNone(tools.apple_deployment_target_flag_name('Solaris'))
+        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1"),
+                         '-mmacosx-version-min=10.1')
+        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1"),
+                         '-mios-version-min=10.1')
+        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1"),
+                         '-mwatchos-version-min=10.1')
+        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1"),
+                         '-mappletvos-version-min=10.1')
+        self.assertIsNone(tools.apple_deployment_target_flag('Solaris', "10.1"))
 
-    @attr('darwin')
+    @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
     def test_xcrun(self):
-        if platform.system() != "Darwin":
-            return
-        xcrun = tools.XCRun('macosx')
-        self.assertTrue(xcrun.cc.endswith('clang'))
-        self.assertTrue(xcrun.cxx.endswith('clang++'))
-        self.assertTrue(xcrun.ar.endswith('ar'))
-        self.assertTrue(xcrun.ranlib.endswith('ranlib'))
-        self.assertTrue(xcrun.strip.endswith('strip'))
 
-        self.assertTrue(os.path.isdir(xcrun.sdk_path))
+        def _common_asserts(xcrun_):
+            self.assertTrue(xcrun_.cc.endswith('clang'))
+            self.assertTrue(xcrun_.cxx.endswith('clang++'))
+            self.assertTrue(xcrun_.ar.endswith('ar'))
+            self.assertTrue(xcrun_.ranlib.endswith('ranlib'))
+            self.assertTrue(xcrun_.strip.endswith('strip'))
+            self.assertTrue(xcrun_.find('lipo').endswith('lipo'))
+            self.assertTrue(os.path.isdir(xcrun_.sdk_path))
 
-        xcrun = tools.XCRun()
-        self.assertTrue(xcrun.find('lipo').endswith('lipo'))
+        settings = FakeSettings('Macos', 'x86')
+        xcrun = tools.XCRun(settings)
+        _common_asserts(xcrun)
+
+        settings = FakeSettings('iOS', 'x86')
+        xcrun = tools.XCRun(settings, sdk='macosx')
+        _common_asserts(xcrun)
+        # Simulator
+        self.assertNotIn("iPhoneOS", xcrun.sdk_path)
+
+        settings = FakeSettings('iOS', 'armv7')
+        xcrun = tools.XCRun(settings)
+        _common_asserts(xcrun)
+        self.assertIn("iPhoneOS", xcrun.sdk_path)
+
+        settings = FakeSettings('watchOS', 'armv7')
+        xcrun = tools.XCRun(settings)
+        _common_asserts(xcrun)
+        self.assertIn("WatchOS", xcrun.sdk_path)
+
+        # Default one
+        settings = FakeSettings(None, None)
+        xcrun = tools.XCRun(settings)
+        _common_asserts(xcrun)

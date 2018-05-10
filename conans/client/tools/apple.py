@@ -4,9 +4,9 @@
 import subprocess
 
 
-def is_apple_os(_os):
+def is_apple_os(os_):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
-    return str(_os) in ['Macos', 'iOS', 'watchOS', 'tvOS']
+    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
 def to_apple_arch(arch):
@@ -23,39 +23,49 @@ def apple_sdk_name(settings):
     """returns proper SDK name suitable for OS and architecture
     we're building for (considering simulators)"""
     arch = settings.get_safe('arch')
-    _os = settings.get_safe('os')
+    os_ = settings.get_safe('os')
     if str(arch).startswith('x86'):
         return {'Macos': 'macosx',
                 'iOS': 'iphonesimulator',
                 'watchOS': 'watchsimulator',
-                'tvOS': 'appletvsimulator'}.get(str(_os))
+                'tvOS': 'appletvsimulator'}.get(str(os_))
     elif str(arch).startswith('arm'):
         return {'iOS': 'iphoneos',
                 'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(_os))
+                'tvOS': 'appletvos'}.get(str(os_))
     else:
         return None
 
 
-def apple_deployment_target_env_name(_os):
+def apple_deployment_target_env(os_, os_version):
     """environment variable name which controls deployment target"""
-    return {'Macos': 'MACOSX_DEPLOYMENT_TARGET',
-            'iOS': 'IOS_DEPLOYMENT_TARGET',
-            'watchOS': 'WATCHOS_DEPLOYMENT_TARGET',
-            'tvOS': 'TVOS_DEPLOYMENT_TARGET'}.get(str(_os))
+    env_name = {'Macos': 'MACOSX_DEPLOYMENT_TARGET',
+                'iOS': 'IOS_DEPLOYMENT_TARGET',
+                'watchOS': 'WATCHOS_DEPLOYMENT_TARGET',
+                'tvOS': 'TVOS_DEPLOYMENT_TARGET'}.get(str(os_))
+    if not env_name:
+        return {}
+    return {env_name: os_version}
 
 
-def apple_deployment_target_flag_name(_os):
+def apple_deployment_target_flag(os_, os_version):
     """compiler flag name which controls deployment target"""
-    return {'Macos': '-mmacosx-version-min',
+    flag = {'Macos': '-mmacosx-version-min',
             'iOS': '-mios-version-min',
             'watchOS': '-mwatchos-version-min',
-            'tvOS': '-mappletvos-version-min'}.get(str(_os))
+            'tvOS': '-mappletvos-version-min'}.get(str(os_))
+    if not flag:
+        return None
+    return "%s=%s" % (flag, os_version)
 
 
 class XCRun(object):
 
-    def __init__(self, sdk=None):
+    def __init__(self, settings, sdk=None):
+        """sdk=False will skip the flag
+           sdk=None will try to adjust it automatically"""
+        if sdk is None and settings:
+            sdk = apple_sdk_name(settings)
         self.sdk = sdk
 
     def _invoke(self, args):
