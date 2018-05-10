@@ -87,11 +87,11 @@ class Edge(object):
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
-        self._root = None
+        self.root = None
 
     def add_node(self, node):
         if not self.nodes:
-            self._root = node
+            self.root = node
         self.nodes.add(node)
 
     def add_edge(self, src, dst, private=False):
@@ -153,7 +153,7 @@ class DepsGraph(object):
         closure = []
         current = node.neighbors()
         while current:
-            new_current = set()
+            new_current = []
             for n in current:
                 if n not in closure:
                     closure.add(n)
@@ -239,7 +239,7 @@ class DepsGraph(object):
         together with the list of nodes that privately require it
         """
         closure = set()
-        open_nodes = [self._root]
+        open_nodes = [self.root]
         closure.update(open_nodes)
         while open_nodes:
             new_open_nodes = set()
