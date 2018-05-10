@@ -28,7 +28,7 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.cmd.download import download_binaries
 
 
 class BuildMode(object):
@@ -213,6 +213,7 @@ class ConanManager(object):
         @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
+        output = ScopedOutput(str(reference), self._user_io.out)
         remote_proxy = self.get_proxy(remote_name=remote_name)
         remote, _ = remote_proxy._get_remote()
         package = self._remote_manager.search_recipes(remote, reference, None)
@@ -232,16 +233,17 @@ class ConanManager(object):
                                 conanfile, reference)
 
         if package_ids:
-            remote_proxy.download_packages(reference, package_ids)
+            download_binaries(reference, package_ids, self._client_cache, self._remote_manager,
+                              remote, output, self._recorder)
         else:
-            self._user_io.out.info("Getting the complete package list "
-                                   "from '%s'..." % str(reference))
+            output.info("Getting the complete package list "
+                        "from '%s'..." % str(reference))
             packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
-                output = ScopedOutput(str(reference), self._user_io.out)
                 output.warn("No remote binary packages found in remote")
             else:
-                remote_proxy.download_packages(reference, list(packages_props.keys()))
+                download_binaries(reference, list(packages_props.keys()), self._client_cache,
+                                  self._remote_manager, remote, output, self._recorder)
 
     @staticmethod
     def _inject_require(conanfile, inject_require):
@@ -259,7 +261,8 @@ class ConanManager(object):
     def _get_graph_builder(self, loader, remote_proxy):
         local_search = self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver,
+                                         self._client_cache, self._registry, self._remote_manager)
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update):
@@ -353,7 +356,9 @@ class ConanManager(object):
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, remote_proxy)
-        deps_graph = graph_builder.load_graph(conanfile, False, update)
+
+        build_mode = BuildMode(build_modes, self._user_io.out)
+        deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name)
 
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput(("%s (test package)" % str(inject_require)) if inject_require else "PROJECT",
@@ -372,11 +377,12 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
-        build_mode = BuildMode(build_modes, self._user_io.out)
-        binaries_graph = GraphBinariesAnalyzer(self._client_cache, self._user_io.out,
-                                               self._remote_manager, self._registry)
-        binaries_graph.evaluate_graph(deps_graph, build_mode, update, remote_name)
-        binaries_graph.print_output(deps_graph)
+        # PRINT THE node.binary of the graph
+        by_level = deps_graph.by_levels()
+        for level in by_level:
+            for node in level:
+                if node.conan_ref:
+                    output.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
         build_mode.report_matches()
 
         build_requires = BuildRequires(loader, graph_builder, self._registry)

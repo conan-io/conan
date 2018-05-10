@@ -97,16 +97,7 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def propagate_info(self):
-        """ takes the exports from upper level and updates the imports
-        right now also the imports are propagated, but should be checked
-        E.g. Conan A, depends on B.  A=>B
-        B exports an include directory "my_dir", with root "/...../0123efe"
-        A imports are the exports of B, plus any other conans it depends on
-        A.imports.include_dirs = B.export.include_paths.
-        Note the difference, include_paths used to compute full paths as the user
-        defines export relative to its folder
-        """
+    def compute_packages_ids(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:

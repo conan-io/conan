@@ -31,7 +31,8 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphBuildRequires(object):
-    def __init__(self):
+    def __init__(self, graph_builder):
+        self._graph_builder = graph_builder
         pass
 
     @staticmethod
@@ -62,3 +63,13 @@ class GraphBuildRequires(object):
                                     package_build_requires[build_require.name] = build_require
                                 else:  # Profile one
                                     new_profile_build_requires[build_require.name] = build_require
+                                    
+    def _get_graph(self, conanfile, build_requires):
+        conanfile.build_requires_options.clear_unscoped_options()
+        virtual = self._loader.load_virtual(build_requires.values(), scope_options=False,
+                                            build_requires_options=conanfile.build_requires_options)
+
+        # compute and print the graph of transitive build-requires
+        deps_graph = self._graph_builder.load_graph(virtual, check_updates=False, update=update)
+        return deps_graph
+

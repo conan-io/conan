@@ -7,29 +7,30 @@ from conans.errors import ConanException, conanfile_exception_formatter, ConanEx
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver):
-        """ param retriever: something that implements retrieve_conanfile for installed conans
-        :param loader: helper ConanLoader to be able to load user space conanfile
-        """
-        self._retriever = retriever
+    def __init__(self, proxy, output, loader, resolver, client_cache, registry, remote_manager):
+        self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._client_cache = client_cache
+        self._registry = registry
+        self._remote_manager = remote_manager
 
     def get_graph_updates_info(self, deps_graph):
         """
         returns a dict of conan_reference: 1 if there is an update,
         0 if don't and -1 if local is newer
         """
-        return {node.conan_ref: self._retriever.update_available(node.conan_ref)
+        return {node.conan_ref: self._proxy.update_available(node.conan_ref)
                 for node in deps_graph.nodes}
 
-    def load_graph(self, conanfile, check_updates, update):
+    def load_graph(self, conanfile, check_updates, update, build_mode, remote_name):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -44,8 +45,11 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
-        dep_graph.propagate_info()
+        dep_graph.compute_packages_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
+        binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
+                                                  self._remote_manager, self._registry)
+        binaries_analyzer.evaluate_graph(dep_graph, build_mode, update, remote_name)
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update):
@@ -207,7 +211,7 @@ class DepsGraphBuilder(object):
                          check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference, check_updates, update)
+        conanfile_path = self._proxy.get_recipe(requirement.conan_reference, check_updates, update)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)

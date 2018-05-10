@@ -16,13 +16,6 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         self._registry = registry
 
-    def print_output(self, deps_graph):
-        by_level = deps_graph.by_levels()
-        for level in by_level:
-            for node in level:
-                if node.conan_ref:
-                    self._out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
-
     def _get_remote(self, conan_ref, remote_name, allow_none=False):
         if remote_name:
             return self._registry.remote(remote_name)
