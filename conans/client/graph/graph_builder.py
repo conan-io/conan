@@ -7,20 +7,16 @@ from conans.errors import ConanException, conanfile_exception_formatter, ConanEx
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, proxy, output, loader, resolver, client_cache, registry, remote_manager):
+    def __init__(self, proxy, output, loader, resolver):
         self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
-        self._client_cache = client_cache
-        self._registry = registry
-        self._remote_manager = remote_manager
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -30,7 +26,7 @@ class DepsGraphBuilder(object):
         return {node.conan_ref: self._proxy.update_available(node.conan_ref)
                 for node in deps_graph.nodes}
 
-    def load_graph(self, conanfile, check_updates, update, build_mode, remote_name):
+    def load_graph(self, conanfile, check_updates, update):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -47,9 +43,6 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         dep_graph.compute_packages_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
-        binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, self._registry)
-        binaries_analyzer.evaluate_graph(dep_graph, build_mode, update, remote_name)
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update):

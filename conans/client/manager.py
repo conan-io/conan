@@ -6,7 +6,6 @@ from conans.client import packager
 from conans.client.graph.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
-from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
 from conans.client.importer import run_imports, run_deploy
@@ -29,6 +28,7 @@ from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.download import download_binaries
+from conans.client.graph.graph_manager import GraphManager
 
 
 class BuildMode(object):
@@ -261,8 +261,8 @@ class ConanManager(object):
     def _get_graph_builder(self, loader, remote_proxy):
         local_search = self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver,
-                                         self._client_cache, self._registry, self._remote_manager)
+        graph_builder = GraphManager(remote_proxy, self._user_io.out, loader, resolver,
+                                     self._client_cache, self._registry, self._remote_manager)
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update):
@@ -358,7 +358,8 @@ class ConanManager(object):
         graph_builder = self._get_graph_builder(loader, remote_proxy)
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name)
+        deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,
+                                              profile.build_requires)
 
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput(("%s (test package)" % str(inject_require)) if inject_require else "PROJECT",
@@ -385,15 +386,8 @@ class ConanManager(object):
                     output.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
         build_mode.report_matches()
 
-        build_requires = BuildRequires(loader, graph_builder, self._registry)
-        installer = ConanInstaller(self._client_cache, output, remote_proxy,
-                                   build_requires, recorder=self._recorder)
-
-        # Apply build_requires to consumer conanfile
-        if not isinstance(reference, ConanFileReference):
-            build_requires.install("", conanfile, installer, profile.build_requires, output, update)
-
-        installer.install(deps_graph, profile.build_requires, keep_build, update=update)
+        installer = ConanInstaller(self._client_cache, output, remote_proxy, recorder=self._recorder)
+        installer.install(deps_graph, keep_build, update=update)
 
         if install_folder:
             # Write generators

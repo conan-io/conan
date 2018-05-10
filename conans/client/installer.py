@@ -236,20 +236,19 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_proxy, build_requires, recorder):
+    def __init__(self, client_cache, output, remote_proxy, recorder):
         self._client_cache = client_cache
         self._out = output
         self._remote_proxy = remote_proxy
-        self._build_requires = build_requires
         self._recorder = recorder
 
-    def install(self, deps_graph, profile_build_requires, keep_build=False, update=False):
+    def install(self, deps_graph, keep_build=False, update=False):
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, deps_graph, profile_build_requires, keep_build,
+        self._build(nodes_by_level, deps_graph, keep_build,
                     root_node, update)
 
     def nodes_to_build(self, deps_graph):
@@ -262,7 +261,7 @@ class ConanInstaller(object):
         return [(PackageReference(node.conan_ref, package_id), node.conanfile)
                 for node, package_id, build in nodes if build]
 
-    def _build(self, nodes_by_level, deps_graph, profile_build_requires, keep_build,
+    def _build(self, nodes_by_level, deps_graph, keep_build,
                root_node, update):
         inverse = deps_graph.inverse_levels()
         flat = []
@@ -292,7 +291,7 @@ class ConanInstaller(object):
                         set_dirty(package_folder)
                         if node.binary == "BUILD":
                             self._build_package(node, package_ref, output,
-                                                keep_build, profile_build_requires, flat, deps_graph, update)
+                                                keep_build, flat, deps_graph, update)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
                             self._download_package(conan_file, package_ref, output, package_folder)
                             self._propagate_info(node, flat, deps_graph)
@@ -317,7 +316,7 @@ class ConanInstaller(object):
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build,
-                       profile_build_requires, flat, deps_graph, update):
+                       flat, deps_graph, update):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
         skip_build = conan_file.develop and keep_build
@@ -325,8 +324,9 @@ class ConanInstaller(object):
             output.info("Won't be built as specified by --keep-build")
 
         if not skip_build:
+            # Build requires
             self._build_requires.install(conan_ref, conan_file, self,
-                                         profile_build_requires, output, update=update)
+                                         output, update=update)
 
         # It is important that it is done AFTER build_requires install
         self._propagate_info(node, flat, deps_graph)

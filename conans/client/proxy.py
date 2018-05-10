@@ -7,7 +7,6 @@ from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
-from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.client.source import complete_recipe_sources
@@ -183,19 +182,3 @@ class ConanProxy(object):
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             if search_result:
                 return search_result
-
-    def download_packages(self, reference, package_ids):
-        assert(isinstance(package_ids, list))
-        remote, _ = self._get_remote(reference)
-        conanfile_path = self._client_cache.conanfile(reference)
-        if not os.path.exists(conanfile_path):
-            raise Exception("Download recipe first")
-        conanfile = load_conanfile_class(conanfile_path)
-        short_paths = conanfile.short_paths
-        self._registry.set_ref(reference, remote)
-        output = ScopedOutput(str(reference), self._out)
-        for package_id in package_ids:
-            package_ref = PackageReference(reference, package_id)
-            package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-            self._out.info("Downloading %s" % str(package_ref))
-            self._remote_manager.get_package(package_ref, package_folder, remote, output, self._recorder)
