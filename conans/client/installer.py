@@ -297,12 +297,7 @@ class ConanInstaller(object):
         dependencies only to first level conans.
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
         """
-        inverse = deps_graph.inverse_levels()
-        flat = []
-
-        for level in inverse:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(n for n in level if n not in skip_nodes)
+        inverse_levels = deps_graph.inverse_levels()
 
         for node, package_id, build_needed in nodes_to_process:
             conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -315,20 +310,20 @@ class ConanInstaller(object):
                 set_dirty(package_folder)
                 if build_needed and (conan_ref, package_id) not in self._built_packages:
                     self._build_package(node, package_id, package_ref, output,
-                                        keep_build, profile_build_requires, flat, deps_graph, update)
+                                        keep_build, profile_build_requires, inverse_levels, deps_graph, update)
                 else:
                     self._get_existing_package(conan_file, package_ref, output, package_folder, update)
-                    self._propagate_info(node, flat, deps_graph)
+                    self._propagate_info(node, inverse_levels, deps_graph)
 
                 # Call the info method
                 self._call_package_info(conan_file, package_folder)
                 clean_dirty(package_folder)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, flat, deps_graph)
+        self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _build_package(self, node, package_id, package_ref, output, keep_build,
-                       profile_build_requires, flat, deps_graph, update):
+                       profile_build_requires, inverse_levels, deps_graph, update):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         build_allowed = self._build_mode.allowed(conan_file, conan_ref)
         if not build_allowed:
@@ -348,7 +343,7 @@ class ConanInstaller(object):
                                          profile_build_requires, output, update=update)
 
         # It is important that it is done AFTER build_requires install
-        self._propagate_info(node, flat, deps_graph)
+        self._propagate_info(node, inverse_levels, deps_graph)
 
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)

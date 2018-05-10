@@ -149,20 +149,23 @@ class DepsGraph(object):
         open_nodes = nodes_by_level[1]
         return open_nodes
 
-    def ordered_closure(self, node, flat):
+    def ordered_closure(self, node, levels):
         closure = []
         current = node.neighbors()
         while current:
             new_current = []
             for n in current:
                 if n not in closure:
-                    closure.add(n)
-                new_neighs = n.public_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
+                    closure.append(n)
+                    new_neighs = n.public_neighbors()
+                    for new in new_neighs:
+                        if new not in current and new not in new_current:
+                            new_current.append(new)
             current = new_current
 
-        result = [n for n in flat if n in closure]
+        result = []
+        for level in levels:
+            result.extend([n for n in closure if n in level])
         return result
 
     def public_closure(self, node):
