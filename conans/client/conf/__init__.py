@@ -53,7 +53,8 @@ compiler:
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2", "7.3"]
+                  "7", "7.1", "7.2", "7.3",
+                  "8", "8.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
