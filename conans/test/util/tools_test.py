@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import platform
 import unittest
@@ -22,7 +24,7 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.context_manager import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load
+from conans.util.files import save, load, md5
 import requests
 
 
@@ -66,6 +68,18 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def load_save_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        save(path, u"äüïöñç")
+        content = load(path)
+        self.assertEqual(content, u"äüïöñç")
+
+    def md5_test(self):
+        result = md5(u"äüïöñç")
+        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
+
     def cpu_count_test(self):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
