@@ -377,6 +377,8 @@ class ConanManager(object):
                                                self._remote_manager, self._registry)
         binaries_graph.evaluate_graph(deps_graph, build_mode, update, remote_name)
         binaries_graph.print_output(deps_graph)
+        build_mode.report_matches()
+
         build_requires = BuildRequires(loader, graph_builder, self._registry)
         installer = ConanInstaller(self._client_cache, output, remote_proxy,
                                    build_requires, recorder=self._recorder)
@@ -386,7 +388,6 @@ class ConanManager(object):
             build_requires.install("", conanfile, installer, profile.build_requires, output, update)
 
         installer.install(deps_graph, profile.build_requires, keep_build, update=update)
-        build_mode.report_matches()
 
         if install_folder:
             # Write generators

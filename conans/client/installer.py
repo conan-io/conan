@@ -291,7 +291,7 @@ class ConanInstaller(object):
                         processed_package_references.add(package_ref)
                         set_dirty(package_folder)
                         if node.binary == "BUILD":
-                            self._build_package(node, package_id, package_ref, output,
+                            self._build_package(node, package_ref, output,
                                                 keep_build, profile_build_requires, flat, deps_graph, update)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
                             self._download_package(conan_file, package_ref, output, package_folder)
@@ -316,7 +316,7 @@ class ConanInstaller(object):
         self._remote_proxy.handle_package_manifest(package_reference)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
-    def _build_package(self, node, package_id, package_ref, output, keep_build,
+    def _build_package(self, node, package_ref, output, keep_build,
                        profile_build_requires, flat, deps_graph, update):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
