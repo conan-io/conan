@@ -55,14 +55,14 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
                           '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++1z',
+                          '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17',
                           gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
                           '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++1z',
+                          '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17',
                           gcc.content)
 
         settings.os = "Windows"
