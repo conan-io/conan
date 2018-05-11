@@ -51,7 +51,7 @@ class CompilerFlagsTest(unittest.TestCase):
     def test_gcc_cppstd_defaults(self):
         self.assertEquals(cppstd_default("gcc", "4"), "gnu98")
         self.assertEquals(cppstd_default("gcc", "5"), "gnu98")
-        self.assertEquals(cppstd_default("gcc", "6"), "gnu98")
+        self.assertEquals(cppstd_default("gcc", "6"), "gnu14")
         self.assertEquals(cppstd_default("gcc", "6.1"), "gnu14")
         self.assertEquals(cppstd_default("gcc", "7.3"), "gnu14")
         self.assertEquals(cppstd_default("gcc", "8.1"), "gnu14")
@@ -104,7 +104,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_default("clang", "3.5"), "gnu98")
         self.assertEquals(cppstd_default("clang", "5"), "gnu98")
         self.assertEquals(cppstd_default("clang", "5.1"), "gnu98")
-        self.assertEquals(cppstd_default("clang", "6"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "6"), "gnu14")
+        self.assertEquals(cppstd_default("clang", "7"), "gnu14")
 
     def test_apple_clang_cppstd_flags(self):
         self.assertEquals(cppstd_flag("apple-clang", "3.9", "98"), None)
