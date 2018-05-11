@@ -28,7 +28,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
                        for s in generator.content.splitlines()]
         self.assertEquals('set(CMAKE_MODULE_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[0])
-        self.assertEquals('"%s" ${CMAKE_MODULE_PATH} ${CMAKE_ROOT}/Modules '
+        self.assertEquals('"%s" ${CMAKE_MODULE_PATH} '
                           '${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
                           cmake_lines[1])
         self.assertEquals('set(CMAKE_PREFIX_PATH '
@@ -142,8 +142,8 @@ find_package(ZLIB REQUIRED)
         self.assertIn("HELLO FROM THE PACKAGE FIND PACKAGE!", client.out)
 
     def find_package_priority2_test(self):
-        """A system findXXX has priority over the install folder one, the zlib package do not package
-        findZLIB.cmake"""
+        """A system findXXX has NOT priority over the install folder one,
+        the zlib package do not package findZLIB.cmake"""
         client = TestClient()
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
@@ -175,7 +175,5 @@ find_package(ZLIB REQUIRED)
         os.mkdir(build_dir)
         client.run("install Zlib/0.1@user/channel -g cmake_paths")
         ret = client.runner("cmake .. ", cwd=build_dir)
-        if ret == 0:  # Not windows, findZLIB works
-            self.assertNotIn("HELLO FROM THE INSTALL FOLDER!", client.out)
-        else:  # Windows, ensure failed with the cmake installation one
-            self.assertIn("Could NOT find ZLIB", client.out)
+        self.assertEquals(ret, 0)
+        self.assertIn("HELLO FROM THE INSTALL FOLDER!", client.out)
