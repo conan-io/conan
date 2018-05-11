@@ -299,7 +299,7 @@ class ConanInstaller(object):
         self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._remote_manager.get_package(package_reference, package_folder, remote, output, self._recorder)
+        self._remote_proxy._remote_manager.get_package(package_reference, package_folder, remote, output, self._recorder)
         self._remote_proxy.handle_package_manifest(package_reference)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
