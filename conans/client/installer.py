@@ -263,12 +263,8 @@ class ConanInstaller(object):
 
     def _build(self, nodes_by_level, deps_graph, keep_build,
                root_node, update):
-        inverse = deps_graph.inverse_levels()
-        flat = []
 
-        for level in inverse:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
+        inverse_levels = deps_graph.inverse_levels()
 
         processed_package_references = set()
         for level in nodes_by_level:
@@ -289,24 +285,24 @@ class ConanInstaller(object):
                         set_dirty(package_folder)
                         if node.binary == "BUILD":
                             self._build_package(node, package_ref, output,
-                                                keep_build, flat, deps_graph, update)
+                                                keep_build, inverse_levels, deps_graph, update)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
                             self._download_package(conan_file, package_ref, output, package_folder)
-                            self._propagate_info(node, flat, deps_graph)
+                            self._propagate_info(node, inverse_levels, deps_graph)
                         elif node.binary == "INSTALLED":
-                            self._propagate_info(node, flat, deps_graph)
+                            self._propagate_info(node, inverse_levels, deps_graph)
                             output.success('Already installed!')
                             log_package_got_from_local_cache(package_ref)
                             self._recorder.package_fetched_from_cache(package_ref)
                         clean_dirty(package_folder)
                     else:
-                        self._propagate_info(node, flat, deps_graph)
+                        self._propagate_info(node, inverse_levels, deps_graph)
 
                     # Call the info method
                     self._call_package_info(conan_file, package_folder)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, flat, deps_graph)
+        self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
         self._remote_manager.get_package(package_reference, package_folder, remote, output, self._recorder)
@@ -314,7 +310,8 @@ class ConanInstaller(object):
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build,
-                       flat, deps_graph, update):
+                       inverse_levels, deps_graph, update):
+
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
         skip_build = conan_file.develop and keep_build
@@ -327,7 +324,7 @@ class ConanInstaller(object):
                                          output, update=update)
 
         # It is important that it is done AFTER build_requires install
-        self._propagate_info(node, flat, deps_graph)
+        self._propagate_info(node, inverse_levels, deps_graph)
 
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
@@ -367,9 +364,14 @@ class ConanInstaller(object):
         self._recorder.package_built(package_ref)
 
     @staticmethod
-    def _propagate_info(node, flat, deps_graph):
+    def _propagate_info(node, levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        node_order = deps_graph.ordered_closure(node, flat)
+        closure = deps_graph.closure(node)
+        node_order = []
+        for level in levels:
+            for n in closure.values():
+                if n in level:
+                    node_order.append(n)
         conan_file = node.conanfile
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)

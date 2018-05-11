@@ -1,31 +1,33 @@
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
+from collections import OrderedDict
 
 
 class Node(object):
     def __init__(self, conan_ref, conanfile):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
-        self.dependencies = set()  # Edges
+        self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None
         self.remote = None
 
     def add_edge(self, edge):
         if edge.src == self:
-            self.dependencies.add(edge)
+            if edge not in self.dependencies:
+                self.dependencies.append(edge)
         else:
             self.dependants.add(edge)
 
     def neighbors(self):
-        return set(edge.dst for edge in self.dependencies)
+        return [edge.dst for edge in self.dependencies]
 
     def public_neighbors(self):
-        return set(edge.dst for edge in self.dependencies if not edge.private)
+        return [edge.dst for edge in self.dependencies if not edge.private]
 
     def inverse_neighbors(self):
-        return set(edge.src for edge in self.dependants)
+        return [edge.src for edge in self.dependants]
 
     def __eq__(self, other):
         return (self.conan_ref == other.conan_ref and
@@ -87,8 +89,11 @@ class Edge(object):
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
+        self.root = None
 
     def add_node(self, node):
+        if not self.nodes:
+            self.root = node
         self.nodes.add(node)
 
     def add_edge(self, src, dst, private=False):
@@ -137,33 +142,18 @@ class DepsGraph(object):
         open_nodes = nodes_by_level[1]
         return open_nodes
 
-    def ordered_closure(self, node, flat):
-        closure = set()
+    def closure(self, node):
+        closure = OrderedDict()
         current = node.neighbors()
         while current:
-            new_current = set()
-            for n in current:
-                closure.add(n)
-                new_neighs = n.public_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
-            current = new_current
-
-        result = [n for n in flat if n in closure]
-        return result
-
-    def public_closure(self, node):
-        closure = {}
-        current = node.neighbors()
-        while current:
-            new_current = set()
+            new_current = []
             for n in current:
                 closure[n.conan_ref.name] = n
-                new_neighs = n.public_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
+            for n in current:
+                for neigh in n.public_neighbors():
+                    if neigh not in new_current and neigh.conan_ref.name not in closure:
+                        new_current.append(neigh)
             current = new_current
-
         return closure
 
     def _inverse_closure(self, references):
