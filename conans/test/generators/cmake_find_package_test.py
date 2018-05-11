@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 @attr('slow')
 class CMakeFindPathGeneratorTest(unittest.TestCase):
 
-    def cmake_paths_integration_test(self):
+    def cmake_find_package_test(self):
         """First package without custom find_package"""
         client = TestClient()
         files = cpp_hello_conan_files(name="Hello0",
@@ -89,7 +89,7 @@ if(NOT DEFINED Hello0_LIBRARIES)
 endif()
 
 include_directories(${Hello0_INCLUDE_DIRS})
-target_link_libraries(helloHello1 PUBLIC ${Hello0_LIBRARIES})
+target_link_libraries(helloHello1 PUBLIC ${Hello0_LIBS})
 add_executable(say_hello main.cpp)
 target_link_libraries(say_hello helloHello1)
 

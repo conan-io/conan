@@ -18,5 +18,5 @@ class CMakePathsGenerator(Generator):
         #    if the user used the "cmake_find_package" will find the auto-generated
         # 4. The CMake installation dir/Modules ones.
         return """set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
-set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}} )
+set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
 """.format(deps=deps)

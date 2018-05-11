@@ -9,6 +9,7 @@ SET({name}_INCLUDE_DIRS {deps.include_paths})
 SET({name}_INCLUDES {deps.include_paths})
 SET({name}_DEFINITIONS {deps.defines})
 SET({name}_LIBRARIES "") # Will be filled later
+SET({name}_LIBS "") # Same as {name}_LIBRARIES
 
 # Target approach
 if(NOT TARGET {name}::{name})
@@ -33,6 +34,7 @@ if(NOT TARGET {name}::{name})
     endforeach()
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES}})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.defines})
+    set({name}_LIBS ${{{name}_LIBRARIES}})
 endif()
 """
 

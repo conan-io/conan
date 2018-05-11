@@ -29,12 +29,12 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         self.assertEquals('set(CMAKE_MODULE_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[0])
         self.assertEquals('"%s" ${CMAKE_MODULE_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
+                          '${CMAKE_CURRENT_LIST_DIR})' % custom_dir.replace('\\', '/'),
                           cmake_lines[1])
         self.assertEquals('set(CMAKE_PREFIX_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[2])
         self.assertEquals('"%s" ${CMAKE_PREFIX_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR} )' % custom_dir.replace('\\', '/'),
+                          '${CMAKE_CURRENT_LIST_DIR})' % custom_dir.replace('\\', '/'),
                           cmake_lines[3])
 
     def cmake_paths_integration_test(self):
