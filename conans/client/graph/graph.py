@@ -220,26 +220,3 @@ class DepsGraph(object):
                 result.append(current_level)
 
         return result
-
-    def private_nodes(self, built_private_nodes):
-        """ computes a list of nodes living in the private zone of the deps graph,
-        together with the list of nodes that privately require it
-        """
-        closure = set()
-        nodes_by_level = self.by_levels()
-        open_nodes = nodes_by_level[-1]
-        closure.update(open_nodes)
-        while open_nodes:
-            new_open_nodes = set()
-            for node in open_nodes:
-                if node in built_private_nodes:
-                    neighbors = node.public_neighbors()
-                else:
-                    neighbors = node.neighbors()
-                new_open_nodes.update(set(neighbors).difference(closure))
-                closure.update(neighbors)
-            open_nodes = new_open_nodes
-
-        private_nodes = self.nodes.difference(closure)
-        for node in private_nodes:
-            node.binary = "SKIP"

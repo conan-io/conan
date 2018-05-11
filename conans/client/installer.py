@@ -277,8 +277,6 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_id = conan_file.info.package_id()
                 package_ref = PackageReference(conan_ref, package_id)
-                if node.binary == "SKIP":
-                    continue
                 if node.binary == "MISSING":
                     raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
 

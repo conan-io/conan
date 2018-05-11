@@ -110,7 +110,7 @@ class GraphBinariesAnalyzer(object):
                 output.info("Package is up to date")
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
-        skip_nodes = set()
+
         evaluated_references = {}
         for node in deps_graph.nodes:
             conan_ref, conanfile = node.conan_ref, node.conanfile
@@ -122,15 +122,6 @@ class GraphBinariesAnalyzer(object):
                 node.binary = "BUILD"
                 continue
 
-            if [r for r in conanfile.requires.values() if r.private]:
-                self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
-                if node.binary != "BUILD":
-                    skip_nodes.add(node)
-
-        deps_graph.private_nodes(skip_nodes)
-        for node in deps_graph.nodes:
-            if node.binary or not node.conan_ref:
-                continue
             self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
 
     def nodes_to_build(self, deps_graph):
