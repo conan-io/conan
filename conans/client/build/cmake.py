@@ -115,8 +115,11 @@ class CMake(object):
             return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
-            raise ConanException("You must specify compiler, compiler.version and arch in "
-                                 "your settings to use a CMake generator")
+            if self._os_build == "Windows":
+                raise ConanException("You must specify compiler, compiler.version and arch in "
+                                     "your settings to use a CMake generator. You can also declare "
+                                     "the env variable CONAN_CMAKE_GENERATOR.")
+            return "Unix Makefiles"
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
