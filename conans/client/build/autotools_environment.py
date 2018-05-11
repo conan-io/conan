@@ -33,6 +33,7 @@ class AutoToolsBuildEnvironment(object):
         self._include_rpath_flags = include_rpath_flags
         self.subsystem = OSInfo().detect_windows_subsystem() if self._win_bash else None
         self._deps_cpp_info = conanfile.deps_cpp_info
+        self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
@@ -55,11 +56,18 @@ class AutoToolsBuildEnvironment(object):
         self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
         # Not -L flags, ["-m64" "-m32"]
         self.link_flags = self._configure_link_flags()  # TEST!
-        # Not declared by default
-        self.fpic = None
+        # Precalculate -fPIC
+        self.fpic = self._configure_fpic()
 
         # Precalculate build, host, target triplets
         self.build, self.host, self.target = self._get_host_build_target_flags()
+
+    def _configure_fpic(self):
+        if str(self._os) not in ["Windows", "WindowsStore"]:
+            fpic = self._conanfile.options.get_safe("fPIC")
+            if fpic is not None:
+                shared = self._conanfile.options.get_safe("shared")
+                return True if (fpic or shared) else None
 
     def _get_host_build_target_flags(self):
         """Based on google search for build/host triplets, it could need a lot
@@ -67,22 +75,19 @@ class AutoToolsBuildEnvironment(object):
 
         arch_detected = detected_architecture() or platform.machine()
         os_detected = platform.system()
-        arch_settings = self._conanfile.settings.get_safe("arch")
-        os_settings = self._conanfile.settings.get_safe("os")
-        compiler = self._conanfile.settings.get_safe("compiler")
 
-        if (os_detected is None or arch_detected is None or arch_settings is None or
-                os_settings is None):
+        if (os_detected is None or arch_detected is None or self._arch is None or
+                self._os is None):
             return False, False, False
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
         try:
-            build = get_gnu_triplet(os_detected, arch_detected, compiler)
+            build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
         except ConanException:
             build = None
         try:
-            host = get_gnu_triplet(os_settings, arch_settings, compiler)
+            host = get_gnu_triplet(self._os, self._arch, self._compiler)
         except ConanException:
             host = None
         return build, host, None
@@ -185,7 +190,7 @@ class AutoToolsBuildEnvironment(object):
 
         if self._include_rpath_flags:
             the_os = self._conanfile.settings.get_safe("os_build") or \
-                 self._conanfile.settings.get_safe("os")
+                 self._os
             ret.extend(rpath_flags(the_os, self._compiler, self._deps_cpp_info.lib_paths))
 
         return ret
