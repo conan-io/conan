@@ -279,24 +279,20 @@ class ConanInstaller(object):
                 package_folder = self._client_cache.package(package_ref,
                                                             conan_file.short_paths)
 
+                self._propagate_info(node, inverse_levels, deps_graph)
                 with self._client_cache.package_lock(package_ref):
                     if package_ref not in processed_package_references:
                         processed_package_references.add(package_ref)
                         set_dirty(package_folder)
                         if node.binary == "BUILD":
-                            self._build_package(node, package_ref, output,
-                                                keep_build, inverse_levels, deps_graph, update)
+                            self._build_package(node, package_ref, output, keep_build)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
                             self._download_package(conan_file, package_ref, output, package_folder)
-                            self._propagate_info(node, inverse_levels, deps_graph)
                         elif node.binary == "INSTALLED":
-                            self._propagate_info(node, inverse_levels, deps_graph)
                             output.success('Already installed!')
                             log_package_got_from_local_cache(package_ref)
                             self._recorder.package_fetched_from_cache(package_ref)
                         clean_dirty(package_folder)
-                    else:
-                        self._propagate_info(node, inverse_levels, deps_graph)
 
                     # Call the info method
                     self._call_package_info(conan_file, package_folder)
@@ -309,22 +305,12 @@ class ConanInstaller(object):
         self._remote_proxy.handle_package_manifest(package_reference)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
-    def _build_package(self, node, package_ref, output, keep_build,
-                       inverse_levels, deps_graph, update):
-
+    def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
         skip_build = conan_file.develop and keep_build
         if skip_build:
             output.info("Won't be built as specified by --keep-build")
-
-        if not skip_build:
-            # Build requires
-            self._build_requires.install(conan_ref, conan_file, self,
-                                         output, update=update)
-
-        # It is important that it is done AFTER build_requires install
-        self._propagate_info(node, inverse_levels, deps_graph)
 
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)

@@ -91,6 +91,16 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
 
+    def add_graph(self, node, graph):
+        for n in graph.nodes:
+            if n != graph.root:
+                self.add_node(n)
+
+        for e in graph.root.dependencies:
+            e.src = node
+
+        node.dependencies = graph.root.dependencies + node.dependencies
+
     def add_node(self, node):
         if not self.nodes:
             self.root = node
