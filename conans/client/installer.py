@@ -298,6 +298,8 @@ class ConanInstaller(object):
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
         """
         inverse_levels = deps_graph.inverse_levels()
+        for level in inverse_levels:
+            level[:] = [n for n in level if n not in skip_nodes]
 
         for node, package_id, build_needed in nodes_to_process:
             conan_ref, conan_file = node.conan_ref, node.conanfile
