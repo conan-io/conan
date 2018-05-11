@@ -1,24 +1,27 @@
 from collections import namedtuple, OrderedDict
 
 
-class _SearchRecipe(namedtuple("SearchRecipe", "reference")):
+class _SearchRecipe(namedtuple("SearchRecipe", "reference, recipe_hash, remote")):
     with_packages = True
 
-    def __new__(cls, reference):
-        return super(cls, _SearchRecipe).__new__(cls, reference)
+    def __new__(cls, reference, recipe_hash, remote):
+        return super(cls, _SearchRecipe).__new__(cls, reference, recipe_hash, remote)
 
     def to_dict(self):
-        return {"id": self.reference}
+        return {"id": self.reference, "hash": self.recipe_hash, "remote": self.remote}
 
 
-class _SearchPackage(namedtuple("SearchPackage", "package_id, options, settings, requires, outdated")):
+class _SearchPackage(namedtuple("SearchPackage",
+                                "package_id, options, settings, requires, recipe_hash, outdated")):
 
-    def __new__(cls, package_id, options, settings, requires, outdated):
-        return super(cls, _SearchPackage).__new__(cls, package_id, options, settings, requires, outdated)
+    def __new__(cls, package_id, options, settings, requires, recipe_hash, outdated):
+        return super(cls, _SearchPackage).__new__(cls, package_id, options, settings, requires,
+                                                  recipe_hash, outdated)
 
     def to_dict(self):
         return {"id": self.package_id, "options": self.options, "settings": self.settings,
-                "requires": self.requires, "outdated": self.outdated}
+                "requires": self.requires, "recipe_hash": self.recipe_hash,
+                "outdated": self.outdated}
 
 
 class SearchRecoder(object):
@@ -27,14 +30,14 @@ class SearchRecoder(object):
         self.error = False
         self._info = OrderedDict()
 
-    def add_recipe(self, reference, with_packages=True):
-        recipe = _SearchRecipe(reference)
+    def add_recipe(self, reference, recipe_hash, remote, with_packages=True):
+        recipe = _SearchRecipe(reference, recipe_hash, remote)
         recipe.with_packages = with_packages
         self._info[reference] = {"recipe": recipe, "packages": []}
 
-    def add_package(self, reference, package_id, options, settings, requires, outdated):
+    def add_package(self, reference, package_id, options, settings, requires, recipe_hash, outdated):
         self._info[reference]["packages"].append(_SearchPackage(package_id, options, settings,
-                                                                requires, outdated))
+                                                                requires, recipe_hash, outdated))
 
     def get_info(self):
         info = {"error": self.error, "found": []}

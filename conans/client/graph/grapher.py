@@ -7,8 +7,9 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
     binary = namedtuple("Binary", "ID outdated")
     columns = set()
     table = defaultdict(dict)
-    for package_id, properties in ordered_packages.items():
-        settings = properties.get("settings", None)
+    for package in ordered_packages:
+        package_id = package["id"]
+        settings = package["settings"]
         if settings:
             row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
                                      settings.get("compiler.version", "None"))
@@ -24,14 +25,14 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
             row_name = "NO settings"
             column_name = ""
 
-        options = properties.get("options", None)
+        options = package["options"]
         if options:
             for k, v in options.items():
                 column_name += "<br>%s=%s" % (k, v)
 
         column_name = column_name or "NO options"
         columns.add(column_name)
-        package_recipe_hash = properties.get("recipe_hash", None)
+        package_recipe_hash = package["recipe_hash"]
         # Always compare outdated with local recipe, simplification,
         # if a remote check is needed install recipe first
         if recipe_hash:

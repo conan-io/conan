@@ -835,38 +835,30 @@ class Command(object):
         except (TypeError, ConanException):
             reference = None
 
+        info = None
         cwd = os.getcwd()
-        recorder = SearchRecoder()
 
         try:
             if reference:
-                ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                info = self._conan.search_packages(reference, query=args.query, remote=args.remote,
                                                   outdated=args.outdated)
-                ordered_packages, reference, recipe_hash, packages_query = ret
-                self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
-                                                     packages_query, args.table)
-                recorder.add_recipe(str(reference))
-                for package_id, properties in ordered_packages.items():
-                    recorder.add_package(str(reference), package_id, properties.get("options", []),
-                                         properties.get("settings", []),
-                                         properties.get("full_requires", []),
-                                         recipe_hash != properties.get("recipe_hash", None))
+                self._outputer.print_search_packages(info["found"][0]["packages"],
+                                                     info["found"][0]["recipe"]["id"],
+                                                     info["found"][0]["recipe"]["hash"], args.query,
+                                                     args.table)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
 
-                refs = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
+                info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
                                                   case_sensitive=args.case_sensitive)
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
-                self._outputer.print_search_references(refs, args.pattern_or_reference, args.raw)
-
-                for ref in refs:
-                    recorder.add_recipe(str(ref), with_packages=False)
-        except Exception:
-            recorder.error = True
+                self._outputer.print_search_references(info["found"], args.pattern_or_reference,
+                                                       args.raw)
+        except ConanException as exc:
+            info = exc.info
             raise
         finally:
-            info = recorder.get_info()
             print(info)
             if args.json and info:
                 self._outputer.json_output(info, args.json, cwd)

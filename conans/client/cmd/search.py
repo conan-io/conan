@@ -13,12 +13,12 @@ class Search(object):
         if not remote:
             return DiskSearchManager(self._client_cache).search_recipes(pattern, ignorecase)
 
+        references = {}
         if remote == 'all':
             remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
-                references = {}
                 for remote in remotes:
                     result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if result:
@@ -26,7 +26,8 @@ class Search(object):
                 return references
         # single remote
         remote = self._registry.remote(remote)
-        return self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        references[remote] = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
@@ -54,4 +55,4 @@ class Search(object):
                 recipe_hash = None
         if outdated and recipe_hash:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-        return ordered_packages, reference, recipe_hash, query
+        return ordered_packages, reference, recipe_hash

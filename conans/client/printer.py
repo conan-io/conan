@@ -177,27 +177,35 @@ class Printer(object):
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
+        remotes = []
+        for ref in references:
+            print("remote in recipe", ref["recipe"]["remote"])
+            if ref["recipe"]["remote"] not in remotes:
+                remotes.append(ref["recipe"]["remote"])
+
         if not raw:
             self._out.info("Existing package recipes:\n")
-            if isinstance(references, dict):
-                for remote, refs in references.items():
+            if remotes != [None]:
+                for remote in sorted(remotes):
                     self._out.highlight("Remote '%s':" % str(remote))
-                    for conan_ref in sorted(refs):
-                        self._print_colored_line(str(conan_ref), indent=0)
+                    for conan_ref in references:
+                        if conan_ref["recipe"]["remote"] == remote:
+                            self._print_colored_line(conan_ref["recipe"]["id"], indent=0)
             else:
-                for conan_ref in sorted(references):
-                    self._print_colored_line(str(conan_ref), indent=0)
+                for conan_ref in references:
+                    self._print_colored_line(str(conan_ref["recipe"]["id"]), indent=0)
         else:
-            if isinstance(references, dict):
-                for remote, refs in references.items():
+            if remotes != [None]:
+                for remote in remotes:
                     self._out.writeln("Remote '%s':" % str(remote))
-                    for conan_ref in sorted(refs):
-                        self._out.writeln(str(conan_ref))
+                    for conan_ref in references:
+                        if conan_ref["recipe"]["remote"] == remote:
+                            self._out.writeln(conan_ref["recipe"]["id"])
             else:
-                self._out.writeln("\n".join([str(ref) for ref in references]))
+                self._out.writeln("\n".join([str(ref["recipe"]["id"]) for ref in references]))
 
-    def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
-        if not packages_props:
+    def print_search_packages(self, packages, reference, recipe_hash, packages_query):
+        if not packages:
             if packages_query:
                 warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
                             (str(reference), packages_query))
@@ -212,25 +220,24 @@ class Printer(object):
 
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         # Each package
-        for package_id, properties in sorted(packages_props.items()):
+        for package in packages:
+            package_id = package["id"]
             self._print_colored_line("Package_ID", package_id, 1)
-            for section in ("options", "settings", "full_requires"):
-                attrs = properties.get(section, [])
-                if attrs:
-                    section_name = {"full_requires": "requires"}.get(section, section)
-                    self._print_colored_line("[%s]" % section_name, indent=2)
-                    if isinstance(attrs, dict):  # options, settings
-                        attrs = OrderedDict(sorted(attrs.items()))
-                        for key, value in attrs.items():
+            for section in ("options", "settings", "requires"):
+                attr = package[section]
+                if attr:
+                    self._print_colored_line("[%s]" % section, indent=2)
+                    if isinstance(attr, dict):  # options, settings
+                        attr = OrderedDict(sorted(attr.items()))
+                        for key, value in attr.items():
                             self._print_colored_line(key, value=value, indent=3)
-                    elif isinstance(attrs, list):  # full requires
-                        for key in sorted(attrs):
+                    elif isinstance(attr, list):  # full requires
+                        for key in sorted(attr):
                             self._print_colored_line(key, indent=3)
-            package_recipe_hash = properties.get("recipe_hash", None)
             # Always compare outdated with local recipe, simplification,
             # if a remote check is needed install recipe first
             if recipe_hash:
-                self._print_colored_line("Outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
+                self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
             self._out.writeln("")
 
     def print_profile(self, name, profile):

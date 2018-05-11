@@ -14,6 +14,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
+from conans.client.recorder.search_recorder import SearchRecoder
 from conans.client.recorder.upload_recoder import UploadRecoder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -673,14 +674,53 @@ class ConanAPIV1(object):
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
+        recorder = SearchRecoder()
         search = Search(self._client_cache, self._remote_manager, self._registry)
-        return search.search_recipes(pattern, remote, case_sensitive)
+
+        try:
+            references = search.search_recipes(pattern, remote, case_sensitive)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
+
+        print("REFERENCES", references)
+
+        if isinstance(references, dict):
+            print("REFERENCES DICT", references)
+            for remote, refs in references.items():
+                for ref in refs:
+                    print("REF, REMOTE", ref, remote)
+                    recorder.add_recipe(str(ref), None, str(remote), with_packages=False)
+        else:
+            for ref in references:
+                recorder.add_recipe(str(ref), None, None, with_packages=False)
+        print("RETURN search_recipes():", recorder.get_info())
+        return recorder.get_info()
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
+        recorder = SearchRecoder()
         search = Search(self._client_cache, self._remote_manager, self._registry)
-        return search.search_packages(reference, remote, query=query,
-                                      outdated=outdated)
+
+        try:
+            ordered_packages, reference, recipe_hash = search.search_packages(reference, remote,
+                                                                              query=query,
+                                                                              outdated=outdated)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
+
+        recorder.add_recipe(str(reference), recipe_hash, str(remote))
+        for package_id, properties in ordered_packages.items():
+            package_recipe_hash = properties.get("recipe_hash", None)
+            recorder.add_package(str(reference), package_id, properties.get("options", []),
+                                 properties.get("settings", []),
+                                 properties.get("full_requires", []),
+                                 package_recipe_hash,
+                                 recipe_hash != package_recipe_hash)
+        return recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
