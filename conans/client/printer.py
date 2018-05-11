@@ -199,8 +199,8 @@ class Printer(object):
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
             if packages_query:
-                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference),
-                                                                                                 packages_query)
+                warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
+                            (str(reference), packages_query))
             else:
                 warn_msg = "There are no packages for reference '%s'" % str(reference)
 
