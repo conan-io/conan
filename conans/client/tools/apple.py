@@ -119,7 +119,7 @@ class XCRun(object):
 
     @property
     def ranlib(self):
-        """path to archive indexer (RANBLI)"""
+        """path to archive indexer (RANLIB)"""
         return self.find('ranlib')
 
     @property
