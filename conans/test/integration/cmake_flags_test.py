@@ -254,10 +254,13 @@ class MyLib(ConanFile):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
             client.run("install .")
-            client.run("build .", ignore_error=True)
-
-            self.assertIn("You must specify compiler, compiler.version and arch in "
-                          "your settings to use a CMake generator", client.user_io.out,)
+            error = client.run("build .", ignore_error=True)
+            if platform.system() == "Windows":
+                self.assertTrue(error)
+                self.assertIn("You must specify compiler, compiler.version and arch in "
+                              "your settings to use a CMake generator", client.user_io.out,)
+            else:
+                self.assertFalse(error)
 
     def cmake_shared_flag_test(self):
         conanfile = """
