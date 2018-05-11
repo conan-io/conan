@@ -3,7 +3,6 @@ import os
 from collections import Counter
 
 from conans.client import packager
-from conans.client.graph.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
 from conans.client.generators import write_generators
@@ -387,7 +386,7 @@ class ConanManager(object):
         build_mode.report_matches()
 
         installer = ConanInstaller(self._client_cache, output, remote_proxy, recorder=self._recorder)
-        installer.install(deps_graph, keep_build, update=update)
+        installer.install(deps_graph, keep_build)
 
         if install_folder:
             # Write generators

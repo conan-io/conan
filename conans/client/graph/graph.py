@@ -98,6 +98,7 @@ class DepsGraph(object):
 
         for e in graph.root.dependencies:
             e.src = node
+            e.private = True
 
         node.dependencies = graph.root.dependencies + node.dependencies
 

@@ -57,6 +57,10 @@ class GraphManager(object):
         for node in list(graph.nodes):
             if node.binary != "BUILD" and not node.conan_ref:
                 continue
+
+            privates = [r for r in node.conanfile.requires.values() if r.private]
+            if privates:
+                raise Exception("PRIVATES NOT IMPLEMENTED")
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.conan_ref or "")
             new_profile_build_requires = OrderedDict()

@@ -242,14 +242,13 @@ class ConanInstaller(object):
         self._remote_proxy = remote_proxy
         self._recorder = recorder
 
-    def install(self, deps_graph, keep_build=False, update=False):
+    def install(self, deps_graph, keep_build=False):
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, deps_graph, keep_build,
-                    root_node, update)
+        self._build(nodes_by_level, deps_graph, keep_build, root_node)
 
     def nodes_to_build(self, deps_graph):
         """Called from info command when a build policy is used in build_order parameter"""
@@ -261,8 +260,7 @@ class ConanInstaller(object):
         return [(PackageReference(node.conan_ref, package_id), node.conanfile)
                 for node, package_id, build in nodes if build]
 
-    def _build(self, nodes_by_level, deps_graph, keep_build,
-               root_node, update):
+    def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
 
         inverse_levels = deps_graph.inverse_levels()
 
@@ -287,7 +285,7 @@ class ConanInstaller(object):
                         if node.binary == "BUILD":
                             self._build_package(node, package_ref, output, keep_build)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
-                            self._download_package(conan_file, package_ref, output, package_folder)
+                            self._download_package(conan_file, package_ref, output, package_folder, node.remote)
                         elif node.binary == "INSTALLED":
                             output.success('Already installed!')
                             log_package_got_from_local_cache(package_ref)
