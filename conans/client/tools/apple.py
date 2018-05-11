@@ -55,7 +55,7 @@ def apple_deployment_target_flag(os_, os_version):
             'watchOS': '-mwatchos-version-min',
             'tvOS': '-mappletvos-version-min'}.get(str(os_))
     if not flag:
-        return None
+        return ''
     return "%s=%s" % (flag, os_version)
 
 

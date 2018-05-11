@@ -70,7 +70,7 @@ class AppleTest(unittest.TestCase):
                          '-mwatchos-version-min=10.1')
         self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1"),
                          '-mappletvos-version-min=10.1')
-        self.assertIsNone(tools.apple_deployment_target_flag('Solaris', "10.1"))
+        self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
 
     @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
     def test_xcrun(self):
