@@ -91,10 +91,12 @@ class GraphManager(object):
                                                                remote_name, new_profile_build_requires)
                 graph.add_graph(node, build_requires_profile_graph)
 
-    def load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
-                   profile_build_requires):
+    def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
+                   profile_build_requires=None):
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
         graph = builder.load_graph(conanfile, check_updates, update)
+        if build_mode is None:
+            return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
                                                   self._remote_manager, self._registry)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)

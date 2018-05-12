@@ -175,7 +175,8 @@ class ConanManager(object):
             _load_deps_info(install_folder, conanfile, required=True)
 
         graph_builder = self._get_graph_builder(loader, remote_proxy)
-        deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False)
+        deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False,
+                                              build_mode=None)
 
         # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
         # which is the exported pkg
@@ -268,7 +269,8 @@ class ConanManager(object):
         loader = self.get_loader(profile)
         conanfile = self._load_install_conanfile(loader, reference)
         graph_builder = self._get_graph_builder(loader, remote_proxy)
-        deps_graph = graph_builder.load_graph(conanfile, check_updates, update)
+        deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
+                                              build_mode=None)
         return deps_graph, graph_builder, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):

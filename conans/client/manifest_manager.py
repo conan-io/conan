@@ -43,13 +43,14 @@ class ManifestManager(object):
                 self._log.append("Manifest for '%s': OK" % str(reference))
                 return
 
-        if self._verify:
-            diff = existing_manifest.difference(manifest)
-            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
-            raise ConanException("Modified or new manifest '%s' detected.\n"
-                                 "Remote: %s\nProject manifest doesn't match installed one\n%s"
-                                 % (str(reference), remote, error_msg))
+            # FIXME: This was weirdly broken, check
+            if self._verify:
+                diff = existing_manifest.difference(manifest)
+                error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                            % (fname, h1, h2) for fname, (h1, h2) in diff.items())
+                raise ConanException("Modified or new manifest '%s' detected.\n"
+                                     "Remote: %s\nProject manifest doesn't match installed one\n%s"
+                                     % (str(reference), remote, error_msg))
 
         self._handle_add(reference, remote, manifest, pkg_folder)
 
