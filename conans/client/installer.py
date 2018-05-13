@@ -236,10 +236,11 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_proxy, recorder):
+    def __init__(self, client_cache, output, remote_manager, registry, recorder):
         self._client_cache = client_cache
         self._out = output
-        self._remote_proxy = remote_proxy
+        self._remote_manager = remote_manager
+        self._registry = registry
         self._recorder = recorder
 
     def install(self, deps_graph, keep_build=False):
@@ -249,16 +250,6 @@ class ConanInstaller(object):
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._build(nodes_by_level, deps_graph, keep_build, root_node)
-
-    def nodes_to_build(self, deps_graph):
-        """Called from info command when a build policy is used in build_order parameter"""
-        # Get the nodes in order and if we have to build them
-        nodes_by_level = deps_graph.by_levels()
-        nodes_by_level.pop()  # Remove latest one, consumer node with conan_ref=None
-        skip_private_nodes = self._compute_private_nodes(deps_graph)
-        nodes = self._get_nodes(nodes_by_level, skip_private_nodes)
-        return [(PackageReference(node.conan_ref, package_id), node.conanfile)
-                for node, package_id, build in nodes if build]
 
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
 
@@ -299,9 +290,8 @@ class ConanInstaller(object):
         self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._remote_proxy._remote_manager.get_package(package_reference, package_folder,
-                                                       remote, output, self._recorder)
-        self._remote_proxy.handle_package_manifest(package_reference)
+        self._remote_manager.get_package(package_reference, package_folder,
+                                         remote, output, self._recorder)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
@@ -323,8 +313,8 @@ class ConanInstaller(object):
                 raise ConanException(msg)
         else:
             with self._client_cache.conanfile_write_lock(conan_ref):
-                complete_recipe_sources(self._remote_proxy._remote_manager, self._client_cache,
-                                        self._remote_proxy.registry, conan_file, conan_ref)
+                complete_recipe_sources(self._remote_manager, self._client_cache,
+                                        self._registry, conan_file, conan_ref)
                 builder.prepare_build()
 
         with self._client_cache.conanfile_read_lock(conan_ref):
@@ -337,8 +327,6 @@ class ConanInstaller(object):
                                                      str(exc), remote=None)
                 raise exc
             else:
-                self._remote_proxy.handle_package_manifest(package_ref)
-
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
 

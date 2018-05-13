@@ -18,14 +18,6 @@ class DepsGraphBuilder(object):
         self._loader = loader
         self._resolver = resolver
 
-    def get_graph_updates_info(self, deps_graph):
-        """
-        returns a dict of conan_reference: 1 if there is an update,
-        0 if don't and -1 if local is newer
-        """
-        return {node.conan_ref: self._proxy.update_available(node.conan_ref)
-                for node in deps_graph.nodes}
-
     def load_graph(self, conanfile, check_updates, update):
         check_updates = check_updates or update
         dep_graph = DepsGraph()

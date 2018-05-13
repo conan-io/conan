@@ -284,10 +284,6 @@ class ConanManager(object):
         remote_proxy = self.get_proxy(remote_name=remote_name)
         deps_graph, _, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
                                                         check_updates=check_updates)
-        build_mode = BuildMode(build_modes, self._user_io.out)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
-                                   None, recorder=self._recorder)
-        nodes = installer.nodes_to_build(deps_graph)
         counter = Counter(ref.conan.name for ref, _ in nodes)
         ret = [ref if counter[ref.conan.name] > 1 else str(ref.conan) for ref, _ in nodes]
         return ret, self._get_project_reference(reference, conanfile)
@@ -389,6 +385,12 @@ class ConanManager(object):
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                                client_cache=self._client_cache)
+            for node in deps_graph.nodes:
+                if not node.conan_ref:
+                    continue
+                conanfile = node.conanfile
+                complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                        conanfile, node.conan_ref)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)

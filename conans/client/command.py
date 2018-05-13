@@ -464,7 +464,7 @@ class Command(object):
                                               profile_name=args.profile,
                                               update=args.update,
                                               install_folder=args.install_folder)
-            deps_graph, graph_updates_info, project_reference = data
+            deps_graph, project_reference = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -479,7 +479,7 @@ class Command(object):
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
             else:
-                self._outputer.info(deps_graph, graph_updates_info, only, args.remote,
+                self._outputer.info(deps_graph, only, args.remote,
                                     args.package_filter, args.paths, project_reference)
 
     def source(self, *args):

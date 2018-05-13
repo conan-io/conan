@@ -8,6 +8,31 @@ from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
 
+"""            if ret == 1:
+                        if not update:
+                            if remote != ref_remote:  # Forced new remote
+                                output.warn("There is a new conanfile in '%s' remote. "
+                                            "Execute 'install -u -r %s' to update it."
+                                            % (remote.name, remote.name))
+                            else:
+                                output.warn("There is a new conanfile in '%s' remote. "
+                                            "Execute 'install -u' to update it."
+                                            % remote.name)
+                            output.warn("Refused to install!")
+                        else:
+                            DiskRemover(self._client_cache).remove(conan_reference)
+                            output.info("Retrieving from remote '%s'..." % remote.name)
+                            self._remote_manager.get_recipe(conan_reference, remote)
+
+                            output.info("Updated!")
+                    elif ret == -1:
+                        if not update:
+                            output.info("Current conanfile is newer than %s's one" % remote.name)
+                        else:
+                            output.error("Current conanfile is newer than %s's one. "
+                                         "Run 'conan remove %s' and run install again "
+                                         "to replace it." % (remote.name, conan_reference))
+"""
 
 class Printer(object):
     """ Print some specific information """
@@ -64,7 +89,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
+    def print_info(self, deps_graph, project_reference, _info, registry,
                    remote=None, node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
