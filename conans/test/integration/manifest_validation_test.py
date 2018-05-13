@@ -26,7 +26,6 @@ class ConanFileTest(ConanFile):
     exports = "*"
 """
         self.files = {CONANFILE: conanfile, "data.txt": "MyData"}
-        # Export and upload the conanfile
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable")
@@ -89,7 +88,6 @@ class ConsumerFileTest(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
         package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        print paths.package(package_reference)
         self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
 
         # again should do nothing
@@ -154,7 +152,7 @@ class ConanFileTest(ConanFile):
         self.client.run("remove Hello* -f")
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
-        self._capture_verify_manifest(".", remote="default:")
+        self._capture_verify_manifest(".", remote="local cache")
 
     def _failed_verify(self, reference, remote="local cache"):
         self.client.run("install %s --build missing --manifests" % str(reference))
@@ -284,7 +282,7 @@ class ConanFileTest(ConanFile):
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_path = self.client.paths.package(package_reference)
         file_path = os.path.join(package_path, "conaninfo.txt")
-        save(file_path, load(file_path) + "RANDOM STRING")
+        save(file_path, load(file_path) + "  ")
 
         self.client.run("install %s --build missing --manifests" % str(self.reference),
                         ignore_error=True)

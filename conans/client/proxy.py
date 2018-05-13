@@ -10,6 +10,7 @@ from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.client.source import complete_recipe_sources
+from conans.model.manifest import FileTreeManifest
 
 
 class ConanProxy(object):
@@ -101,8 +102,9 @@ class ConanProxy(object):
         the local is newer than the remote"""
         if not conan_reference:
             return 0
-        read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
-        if read_manifest:
+        export = self._client_cache.export(conan_reference)
+        if os.path.exists(export):
+            read_manifest = FileTreeManifest.load(export)
             try:  # get_conan_manifest can fail, not in server
                 remote, _ = self._get_remote(conan_reference)
                 upstream_manifest = self._remote_manager.get_conan_manifest(conan_reference, remote)
