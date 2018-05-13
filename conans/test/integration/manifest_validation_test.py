@@ -89,6 +89,7 @@ class ConsumerFileTest(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
         package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        print paths.package(package_reference)
         self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
 
         # again should do nothing

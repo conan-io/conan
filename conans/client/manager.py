@@ -155,10 +155,10 @@ class ConanManager(object):
             self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
-    def get_proxy(self, remote_name=None, manifest_manager=None):
+    def get_proxy(self, remote_name=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
-                                  remote_name=remote_name, recorder=self._recorder, registry=self._registry,
-                                  manifest_manager=manifest_manager)
+                                  remote_name=remote_name, recorder=self._recorder,
+                                  registry=self._registry)
         return remote_proxy
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
@@ -341,11 +341,7 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
-        manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
-                                           client_cache=self._client_cache,
-                                           verify=manifest_verify,
-                                           interactive=manifest_interactive) if manifest_folder else None
-        remote_proxy = self.get_proxy(remote_name=remote_name, manifest_manager=manifest_manager)
+        remote_proxy = self.get_proxy(remote_name=remote_name)
 
         loader = self.get_loader(profile)
         if not install_reference:
@@ -390,6 +386,14 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, remote_proxy, recorder=self._recorder)
         installer.install(deps_graph, keep_build)
 
+        if manifest_folder:
+            manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
+                                               client_cache=self._client_cache)
+            manifest_manager.check_graph(deps_graph,
+                                         verify=manifest_verify,
+                                         interactive=manifest_interactive)
+            manifest_manager.print_log()
+
         if install_folder:
             # Write generators
             if generators is not False:
@@ -411,9 +415,6 @@ class ConanManager(object):
                 deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder, output)
-
-        if manifest_manager:
-            manifest_manager.print_log()
 
     def source(self, conanfile_path, source_folder, info_folder):
         """
