@@ -55,7 +55,7 @@ class GraphManager(object):
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
                                 profile_build_requires):
         for node in list(graph.nodes):
-            if node.binary != "BUILD" and not node.conan_ref:
+            if node.binary != "BUILD" and node.conan_ref:
                 continue
 
             privates = [r for r in node.conanfile.requires.values() if r.private]
@@ -79,7 +79,7 @@ class GraphManager(object):
                 virtual = self._loader.load_virtual(package_build_requires.values(), scope_options=False,
                                                     build_requires_options=node.conanfile.build_requires_options)
                 build_requires_package_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                               remote_name, package_build_requires)
+                                                               remote_name, profile_build_requires)
                 graph.add_graph(node, build_requires_package_graph)
 
             if new_profile_build_requires:

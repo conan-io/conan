@@ -380,7 +380,7 @@ class ConanManager(object):
         for level in by_level:
             for node in level:
                 if node.conan_ref:
-                    output.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
+                    self._user_io.out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
         build_mode.report_matches()
 
         installer = ConanInstaller(self._client_cache, output, remote_proxy, recorder=self._recorder)
