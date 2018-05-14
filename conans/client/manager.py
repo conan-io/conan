@@ -272,18 +272,18 @@ class ConanManager(object):
         build_mode = BuildMode(build_mode, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
                                               build_mode=build_mode)
-        return deps_graph, graph_builder, conanfile
+        return deps_graph, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):
         remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, _, _ = self._get_deps_graph(reference, profile, remote_proxy, update=False,
+        deps_graph, _ = self._get_deps_graph(reference, profile, remote_proxy, update=False,
                                                 check_updates=check_updates)
         result = deps_graph.build_order(build_order)
         return result
 
     def info_nodes_to_build(self, reference, profile, build_mode, remote_name, check_updates):
         remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, _, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
+        deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
                                                         check_updates=check_updates, build_mode=build_mode)
         ret = []
         for level in deps_graph.by_levels():
@@ -301,14 +301,15 @@ class ConanManager(object):
 
         return project_reference
 
-    def info_get_graph(self, reference, profile, remote_name=None, check_updates=False):
+    def info_get_graph(self, reference, profile, remote_name=None, check_updates=False, build_mode=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param remote: install only from that remote
         """
         remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, graph_builder, conanfile = self._get_deps_graph(reference, profile, remote_proxy,
-                                                                    update=False, check_updates=check_updates)
+        deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy,
+                                                     update=False, check_updates=check_updates,
+                                                     build_mode=build_mode)
 
         return deps_graph, self._get_project_reference(reference, conanfile)
 
