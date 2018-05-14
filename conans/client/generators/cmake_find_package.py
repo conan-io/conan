@@ -35,6 +35,8 @@ if(NOT TARGET {name}::{name})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES}})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.defines})
     set({name}_LIBS ${{{name}_LIBRARIES}})
+
+
 endif()
 """
 
@@ -48,7 +50,10 @@ class CMakeFindPackageGenerator(Generator):
     @property
     def content(self):
         ret = {}
+        print(self.deps_build_info.dependencies)
         for depname, cpp_info in self.deps_build_info.dependencies:
+            print("DEP FOR %s" % depname)
+            print(cpp_info.public_deps)
             ret["Find%s.cmake" % depname] = self._single_find_package(depname, cpp_info)
         return ret
 
