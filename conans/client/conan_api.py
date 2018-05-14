@@ -533,7 +533,7 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         ret = manager.info_nodes_to_build(reference, profile, build_modes, remote,
-                                          check_updates)
+                                          check_updates, build_modes)
         ref_list, project_reference = ret
         return ref_list, project_reference
 

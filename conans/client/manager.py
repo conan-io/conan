@@ -277,14 +277,14 @@ class ConanManager(object):
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):
         remote_proxy = self.get_proxy(remote_name=remote_name)
         deps_graph, _ = self._get_deps_graph(reference, profile, remote_proxy, update=False,
-                                                check_updates=check_updates)
+                                             check_updates=check_updates, build_mode=["missing"])
         result = deps_graph.build_order(build_order)
         return result
 
     def info_nodes_to_build(self, reference, profile, build_mode, remote_name, check_updates):
         remote_proxy = self.get_proxy(remote_name=remote_name)
         deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
-                                                        check_updates=check_updates, build_mode=build_mode)
+                                                     check_updates=check_updates, build_mode=build_mode)
         ret = []
         for level in deps_graph.by_levels():
             for node in level:
