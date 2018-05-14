@@ -547,8 +547,8 @@ class ConanAPIV1(object):
         manager = self._init_manager(recorder)
         ret = manager.info_get_graph(reference, remote_name=remote, profile=profile,
                                      check_updates=update)
-        deps_graph, graph_updates_info, project_reference = ret
-        return deps_graph, graph_updates_info, project_reference
+        deps_graph, project_reference = ret
+        return deps_graph, project_reference
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,

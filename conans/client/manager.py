@@ -305,12 +305,7 @@ class ConanManager(object):
         deps_graph, graph_builder, conanfile = self._get_deps_graph(reference, profile, remote_proxy,
                                                                     update=False, check_updates=check_updates)
 
-        if check_updates:
-            graph_updates_info = graph_builder.get_graph_updates_info(deps_graph)
-        else:
-            graph_updates_info = {}
-
-        return deps_graph, graph_updates_info, self._get_project_reference(reference, conanfile)
+        return deps_graph, self._get_project_reference(reference, conanfile)
 
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
@@ -379,7 +374,8 @@ class ConanManager(object):
                     self._user_io.out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
         build_mode.report_matches()
 
-        installer = ConanInstaller(self._client_cache, output, remote_proxy, recorder=self._recorder)
+        installer = ConanInstaller(self._client_cache, output, remote_proxy, self._registry,
+                                   recorder=self._recorder)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:

@@ -112,7 +112,6 @@ class Printer(object):
             def show(field):
                 return field in _info_lower
 
-        graph_updates_info = graph_updates_info or {}
         for node in sorted(deps_graph.nodes):
             ref, conan = node.conan_ref, node.conanfile
             if not ref:
@@ -163,7 +162,7 @@ class Printer(object):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
             if isinstance(ref, ConanFileReference) and show("update"):  # Excludes PROJECT
-                update = graph_updates_info.get(ref)
+                update = node.binary == "UPDATE"
                 update_messages = {
                  None: ("Version not checked", Color.WHITE),
                  0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
