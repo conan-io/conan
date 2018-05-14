@@ -147,9 +147,6 @@ class ConanFile(object):
         # Keys are the package names, and the values a dict with the vars
         self.deps_user_info = DepsUserInfo()
 
-        self.copy = None  # initialized at runtime
-        self.copy_deps = None  # initialized at runtime
-
         # an output stream (writeln, info, warn error)
         self.output = output
         # something that can run commands, as os.sytem
