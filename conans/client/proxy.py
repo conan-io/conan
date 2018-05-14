@@ -44,7 +44,7 @@ class ConanProxy(object):
         status = None
         if os.path.exists(conanfile_path):
             if check_updates:
-                ret, remote = self._update_available(conan_reference)
+                ret = self._update_available(conan_reference)
                 if ret is None:
                     status = "NO_REMOTE"
                 elif ret == 0:
