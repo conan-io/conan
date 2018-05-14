@@ -374,8 +374,8 @@ class ConanManager(object):
                     self._user_io.out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
         build_mode.report_matches()
 
-        installer = ConanInstaller(self._client_cache, output, remote_proxy, self._registry,
-                                   recorder=self._recorder)
+        installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+                                   self._registry, recorder=self._recorder)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:
