@@ -207,6 +207,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node.recipe = update_status
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node)
         public_deps[name_req] = new_node, None

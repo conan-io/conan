@@ -11,6 +11,7 @@ class Node(object):
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None
+        self.recipe = None
         self.remote = None
 
     def add_edge(self, edge):

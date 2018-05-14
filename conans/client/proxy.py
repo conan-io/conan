@@ -44,19 +44,23 @@ class ConanProxy(object):
         status = None
         if os.path.exists(conanfile_path):
             if check_updates:
-                ret = self._update_available(conan_reference)
-                if ret != 0:  # Found and not equal
-                    remote, _ = self._get_remote(conan_reference)
-                    if ret == 1:
-                        if not update:
-                            status = "AVAILABLE"
-                        else:
-                            DiskRemover(self._client_cache).remove(conan_reference)
-                            output.info("Retrieving from remote '%s'..." % remote.name)
-                            self._remote_manager.get_recipe(conan_reference, remote)
-                            status = "UPDATED"
-                    elif ret == -1:
-                        status = "NEWER_NO_UPDATED" if update else "NEWER"
+                ret, remote = self._update_available(conan_reference)
+                if ret is None:
+                    status = "NO_REMOTE"
+                elif ret == 0:
+                    status = "NO_UPDATE"
+                elif ret == 1:
+                    if not update:
+                        status = "AVAILABLE"
+                    else:
+                        # FIXME: this is a bit repeated, was already done by "_update_available"
+                        remote = self._get_remote(conan_reference)
+                        DiskRemover(self._client_cache).remove(conan_reference)
+                        output.info("Retrieving from remote '%s'..." % remote.name)
+                        self._remote_manager.get_recipe(conan_reference, remote)
+                        status = "UPDATED"
+                elif ret == -1:
+                    status = "NEWER_NO_UPDATED" if update else "NEWER"
 
             log_recipe_got_from_local_cache(conan_reference)
             self._recorder.recipe_fetched_from_cache(conan_reference)
@@ -65,23 +69,18 @@ class ConanProxy(object):
 
         return conanfile_path, status
 
-    def _update_available(self, conan_reference):
-        """Returns 0 if the conanfiles are equal, 1 if there is an update and -1 if
-        the local is newer than the remote"""
-        if not conan_reference:
-            return 0
-        export = self._client_cache.export(conan_reference)
-        if os.path.exists(export):
-            read_manifest = FileTreeManifest.load(export)
-            try:  # get_conan_manifest can fail, not in server
-                remote, _ = self._get_remote(conan_reference)
-                upstream_manifest = self._remote_manager.get_conan_manifest(conan_reference, remote)
-                if upstream_manifest != read_manifest:
-                    return 1 if upstream_manifest.time > read_manifest.time else -1
-            except (NotFoundException, NoRemoteAvailable):  # 404
-                pass
-
-        return 0
+    def _update_available(self, reference):
+        export = self._client_cache.export(reference)
+        read_manifest = FileTreeManifest.load(export)
+        try:  # get_conan_manifest can fail, not in server
+            remote, _ = self._get_remote(reference)
+            upstream_manifest = self._remote_manager.get_conan_manifest(reference, remote)
+            if upstream_manifest != read_manifest:
+                return 1 if upstream_manifest.time > read_manifest.time else -1
+            else:
+                return 0
+        except (NotFoundException, NoRemoteAvailable):  # 404
+            pass
 
     def _retrieve_recipe(self, conan_reference, output):
         """ returns the requested conanfile object, retrieving it from
