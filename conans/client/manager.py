@@ -265,12 +265,13 @@ class ConanManager(object):
                                      self._client_cache, self._registry, self._remote_manager)
         return graph_builder
 
-    def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update):
+    def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update, build_mode):
         loader = self.get_loader(profile)
         conanfile = self._load_install_conanfile(loader, reference)
         graph_builder = self._get_graph_builder(loader, remote_proxy)
+        build_mode = BuildMode(build_mode, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
-                                              build_mode=None)
+                                              build_mode=build_mode)
         return deps_graph, graph_builder, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):
@@ -280,12 +281,16 @@ class ConanManager(object):
         result = deps_graph.build_order(build_order)
         return result
 
-    def info_nodes_to_build(self, reference, profile, build_modes, remote_name, check_updates):
+    def info_nodes_to_build(self, reference, profile, build_mode, remote_name, check_updates):
         remote_proxy = self.get_proxy(remote_name=remote_name)
         deps_graph, _, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
-                                                        check_updates=check_updates)
-        counter = Counter(ref.conan.name for ref, _ in nodes)
-        ret = [ref if counter[ref.conan.name] > 1 else str(ref.conan) for ref, _ in nodes]
+                                                        check_updates=check_updates, build_mode=build_mode)
+        ret = []
+        for level in deps_graph.by_levels():
+            for node in level:
+                if node.binary == "BUILD":
+                    if node.conan_ref not in ret:
+                        ret.append(node.conan_ref)
         return ret, self._get_project_reference(reference, conanfile)
 
     def _get_project_reference(self, reference, conanfile):

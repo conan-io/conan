@@ -68,7 +68,7 @@ class CommandOutputer(object):
         return ret
 
     def nodes_to_build(self, nodes_to_build):
-        self.user_io.out.info(", ".join(nodes_to_build))
+        self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def info(self, deps_graph, only, remote, package_filter, show_paths, project_reference):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
