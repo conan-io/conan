@@ -54,13 +54,15 @@ class ConanProxy(object):
                         status = "AVAILABLE"
                     else:
                         # FIXME: this is a bit repeated, was already done by "_update_available"
-                        remote = self._get_remote(conan_reference)
+                        remote, _ = self._get_remote(conan_reference)
                         DiskRemover(self._client_cache).remove(conan_reference)
                         output.info("Retrieving from remote '%s'..." % remote.name)
                         self._remote_manager.get_recipe(conan_reference, remote)
                         status = "UPDATED"
                 elif ret == -1:
                     status = "NEWER_NO_UPDATED" if update else "NEWER"
+                    if status == "NEWER_NO_UPDATED":
+                        output.error("Current conanfile is newer than myremote's one")
 
             log_recipe_got_from_local_cache(conan_reference)
             self._recorder.recipe_fetched_from_cache(conan_reference)

@@ -16,18 +16,17 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         self._registry = registry
 
-    def _get_remote(self, conan_ref, remote_name, allow_none=False):
+    def _get_remote(self, conan_ref, remote_name):
         if remote_name:
             return self._registry.remote(remote_name)
         remote = self._registry.get_ref(conan_ref)
         if remote:
             return remote
-        if allow_none:
-            try:
-                return self._registry.default_remote
-            except NoRemoteAvailable:
-                return None
-        return self._registry.default_remote
+
+        try:
+            return self._registry.default_remote
+        except NoRemoteAvailable:
+            return None
 
     def _get_package_info(self, package_ref, remote):
         try:
@@ -36,22 +35,22 @@ class GraphBinariesAnalyzer(object):
         except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
             return False
 
-    def _check_update(self, package_folder, package_ref, remote):
+    def _check_update(self, package_folder, package_ref, remote, output):
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
         except NotFoundException:
-            self._out.warn("Can't update, no package in remote")
+            output.warn("Can't update, no package in remote")
         except NoRemoteAvailable:
-            self._out.warn("Can't update, no remote defined")
+            output.warn("Can't update, no remote defined")
         else:
             read_manifest = FileTreeManifest.load(package_folder)
             if upstream_manifest != read_manifest:
                 if upstream_manifest.time > read_manifest.time:
-                    self._out.warn("Current package is older than remote upstream one")
+                    output.warn("Current package is older than remote upstream one")
                     return True
                 else:
-                    self._out.warn("Current package is newer than remote upstream one")
+                    output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, remote_name, evaluated_references):
         conan_ref, conanfile = node.conan_ref, node.conanfile
@@ -78,16 +77,19 @@ class GraphBinariesAnalyzer(object):
         if os.path.exists(package_folder):
             if update:
                 remote = self._get_remote(conan_ref, remote_name)
-                if self._check_update(package_folder, package_ref, remote):
-                    node.binary = "UPDATE"
-                    node.remote = remote
-                    if build_mode.outdated:
-                        package_hash = self._get_package_info(package_ref, remote).recipe_hash
+                if remote:
+                    if self._check_update(package_folder, package_ref, remote, output):
+                        node.binary = "UPDATE"
+                        node.remote = remote
+                        if build_mode.outdated:
+                            package_hash = self._get_package_info(package_ref, remote).recipe_hash
+                else:
+                    output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = "INSTALLED"
                 package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
         else:  # Binary does NOT exist locally
-            remote = self._get_remote(conan_ref, remote_name, allow_none=True)
+            remote = self._get_remote(conan_ref, remote_name)
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
