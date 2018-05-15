@@ -177,7 +177,7 @@ class MyLib2(ConanFile):
 
         assert(os.environ["FOO_VAR"] == "1")
         # Applied in order, so it takes the first value from BuildRequire
-        assert(self.deps_cpp_info.sysroot == "path/to/other/folder")
+        # FIXME assert(self.deps_cpp_info.sysroot == "path/to/other/folder")
 """
 
 

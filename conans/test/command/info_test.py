@@ -268,14 +268,16 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Updates: You have the latest version (None)
+                Recipe: NO_REMOTE
+                Updates: MISSING
                 Required by:
                     Hello1/0.1@lasote/stable
             Hello1/0.1@lasote/stable
                 Remote: None
                 URL: myurl
                 License: MIT
-                Updates: You have the latest version (None)
+                Recipe: NO_REMOTE
+                Updates: MISSING
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:
@@ -303,6 +305,7 @@ class MyTest(ConanFile):
                 URL: myurl
             Hello1/0.1@lasote/stable
                 URL: myurl""")
+
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
         self.client.run("info . -u --only=url --only=license")
         expected_output = textwrap.dedent(
