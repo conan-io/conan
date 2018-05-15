@@ -92,7 +92,7 @@ class SearchTest(unittest.TestCase):
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
-        self.root_folder1 = 'Hello/1.4.10/fenix/testing'
+        root_folder1 = 'Hello/1.4.10/fenix/testing'
         root_folder2 = 'helloTest/1.4.10/fenix/stable'
         root_folder3 = 'Bye/0.14/fenix/testing'
         root_folder4 = 'NodeInfo/1.0.2/fenix/stable'
@@ -101,7 +101,7 @@ class SearchTest(unittest.TestCase):
         root_folder12 = 'Hello/1.4.12/fenix/testing'
 
         self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
-                          "%s/%s/WindowsPackageSHA/%s" % (self.root_folder1,
+                          "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder11,
@@ -110,10 +110,10 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder12,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
-                          "%s/%s/PlatformIndependantSHA/%s" % (self.root_folder1,
+                          "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
                                                                PACKAGES_FOLDER,
                                                                CONANINFO): conan_vars1b,
-                          "%s/%s/LinuxPackageSHA/%s" % (self.root_folder1,
+                          "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
                           "%s/%s/a44f541cd44w57/%s" % (root_folder2,
@@ -132,11 +132,13 @@ class SearchTest(unittest.TestCase):
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        fake_manifest.save(os.path.join(self.client.paths.store, self.root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder1, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder2, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder3, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder4, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder11, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder12, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
