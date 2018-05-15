@@ -170,8 +170,10 @@ class Printer(object):
                  -1: ("The local file is newer than remote's one (%s)" % remote_name,
                       Color.BRIGHT_RED)
                 }
-                self._out.writeln("    Updates: %s" % update_messages[update][0],
-                                  update_messages[update][1])
+                #self._out.writeln("    Updates: %s" % update_messages[update][0],
+                #                  update_messages[update][1])
+                self._out.writeln("    Recipe: %s" % node.recipe)
+                self._out.writeln("    Updates: %s" % node.binary)
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),

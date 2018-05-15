@@ -166,14 +166,18 @@ class MyLib2(ConanFile):
         assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert(os.environ["ENV_VAR_REQ2"] == "ENV_VALUE_FROM_BUILD_REQUIRE2")
 
-        tmp = "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2"
+        tmp = os.pathsep.join(["ENV_VALUE_MULTI_FROM_BUILD_REQUIRE",
+                               "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2",
+                               "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT"])
 
         assert(os.environ.get("ENV_VAR_MULTI", None) == tmp)
-        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE2", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",  "A_C_FLAG_FROM_BUILD_REQUIRE"])
+        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE2",
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE"])
 
         assert(os.environ["FOO_VAR"] == "1")
-        assert(self.deps_cpp_info.sysroot == "path/to/folder") # Applied in order, so it takes the first value from BuildRequire
-
+        # Applied in order, so it takes the first value from BuildRequire
+        assert(self.deps_cpp_info.sysroot == "path/to/other/folder")
 """
 
 

@@ -308,7 +308,7 @@ class ConanManager(object):
         """
         remote_proxy = self.get_proxy(remote_name=remote_name)
         deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy,
-                                                     update=False, check_updates=check_updates,
+                                                     update=True, check_updates=check_updates,
                                                      build_mode=build_mode)
 
         return deps_graph, self._get_project_reference(reference, conanfile)
