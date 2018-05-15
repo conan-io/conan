@@ -684,18 +684,9 @@ class ConanAPIV1(object):
             exc.info = recorder.get_info()
             raise
 
-        print("REFERENCES", references)
-
-        if isinstance(references, dict):
-            print("REFERENCES DICT", references)
-            for remote, refs in references.items():
-                for ref in refs:
-                    print("REF, REMOTE", ref, remote)
-                    recorder.add_recipe(str(ref), None, str(remote), with_packages=False)
-        else:
-            for ref in references:
-                recorder.add_recipe(str(ref), None, None, with_packages=False)
-        print("RETURN search_recipes():", recorder.get_info())
+        for remote, refs in references.items():
+            for ref in refs:
+                recorder.add_recipe(str(remote), str(ref[0]), str(ref[1]), with_packages=False)
         return recorder.get_info()
 
     @api_method
@@ -704,22 +695,23 @@ class ConanAPIV1(object):
         search = Search(self._client_cache, self._remote_manager, self._registry)
 
         try:
-            ordered_packages, reference, recipe_hash = search.search_packages(reference, remote,
-                                                                              query=query,
-                                                                              outdated=outdated)
+            ordered_packages, ref, recipe_hash = search.search_packages(reference, remote,
+                                                                        query=query,
+                                                                        outdated=outdated)
         except ConanException as exc:
             recorder.error = True
             exc.info = recorder.get_info()
             raise
 
-        recorder.add_recipe(str(reference), recipe_hash, str(remote))
-        for package_id, properties in ordered_packages.items():
-            package_recipe_hash = properties.get("recipe_hash", None)
-            recorder.add_package(str(reference), package_id, properties.get("options", []),
-                                 properties.get("settings", []),
-                                 properties.get("full_requires", []),
-                                 package_recipe_hash,
-                                 recipe_hash != package_recipe_hash)
+        if ordered_packages:
+            recorder.add_recipe(str(remote), str(ref), recipe_hash)
+            for package_id, properties in ordered_packages.items():
+                package_recipe_hash = properties.get("recipe_hash", None)
+                recorder.add_package(str(remote), str(reference), package_id,
+                                     properties.get("options", []),
+                                     properties.get("settings", []),
+                                     properties.get("full_requires", []),
+                                     recipe_hash != package_recipe_hash)
         return recorder.get_info()
 
     @api_method

@@ -109,6 +109,8 @@ class DiskSearchManager(object):
                                settings: {os: Windows}}}
         param conan_ref: ConanFileReference object
         """
+        if not self.search_recipes(reference):
+            raise ConanException("Recipe not found: %s" % str(reference))
         infos = self._get_local_infos_min(reference)
         return filter_packages(query, infos)
 

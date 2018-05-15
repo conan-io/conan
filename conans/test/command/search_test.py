@@ -435,8 +435,9 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def search_with_no_local_test(self):
         client = TestClient()
-        client.run("search nonexist/1.0@lasote/stable")
-        self.assertIn("There are no packages", self.client.user_io.out)
+        error = client.run("search nonexist/1.0@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Recipe not found: nonexist/1.0@lasote/stable", client.out)
 
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589

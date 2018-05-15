@@ -167,56 +167,47 @@ class Printer(object):
                     for d in depends:
                         self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_search_recipes(self, references, pattern, raw):
+    def print_search_recipes(self, search_info, pattern, raw, all_remotes):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
-        if not references and not raw:
+        if not search_info and not raw:
             warn_msg = "There are no packages"
             pattern_msg = " matching the '%s' pattern" % pattern
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
-        remotes = []
-        for ref in references:
-            print("remote in recipe", ref["recipe"]["remote"])
-            if ref["recipe"]["remote"] not in remotes:
-                remotes.append(ref["recipe"]["remote"])
-
         if not raw:
             self._out.info("Existing package recipes:\n")
-            if remotes != [None]:
-                for remote in sorted(remotes):
-                    self._out.highlight("Remote '%s':" % str(remote))
-                    for conan_ref in references:
-                        if conan_ref["recipe"]["remote"] == remote:
-                            self._print_colored_line(conan_ref["recipe"]["id"], indent=0)
-            else:
-                for conan_ref in references:
-                    self._print_colored_line(str(conan_ref["recipe"]["id"]), indent=0)
+            for remote_info in search_info:
+                if all_remotes:
+                    self._out.highlight("Remote '%s':" % str(remote_info["remote"]))
+                for conan_item in remote_info["items"]:
+                    self._print_colored_line(str(conan_item["recipe"]["id"]), indent=0)
         else:
-            if remotes != [None]:
-                for remote in remotes:
-                    self._out.writeln("Remote '%s':" % str(remote))
-                    for conan_ref in references:
-                        if conan_ref["recipe"]["remote"] == remote:
-                            self._out.writeln(conan_ref["recipe"]["id"])
-            else:
-                self._out.writeln("\n".join([str(ref["recipe"]["id"]) for ref in references]))
+            for remote_info in search_info:
+                if all_remotes:
+                    self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
+                for conan_item in remote_info["items"]:
+                    self._out.writeln(conan_item["recipe"]["id"])
 
-    def print_search_packages(self, packages, reference, recipe_hash, packages_query):
-        if not packages:
+    def print_search_packages(self, search_info, reference, packages_query):
+        if not search_info:
             if packages_query:
                 warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
                             (str(reference), packages_query))
             else:
                 warn_msg = "There are no packages for reference '%s'" % str(reference)
-
-            if recipe_hash:
-                warn_msg += ", but package recipe found."
-
             self._out.info(warn_msg)
             return
+        elif not search_info[0]["items"][0]["packages"] and search_info[0]["items"][0]["recipe"]:
+            warn_msg = "There are no packages for reference '%s', but package recipe found." %\
+                       str(reference)
+            self._out.info(warn_msg)
+            return
+        # Only one repository is used, local cache (None) or a remote, so we use only first element
+        reference = search_info[0]["items"][0]["recipe"]["id"]
+        packages = search_info[0]["items"][0]["packages"]
 
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         # Each package
@@ -236,7 +227,7 @@ class Printer(object):
                             self._print_colored_line(key, indent=3)
             # Always compare outdated with local recipe, simplification,
             # if a remote check is needed install recipe first
-            if recipe_hash:
+            if "outdated" in package:
                 self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
             self._out.writeln("")
 

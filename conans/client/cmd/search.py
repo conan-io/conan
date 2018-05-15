@@ -10,23 +10,36 @@ class Search(object):
 
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         ignorecase = not case_sensitive
-        if not remote:
-            return DiskSearchManager(self._client_cache).search_recipes(pattern, ignorecase)
 
         references = {}
+        if not remote:
+            references[None] = []
+            searcher = DiskSearchManager(self._client_cache)
+            refs = searcher.search_recipes(pattern, ignorecase)
+            for ref in refs:
+                references[None].append((ref, self._get_recipe_hash_local(ref)))
+            return references
+
         if remote == 'all':
             remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
                 for remote in remotes:
-                    result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                    if result:
-                        references[remote.name] = result
+                    refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+                    if refs:
+                        references[remote.name] = []
+                        for ref in refs:
+                            recipe_hash = self._get_recipe_hash_remote(ref, remote)
+                            references[remote.name].append((ref, recipe_hash))
                 return references
         # single remote
         remote = self._registry.remote(remote)
-        references[remote] = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        references[remote.name] = []
+        refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        for ref in refs:
+            recipe_hash = self._get_recipe_hash_remote(ref, remote)
+            references[remote.name].append((ref, recipe_hash))
         return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
@@ -43,16 +56,25 @@ class Search(object):
             remote = self._registry.remote(remote_name)
             packages_props = self._remote_manager.search_packages(remote, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            manifest = self._remote_manager.get_conan_manifest(reference, remote)
-            recipe_hash = manifest.summary_hash
+            recipe_hash = self._get_recipe_hash_remote(reference, remote)
         else:
             searcher = DiskSearchManager(self._client_cache)
             packages_props = searcher.search_packages(reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            try:
-                recipe_hash = self._client_cache.load_manifest(reference).summary_hash
-            except IOError:  # It could not exist in local
-                recipe_hash = None
+            recipe_hash = self._get_recipe_hash_local(reference)
         if outdated and recipe_hash:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
         return ordered_packages, reference, recipe_hash
+
+    def _get_recipe_hash_local(self, reference):
+        try:
+            recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+        except IOError:  # It could not exist in local
+            recipe_hash = None
+        return recipe_hash
+
+    def _get_recipe_hash_remote(self, reference, remote):
+        manifest = self._remote_manager.get_conan_manifest(reference, remote)
+        recipe_hash = manifest.summary_hash
+        return recipe_hash
+

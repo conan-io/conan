@@ -3,7 +3,9 @@ from conans.client.installer import build_id
 from collections import defaultdict, namedtuple
 
 
-def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
+def html_binary_graph(search_info, table_filename):
+    reference = search_info[0]["items"][0]["recipe"]["id"]
+    ordered_packages = search_info[0]["items"][0]["packages"]
     binary = namedtuple("Binary", "ID outdated")
     columns = set()
     table = defaultdict(dict)
@@ -32,11 +34,10 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
 
         column_name = column_name or "NO options"
         columns.add(column_name)
-        package_recipe_hash = package["recipe_hash"]
         # Always compare outdated with local recipe, simplification,
         # if a remote check is needed install recipe first
-        if recipe_hash:
-            outdated = (recipe_hash != package_recipe_hash)
+        if "outdated" in package:
+            outdated = package["outdated"]
         else:
             outdated = None
         table[row_name][column_name] = binary(package_id, outdated)
