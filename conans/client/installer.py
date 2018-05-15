@@ -262,8 +262,6 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_id = conan_file.info.package_id()
                 package_ref = PackageReference(conan_ref, package_id)
-                if node.binary == "SKIP":  # Privates not necessary
-                    continue
                 if node.binary == "MISSING":
                     raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
 
@@ -271,6 +269,8 @@ class ConanInstaller(object):
                                                             conan_file.short_paths)
 
                 self._propagate_info(node, inverse_levels, deps_graph)
+                if node.binary == "SKIP":  # Privates not necessary
+                    continue
                 with self._client_cache.package_lock(package_ref):
                     if package_ref not in processed_package_references:
                         processed_package_references.add(package_ref)
@@ -345,7 +345,7 @@ class ConanInstaller(object):
         node_order = []
         for level in levels:
             for n in closure.values():
-                if n in level:
+                if n in level and n.binary != "SKIP":
                     node_order.append(n)
         conan_file = node.conanfile
         for n in node_order:
