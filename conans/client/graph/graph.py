@@ -154,7 +154,7 @@ class DepsGraph(object):
         open_nodes = nodes_by_level[1]
         return open_nodes
 
-    def closure(self, node):
+    def closure(self, node, private=False):
         closure = OrderedDict()
         current = node.neighbors()
         while current:
@@ -162,7 +162,8 @@ class DepsGraph(object):
             for n in current:
                 closure[n.conan_ref.name] = n
             for n in current:
-                for neigh in n.public_neighbors():
+                neighs = n.neighbors() if private else n.public_neighbors()
+                for neigh in neighs:
                     if neigh not in new_current and neigh.conan_ref.name not in closure:
                         new_current.append(neigh)
             current = new_current

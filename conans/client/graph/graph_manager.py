@@ -58,15 +58,6 @@ class GraphManager(object):
             if node.binary != "BUILD" and node.conan_ref:
                 continue
 
-            privates = [r.conan_reference for r in node.conanfile.requires.values() if r.private]
-            if privates:
-                node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = self._loader.load_virtual(privates, scope_options=False,
-                                                    build_requires_options=node.conanfile.build_requires_options)
-                private_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                remote_name, profile_build_requires)
-                graph.add_graph(node, private_graph)
-
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.conan_ref or "")
             new_profile_build_requires = OrderedDict()

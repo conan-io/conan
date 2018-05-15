@@ -79,7 +79,7 @@ class DepsGraphBuilder(object):
 
         # Expand each one of the current requirements
         for name, require in node.conanfile.requires.items():
-            if require.override or require.private:
+            if require.override:
                 continue
             if require.conan_reference in loop_ancestors:
                 raise ConanException("Loop detected: %s"
@@ -87,7 +87,9 @@ class DepsGraphBuilder(object):
             new_loop_ancestors = loop_ancestors[:]  # Copy for propagating
             new_loop_ancestors.append(require.conan_reference)
             previous = public_deps.get(name)
-            if not previous:  # new node, must be added and expanded
+            if require.private or not previous:  # new node, must be added and expanded
+                if require.private:  # Make sure the subgraph is truly private
+                    public_deps = {}
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
                                                  aliased, check_updates, update)
                 # RECURSION!
@@ -209,6 +211,7 @@ class DepsGraphBuilder(object):
         new_node = Node(requirement.conan_reference, dep_conanfile)
         new_node.recipe = update_status
         dep_graph.add_node(new_node)
-        dep_graph.add_edge(current_node, new_node)
-        public_deps[name_req] = new_node, None
+        if not requirement.private:
+            public_deps[name_req] = new_node, None
+        dep_graph.add_edge(current_node, new_node, requirement.private)
         return new_node

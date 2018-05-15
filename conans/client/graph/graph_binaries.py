@@ -53,6 +53,8 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, remote_name, evaluated_references):
+        assert node.binary is None
+
         conan_ref, conanfile = node.conan_ref, node.conanfile
         package_id = conanfile.info.package_id()
         package_ref = PackageReference(conan_ref, package_id)
@@ -64,9 +66,14 @@ class GraphBinariesAnalyzer(object):
             return
         evaluated_references[package_ref] = node
 
+        output = ScopedOutput(str(conan_ref), self._out)
+        if build_mode.forced(conanfile, conan_ref):
+            output.warn('Forced build from source')
+            node.binary = "BUILD"
+            return
+
         package_folder = self._client_cache.package(package_ref,
                                                     short_paths=conanfile.short_paths)
-        output = ScopedOutput(str(conan_ref), self._out)
 
         # Check if dirty, to remove it
         with self._client_cache.package_lock(package_ref):
@@ -118,20 +125,16 @@ class GraphBinariesAnalyzer(object):
             conan_ref, conanfile = node.conan_ref, node.conanfile
             if not conan_ref:
                 continue
-            output = ScopedOutput(str(conan_ref), self._out)
-            if build_mode.forced(conanfile, conan_ref):
-                output.warn('Forced build from source')
-                node.binary = "BUILD"
+
+            if [r for r in conanfile.requires.values() if r.private]:
+                self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
+                if node.binary != "BUILD":
+                    closure = deps_graph.closure(node, private=True)
+                    for node in closure.values():
+                        node.binary = "SKIP"
+
+        for node in deps_graph.nodes:
+            conan_ref, conanfile = node.conan_ref, node.conanfile
+            if not conan_ref or node.binary:
                 continue
-
             self._evaluate_node(node, build_mode, update, remote_name, evaluated_references)
-
-    def nodes_to_build(self, deps_graph):
-        """Called from info command when a build policy is used in build_order parameter"""
-        # Get the nodes in order and if we have to build them
-        nodes_by_level = deps_graph.by_levels()
-        nodes_by_level.pop()  # Remove latest one, consumer node with conan_ref=None
-        skip_private_nodes = self._compute_private_nodes(deps_graph)
-        nodes = self._get_nodes(nodes_by_level, skip_private_nodes)
-        return [(PackageReference(node.conan_ref, package_id), node.conanfile)
-                for node, package_id, build in nodes if build]
