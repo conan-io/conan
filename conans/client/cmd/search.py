@@ -18,21 +18,21 @@ class Search(object):
             refs = searcher.search_recipes(pattern, ignorecase)
             for ref in refs:
                 references[None].append((ref, self._get_recipe_hash_local(ref)))
-            return references
+            return OrderedDict(references)
 
         if remote == 'all':
             remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
-                for remote in sorted(remotes):
+                for remote in remotes:
                     refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if refs:
                         references[remote.name] = []
-                        for ref in sorted(refs):
+                        for ref in refs:
                             recipe_hash = self._get_recipe_hash_remote(ref, remote)
                             references[remote.name].append((ref, recipe_hash))
-                return references
+                return OrderedDict(references)
         # single remote
         remote = self._registry.remote(remote)
         references[remote.name] = []
@@ -40,7 +40,7 @@ class Search(object):
         for ref in refs:
             recipe_hash = self._get_recipe_hash_remote(ref, remote)
             references[remote.name].append((ref, recipe_hash))
-        return references
+        return OrderedDict(references)
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
