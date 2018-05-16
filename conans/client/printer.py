@@ -167,7 +167,7 @@ class Printer(object):
                     for d in depends:
                         self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_search_recipes(self, search_info, pattern, raw, all_remotes):
+    def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
@@ -180,13 +180,13 @@ class Printer(object):
         if not raw:
             self._out.info("Existing package recipes:\n")
             for remote_info in search_info:
-                if all_remotes:
+                if all_remotes_search:
                     self._out.highlight("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
                     self._print_colored_line(str(conan_item["recipe"]["id"]), indent=0)
         else:
             for remote_info in search_info:
-                if all_remotes:
+                if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
                     self._out.writeln(conan_item["recipe"]["id"])

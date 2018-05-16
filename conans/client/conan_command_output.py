@@ -91,9 +91,9 @@ class CommandOutputer(object):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
 
-    def print_search_references(self, search_info, pattern, raw, all_remotes):
+    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self.user_io.out)
-        printer.print_search_recipes(search_info, pattern, raw, all_remotes)
+        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table):
         if table:
