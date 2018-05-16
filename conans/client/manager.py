@@ -286,10 +286,8 @@ class ConanManager(object):
         deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
                                                      check_updates=check_updates, build_mode=build_mode)
         ret = []
-        print "_____________________"
         for level in deps_graph.by_levels():
             for node in level:
-                print "NODE ", node.conan_ref, node.binary
                 if node.binary == "BUILD":
                     if node.conan_ref not in ret:
                         ret.append(node.conan_ref)
