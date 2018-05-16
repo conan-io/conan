@@ -192,17 +192,13 @@ class Printer(object):
                     self._out.writeln(conan_item["recipe"]["id"])
 
     def print_search_packages(self, search_info, reference, packages_query):
-        if not search_info:
+        if not search_info[0]["items"][0]["packages"]:
             if packages_query:
                 warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
                             (str(reference), packages_query))
-            else:
-                warn_msg = "There are no packages for reference '%s'" % str(reference)
-            self._out.info(warn_msg)
-            return
-        elif not search_info[0]["items"][0]["packages"] and search_info[0]["items"][0]["recipe"]:
-            warn_msg = "There are no packages for reference '%s', but package recipe found." %\
-                       str(reference)
+            elif search_info[0]["items"][0]["recipe"]:
+                warn_msg = "There are no packages for reference '%s', but package recipe found." % \
+                           str(reference)
             self._out.info(warn_msg)
             return
         # Only one repository is used, local cache (None) or a remote, so we use only first element
