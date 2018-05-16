@@ -858,7 +858,8 @@ class Command(object):
                                                   case_sensitive=args.case_sensitive)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
                 remote_registry = RemoteRegistry(self._client_cache.registry, None)
-                all_remotes_search = "all" not in (r.name for r in remote_registry.remotes)
+                all_remotes_search = ("all" not in (r.name for r in remote_registry.remotes) and
+                                      args.remote == "all")
 
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
                                                        args.raw, all_remotes_search)
