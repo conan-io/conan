@@ -25,11 +25,11 @@ class Search(object):
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
-                for remote in remotes:
+                for remote in sorted(remotes):
                     refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if refs:
                         references[remote.name] = []
-                        for ref in refs:
+                        for ref in sorted(refs):
                             recipe_hash = self._get_recipe_hash_remote(ref, remote)
                             references[remote.name].append((ref, recipe_hash))
                 return references
