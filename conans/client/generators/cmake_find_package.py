@@ -25,7 +25,6 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST}})
                  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
     if(CONAN_FOUND_LIBRARY)
         if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-            MESSAGE("OLD CMAKE STUFF")
             list(APPEND {name}_LIBRARIES ${{CONAN_FOUND_LIBRARY}})
         else() # Create a micro-target for each lib/a found
             set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}})
