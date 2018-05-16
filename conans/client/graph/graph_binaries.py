@@ -110,13 +110,16 @@ class GraphBinariesAnalyzer(object):
                 else:
                     node.binary = "MISSING"
 
-        if build_mode.outdated and node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
-            local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
-            if local_recipe_hash != package_hash:
-                output.info("Outdated package!")
+        if build_mode.outdated:
+            if node.binary == "MISSING":
                 node.binary = "BUILD"
-            else:
-                output.info("Package is up to date")
+            elif node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
+                local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
+                if local_recipe_hash != package_hash:
+                    output.info("Outdated package!")
+                    node.binary = "BUILD"
+                else:
+                    output.info("Package is up to date")
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
 
