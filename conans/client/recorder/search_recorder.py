@@ -34,7 +34,7 @@ class SearchRecoder(object):
         recipe = _SearchRecipe(reference, recipe_hash)
         recipe.with_packages = with_packages
         if remote not in self._info:
-            self._info[remote] = {}
+            self._info[remote] = OrderedDict()
         self._info[remote][reference] = {"recipe": recipe, "packages": []}
 
     def add_package(self, remote, reference, package_id, options, settings, requires, outdated):
@@ -45,7 +45,7 @@ class SearchRecoder(object):
     def get_info(self):
         info = {"error": self.error, self.keyword: []}
 
-        for remote, recipe_pacakges in self._info.items():
+        for remote, recipe_pacakges in sorted(self._info.items()):
             remote_info = {"remote": remote, "items": []}
             for reference, item in recipe_pacakges.items():
                 recipe_info = item["recipe"].to_dict()

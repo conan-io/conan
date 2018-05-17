@@ -18,7 +18,7 @@ class Search(object):
             refs = searcher.search_recipes(pattern, ignorecase)
             for ref in refs:
                 references[None].append((ref, self._get_recipe_hash_local(ref)))
-            return OrderedDict(references)
+            return references
 
         if remote == 'all':
             remotes = self._registry.remotes
