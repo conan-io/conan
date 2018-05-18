@@ -45,27 +45,3 @@ class CustomEnvPath():
 
     def __exit__(self, _type, value, traceback):
         os.environ = self._original_env
-
-
-# def which(program):
-#     path_found = []
-#
-#     def is_exe(fpath):
-#         return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-#
-#     fpath, _ = os.path.split(program)
-#     if fpath:
-#         if is_exe(program):
-#             path_found.append(fpath)
-#     else:
-#         _, ext = os.path.splitext(program)
-#         if ext:
-#             file_to_find = program
-#         else:
-#             file_to_find = "%s.*" % program
-#         for path in os.environ["PATH"].split(os.pathsep):
-#             for _file in glob.glob(os.path.join(path, file_to_find)):
-#                 if is_exe(os.path.join(path, _file)):
-#                     path_found.append(path)
-#
-#     return path_found
