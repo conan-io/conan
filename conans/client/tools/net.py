@@ -22,10 +22,9 @@ def get(url, md5='', sha1='', sha256='', gpg_signature='', gpg_pubkey='', destin
         check_sha1(filename, sha1)
     if sha256:
         check_sha256(filename, sha256)
-    
+
     if gpg_signature and gpg_pubkey:
-        verify_gpg_sig(filename,gpg_pubkey,gpg_signature)
-    
+        verify_gpg_sig(filename, gpg_pubkey, gpg_signature)
     elif gpg_signature or gpg_pubkey:
         raise ConanException("must provide both gpg_signature and gpg_pubkey")
 

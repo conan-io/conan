@@ -1,5 +1,4 @@
 import tempfile
-import gnupg
 import platform
 from conans.errors import ConanException
 import os
@@ -8,6 +7,7 @@ _global_output = None
 
 
 def _get_gpg():
+    import gnupg
     try:
         _GPG_HOME_DIR = tempfile.mkdtemp(suffix="_conan_gpg")
         gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
@@ -31,12 +31,16 @@ def _get_keys(gpg, pubkey, keyserver):
         import_key_result = gpg.import_keys(pubkey)
 
     # check if key was imported correctly
-    if "problem" in import_key_result.results[0]:
-        raise ConanException("failed to import public key from file: %s "
-                             % import_key_result.problem_reason[import_key_result.results[0]["problem"]])
+    try:
+        # This was failing because results was empty (in windows). It might depend on the gpg version
+        if "problem" in import_key_result.results[0]:
+            raise ConanException("failed to import public key from file: %s "
+                                 % import_key_result.problem_reason[import_key_result.results[0]["problem"]])
 
-    fingerprint = import_key_result.fingerprints[0]
-    return fingerprint
+        fingerprint = import_key_result.fingerprints[0]
+        return fingerprint
+    except Exception as e:
+        raise ConanException("failed to import public key from file: %s " % str(e))
 
 
 def _verify(gpg, sig_file, data_file):
