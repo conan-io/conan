@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import mock
 import os
 import platform
 import unittest
@@ -624,6 +625,40 @@ class MyConan(ConanFile):
         else:
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
+
+    def vcvars_dict_test(self):
+        # https://github.com/conan-io/conan/issues/2904
+        output_with_newline_and_spaces = """__BEGINS__
+     PROCESSOR_ARCHITECTURE=AMD64
+
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
+
+
+ PROCESSOR_LEVEL=6 
+
+PROCESSOR_REVISION=9e09    
+
+                         
+set nl=^
+
+ProgramFiles(x86)=C:\Program Files (x86)
+       
+"""
+        def vcvars_command_mock(settings, arch, compiler_version, force):  # @UnusedVariable
+            return "unused command"
+
+        def subprocess_check_output_mock(cmd, shell):
+            self.assertIn("unused command", cmd)
+            return output_with_newline_and_spaces
+
+        with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
+            with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
+                vars = tools.vcvars_dict(None)
+                self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
+                self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
+                self.assertEqual(vars["PROCESSOR_REVISION"], "9e09")
+                self.assertEqual(vars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
