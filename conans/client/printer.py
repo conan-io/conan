@@ -48,27 +48,6 @@ class Printer(object):
     def __init__(self, out):
         self._out = out
 
-    def print_graph(self, deps_graph, registry):
-        """ Simple pretty printing of a deps graph, can be improved
-        with options, info like licenses, etc
-        """
-        self._out.writeln("Requirements", Color.BRIGHT_YELLOW)
-        for node in sorted(deps_graph.nodes):
-            ref = node.conan_ref
-            if not ref:
-                continue
-            remote = registry.get_ref(ref)
-            from_text = "from local cache" if not remote else "from '%s'" % remote.name
-            self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
-        self._out.writeln("Packages", Color.BRIGHT_YELLOW)
-        for node in sorted(deps_graph.nodes):
-            ref, conanfile = node.conan_ref, node.conanfile
-            if not ref:
-                continue
-            ref = PackageReference(ref, conanfile.info.package_id())
-            self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
-        self._out.writeln("")
-
     def _print_paths(self, ref, conan, path_resolver, show):
         if isinstance(ref, ConanFileReference):
             if show("export_folder"):

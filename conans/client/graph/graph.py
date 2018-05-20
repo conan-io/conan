@@ -13,6 +13,8 @@ class Node(object):
         self.binary = None
         self.recipe = None
         self.remote = None
+        self.build_require = False
+        self.private = False
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -92,9 +94,11 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
 
-    def add_graph(self, node, graph):
+    def add_graph(self, node, graph, build_require=False, private=False):
         for n in graph.nodes:
             if n != graph.root:
+                n.build_require = build_require
+                n.private = private
                 self.add_node(n)
 
         for e in graph.root.dependencies:

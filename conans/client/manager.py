@@ -28,6 +28,7 @@ from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.download import download_binaries
 from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.printer import print_graph
 
 
 class BuildMode(object):
@@ -362,7 +363,8 @@ class ConanManager(object):
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.highlight("Installing package")
-        Printer(self._user_io.out).print_graph(deps_graph, self._registry)
+        print_graph(deps_graph, self._user_io.out)
+        build_mode.report_matches()
 
         try:
             if cross_building(loader._settings):
@@ -371,14 +373,6 @@ class ConanManager(object):
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
-
-        # PRINT THE node.binary of the graph
-        by_level = deps_graph.by_levels()
-        for level in by_level:
-            for node in level:
-                if node.conan_ref:
-                    self._user_io.out.info("Binary %s: %s - %s" % (node.conan_ref, node.binary, node.remote))
-        build_mode.report_matches()
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder)

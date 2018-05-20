@@ -78,7 +78,7 @@ class GraphManager(object):
                                                     build_requires_options=node.conanfile.build_requires_options)
                 build_requires_package_graph = self.load_graph(virtual, check_updates, update, build_mode,
                                                                remote_name, profile_build_requires)
-                graph.add_graph(node, build_requires_package_graph)
+                graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
@@ -87,7 +87,7 @@ class GraphManager(object):
 
                 build_requires_profile_graph = self.load_graph(virtual, check_updates, update, build_mode,
                                                                remote_name, new_profile_build_requires)
-                graph.add_graph(node, build_requires_profile_graph)
+                graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
                    profile_build_requires=None):

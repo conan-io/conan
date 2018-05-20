@@ -65,6 +65,7 @@ Boost/1.0@user/channel
 """
         client.save({"conanfile.txt": other}, clean_first=True)
         client.run("install .")
+        print client.out
         # FIXME: self.assertIn("PROJECT: Build requires: [Boost/1.0@user/channel]", client.out)
         conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
         self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
