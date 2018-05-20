@@ -21,7 +21,7 @@ def satisfying(list_versions, versionexpr, output):
     return candidates.get(result)
 
 
-class RequireResolver(object):
+class RangeResolver(object):
 
     def __init__(self, output, client_cache, remote_search):
         self._output = output

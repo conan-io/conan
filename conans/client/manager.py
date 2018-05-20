@@ -17,7 +17,7 @@ from conans.client.output import ScopedOutput, Color
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
-from conans.client.graph.require_resolver import RequireResolver
+from conans.client.graph.range_resolver import RangeResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -256,7 +256,7 @@ class ConanManager(object):
         conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, remote_proxy):
-        resolver = RequireResolver(self._user_io.out, self._client_cache, remote_proxy)
+        resolver = RangeResolver(self._user_io.out, self._client_cache, remote_proxy)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 

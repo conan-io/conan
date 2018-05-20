@@ -51,7 +51,7 @@ class DepsGraphBuilder(object):
     def _resolve_deps(self, node, aliased, update):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
-        # RequireResolver are also done in new_reqs, and then propagated!
+        # RangeResolver are also done in new_reqs, and then propagated!
         conanfile, conanref = node.conanfile, node.conan_ref
         for _, require in conanfile.requires.items():
             self._resolver.resolve(require, conanref, update)
