@@ -37,8 +37,9 @@ class ServerLauncher(object):
         file_manager = get_file_manager(server_config, updown_auth_manager=updown_auth_manager)
 
         server_capabilities = SERVER_CAPABILITIES
+        paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, file_manager,
+                              authorizer, authenticator, file_manager, paths,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
                               server_capabilities)
 

@@ -12,6 +12,7 @@ from conans.server.migrate import migrate_and_get_server_config
 import time
 import shutil
 from conans import SERVER_CAPABILITIES
+from conans.paths import SimplePaths
 
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
@@ -73,9 +74,9 @@ class TestServerLauncher(object):
 
         logger.debug("Storage path: %s" % self.storage_folder)
         self.port = TestServerLauncher.port
-
+        paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.file_manager,
+                              authorizer, authenticator, self.file_manager, paths,
                               server_version, min_client_compatible_version,
                               server_capabilities)
         for plugin in plugins:
