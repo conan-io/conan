@@ -101,7 +101,7 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager,
                  settings_preprocessor, recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -109,7 +109,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
@@ -257,8 +256,7 @@ class ConanManager(object):
         conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, remote_proxy):
-        local_search = self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        resolver = RequireResolver(self._user_io.out, self._client_cache, remote_proxy)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 
