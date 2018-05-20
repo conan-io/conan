@@ -1,6 +1,5 @@
 import fnmatch
 import os
-from collections import Counter
 
 from conans.client import packager
 from conans.client.client_cache import ClientCache
@@ -12,10 +11,9 @@ from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
-from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
-from conans.client.graph.require_resolver import RequireResolver
+from conans.client.graph.range_resolver import RangeResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -101,7 +99,7 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager,
                  settings_preprocessor, recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -109,7 +107,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
@@ -260,8 +257,7 @@ class ConanManager(object):
         conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, remote_proxy):
-        local_search = self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        resolver = RangeResolver(self._user_io.out, self._client_cache, remote_proxy)
         graph_builder = GraphManager(remote_proxy, self._user_io.out, loader, resolver,
                                      self._client_cache, self._registry, self._remote_manager)
         return graph_builder

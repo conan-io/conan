@@ -1,4 +1,5 @@
 import os
+import shutil
 from os.path import join, normpath
 from collections import OrderedDict
 
@@ -15,7 +16,6 @@ from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case,\
     CONAN_MANIFEST
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
-import shutil
 from conans.unicode import get_cwd
 
 

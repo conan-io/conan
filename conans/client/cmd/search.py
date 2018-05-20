@@ -1,4 +1,5 @@
-from conans.search.search import DiskSearchManager, filter_outdated
+from conans.search.search import filter_outdated, search_recipes,\
+    search_packages
 from collections import OrderedDict
 
 
@@ -11,7 +12,7 @@ class Search(object):
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         ignorecase = not case_sensitive
         if not remote:
-            return DiskSearchManager(self._client_cache).search_recipes(pattern, ignorecase)
+            return search_recipes(self._client_cache, pattern, ignorecase)
 
         if remote == 'all':
             remotes = self._registry.remotes
@@ -45,8 +46,7 @@ class Search(object):
             manifest = self._remote_manager.get_conan_manifest(reference, remote)
             recipe_hash = manifest.summary_hash
         else:
-            searcher = DiskSearchManager(self._client_cache)
-            packages_props = searcher.search_packages(reference, query)
+            packages_props = search_packages(self._client_cache, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
             try:
                 recipe_hash = self._client_cache.load_manifest(reference).summary_hash

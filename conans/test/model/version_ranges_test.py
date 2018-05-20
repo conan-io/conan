@@ -11,7 +11,7 @@ from conans.model.settings import Settings
 from conans.model.requires import Requirements
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
-from conans.client.graph.require_resolver import RequireResolver, satisfying
+from conans.client.graph.range_resolver import RangeResolver, satisfying
 import re
 from parameterized import parameterized
 from conans.model.profile import Profile
@@ -172,7 +172,7 @@ class VersionRangesTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
-        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
+        self.resolver = RangeResolver(self.output, self.retriever, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:

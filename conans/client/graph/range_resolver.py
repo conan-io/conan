@@ -1,5 +1,6 @@
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
+from conans.search.search import search_recipes
 
 
 def satisfying(list_versions, versionexpr, output):
@@ -20,11 +21,11 @@ def satisfying(list_versions, versionexpr, output):
     return candidates.get(result)
 
 
-class RequireResolver(object):
+class RangeResolver(object):
 
-    def __init__(self, output, local_search, remote_search):
+    def __init__(self, output, client_cache, remote_search):
         self._output = output
-        self._local_search = local_search
+        self._client_cache = client_cache
         self._remote_search = remote_search
 
     def resolve(self, require, base_conanref, update):
@@ -68,12 +69,11 @@ class RequireResolver(object):
                                  % (version_range, require))
 
     def _resolve_local(self, search_ref, version_range):
-        if self._local_search:
-            local_found = self._local_search.search_recipes(search_ref)
-            if local_found:
-                resolved_version = self._resolve_version(version_range, local_found)
-                if resolved_version:
-                    return resolved_version
+        local_found = search_recipes(self._client_cache, search_ref)
+        if local_found:
+            resolved_version = self._resolve_version(version_range, local_found)
+            if resolved_version:
+                return resolved_version
 
     def _resolve_remote(self, search_ref, version_range):
         # We should use ignorecase=False, we want the exact case!
