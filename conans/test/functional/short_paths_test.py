@@ -65,25 +65,3 @@ class TestConan(ConanFile):
         self.assertIn("PACKAGE: source_file.cpp", client.out)
         self.assertIn("PACKAGE: artifact", client.out)
         self.assertEqual([".conan_link"], os.listdir(package_folder))
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def package_output_test(self):
-        conanfile = """
-import os
-from conans import ConanFile, tools
-
-
-class TestConan(ConanFile):
-    name = "test"
-    version = "1.0"
-    short_paths = True
-"""
-
-        client = TestClient()
-        client.save({"conanfile.py": conanfile.format("False"),
-                     "source_file.cpp": ""})
-        client.run("create . danimtb/testing")
-        self.assertNotIn("test/1.0@danimtb/testing: Package '1' created", client.out)
-        self.assertIn(
-            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
-            client.out)

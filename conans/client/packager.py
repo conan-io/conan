@@ -27,7 +27,7 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
-    output.success("Package '%s' created" % conanfile.info.package_id())
+    output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
 def create_package(conanfile, source_folder, build_folder, package_folder, install_folder,
@@ -82,7 +82,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         raise ConanException(e)
 
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
-    output.success("Package '%s' created" % conanfile.info.package_id())
+    output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
