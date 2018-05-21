@@ -131,8 +131,9 @@ class _ConanPackageBuilder(object):
             source_folder = self.build_folder
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
-            create_package(self._conan_file, source_folder, self.build_folder, self.package_folder,
-                           install_folder, self._out)
+            pkg_id = self._conan_file.info.package_id()
+            create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
+                           self.package_folder, install_folder, self._out)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)

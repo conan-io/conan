@@ -132,10 +132,11 @@ class ConanManager(object):
         conanfile.develop = True
         package_output = ScopedOutput(str(reference), self._user_io.out)
         if package_folder:
-            packager.export_pkg(conanfile, package_folder, dest_package_folder, package_output)
+            packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
+                                package_output)
         else:
-            packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
-                                    install_folder, package_output, local=True)
+            packager.create_package(conanfile, pkg_id, source_folder, build_folder,
+                                    dest_package_folder, install_folder, package_output, local=True)
 
     def download(self, reference, package_ids, remote_name, recipe):
         """ Download conanfile and specified packages to local repository
@@ -384,7 +385,7 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                   deps_info_required=True)
-        packager.create_package(conanfile, source_folder, build_folder, package_folder,
+        packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
