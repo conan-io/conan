@@ -253,7 +253,7 @@ def collect_libs(conanfile, folder="lib"):
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
     def verify(filepath):
-        if os.path.exists(filepath) and os.access(filepath, os.X_OK) and os.path.isfile(filepath):
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
             return os.path.join(path, filename)
         return None
 
