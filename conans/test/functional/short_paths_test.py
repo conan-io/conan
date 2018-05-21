@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
@@ -7,6 +8,7 @@ from conans.test.utils.tools import TestClient
 
 class ShortPathsTest(unittest.TestCase):
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def short_paths_test(self):
         conanfile = """
 import os
