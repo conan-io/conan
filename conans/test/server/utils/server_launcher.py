@@ -74,9 +74,9 @@ class TestServerLauncher(object):
 
         logger.debug("Storage path: %s" % self.storage_folder)
         self.port = TestServerLauncher.port
-        paths = SimplePaths(server_config.disk_storage_path)
+        self.paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.file_manager, paths,
+                              authorizer, authenticator, self.file_manager, self.paths,
                               server_version, min_client_compatible_version,
                               server_capabilities)
         for plugin in plugins:
