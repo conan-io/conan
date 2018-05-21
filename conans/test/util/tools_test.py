@@ -643,7 +643,8 @@ set nl=^
 
 ProgramFiles(x86)=C:\Program Files (x86)
        
-"""
+""".encode("utf-8")
+
         def vcvars_command_mock(settings, arch, compiler_version, force):  # @UnusedVariable
             return "unused command"
 
