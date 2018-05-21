@@ -65,3 +65,43 @@ class TestConan(ConanFile):
         self.assertIn("PACKAGE: source_file.cpp", client.out)
         self.assertIn("PACKAGE: artifact", client.out)
         self.assertEqual([".conan_link"], os.listdir(package_folder))
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def package_output_test(self):
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+    short_paths = True
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "source_file.cpp": ""})
+        client.run("create . danimtb/testing")
+        self.assertNotIn("test/1.0@danimtb/testing: Package '1' created", client.out)
+        self.assertIn(
+            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            client.out)
+
+        # try local flow still works, but no pkg id available
+        client.run("install .")
+        client.run("package .")
+        self.assertIn("PROJECT: Package 'package' created", client.out)
+
+        # try export-pkg with package folder
+        client.run("remove test/1.0@danimtb/testing --force")
+        client.run("export-pkg . test/1.0@danimtb/testing --package-folder package")
+        self.assertIn(
+            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            client.out)
+
+        # try export-pkg without package folder
+        client.run("remove test/1.0@danimtb/testing --force")
+        client.run("export-pkg . test/1.0@danimtb/testing --install-folder .")
+        self.assertIn(
+            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            client.out)
