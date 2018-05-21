@@ -172,9 +172,6 @@ class ConanManager(object):
 
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], scope_options=True)
-        if install_folder and existing_info_files(install_folder):
-            _load_deps_info(install_folder, conanfile, required=True)
-
         graph_builder = self._get_graph_builder(loader, remote_proxy)
         deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False)
 
@@ -182,6 +179,8 @@ class ConanManager(object):
         # one, the first of the first level, always existing
         nodes = deps_graph.direct_requires()
         conanfile = nodes[0].conanfile
+        if install_folder and existing_info_files(install_folder):
+            _load_deps_info(install_folder, conanfile, required=True)
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
         pkg_reference = PackageReference(reference, pkg_id)
