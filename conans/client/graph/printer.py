@@ -6,7 +6,7 @@ def print_graph(deps_graph, out):
     all_nodes = []
     ids = set()
     for node in sorted(n for n in deps_graph.nodes if n.conan_ref):
-        package_id = node.conanfile.package_id()
+        package_id = PackageReference(node.conan_ref, node.conanfile.package_id())
         if package_id not in ids:
             all_nodes.append(node)
             ids.add(package_id)
