@@ -116,7 +116,7 @@ class Version(str):
             else:
                 return -1
         if len(other_list) > len(self.as_list):
-            return -1
+            return 1
         else:
             return 0
 
