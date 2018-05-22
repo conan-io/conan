@@ -25,13 +25,15 @@ class Pkg(ConanFile):
             manifest = FileTreeManifest.load(path)
             manifest.time += inc_time
             manifest.save(path)
-        bump_time(10)
+
         client.save({"conanfile.py": conanfile % "Server2!"})
         client.run("create . Pkg/0.1@lasote/testing")
-        client.run("upload Pkg* -r=server2 --confirm --all")
         bump_time(20)
+        client.run("upload Pkg* -r=server2 --confirm --all")
+
         client.save({"conanfile.py": conanfile % "Server3!"})
         client.run("create . Pkg/0.1@lasote/testing")
+        bump_time(40)
         client.run("upload Pkg* -r=server3 --confirm --all")
 
         # The remote defined is the first one that was used for upload
