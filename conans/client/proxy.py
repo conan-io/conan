@@ -104,7 +104,7 @@ class ConanProxy(object):
                             DiskRemover(self._client_cache).remove(conan_reference)
                             output.info("Retrieving from remote '%s'..." % remote.name)
                             self._remote_manager.get_recipe(conan_reference, remote)
-
+                            self._registry.set_ref(conan_reference, remote)
                             output.info("Updated!")
                     elif ret == -1:
                         if not update:
