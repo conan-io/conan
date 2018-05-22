@@ -1,4 +1,5 @@
-from conans.search.search import DiskSearchManager, filter_outdated
+from conans.search.search import filter_outdated, search_recipes,\
+    search_packages
 from collections import OrderedDict
 
 
@@ -14,8 +15,7 @@ class Search(object):
         references = {}
         if not remote:
             references[None] = []
-            searcher = DiskSearchManager(self._client_cache)
-            refs = searcher.search_recipes(pattern, ignorecase)
+            refs = search_recipes(self._client_cache, pattern, ignorecase)
             for ref in refs:
                 references[None].append((ref, self._get_recipe_hash_local(ref)))
             return references
@@ -58,8 +58,7 @@ class Search(object):
             ordered_packages = OrderedDict(sorted(packages_props.items()))
             recipe_hash = self._get_recipe_hash_remote(reference, remote)
         else:
-            searcher = DiskSearchManager(self._client_cache)
-            packages_props = searcher.search_packages(reference, query)
+            packages_props = search_packages(self._client_cache, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
             recipe_hash = self._get_recipe_hash_local(reference)
         if outdated and recipe_hash:

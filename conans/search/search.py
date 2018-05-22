@@ -74,65 +74,59 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     return False
 
 
-class DiskSearchManager(object):
-    """Will search recipes and packages using a file system.
-    Can be used with a SearchAdapter"""
+def search_recipes(paths, pattern=None, ignorecase=True):
+    # Conan references in main storage
+    if pattern:
+        if isinstance(pattern, ConanFileReference):
+            pattern = str(pattern)
+        pattern = translate(pattern)
+        pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    def __init__(self, paths):
-        self._paths = paths
+    subdirs = list_folder_subdirs(basedir=paths.store, level=4)
+    if not pattern:
+        return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
+    else:
+        ret = []
+        for subdir in subdirs:
+            conan_ref = ConanFileReference(*subdir.split("/"))
+            if pattern:
+                if pattern.match(str(conan_ref)):
+                    ret.append(conan_ref)
+        return sorted(ret)
 
-    def search_recipes(self, pattern=None, ignorecase=True):
-        # Conan references in main storage
-        if pattern:
-            if isinstance(pattern, ConanFileReference):
-                pattern = str(pattern)
-            pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-        subdirs = list_folder_subdirs(basedir=self._paths.store, level=4)
-        if not pattern:
-            return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
-        else:
-            ret = []
-            for subdir in subdirs:
-                conan_ref = ConanFileReference(*subdir.split("/"))
-                if pattern:
-                    if pattern.match(str(conan_ref)):
-                        ret.append(conan_ref)
-            return sorted(ret)
+def search_packages(paths, reference, query):
+    """ Return a dict like this:
 
-    def search_packages(self, reference, query):
-        """ Return a dict like this:
+            {package_ID: {name: "OpenCV",
+                           version: "2.14",
+                           settings: {os: Windows}}}
+    param conan_ref: ConanFileReference object
+    """
+    if not search_recipes(paths, reference):
+        raise ConanException("Recipe not found: %s" % str(reference))
+    infos = _get_local_infos_min(paths, reference)
+    return filter_packages(query, infos)
 
-                {package_ID: {name: "OpenCV",
-                               version: "2.14",
-                               settings: {os: Windows}}}
-        param conan_ref: ConanFileReference object
-        """
-        if not self.search_recipes(reference):
-            raise ConanException("Recipe not found: %s" % str(reference))
-        infos = self._get_local_infos_min(reference)
-        return filter_packages(query, infos)
 
-    def _get_local_infos_min(self, reference):
-        result = {}
-        packages_path = self._paths.packages(reference)
-        subdirs = list_folder_subdirs(packages_path, level=1)
-        for package_id in subdirs:
-            # Read conaninfo
-            try:
-                package_reference = PackageReference(reference, package_id)
-                info_path = os.path.join(self._paths.package(package_reference,
-                                                             short_paths=None), CONANINFO)
-                if not os.path.exists(info_path):
-                    raise NotFoundException("")
-                conan_info_content = load(info_path)
-                conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
-                result[package_id] = conan_vars_info
+def _get_local_infos_min(paths, reference):
+    result = {}
+    packages_path = paths.packages(reference)
+    subdirs = list_folder_subdirs(packages_path, level=1)
+    for package_id in subdirs:
+        # Read conaninfo
+        try:
+            package_reference = PackageReference(reference, package_id)
+            info_path = os.path.join(paths.package(package_reference,
+                                                   short_paths=None), CONANINFO)
+            if not os.path.exists(info_path):
+                raise NotFoundException("")
+            conan_info_content = load(info_path)
+            conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+            result[package_id] = conan_vars_info
 
-            except Exception as exc:
-                logger.error("Package %s has no ConanInfo file" % str(package_reference))
-                if str(exc):
-                    logger.error(str(exc))
-
-        return result
+        except Exception as exc:
+            logger.error("Package %s has no ConanInfo file" % str(package_reference))
+            if str(exc):
+                logger.error(str(exc))
+    return result
