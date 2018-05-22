@@ -5,6 +5,7 @@ import jwt
 from conans.util.files import mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
+from conans.search.search import search_packages, search_recipes
 
 
 class FileUploadDownloadService(object):
@@ -63,14 +64,14 @@ class FileUploadDownloadService(object):
 
 class SearchService(object):
 
-    def __init__(self, authorizer, search_manager, auth_user):
+    def __init__(self, authorizer, paths, auth_user):
         self._authorizer = authorizer
-        self._search_manager = search_manager
+        self._paths = paths
         self._auth_user = auth_user
 
     def search_packages(self, reference, query):
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = self._search_manager.search_packages(reference, query)
+        info = search_packages(self._paths, reference, query)
         return info
 
     def search(self, pattern=None, ignorecase=True):
@@ -78,7 +79,7 @@ class SearchService(object):
             Attributes:
                 pattern = wildcards like opencv/*
         """
-        references = self._search_manager.search_recipes(pattern, ignorecase)
+        references = search_recipes(self._paths, pattern, ignorecase)
         filtered = []
         # Filter out restricted items
         for conan_ref in references:
