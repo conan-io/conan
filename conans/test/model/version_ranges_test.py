@@ -108,7 +108,11 @@ class Retriever(object):
 
     def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariables
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
+<<<<<<< HEAD
         return conan_path, None
+=======
+        return conan_path
+>>>>>>> develop
 
 
 hello_content = """
