@@ -297,7 +297,6 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
-    ret = ret.replace("\n\n", "\n")
     new_env = {}
     start_reached = False
     for line in ret.splitlines():
