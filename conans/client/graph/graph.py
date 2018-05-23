@@ -13,6 +13,7 @@ class Node(object):
         self.binary = None
         self.recipe = None
         self.remote = None
+        self.binary_remote = None
         self.build_require = False
         self.private = False
 

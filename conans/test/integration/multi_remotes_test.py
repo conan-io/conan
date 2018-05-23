@@ -49,8 +49,8 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: UPDATED", str(client_b.out))
-        self.assertIn("Updates: MISSING", str(client_b.out))
+        self.assertIn("Recipe: UPDATE AVAILABLE", client_b.out)
+        self.assertIn("Updates: INSTALLED", client_b.out)
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
@@ -72,7 +72,6 @@ class MultiRemotesTest(unittest.TestCase):
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        print client_b.out
         self.assertIn("Remote: local", str(client_b.user_io.out))
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
@@ -83,8 +82,5 @@ class MultiRemotesTest(unittest.TestCase):
                       str(client_b.user_io.out))
         client_b.run("info Hello0/0.0@lasote/stable -u")
 
-        print client_b.out
-        self.assertIn("Recipe: NEWER_NO_UPDATED", client_b.out)
+        self.assertIn("Recipe: UPDATED", client_b.out)
         self.assertIn("Updates: INSTALLED", client_b.out)
-        self.assertIn("Updates: You have the latest version (default)",
-                      str(client_b.user_io.out))

@@ -42,10 +42,10 @@ class ConanProxy(object):
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
-            remote = self._retrieve_recipe(reference, output)
-            binary_remote = remote
+            ref_remote = self._retrieve_recipe(reference, output)
+            binary_remote = ref_remote
             status = "DOWNLOADED"
-            return conanfile_path, status, remote
+            return conanfile_path, status, ref_remote, binary_remote
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
@@ -54,31 +54,29 @@ class ConanProxy(object):
         try:
             default_remote = self._registry.default_remote
         except NoRemoteAvailable:
-            default_remote = True
+            default_remote = None
 
         if not check_updates:
-            remote = ref_remote
             binary_remote = ref_remote or named_remote or default_remote
             status = "INSTALLED"
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            return conanfile_path, status, remote
+            return conanfile_path, status, ref_remote, binary_remote
 
-        remote = named_remote or ref_remote or default_remote
-        if not remote:
-            binary_remote = None
+        binary_remote = named_remote or ref_remote or default_remote
+        if not binary_remote:
             status = "NO REMOTE AVAILABLE"
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            return conanfile_path, status, remote
+            return conanfile_path, status, ref_remote, binary_remote
 
         try:  # get_conan_manifest can fail, not in server
-            upstream_manifest = self._remote_manager.get_conan_manifest(reference, remote)
+            upstream_manifest = self._remote_manager.get_conan_manifest(reference, binary_remote)
         except NotFoundException:
             status = "NO REMOTE PACKAGE"
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            return conanfile_path, status, remote
+            return conanfile_path, status, ref_remote, binary_remote
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -86,23 +84,21 @@ class ConanProxy(object):
             if upstream_manifest.time > read_manifest.time:
                 if update:
                     DiskRemover(self._client_cache).remove(reference)
-                    output.info("Retrieving from remote '%s'..." % remote.name)
-                    self._remote_manager.get_recipe(reference, remote)
-                    self._registry.set_ref(reference, remote)
+                    output.info("Retrieving from remote '%s'..." % binary_remote.name)
+                    self._remote_manager.get_recipe(reference, binary_remote)
+                    self._registry.set_ref(reference, binary_remote)
+                    ref_remote = binary_remote
                     status = "UPDATED"
                 else:
-                    remote = self._registry.get_ref(reference)  # Keep current ref
                     status = "UPDATE AVAILABLE"
             else:
-                remote = self._registry.get_ref(reference)  # Keep current ref
                 status = "NEWER"
         else:
-            remote = self._registry.get_ref(reference)  # Keep current ref
             status = "UPDATED"
 
         log_recipe_got_from_local_cache(reference)
         self._recorder.recipe_fetched_from_cache(reference)
-        return conanfile_path, status, remote
+        return conanfile_path, status, ref_remote, binary_remote
 
     def _retrieve_recipe(self, conan_reference, output):
         def _retrieve_from_remote(the_remote):
