@@ -11,10 +11,10 @@ class VirtualBuildEnvTest(unittest.TestCase):
 
     def environment_deactivate_test(self):
 
-        def env_output_to_dict(out):
+        def env_output_to_dict(env_output):
             env = {}
-            for line in out.splitlines():
-                tmp = line.split("=")
+            for line in env_output.splitlines():
+                tmp = line.decode().split("=")
                 env[tmp[0]] = tmp[1].replace("\\", "/")
             return env
 
@@ -38,10 +38,11 @@ class TestConan(ConanFile):
         activate_build_file = os.path.join(client.current_folder, "activate_build.%s" % extension)
         deactivate_build_file = os.path.join(client.current_folder,
                                              "deactivate_build.%s" % extension)
-        activate_build_content = load(activate_build_file)
-        deactivate_build_content = load(deactivate_build_file)
-        self.assertEqual(len(activate_build_content.splitlines()),
-                         len(deactivate_build_content.splitlines()))
+        if platform.system() == "Windows":
+            activate_build_content = load(activate_build_file)
+            deactivate_build_content = load(deactivate_build_file)
+            self.assertEqual(len(activate_build_content.splitlines()),
+                             len(deactivate_build_content.splitlines()))
         output = subprocess.check_output(activate_build_file + " && %s" % env_cmd, shell=True)
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
