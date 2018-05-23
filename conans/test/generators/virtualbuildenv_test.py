@@ -1,5 +1,6 @@
 import os
 import platform
+import stat
 import subprocess
 import unittest
 
@@ -43,6 +44,8 @@ class TestConan(ConanFile):
             deactivate_build_content = load(deactivate_build_file)
             self.assertEqual(len(activate_build_content.splitlines()),
                              len(deactivate_build_content.splitlines()))
+        os.chmod(activate_build_file, stat.S_IEXEC)
+        os.chmod(deactivate_build_file, stat.S_IEXEC)
         output = subprocess.check_output(activate_build_file + " && %s" % env_cmd, shell=True)
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
