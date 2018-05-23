@@ -39,6 +39,8 @@ class TestConan(ConanFile):
         activate_build_file = os.path.join(client.current_folder, "activate_build.%s" % extension)
         deactivate_build_file = os.path.join(client.current_folder,
                                              "deactivate_build.%s" % extension)
+        self.assertTrue(os.path.exists(activate_build_file))
+        self.assertTrue(os.path.exists(deactivate_build_file))
         if platform.system() == "Windows":
             activate_build_content = load(activate_build_file)
             deactivate_build_content = load(deactivate_build_file)
