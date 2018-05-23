@@ -109,6 +109,6 @@ class InfoTest(unittest.TestCase):
 
         # But with build outdated we have to build the private H0 (but only once) and H1a
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info . --build outdated")
+        self.clients["H3"].run("info . --build outdated --build=missing")
         self.assert_last_line(self.clients["H3"],
                               "H0/0.1@lu/st, H1a/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
