@@ -154,11 +154,6 @@ class DepsGraph(object):
                     conanfile.package_id()
         return ordered
 
-    def direct_requires(self):
-        nodes_by_level = self.inverse_levels()
-        open_nodes = nodes_by_level[1]
-        return open_nodes
-
     def closure(self, node, private=False):
         closure = OrderedDict()
         current = node.neighbors()

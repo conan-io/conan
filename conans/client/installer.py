@@ -269,7 +269,7 @@ class ConanInstaller(object):
                 package_folder = self._client_cache.package(package_ref,
                                                             conan_file.short_paths)
 
-                self._propagate_info(node, inverse_levels, deps_graph)
+                self._propagate_info(node, inverse_levels, deps_graph, output)
                 if node.binary == "SKIP":  # Privates not necessary
                     continue
                 with self._client_cache.package_lock(package_ref):
@@ -292,7 +292,7 @@ class ConanInstaller(object):
                     self._call_package_info(conan_file, package_folder)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, inverse_levels, deps_graph)
+        self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
         self._remote_manager.get_package(package_reference, package_folder,
@@ -342,7 +342,7 @@ class ConanInstaller(object):
         self._recorder.package_built(package_ref)
 
     @staticmethod
-    def _propagate_info(node, levels, deps_graph):
+    def _propagate_info(node, levels, deps_graph, out):
         # Get deps_cpp_info from upstream nodes
         closure = deps_graph.closure(node)
         node_order = []
@@ -352,6 +352,8 @@ class ConanInstaller(object):
                     node_order.append(n)
         conan_file = node.conanfile
         for n in node_order:
+            if n.build_require:
+                out.info("Applying build-requirement: %s" % str(n.conan_ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
