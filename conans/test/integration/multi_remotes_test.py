@@ -68,10 +68,11 @@ class MultiRemotesTest(unittest.TestCase):
         # Now client_b checks for updates without -r parameter
         client_b.run("info Hello0/0.0@lasote/stable -u")
         self.assertIn("Remote: local", str(client_b.user_io.out))
-        self.assertIn("    Recipe: NO_UPDATE", client_b.out)
+        self.assertIn("    Recipe: UPDATED", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         client_b.run("info Hello0/0.0@lasote/stable -r default -u")
+        print client_b.out
         self.assertIn("Remote: local", str(client_b.user_io.out))
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
@@ -81,5 +82,9 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.user_io.out))
         client_b.run("info Hello0/0.0@lasote/stable -u")
+
+        print client_b.out
         self.assertIn("Recipe: NEWER_NO_UPDATED", client_b.out)
         self.assertIn("Updates: INSTALLED", client_b.out)
+        self.assertIn("Updates: You have the latest version (default)",
+                      str(client_b.user_io.out))

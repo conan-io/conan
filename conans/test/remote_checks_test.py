@@ -1,8 +1,60 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference
 
 
 class RemoteChecksTest(unittest.TestCase):
+
+    def test_recipe_updates(self):
+        servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
+        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                    "server2": [("lasote", "mypass")],
+                                                    "server3": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def package_info(self):
+        self.output.info("%s")
+"""
+        client.save({"conanfile.py": conanfile % "Server1!"})
+        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("upload Pkg* -r=server1 --confirm --all")
+
+        def bump_time(inc_time):
+            path = client.client_cache.export(ConanFileReference.loads("Pkg/0.1@lasote/testing"))
+            manifest = FileTreeManifest.load(path)
+            manifest.time += inc_time
+            manifest.save(path)
+
+        client.save({"conanfile.py": conanfile % "Server2!"})
+        client.run("create . Pkg/0.1@lasote/testing")
+        bump_time(20)
+        client.run("upload Pkg* -r=server2 --confirm --all")
+
+        client.save({"conanfile.py": conanfile % "Server3!"})
+        client.run("create . Pkg/0.1@lasote/testing")
+        bump_time(40)
+        client.run("upload Pkg* -r=server3 --confirm --all")
+
+        # The remote defined is the first one that was used for upload
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
+        client.run("remove * -f")
+        client.run("install Pkg/0.1@lasote/testing -r=server1")
+        self.assertIn("Pkg/0.1@lasote/testing: Server1!", client.out)
+        client.run("install Pkg/0.1@lasote/testing -r=server2")
+        self.assertIn("Pkg/0.1@lasote/testing: Server1!", client.out)
+        # Update
+        client.run("install Pkg/0.1@lasote/testing -r=server2 --update")
+        self.assertIn("Pkg/0.1@lasote/testing: Server2!", client.out)
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
+        # Update
+        client.run("install Pkg/0.1@lasote/testing -r=server3 --update")
+        self.assertIn("Pkg/0.1@lasote/testing: Server3!", client.out)
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
 
     def test_binary_defines_remote(self):
         servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}

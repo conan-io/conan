@@ -62,7 +62,6 @@ class GraphBinariesAnalyzer(object):
         previous_node = evaluated_references.get(package_ref)
         if previous_node:
             node.binary = previous_node.binary
-            node.remote = previous_node.remote
             return
         evaluated_references[package_ref] = node
 

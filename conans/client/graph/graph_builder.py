@@ -194,8 +194,8 @@ class DepsGraphBuilder(object):
                          check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path, update_status = self._proxy.get_recipe(requirement.conan_reference,
-                                                               check_updates, update)
+        conanfile_path, recipe_status, remote = self._proxy.get_recipe(requirement.conan_reference,
+                                                                       check_updates, update)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
@@ -209,7 +209,8 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
-        new_node.recipe = update_status
+        new_node.recipe = recipe_status
+        new_node.remote = remote
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         if not requirement.private:
