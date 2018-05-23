@@ -147,14 +147,14 @@ class ConanManager(object):
         """
         assert(isinstance(reference, ConanFileReference))
         output = ScopedOutput(str(reference), self._user_io.out)
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        remote, _ = remote_proxy._get_remote()
+        remote = self._registry.remote(remote_name) if remote_name else self._registry.default_remote
         package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        remote_proxy.get_recipe(reference, check_updates=True, update=True)
+        self._remote_manager.get_recipe(reference, remote)
+        self._registry.set_ref(reference, remote)
 
         if recipe:
             return

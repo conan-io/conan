@@ -148,16 +148,6 @@ class ConanProxy(object):
                                                 msg, None)
             raise NotFoundException(msg)
 
-    def _get_remote(self, conan_ref):
-        # Prioritize -r , then reference registry and then the default remote
-        if self._remote_name:
-            return self._registry.remote(self._remote_name)
-        remote = self._registry.get_ref(conan_ref)
-        try:
-            return remote or self._registry.default_remote
-        except NoRemoteAvailable:
-            return None
-
     def search_remotes(self, pattern=None, ignorecase=True):
         if self._remote_name:
             remote = self._registry.remote(self._remote_name)
