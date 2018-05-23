@@ -280,6 +280,8 @@ class ConanInstaller(object):
                             self._build_package(node, package_ref, output, keep_build)
                         elif node.binary in ("UPDATE", "DOWNLOAD"):
                             self._download_package(conan_file, package_ref, output, package_folder, node.binary_remote)
+                            if node.binary_remote != node.remote:
+                                self._registry.set_ref(conan_ref, node.binary_remote)
                         elif node.binary == "INSTALLED":
                             output.success('Already installed!')
                             log_package_got_from_local_cache(package_ref)

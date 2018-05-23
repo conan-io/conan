@@ -268,7 +268,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: NO_REMOTE
+                Recipe: NO REMOTE AVAILABLE
                 Updates: MISSING
                 Required by:
                     Hello1/0.1@lasote/stable
@@ -276,7 +276,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: NO_REMOTE
+                Recipe: NO REMOTE AVAILABLE
                 Updates: MISSING
                 Required by:
                     Hello2/0.1@PROJECT
@@ -294,7 +294,7 @@ class MyTest(ConanFile):
                               not line.strip().startswith("package_folder")])
 
         # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_output(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.out))
 
         self.client.run("info . -u --only=url")
         expected_output = textwrap.dedent(

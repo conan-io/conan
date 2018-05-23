@@ -76,7 +76,7 @@ class ConanProxy(object):
             status = "NO REMOTE PACKAGE"
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            return conanfile_path, status, ref_remote, binary_remote
+            return conanfile_path, status, ref_remote, None
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -96,6 +96,7 @@ class ConanProxy(object):
         else:
             status = "UPDATED"
 
+        binary_remote = ref_remote or named_remote or default_remote
         log_recipe_got_from_local_cache(reference)
         self._recorder.recipe_fetched_from_cache(reference)
         return conanfile_path, status, ref_remote, binary_remote

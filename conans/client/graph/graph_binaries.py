@@ -96,9 +96,7 @@ class GraphBinariesAnalyzer(object):
                     node.binary = "MISSING"
 
         if build_mode.outdated:
-            if node.binary == "MISSING":
-                node.binary = "BUILD"
-            elif node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
+            if node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
                 local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")

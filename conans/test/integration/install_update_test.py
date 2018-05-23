@@ -125,8 +125,8 @@ class Pkg(ConanFile):
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
         self.client.run("install . --update")
-        self.assertIn("ERROR: Current conanfile is newer than myremote's one",
-                      self.client.user_io.out)
+        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - NEWER",
+                      self.client.out)
         failed_update_timestamps = timestamps()
         self.assertEqual(rebuild_timestamps, failed_update_timestamps)
 
