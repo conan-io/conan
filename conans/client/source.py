@@ -104,10 +104,12 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
 
                     scm = get_scm(conan_file, src_folder)
                     if scm:
-                        if local_sources_path:  # scm.capture_enabled before exporting
+                        if local_sources_path:  # scm.capture_origin before exporting
+                            output.info("Getting sources from folder: %s" % local_sources_path)
                             merge_directories(local_sources_path, src_folder)
                             _clean_source_folder(src_folder)
                         else:
+                            output.info("Getting sources from url: '%s'" % scm.url)
                             scm.clone()
                             scm.checkout()
                     else:
@@ -135,10 +137,12 @@ def config_source_local(dest_dir, conan_file, conanfile_folder, output):
                     conan_file.package_folder = None
                     scm = get_scm(conan_file, dest_dir)
                     if scm:
-                        if scm.capture_enabled:
+                        if scm.capture_origin or scm.capture_revision:
+                            output.info("Getting sources from folder: %s" % conanfile_folder)
                             merge_directories(conanfile_folder, dest_dir)
                             _clean_source_folder(dest_dir)
                         else:
+                            output.info("Getting sources from url: '%s'" % scm.url)
                             scm.clone()
                             scm.checkout()
                     else:

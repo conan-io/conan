@@ -858,6 +858,14 @@ class GitToolTest(unittest.TestCase):
         git.clone("https://github.com/conan-community/conan-zlib.git", branch="release/1.2.11")
         self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
 
+        # Checkout different branch
+        ret = git.checkout("release/1.2.8")
+        self.assertIn("Branch 'release/1.2.8' set up to track remote branch", ret)
+
+        # Checkout a commit
+        git.checkout("feff5efd4660ae0cd07c231d0fa1590d3d7967bf")
+        self.assertEquals(git.get_revision(), "feff5efd4660ae0cd07c231d0fa1590d3d7967bf")
+
     def test_clone_existing_folder_without_branch(self):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
@@ -865,3 +873,35 @@ class GitToolTest(unittest.TestCase):
         with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
                                                      "specify a branch to checkout"):
             git.clone("https://github.com/conan-community/conan-zlib.git")
+
+    def test_credentials(self):
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool")
+        url_credentials = git.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+
+    def test_verify_ssl_and_english(self):
+        class MyRunner(object):
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, *args, **kwargs):
+                self.calls.append(args[0])
+                return ""
+
+        runner = MyRunner()
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
+                  force_english=True)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify true", runner.calls[1])
+        self.assertIn("LC_ALL=en_US.UTF-8", runner.calls[1])
+
+        runner = MyRunner()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
+                  force_english=False)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify false", runner.calls[1])
+        self.assertNotIn("LC_ALL=en_US.UTF-8", runner.calls[1])
+
+

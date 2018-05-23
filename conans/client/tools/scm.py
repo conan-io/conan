@@ -1,22 +1,24 @@
+import os
 import platform
 import subprocess
-import os
-from conans.errors import ConanException
-from conans.client.tools.files import chdir
+
+from six.moves.urllib.parse import urlparse, quote_plus
+
 from conans.client.tools.env import no_op
+from conans.client.tools.files import chdir
+from conans.errors import ConanException
 
 
 class Git(object):
 
-    def __init__(self, folder, ssl_verify=True, auth_env=None, force_english=True):
+    def __init__(self, folder, verify_ssl=True, username=None, password=None, force_english=True,
+                 runner=None):
         self.folder = folder
-        self._ssl_verify = ssl_verify
-        self.login = None
-        self.password = None
+        self._verify_ssl = verify_ssl
         self._force_english = force_english
-        if auth_env:
-            self.login = os.getenv("%s_USERNAME" % auth_env)
-            self.password = os.getenv("%s_PASSWORD" % auth_env)
+        self._username = username
+        self._password = password
+        self._runner = runner
 
     def run(self, command):
         def english_output(cmd):
@@ -30,26 +32,27 @@ class Git(object):
 
         with chdir(self.folder) if self.folder else no_op():
             command = english_output('git %s' % command)
-            return subprocess.check_output(command, shell=True).decode().strip()
+            if not self._runner:
+                return subprocess.check_output(command, shell=True).decode().strip()
+            else:
+                return self._runner(command)
 
-    def _get_url_with_credentials(self, url):
-        if not self.login or not self.password:
+    def get_url_with_credentials(self, url):
+        if not self._username or not self._password:
             return url
-        from six.moves.urllib.parse import urlparse
         if urlparse(url).password:
             return url
 
-        import urllib
-        user_enc = urllib.quote_plus(self.login)
-        pwd_enc = urllib.quote_plus(self.password)
+        user_enc = quote_plus(self._username)
+        pwd_enc = quote_plus(self._password)
         url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
         return url
 
     def _configure_ssl_verify(self):
-        return self.run("config http.sslVerify %s" % ("true" if self._ssl_verify else "false"))
+        return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
     def clone(self, url, branch=None):
-        url = self._get_url_with_credentials(url)
+        url = self.get_url_with_credentials(url)
         if os.path.exists(self.folder) and os.listdir(self.folder):
             if not branch:
                 raise ConanException("The destination folder is not empty, "

@@ -13,27 +13,33 @@ class SCM(object):
         self.type = data.get("type")
         self.url = data.get("url")
         self.revision = data.get("revision")
-        self.ssl_verify = data.get("ssl_verify")
+        self.verify_ssl = data.get("verify_ssl")
         self.subfolder = data.get("subfolder")
         if data.get("subfolder"):
             self.src_folder = os.path.join(src_folder, self.subfolder)
         else:
             self.src_folder = src_folder
 
-        self.auth_env = data.get("auth_env")
+        self.username = data.get("username")
+        self.password = data.get("password")
 
         # Finally instance a repo
         self.repo = self._get_repo()
 
     def _get_repo(self):
-        repo = {"git": Git(self.src_folder, self.ssl_verify, self.auth_env)}.get(self.type)
+        repo = {"git": Git(self.src_folder, verify_ssl=self.verify_ssl,
+                           username=self.username, password=self.password)}.get(self.type)
         if not repo:
             raise ConanException("SCM not supported: %s" % self.type)
         return repo
 
     @property
-    def capture_enabled(self):
-        return self.url == "auto" or self.revision == "auto"
+    def capture_origin(self):
+        return self.url == "auto"
+
+    @property
+    def capture_revision(self):
+        return self.revision == "auto"
 
     def clone(self):
         return self.repo.clone(self.url)
@@ -48,8 +54,9 @@ class SCM(object):
         return self.repo.get_revision()
 
     def __repr__(self):
-        d = {"url": self.url, "revision": self.revision, "auth_env": self.auth_env,
-             "type": self.type, "ssl_verify": self.ssl_verify, "subfolder": self.subfolder}
+        d = {"url": self.url, "revision": self.revision, "username": self.username,
+             "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
+             "subfolder": self.subfolder}
         d = {k: v for k, v in d.items() if v}
         return json.dumps(d)
 

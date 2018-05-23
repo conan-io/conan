@@ -105,7 +105,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
 
     scm = get_scm(conanfile, src_path)
 
-    if not scm or not scm.capture_enabled:
+    if not scm or not (scm.capture_origin or scm.capture_revision):
         return
 
     if scm.url == "auto":
