@@ -847,13 +847,21 @@ class GitToolTest(unittest.TestCase):
 
     def test_clone_git(self):
         tmp = temp_folder()
-        git = Git()
-        git.clone("https://github.com/conan-community/conan-zlib.git", tmp)
+        git = Git(tmp)
+        git.clone("https://github.com/conan-community/conan-zlib.git")
         self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
 
     def test_clone_existing_folder_git(self):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
-        git = Git()
-        git.clone("https://github.com/conan-community/conan-zlib.git", tmp)
+        git = Git(tmp)
+        git.clone("https://github.com/conan-community/conan-zlib.git", branch="release/1.2.11")
         self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
+
+    def test_clone_existing_folder_without_branch(self):
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
+                                                     "specify a branch to checkout"):
+            git.clone("https://github.com/conan-community/conan-zlib.git")

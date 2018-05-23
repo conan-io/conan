@@ -26,7 +26,7 @@ class SCM(object):
         self.repo = self._get_repo()
 
     def _get_repo(self):
-        repo = {"git": Git(self.ssl_verify, self.auth_env)}.get(self.type)
+        repo = {"git": Git(self.src_folder, self.ssl_verify, self.auth_env)}.get(self.type)
         if not repo:
             raise ConanException("SCM not supported: %s" % self.type)
         return repo
@@ -36,16 +36,16 @@ class SCM(object):
         return self.url == "auto" or self.revision == "auto"
 
     def clone(self):
-        return self.repo.clone(self.url, self.src_folder)
+        return self.repo.clone(self.url)
 
     def checkout(self):
-        return self.repo.checkout(self.revision, self.src_folder)
+        return self.repo.checkout(self.revision)
 
     def get_repo_url(self):
-        return self.repo.get_remote_url(self.src_folder)
+        return self.repo.get_remote_url()
 
     def get_repo_revision(self):
-        return self.repo.get_revision(self.src_folder)
+        return self.repo.get_revision()
 
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "auth_env": self.auth_env,
