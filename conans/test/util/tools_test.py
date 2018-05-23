@@ -13,6 +13,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
@@ -840,3 +841,19 @@ class MyConan(ConanFile):
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
+
+
+class GitToolTest(unittest.TestCase):
+
+    def test_clone_git(self):
+        tmp = temp_folder()
+        git = Git()
+        git.clone("https://github.com/conan-community/conan-zlib.git", tmp)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
+
+    def test_clone_existing_folder_git(self):
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git()
+        git.clone("https://github.com/conan-community/conan-zlib.git", tmp)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))

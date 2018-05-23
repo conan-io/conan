@@ -10,7 +10,7 @@ from conans.client.file_copier import FileCopier
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
-from conans.model.conan_file import create_exports, create_exports_sources
+from conans.model.conan_file import create_exports, create_exports_sources, get_scm
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
@@ -97,12 +97,41 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
+def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
+
+    scm_src_file = paths.local_sources_pointer(conan_ref)
+    if os.path.exists(scm_src_file):
+        os.unlink(scm_src_file)
+
+    scm = get_scm(conanfile, src_path)
+
+    if not scm or not scm.capture_enabled:
+        return
+
+    if scm.url == "auto":
+        origin = scm.get_repo_url()
+        if not origin:
+            raise Exception("Repo origin cannot be deduced by 'auto', using source folder")
+        output.success("Repo origin deduced by 'auto': %s" % origin)
+        scm.url = origin
+    if scm.revision == "auto":
+        scm.revision = scm.get_repo_revision()
+        output.success("Revision deduced by 'auto': %s" % scm.revision)
+
+    # Generate the export.src file pointing to the src_path
+    save(scm_src_file, src_path)
+    scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+
+
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+
     destination_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
-                    output)
+    _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder, output)
+
+    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), destination_folder,
+                             output, paths, conan_ref)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 
@@ -157,8 +186,8 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile_path, conanfile, destination_folder,
-                    destination_source_folder, output):
+def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
+                    output):
 
     origin_folder = os.path.dirname(conanfile_path)
 
@@ -189,5 +218,5 @@ def _execute_export(conanfile_path, conanfile, destination_folder,
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 
-    shutil.copy2(conanfile_path,
-                 os.path.join(destination_folder, CONANFILE))
+    if destination_folder != destination_source_folder:
+        shutil.copy2(conanfile_path, os.path.join(destination_folder, CONANFILE))

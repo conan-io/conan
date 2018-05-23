@@ -8,6 +8,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvValues
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
+from conans.model.scm import SCM
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
@@ -93,6 +94,12 @@ def get_env_context_manager(conanfile, without_python=False):
     if without_python:
         return environment_append(conanfile.env)
     return _env_and_python(conanfile)
+
+
+def get_scm(conanfile, src_folder):
+    data = getattr(conanfile, "scm", None)
+    if data is not None:
+        return SCM(data, src_folder)
 
 
 class ConanFile(object):

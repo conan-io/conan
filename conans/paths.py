@@ -38,6 +38,7 @@ CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
+LOCAL_SOURCES_POINTER = "export.src"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -152,3 +153,6 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
+
+    def local_sources_pointer(self, conan_reference):
+        return normpath(join(self.conan(conan_reference), LOCAL_SOURCES_POINTER))
