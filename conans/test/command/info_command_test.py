@@ -107,8 +107,7 @@ class InfoTest(unittest.TestCase):
         self.assert_last_line(self.clients["H3"],
                               "H2a/0.1@lu/st, H2c/0.1@lu/st")
 
-        # But with build outdated we have to build the private H0 (but only once) and H1a
+        # But with build outdated only the outdated package is built
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info . --build outdated --build=missing")
-        self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H1a/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+        self.clients["H3"].run("info . --build outdated")
+        self.assert_last_line(self.clients["H3"], "H1a/0.1@lu/st")
