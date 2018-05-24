@@ -36,6 +36,8 @@ class SCMTest(unittest.TestCase):
 
     def _commit_contents(self):
         self.client.runner("git init .", cwd=self.client.current_folder)
+        self.client.runner('git config user.email "you@example.com"', cwd=self.client.current_folder)
+        self.client.runner('git config user.name "Your Name"', cwd=self.client.current_folder)
         self.client.runner("git add .", cwd=self.client.current_folder)
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 

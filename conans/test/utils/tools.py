@@ -264,6 +264,8 @@ def create_local_git_repo(files, branch=None):
     if branch:
         git.run("checkout -b %s" % branch)
     git.run("add .")
+    git.run('config user.email "you@example.com"')
+    git.run('config user.name "Your Name"')
     git.run('commit -m "message"')
     return tmp.replace("\\", "/"), git.get_revision()
 
