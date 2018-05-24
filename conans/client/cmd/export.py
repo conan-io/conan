@@ -125,15 +125,16 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
 
-    destination_folder = paths.export(conan_ref)
+    exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
-    previous_digest = _init_export_folder(destination_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder, output)
+    previous_digest = _init_export_folder(exports_folder, exports_source_folder)
+    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), destination_folder,
+    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
                              output, paths, conan_ref)
 
-    digest = FileTreeManifest.create(destination_folder, exports_source_folder)
+    digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
     if previous_digest and previous_digest == digest:
         output.info("The stored package has not changed")
@@ -141,9 +142,9 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         digest = previous_digest  # Use the old one, keep old timestamp
     else:
         output.success('A new %s version was exported' % CONANFILE)
-        output.info('Folder: %s' % destination_folder)
+        output.info('Folder: %s' % exports_folder)
         modified_recipe = True
-    digest.save(destination_folder)
+    digest.save(exports_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
@@ -217,6 +218,3 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
         copier(pattern, links=True, excludes=excluded_sources)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
-
-    if destination_folder != destination_source_folder:
-        shutil.copy2(conanfile_path, os.path.join(destination_folder, CONANFILE))
