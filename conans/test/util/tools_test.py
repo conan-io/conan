@@ -908,7 +908,7 @@ class GitToolTest(unittest.TestCase):
         client.runner("git init .", cwd=git_repo)
         client.runner('git config user.email "you@example.com"', cwd=git_repo)
         client.runner('git config user.name "Your Name"', cwd=git_repo)
-        client.runner("git co -b dev", cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
         client.runner("git add .", cwd=git_repo)
         client.runner('git commit -m "comm"', cwd=git_repo)
 
