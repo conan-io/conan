@@ -28,11 +28,13 @@ class TestConan(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
     generators = "virtualbuildenv"
 """
+        in_windows = platform.system() == "Windows"
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
-        env_cmd = "set" if platform.system() == "Windows" else "env"
-        extension = "bat" if platform.system() == "Windows" else "sh"
+        env_cmd = "set" if in_windows else "env"
+        extension = "bat" if in_windows else "sh"
+        prefix = "" if in_windows else "sh"
         output = subprocess.check_output(env_cmd, shell=True)
         normal_environment = env_output_to_dict(output)
         client.run("install .")
@@ -41,16 +43,18 @@ class TestConan(ConanFile):
                                              "deactivate_build.%s" % extension)
         self.assertTrue(os.path.exists(activate_build_file))
         self.assertTrue(os.path.exists(deactivate_build_file))
-        if platform.system() == "Windows":
+        if in_windows:
             activate_build_content = load(activate_build_file)
             deactivate_build_content = load(deactivate_build_file)
             self.assertEqual(len(activate_build_content.splitlines()),
                              len(deactivate_build_content.splitlines()))
-        os.chmod(activate_build_file, stat.S_IEXEC)
-        os.chmod(deactivate_build_file, stat.S_IEXEC)
-        output = subprocess.check_output(activate_build_file + " && %s" % env_cmd, shell=True)
+        os.chmod(activate_build_file, 555)
+        os.chmod(deactivate_build_file, 555)
+        output = subprocess.check_output("%s %s && %s" % (prefix, activate_build_file, env_cmd),
+                                         shell=True)
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
-        output = subprocess.check_output(deactivate_build_file + " && %s" % env_cmd, shell=True)
+        output = subprocess.check_output("%s %s && %s" % (prefix, deactivate_build_file, env_cmd),
+                                         shell=True)
         deactivate_environment = env_output_to_dict(output)
         self.assertEqual(normal_environment, deactivate_environment)
