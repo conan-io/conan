@@ -100,7 +100,7 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def propagate_info(self):
+    def compute_package_ids(self):
         """ takes the exports from upper level and updates the imports
         right now also the imports are propagated, but should be checked
         E.g. Conan A, depends on B.  A=>B

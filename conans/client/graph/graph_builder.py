@@ -44,7 +44,7 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
-        dep_graph.propagate_info()
+        dep_graph.compute_package_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
