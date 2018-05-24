@@ -640,6 +640,8 @@ PROCESSOR_REVISION=9e09
 
                          
 set nl=^
+env_var=
+without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
        
