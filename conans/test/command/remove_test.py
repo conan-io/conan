@@ -99,8 +99,8 @@ class RemoveTest(unittest.TestCase):
 
         # Create the manifests to be able to upload
         for pack_ref in pack_refs:
-            digest_path = client.client_cache.digestfile_package(pack_ref)
-            expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+            pkg_folder = client.client_cache.package(pack_ref)
+            expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % ("/".join(pack_ref.conan),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,
@@ -254,7 +254,7 @@ class RemoveTest(unittest.TestCase):
                             remote_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
-        remote_folder = os.path.join(self.server_folder, ".conan_server/data") 
+        remote_folder = os.path.join(self.server_folder, ".conan_server/data")
         folders = os.listdir(remote_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 

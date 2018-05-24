@@ -69,6 +69,11 @@ class PackageOptionValues(object):
             return None
         return self._dict[attr]
 
+    def __delattr__(self, attr):
+        if attr not in self._dict:
+            return
+        del self._dict[attr]
+
     def clear(self):
         self._dict.clear()
 
@@ -159,7 +164,7 @@ class OptionsValues(object):
         if isinstance(values, tuple):
             new_values = []
             for v in values:
-                option, value = v.split("=")
+                option, value = v.split("=", 1)
                 new_values.append((option.strip(), value.strip()))
             values = new_values
 
@@ -225,6 +230,9 @@ class OptionsValues(object):
         if attr[0] == "_":
             return super(OptionsValues, self).__setattr__(attr, value)
         return setattr(self._package_values, attr, value)
+
+    def __delattr__(self, attr):
+        delattr(self._package_values, attr)
 
     def clear_indirect(self):
         for v in self._reqs_options.values():
@@ -306,6 +314,9 @@ class PackageOption(object):
     def __str__(self):
         return str(self._value)
 
+    def __int__(self):
+        return int(self._value)
+
     def _check_option_value(self, value):
         """ checks that the provided value is allowed by current restrictions
         """
@@ -361,6 +372,11 @@ class PackageOptions(object):
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
+
+    def get_safe(self, field):
+        if field not in self._data:
+            return None
+        return self._data[field]
 
     def validate(self):
         for child in self._data.values():
@@ -426,6 +442,14 @@ class PackageOptions(object):
         for (name, value) in vals.items():
             self._ensure_exists(name)
             self._data[name].value = value
+
+    def set_local(self, values):
+        # For local commands, to restore state from conaninfo it is necessary to remove
+        for k in list(self._data):
+            try:
+                self._data[k].value = values._dict[k]
+            except KeyError:
+                self._data.pop(k)
 
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
@@ -547,13 +571,16 @@ class Options(object):
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, name)
 
-    def initialize_upstream(self, user_values):
+    def initialize_upstream(self, user_values, local=False):
         """ used to propagate from downstream the options to the upper requirements
         """
         if user_values is not None:
             assert isinstance(user_values, OptionsValues)
             # This values setter implements an update, not an overwrite
-            self._package_options.values = user_values._package_values
+            if local:
+                self._package_options.set_local(user_values._package_values)
+            else:
+                self._package_options.values = user_values._package_values
             for package_name, package_values in user_values._reqs_options.items():
                 pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
                 pkg_values.update(package_values)

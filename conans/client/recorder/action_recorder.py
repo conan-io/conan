@@ -7,6 +7,8 @@ from datetime import datetime
 from collections import namedtuple, OrderedDict
 
 # Install actions
+from conans.model.ref import ConanFileReference, PackageReference
+
 INSTALL_CACHE = 0
 INSTALL_DOWNLOADED = 1
 INSTALL_BUILT = 2
@@ -32,8 +34,11 @@ class ActionRecorder(object):
     def __init__(self):
         self._inst_recipes_actions = OrderedDict()
         self._inst_packages_actions = OrderedDict()
+        self._inst_recipes_develop = set()  # Recipes being created (to set dependency=False)
 
     # ###### INSTALL METHODS ############
+    def add_recipe_being_developed(self, reference):
+        self._inst_recipes_develop.add(reference)
 
     def _add_recipe_action(self, reference, action):
         if reference not in self._inst_recipes_actions:
@@ -90,6 +95,12 @@ class ActionRecorder(object):
                 ret.append((_package_ref, _package_action))
         return ret
 
+    def in_development_recipe(self, reference):
+        return reference in self._inst_recipes_develop
+
+    def get_info(self):
+        return self.get_install_info()
+
     def get_install_info(self):
         ret = {"error": self.install_errored,
                "installed": []}
@@ -98,11 +109,15 @@ class ActionRecorder(object):
             error = None if the_action.type != INSTALL_ERROR else the_action.doc
             doc = {"id": str(the_ref),
                    "downloaded": the_action.type == INSTALL_DOWNLOADED,
-                   "built": the_action.type == INSTALL_BUILT,
                    "cache": the_action.type == INSTALL_CACHE,
                    "error": error,
                    "remote": the_action.doc.get("remote", None),
                    "time": the_action.time}
+            if isinstance(the_ref, ConanFileReference):
+                doc["dependency"] = not self.in_development_recipe(the_ref)
+            else:
+                doc["built"] = the_action.type == INSTALL_BUILT
+
             if doc["remote"] is None and error:
                 doc["remote"] = error.get("remote", None)
             return doc
@@ -111,7 +126,6 @@ class ActionRecorder(object):
             # Could be a download and then an access to cache, we want the first one
             action = actions[0]
             recipe_doc = get_doc_for_ref(ref, action)
-            del recipe_doc["built"]  # Avoid confusions
             packages = self._get_installed_packages(ref)
             tmp = {"recipe": recipe_doc,
                    "packages": []}

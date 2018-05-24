@@ -155,9 +155,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
-        expected = {'CFLAGS': 'a_c_flag',
+        expected = {'CFLAGS': 'a_c_flag -O2 -Ob2',
                     'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -O2 -Ob2 a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
@@ -171,10 +171,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m32 -s --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': 'a_c_flag -m32 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m32 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
 
@@ -205,10 +205,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -DNDEBUG -D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -stdlib=libstdc++',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cpp_flag -stdlib=libstdc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -222,9 +222,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -stdlib=libc++',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cpp_flag -stdlib=libc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -238,10 +238,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
-                    'CXXFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -255,9 +255,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=Cstd',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=Cstd',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -270,9 +270,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stdcxx4',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stdcxx4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -285,9 +285,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stlport4',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stlport4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -300,9 +300,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stdcpp',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stdcpp',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -317,10 +317,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder',
+        expected = {'CFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
-                    'CXXFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder '
                                '-Wl,-rpath="one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -379,141 +379,13 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def test_previous_env(self):
         settings = MockSettings({"arch": "x86",
-                                 "os": "Linux"})
+                                 "os": "Linux",
+                                 "compiler": "gcc"})
         conanfile = MockConanfile(settings)
 
         with tools.environment_append({"CPPFLAGS": "MyCppFlag"}):
             be = AutoToolsBuildEnvironment(conanfile)
             self.assertEquals(be.vars["CPPFLAGS"], "MyCppFlag")
-
-    def cross_build_flags_test(self):
-
-        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
-            settings = MockSettings({"arch": setting_arch,
-                                     "os": setting_os,
-                                     "compiler": compiler})
-            conanfile = MockConanfile(settings)
-            conanfile.settings = settings
-            be = AutoToolsBuildEnvironment(conanfile)
-            return be._get_host_build_target_flags(this_arch, this_os)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86", "Linux", "armv7hf")
-        self.assertEquals(build, "x86-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86", "Linux", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "x86_64")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86-linux-gnu")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
-        self.assertFalse(target)
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Linux", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv8")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "aarch64-linux-android")
-
-        build, host, target = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
-
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-w64-mingw32")
-
-        build, host, target = get_values("Windows", "x86_64", "Windows", "x86_64")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86", "Windows", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "i686-w64-mingw32")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "arm-linux-gnueabihf")
-        self.assertFalse(target)
-
-        build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
-
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-linux-androideabi")
-
-        build, host, target = get_values("Darwin", "x86_64", "Macos", "x86")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "i686-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "iOS", "armv7")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "watchOS", "armv7k")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
-
-        build, host, target = get_values("Darwin", "x86_64", "tvOS", "armv8")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "aarch64-apple-darwin")
 
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
@@ -552,6 +424,10 @@ class HelloConan(ConanFile):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.build)
+        self.assertFalse(ab.host)
+        self.assertFalse(ab.target)
+
         ab.configure()
         self.assertEquals(runner.command_called, "./configure  ")
 
@@ -564,13 +440,106 @@ class HelloConan(ConanFile):
         ab.configure(target="i686-apple-darwin")
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
 
-    def test_make_targets(self):
-        runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}), None, runner)
-        
+        conanfile = MockConanfile(MockSettings({"build_type": "Debug",
+                                                "arch": "x86_64",
+                                                "os": "Windows",
+                                                "compiler": "gcc",
+                                                "compiler.libcxx": "libstdc++"}),
+                                  None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
-        
-        ab.make(target="install")
-        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())        
+        if platform.system() == "Windows":
+            # Not crossbuilding
+            self.assertFalse(ab.host)
+            self.assertFalse(ab.build)
+            self.assertIn("./configure", runner.command_called)
+            self.assertNotIn("--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32",
+                             runner.command_called)
+        elif platform.system() == "Linux":
+            self.assertIn("x86_64-w64-mingw32", ab.host)
+            self.assertIn("x86_64-linux-gnu", ab.build)
+            self.assertIn("./configure  --build=x86_64-linux-gnu --host=x86_64-w64-mingw32",
+                          runner.command_called)
+        else:
+            self.assertIn("x86_64-w64-mingw32", ab.host)
+            self.assertIn("x86_64-apple-darwin", ab.build)
+            self.assertIn("./configure  --build=x86_64-apple-darwin --host=x86_64-w64-mingw32",
+                          runner.command_called)
 
+        ab.configure(build="fake_build_triplet", host="fake_host_triplet")
+        self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet",
+                      runner.command_called)
+
+        ab.build = "superfake_build_triplet"
+        ab.host = "superfake_host_triplet"
+        ab.configure()
+        self.assertIn("./configure  --build=superfake_build_triplet --host=superfake_host_triplet",
+                      runner.command_called)
+
+    def test_make_targets_install(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), None, runner)
+
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+
+        ab.make(target="install")
+        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
+        ab.install()
+        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
+
+    def autotools_prefix_test(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), None, runner)
+        # Package folder is not defined
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        self.assertNotIn("--prefix", runner.command_called)
+        # package folder defined
+        conanfile.package_folder = "/package_folder"
+        ab.configure()
+        if platform.system() == "Windows":
+            self.assertIn("./configure --prefix=/package_folder", runner.command_called)
+        else:
+            self.assertIn("./configure '--prefix=/package_folder'", runner.command_called)
+        # --prefix already used in args
+        ab.configure(args=["--prefix=/my_package_folder"])
+        if platform.system() == "Windows":
+            self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
+            self.assertNotIn("--prefix=/package_folder", runner.command_called)
+        else:
+            self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
+            self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
+
+    def autotools_configure_vars_test(self):
+        from mock import patch
+
+        runner = RunnerMock()
+        settings = MockSettings({"build_type": "Debug",
+                                 "arch": "x86_64",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++"})
+        conanfile = MockConanfile(settings, None, runner)
+        conanfile.settings = settings
+        self._set_deps_info(conanfile)
+
+        def custom_configure(obj, configure_dir=None, args=None, build=None, host=None, target=None,
+                             pkg_config_paths=None, vars=None):  # @UnusedVariable
+            self.assertNotEqual(obj.vars, vars)
+            return vars or obj.vars
+
+        with patch.object(AutoToolsBuildEnvironment, 'configure', new=custom_configure):
+            be = AutoToolsBuildEnvironment(conanfile)
+
+            # Get vars and modify them
+            my_vars = be.vars
+            my_vars["fake_var"] = "fake"
+            my_vars["super_fake_var"] = "fakefake"
+
+            # TEST with default vars
+            mocked_result = be.configure()
+            self.assertEqual(mocked_result, be.vars)
+
+            # TEST with custom vars
+            mocked_result = be.configure(vars=my_vars)
+            self.assertEqual(mocked_result, my_vars)

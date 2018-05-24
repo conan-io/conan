@@ -5,7 +5,7 @@ from conans.util.files import load
 import os
 
 
-class OptionTest(unittest.TestCase):
+class OptionsTest(unittest.TestCase):
 
     def parsing_test(self):
         client = TestClient()
@@ -15,6 +15,7 @@ class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
     options = {"opt": "ANY"}
+    default_options = ("opt=b=c",)
 
     def build(self):
         self.output.warn("OPTION %s" % self.options.opt)
@@ -31,7 +32,7 @@ equal:opt=a=b
         client.run("install . --build=missing")
         self.assertIn("OPTION a=b", client.user_io.out)
 
-    def basic_test(self):
+    def basic_caching_test(self):
         client = TestClient()
         zlib = '''
 from conans import ConanFile

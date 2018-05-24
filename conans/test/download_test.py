@@ -1,12 +1,11 @@
 import unittest
 
-from conans.client.action_recorder import ActionRecorder
+from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.proxy import ConanProxy
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.client.remote_registry import RemoteRegistry
-from conans.client import remote_registry
 
 
 myconan1 = """
@@ -50,11 +49,12 @@ class DownloadTest(unittest.TestCase):
         registry = RemoteRegistry(client2.client_cache.registry, client2.out)
         installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager,
                                "default", recorder=ActionRecorder(), registry=registry)
+        package_folder = client2.client_cache.package(package_ref)
 
         with self.assertRaises(NotFoundException):
             installer.get_recipe(conan_ref, False, False)
 
-        self.assertFalse(installer.package_available(package_ref, False, True))
+        self.assertFalse(installer.package_available(package_ref, package_folder, True))
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
@@ -73,7 +73,7 @@ class DownloadTest(unittest.TestCase):
             pass
 
         try:
-            installer.package_available(package_ref, False, True)
+            installer.package_available(package_ref, package_folder, True)
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:

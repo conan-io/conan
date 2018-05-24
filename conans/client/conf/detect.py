@@ -235,6 +235,10 @@ def detected_os():
         return "Macos"
     if result.startswith("CYGWIN"):
         return "Windows"
+    if result.startswith("MINGW32_NT") or result.startswith("MINGW64_NT"):
+        return "Windows"
+    if result.startswith("MSYS_NT"):
+        return "Windows"
     return result
 
 

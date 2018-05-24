@@ -3,9 +3,9 @@ import unittest
 from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, SimplePaths, CONANINFO)
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.files import save
 from conans.model.info import ConanInfo
+from conans.search.search import search_recipes, search_packages
 
 
 class SearchTest(unittest.TestCase):
@@ -13,8 +13,6 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         folder = temp_folder()
         paths = SimplePaths(folder)
-        search_adapter = DiskSearchAdapter()
-        self.search_manager = DiskSearchManager(paths, search_adapter)
         os.chdir(paths.store)
         self.paths = paths
 
@@ -31,7 +29,7 @@ class SearchTest(unittest.TestCase):
             info = ConanInfo().loads("[settings]\n[options]")
             save(os.path.join(artif1, CONANINFO), info.dumps())
 
-        packages = self.search_manager.search_packages(conan_ref1, "")
+        packages = search_packages(self.paths, conan_ref1, "")
         all_artif = [_artif for _artif in sorted(packages)]
         self.assertEqual(all_artif, artifacts)
 
@@ -43,7 +41,7 @@ class SearchTest(unittest.TestCase):
             reg1 = "%s/%s" % (root_folder, EXPORT_FOLDER)
             os.makedirs(reg1)
 
-        recipes = self.search_manager.search_recipes("opencv/*@lasote/testing")
+        recipes = search_recipes(self.paths, "opencv/*@lasote/testing")
         self.assertEqual(recipes, refs)
 
     def case_insensitive_test(self):
@@ -63,18 +61,16 @@ class SearchTest(unittest.TestCase):
         conan_ref5 = ConanFileReference.loads("SDL_fake/1.10@lasote/testing")
         os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
         # Case insensitive searches
-        search_adapter = DiskSearchAdapter()
-        search_manager = DiskSearchManager(self.paths, search_adapter)
 
-        reg_conans = sorted([str(_reg) for _reg in search_manager.search_recipes("*")])
+        reg_conans = sorted([str(_reg) for _reg in search_recipes(self.paths, "*")])
         self.assertEqual(reg_conans, [str(conan_ref5),
                                       str(conan_ref3),
                                       str(conan_ref2),
                                       str(conan_ref4)])
 
-        reg_conans = sorted([str(_reg) for _reg in search_manager.search_recipes(pattern="sdl*")])
+        reg_conans = sorted([str(_reg) for _reg in search_recipes(self.paths, pattern="sdl*")])
         self.assertEqual(reg_conans, [str(conan_ref5), str(conan_ref2), str(conan_ref4)])
 
         # Case sensitive search
-        self.assertEqual(str(search_manager.search_recipes(pattern="SDL*", ignorecase=False)[0]),
+        self.assertEqual(str(search_recipes(self.paths, pattern="SDL*", ignorecase=False)[0]),
                          str(conan_ref5))

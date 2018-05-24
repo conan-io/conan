@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import platform
 import unittest
@@ -19,10 +21,10 @@ from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
-from conans.test.utils.context_manager import which
+from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load
+from conans.util.files import save, load, md5
 import requests
 
 
@@ -31,7 +33,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -66,6 +68,18 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def load_save_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        save(path, u"äüïöñç")
+        content = load(path)
+        self.assertEqual(content, u"äüïöñç")
+
+    def md5_test(self):
+        result = md5(u"äüïöñç")
+        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
+
     def cpu_count_test(self):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
@@ -267,26 +281,24 @@ class HelloConan(ConanFile):
             spt.update()
             self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
 
-            
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo yum install -y a_package")
-            
+
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
                 self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
-                
+
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "dpkg -s a_package")
 
-            
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
@@ -318,7 +330,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
 
@@ -384,7 +397,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
@@ -425,7 +439,7 @@ class HelloConan(ConanFile):
                 self.calls = 0
                 self.expected = expected
 
-            def __call__(self, command, *args, **kwargs):
+            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
                 self.calls += 1
                 return 0 if command in self.expected else 1
 
@@ -546,6 +560,21 @@ class HelloConan(ConanFile):
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
 
+    def vcvars_raises_when_not_found_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["5"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "5"
+        with self.assertRaisesRegexp(ConanException, "VS non-existing installation: Visual Studio 5"):
+            tools.vcvars_command(settings)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_constrained_test(self):
         text = """os: [Windows]
 compiler:
@@ -564,9 +593,6 @@ compiler:
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings)
-            if platform.system() != "Windows":
-                self.assertIn("VS non-existing installation", new_out.getvalue())
-
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
@@ -605,33 +631,35 @@ class MyConan(ConanFile):
 
         class MockConanfile(object):
             def __init__(self):
-                self.command = ""
-                self.output = namedtuple("output", "info")(lambda x: None)
+
+                self.output = namedtuple("output", "info")(lambda x: None)  # @UnusedVariable
                 self.env = {"PATH": "/path/to/somewhere"}
 
-            def run(self, command, win_bash=False):
-                self.command = command
+                class MyRun(object):
+                    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):  # @UnusedVariable
+                        self.command = command
+                self._runner = MyRun()
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile.command)
-        self.assertIn("--login -c", conanfile.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile.command)
+        self.assertIn("bash", conanfile._runner.command)
+        self.assertIn("--login -c", conanfile._runner.command)
+        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
                                                                                        "MYVAR": "34"})
         self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile.command)
+                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
@@ -685,3 +713,130 @@ class MyConan(ConanFile):
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
 
+    def get_gnu_triplet_test(self):
+        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
+            build = tools.get_gnu_triplet(this_os, this_arch, compiler)
+            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
+            return build, host
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86", "Linux", "armv7hf")
+        self.assertEquals(build, "x86-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "x86")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86-linux-gnu")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "x86")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "x86_64")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86_64-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv8")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "aarch64-linux-android")
+
+        build, host = get_values("Linux", "x86_64", "Android", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86_64-w64-mingw32")
+
+        build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "i686-w64-mingw32")
+
+        build, host = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+
+        build, host = get_values("Darwin", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host = get_values("Darwin", "x86_64", "Macos", "x86")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "i686-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "iOS", "armv7")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "watchOS", "armv7k")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        for os in ["Windows", "Linux"]:
+            for arch in ["x86_64", "x86"]:
+                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+
+                output = ""
+                if arch == "x86_64":
+                    output += "x86_64"
+                else:
+                    output += "i686" if os != "Linux" else "x86"
+
+                output += "-"
+                if os == "Windows":
+                    output += "w64-mingw32"
+                else:
+                    output += "linux-gnu"
+
+                self.assertIn(output, triplet)
+
+        # Compiler not specified for os="Windows"
+        with self.assertRaises(ConanException):
+            tools.get_gnu_triplet("Windows", "x86")
+
+    def detect_windows_subsystem_test(self):
+        # Dont raise test
+        result = tools.os_info.detect_windows_subsystem()
+        if not tools.os_info.bash_path or platform.system() != "Windows":
+            self.assertEqual(None, result)
+        else:
+            self.assertEqual(str, type(result))

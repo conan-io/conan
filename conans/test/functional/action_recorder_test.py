@@ -1,7 +1,7 @@
 import unittest
 
-from conans.client.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING,
-                                           INSTALL_ERROR_NETWORK)
+from conans.client.recorder.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING,
+                                                    INSTALL_ERROR_NETWORK)
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -19,9 +19,11 @@ class ActionRecorderTest(unittest.TestCase):
     def incomplete_process_test(self):
         tracer = ActionRecorder()
         tracer.recipe_install_error(self.ref1, INSTALL_ERROR_NETWORK, "SSL wtf", "http://drl.com")
-        install_info = tracer.get_install_info()
+        tracer.add_recipe_being_developed(self.ref1)
+        install_info = tracer.get_info()
         self.assertTrue(install_info["error"])
         self.assertEquals(install_info["installed"][0]["packages"], [])
+        self.assertEquals(install_info["installed"][0]["recipe"]["dependency"], False)
 
     def double_actions_test(self):
         tracer = ActionRecorder()
@@ -30,7 +32,7 @@ class ActionRecorderTest(unittest.TestCase):
         tracer.package_downloaded(self.ref_p1, "http://drl.com")
         tracer.package_fetched_from_cache(self.ref_p1)
 
-        install_info = tracer.get_install_info()
+        install_info = tracer.get_info()
         self.assertFalse(install_info["error"])
 
         first_installed = install_info["installed"][0]
@@ -55,12 +57,15 @@ class ActionRecorderTest(unittest.TestCase):
 
         tracer.recipe_fetched_from_cache(self.ref3)
         tracer.package_built(self.ref_p3)
+        tracer.add_recipe_being_developed(self.ref1)
 
-        install_info = tracer.get_install_info()
+        install_info = tracer.get_info()
         self.assertTrue(install_info["error"])
 
         first_installed = install_info["installed"][0]
+
         self.assertTrue(first_installed["recipe"]["cache"])
+        self.assertFalse(first_installed["recipe"]["dependency"])
         self.assertFalse(first_installed["recipe"]["downloaded"])
         self.assertIsNone(first_installed["recipe"]["error"])
         self.assertEquals(str(first_installed["recipe"]["id"]), "lib1/1.0@conan/stable")
@@ -73,6 +78,7 @@ class ActionRecorderTest(unittest.TestCase):
 
         second_installed = install_info["installed"][1]
         self.assertFalse(second_installed["recipe"]["cache"])
+        self.assertTrue(second_installed["recipe"]["dependency"])
         self.assertTrue(second_installed["recipe"]["downloaded"])
         self.assertIsNone(second_installed["recipe"]["error"])
         self.assertEquals(str(second_installed["recipe"]["id"]), "lib2/1.0@conan/stable")
@@ -85,6 +91,7 @@ class ActionRecorderTest(unittest.TestCase):
         self.assertEquals(str(second_installed["packages"][0]["id"]), "2")
 
         third_installed = install_info["installed"][2]
+        self.assertTrue(third_installed["recipe"]["dependency"])
         self.assertFalse(third_installed["packages"][0]["cache"])
         self.assertFalse(third_installed["packages"][0]["error"])
         self.assertTrue(third_installed["packages"][0]["built"])

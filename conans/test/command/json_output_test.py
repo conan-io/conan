@@ -23,6 +23,7 @@ class JsonOutputTest(unittest.TestCase):
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
+        self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
         self.assertTrue(my_json["installed"][0]["recipe"]["cache"])
         self.assertIsNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
@@ -37,6 +38,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertIn("T", the_time_str) # Weak validation of the ISO 8601
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
+        self.assertTrue(my_json["installed"][0]["recipe"]["dependency"])
         self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
@@ -163,6 +165,10 @@ AA*: CC/1.0@private_user/channel
         self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
         my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
         my_json = json.loads(my_json)
+
+        self.assertTrue(my_json["installed"][0]["recipe"]["dependency"])
+        self.assertTrue(my_json["installed"][1]["recipe"]["dependency"])
+        self.assertTrue(my_json["installed"][2]["recipe"]["dependency"])
 
         # Installed the build require CC with two options
         self.assertEquals(len(my_json["installed"][2]["packages"]), 2)

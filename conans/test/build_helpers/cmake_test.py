@@ -77,6 +77,61 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conan_file)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
+    def cmake_fpic_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.compiler = "gcc"
+        settings.compiler.version = "6.3"
+        settings.arch = "x86"
+
+        def assert_fpic(the_settings, input_shared, input_fpic, expected_option):
+            options = []
+            values = {}
+            if input_shared is not None:
+                options.append('"shared": [True, False]')
+                values["shared"] = input_shared
+            if input_fpic is not None:
+                options.append('"fPIC": [True, False]')
+                values["fPIC"] = input_fpic
+
+            conan_file = ConanFileMock(options='{%s}' % ", ".join(options),
+                                       options_values=values)
+            conan_file.settings = the_settings
+            cmake = CMake(conan_file)
+            cmake.configure()
+            if expected_option is not None:
+                self.assertEquals(cmake.definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"],
+                                  expected_option)
+            else:
+                self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake.definitions)
+
+        # Test shared=False and fpic=False
+        assert_fpic(settings, input_shared=False, input_fpic=False, expected_option="OFF")
+
+        # Test shared=True and fpic=False
+        assert_fpic(settings, input_shared=True, input_fpic=False, expected_option="ON")
+
+        # Test shared=True and fpic=True
+        assert_fpic(settings, input_shared=True, input_fpic=True, expected_option="ON")
+
+        # Test shared not defined and fpic=True
+        assert_fpic(settings, input_shared=None, input_fpic=True, expected_option="ON")
+
+        # Test shared not defined and fpic not defined
+        assert_fpic(settings, input_shared=None, input_fpic=None, expected_option=None)
+
+        # Test shared True and fpic not defined
+        assert_fpic(settings, input_shared=True, input_fpic=None, expected_option=None)
+
+        # Test nothing in Windows
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86_64"
+
+        assert_fpic(settings, input_shared=True, input_fpic=True, expected_option=None)
+
     def cmake_make_program_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
@@ -718,6 +773,50 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
 
+
+    def test_missing_settings(self):
+        def instance_with_os_build(os_build):
+            settings = Settings.loads(default_settings_yml)
+            settings.os_build = os_build
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            return CMake(conan_file)
+
+        cmake = instance_with_os_build("Linux")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        cmake = instance_with_os_build("Macos")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        with self.assertRaisesRegexp(ConanException, "You must specify compiler, "
+                                                     "compiler.version and arch"):
+            instance_with_os_build("Windows")
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
+            cmake = instance_with_os_build("Windows")
+            self.assertEquals(cmake.generator, "MyCoolGenerator")
+
+    def test_cmake_system_version_android(self):
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "SomeSystem",
+                                       "CONAN_CMAKE_GENERATOR": "SomeGenerator"}):
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "WindowsStore"
+            settings.os.version = "8.1"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.1")
+
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "Android"
+            settings.os.api_level = "32"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
@@ -725,12 +824,16 @@ build_type: [ Release]
 
 
 class ConanFileMock(ConanFile):
-    def __init__(self, shared=None):
+    def __init__(self, shared=None, options=None, options_values=None):
+        options = options or ""
         self.command = None
         self.path = None
         self.source_folder = self.build_folder = "."
         self.settings = None
-        self.options = Options(PackageOptions.loads(""))
+        self.options = Options(PackageOptions.loads(options))
+        if options_values:
+            for var, value in options_values.items():
+                self.options._data[var] = value
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
         self.in_local_cache = False

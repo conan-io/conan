@@ -262,7 +262,10 @@ class OSInfo(object):
     @staticmethod
     def detect_windows_subsystem():
         from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
-        output = OSInfo.uname()
+        try:
+            output = OSInfo.uname()
+        except ConanException:
+            return None
         if not output:
             return None
         if "cygwin" in output:
@@ -302,6 +305,60 @@ def get_cross_building_settings(settings, self_os=None, self_arch=None):
     host_arch = settings.get_safe("arch")
 
     return build_os, build_arch, host_os, host_arch
+
+
+def get_gnu_triplet(os, arch, compiler=None):
+    """
+    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
+
+    :param os: os to be used to create the triplet
+    :param arch: arch to be used to create the triplet
+    :param compiler: compiler used to create the triplet (only needed fo windows)
+    """
+
+    if os == "Windows" and compiler is None:
+        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
+                             "needed for os=Windows")
+
+    # Calculate the arch
+    machine = {"x86": "i686" if os != "Linux" else "x86",
+               "x86_64": "x86_64",
+               "armv6": "arm",
+               "armv7": "arm",
+               "armv7s": "arm",
+               "armv7k": "arm",
+               "armv7hf": "arm",
+               "armv8": "aarch64"}.get(arch, None)
+    if machine is None:
+        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
+                             "translate it to the GNU triplet, please report at "
+                             " https://github.com/conan-io/conan/issues" % arch)
+
+    # Calculate the OS
+    if compiler == "gcc":
+        windows_op = "w64-mingw32"
+    elif compiler == "Visual Studio":
+        windows_op = "windows-msvc"
+    else:
+        windows_op = "windows"
+
+    op_system = {"Windows": windows_op,
+                 "Linux": "linux-gnu",
+                 "Darwin": "apple-darwin",
+                 "Android": "linux-android",
+                 "Macos": "apple-darwin",
+                 "iOS": "apple-darwin",
+                 "watchOS": "apple-darwin",
+                 "tvOS": "apple-darwin"}.get(os, os.lower())
+
+    if os in ("Linux", "Android"):
+        if "arm" in arch and arch != "armv8":
+            op_system += "eabi"
+
+        if arch == "armv7hf" and os == "Linux":
+            op_system += "hf"
+
+    return "%s-%s" % (machine, op_system)
 
 
 try:

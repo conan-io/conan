@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
@@ -115,12 +115,12 @@ def _get_edges(graph):
 
     edges = set()
     for n in graph.nodes:
-        edges.update([Edge(n, neigh) for neigh in graph.neighbors(n)])
+        edges.update([Edge(n, neigh) for neigh in n.neighbors()])
     return edges
 
 
 class MockRequireResolver(object):
-    def resolve(self, rquire, conanref):  # @UnusedVariable
+    def resolve(self, rquire, conanref, update):  # @UnusedVariable
         return
 
 

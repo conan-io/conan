@@ -14,9 +14,25 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.search.search import DiskSearchManager
-from conans.util.files import save, load, rmdir, is_dirty, set_dirty
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
+from conans.search.search import search_recipes
+
+
+def export_alias(reference, target_reference, client_cache):
+    conanfile = """
+from conans import ConanFile
+
+class AliasConanfile(ConanFile):
+    alias = "%s"
+""" % str(target_reference)
+
+    export_path = client_cache.export(reference)
+    mkdir(export_path)
+    save(os.path.join(export_path, CONANFILE), conanfile)
+    mkdir(client_cache.export_sources(reference))
+    digest = FileTreeManifest.create(export_path)
+    digest.save(export_path)
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -34,7 +50,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
-    refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
+    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
     if refs and conan_ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
@@ -98,12 +114,12 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
+    digest.save(destination_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
     if is_dirty(source):
-        output.info("Source folder is dirty, forcing removal")
+        output.info("Source folder is corrupted, forcing removal")
         remove = True
     elif modified_recipe and not keep_source and os.path.exists(source):
         output.info("Package recipe modified in export, forcing source folder removal")
@@ -116,7 +132,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
             rmdir(source)
         except BaseException as e:
             output.error("Unable to delete source folder. "
-                         "Will be marked as dirty for deletion")
+                         "Will be marked as corrupted for deletion")
             output.warn(str(e))
             set_dirty(source)
 
@@ -126,8 +142,7 @@ def _init_export_folder(destination_folder, destination_src_folder):
     try:
         if os.path.exists(destination_folder):
             if os.path.exists(os.path.join(destination_folder, CONAN_MANIFEST)):
-                manifest_content = load(os.path.join(destination_folder, CONAN_MANIFEST))
-                previous_digest = FileTreeManifest.loads(manifest_content)
+                previous_digest = FileTreeManifest.load(destination_folder)
             # Maybe here we want to invalidate cache
             rmdir(destination_folder)
         os.makedirs(destination_folder)

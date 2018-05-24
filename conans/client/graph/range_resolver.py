@@ -1,5 +1,6 @@
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
+from conans.search.search import search_recipes
 
 
 def satisfying(list_versions, versionexpr, output):
@@ -20,15 +21,14 @@ def satisfying(list_versions, versionexpr, output):
     return candidates.get(result)
 
 
-class RequireResolver(object):
+class RangeResolver(object):
 
-    def __init__(self, output, local_search, remote_search, update):
+    def __init__(self, output, client_cache, remote_search):
         self._output = output
-        self._local_search = local_search
+        self._client_cache = client_cache
         self._remote_search = remote_search
-        self._update = update
 
-    def resolve(self, require, base_conanref):
+    def resolve(self, require, base_conanref, update):
         version_range = require.version_range
         if version_range is None:
             return
@@ -50,7 +50,7 @@ class RequireResolver(object):
         # The search pattern must be a string
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
 
-        if self._update:
+        if update:
             searches = (self._resolve_remote, self._resolve_local)
         else:
             searches = (self._resolve_local, self._resolve_remote)
@@ -69,12 +69,11 @@ class RequireResolver(object):
                                  % (version_range, require))
 
     def _resolve_local(self, search_ref, version_range):
-        if self._local_search:
-            local_found = self._local_search.search_recipes(search_ref)
-            if local_found:
-                resolved_version = self._resolve_version(version_range, local_found)
-                if resolved_version:
-                    return resolved_version
+        local_found = search_recipes(self._client_cache, search_ref)
+        if local_found:
+            resolved_version = self._resolve_version(version_range, local_found)
+            if resolved_version:
+                return resolved_version
 
     def _resolve_remote(self, search_ref, version_range):
         # We should use ignorecase=False, we want the exact case!
@@ -82,7 +81,7 @@ class RequireResolver(object):
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 
-    def _resolve_version(self, version_range, local_found):
-        versions = {ref.version: ref for ref in local_found}
+    def _resolve_version(self, version_range, refs_found):
+        versions = {ref.version: ref for ref in refs_found}
         result = satisfying(versions, version_range, self._output)
         return versions.get(result)

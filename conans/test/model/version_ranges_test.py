@@ -1,20 +1,20 @@
-import unittest
-from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsGraphBuilder
+import unittest
+from collections import namedtuple
+
+from conans.test.utils.tools import TestBufferConanOutput
+from conans.paths import CONANFILE, SimplePaths
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.client.loader import ConanFileLoader
-from conans.util.files import save, list_folder_subdirs
 from conans.model.settings import Settings
 from conans.model.requires import Requirements
 from conans.test.utils.test_files import temp_folder
-from collections import namedtuple
-from conans.client.require_resolver import RequireResolver, satisfying
-import re
+from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
 from conans.model.profile import Profile
 from conans.errors import ConanException
+from conans.util.files import save
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -110,24 +110,6 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
-    def search_recipes(self, pattern):
-        from fnmatch import translate
-        pattern = translate(pattern)
-        pattern = re.compile(pattern)
-
-        subdirs = list_folder_subdirs(basedir=self.folder, level=4)
-
-        if not pattern:
-            result = [ConanFileReference(*folder.split("/")) for folder in subdirs]
-        else:
-            result = []
-            for subdir in subdirs:
-                conan_ref = ConanFileReference(*subdir.split("/"))
-                if pattern:
-                    if pattern.match(str(conan_ref)):
-                        result.append(conan_ref)
-        return sorted(result)
-
 
 hello_content = """
 from conans import ConanFile
@@ -152,7 +134,7 @@ Edge = namedtuple("Edge", "src dst")
 def _get_edges(graph):
     edges = set()
     for n in graph.nodes:
-        edges.update([Edge(n, neigh) for neigh in graph.neighbors(n)])
+        edges.update([Edge(n, neigh) for neigh in n.neighbors()])
     return edges
 
 
@@ -171,7 +153,8 @@ class VersionRangesTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
-        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search, update=False)
+        paths = SimplePaths(self.retriever.folder)
+        self.resolver = RangeResolver(self.output, paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
