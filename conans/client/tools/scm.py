@@ -46,6 +46,8 @@ class Git(object):
 
     def clone(self, url, branch=None):
         url = self.get_url_with_credentials(url)
+        if os.path.exists(url):
+            url = url.replace("\\", "/")  # Windows local directory
         if os.path.exists(self.folder) and os.listdir(self.folder):
             if not branch:
                 raise ConanException("The destination folder is not empty, "

@@ -265,7 +265,7 @@ def create_local_git_repo(files, branch=None):
         git.run("checkout -b %s" % branch)
     git.run("add .")
     git.run('commit -m "message"')
-    return tmp, git.get_revision()
+    return tmp.replace("\\", "/"), git.get_revision()
 
 
 class MockedUserIO(UserIO):

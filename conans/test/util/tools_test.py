@@ -925,7 +925,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         assert(os.path.exists("file.h"))
-""" % git_repo
+""" % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")
 
@@ -947,7 +947,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         assert(os.path.exists(os.path.join("src", "file.h")))
-""" % git_repo
+""" % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")
 
@@ -967,11 +967,8 @@ class HelloConan(ConanFile):
 
     def build(self):
         assert(os.path.exists("file.h"))
-""" % git_repo
+""" % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("The destination folder is not empty, "
                       "specify a branch to checkout", client.out)
-
-
-

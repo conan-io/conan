@@ -40,7 +40,7 @@ class SCMTest(unittest.TestCase):
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
     def test_auto_git(self):
-        curdir = self.client.current_folder
+        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
@@ -73,7 +73,7 @@ class SCMTest(unittest.TestCase):
         self.assertIn("My file is copied", self.client.out)
 
     def test_deleted_source_folder(self):
-        curdir = self.client.current_folder
+        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
@@ -102,23 +102,23 @@ class SCMTest(unittest.TestCase):
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
-        git = Git(curdir)
+        git = Git(curdir.replace("\\", "/"))
         self.client.save({"conanfile.py": base.format(directory="None",
-                                                      url=curdir, revision=git.get_revision()),
+                                                      url=curdir.replace("\\", "/"), revision=git.get_revision()),
                           "myfile2.txt": "My file is copied"})
         self._commit_contents()
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source2", "myfile.txt")))
-        self.assertIn("Getting sources from url: '%s'" % curdir, self.client.out)
+        self.assertIn("Getting sources from url: '%s'" % curdir.replace("\\", "/"), self.client.out)
 
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
-        curdir = self.client.current_folder
+        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()

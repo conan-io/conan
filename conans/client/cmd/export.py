@@ -119,7 +119,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
         output.success("Revision deduced by 'auto': %s" % scm.revision)
 
     # Generate the export.src file pointing to the src_path
-    save(scm_src_file, src_path)
+    save(scm_src_file, src_path.replace("\\", "/"))
     scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
 
 
