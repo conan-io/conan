@@ -4,19 +4,12 @@ from collections import namedtuple, OrderedDict
 class _SearchRecipe(namedtuple("SearchRecipe", "reference, recipe_hash")):
     with_packages = True
 
-    def __new__(cls, reference, recipe_hash):
-        return super(cls, _SearchRecipe).__new__(cls, reference, recipe_hash)
-
     def to_dict(self):
         return {"id": self.reference, "hash": self.recipe_hash}
 
 
 class _SearchPackage(namedtuple("SearchPackage",
                                 "package_id, options, settings, requires, outdated")):
-
-    def __new__(cls, package_id, options, settings, requires, outdated):
-        return super(cls, _SearchPackage).__new__(cls, package_id, options, settings, requires,
-                                                  outdated)
 
     def to_dict(self):
         return {"id": self.package_id, "options": self.options, "settings": self.settings,

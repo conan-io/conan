@@ -12,7 +12,7 @@ class Search(object):
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         ignorecase = not case_sensitive
 
-        references = {}
+        references = OrderedDict()
         if not remote:
             references[None] = []
             refs = search_recipes(self._client_cache, pattern, ignorecase)
@@ -32,7 +32,7 @@ class Search(object):
                         for ref in refs:
                             recipe_hash = self._get_recipe_hash_remote(ref, remote)
                             references[remote.name].append((ref, recipe_hash))
-                return OrderedDict(references)
+                return references
         # single remote
         remote = self._registry.remote(remote)
         references[remote.name] = []
@@ -40,7 +40,7 @@ class Search(object):
         for ref in refs:
             recipe_hash = self._get_recipe_hash_remote(ref, remote)
             references[remote.name].append((ref, recipe_hash))
-        return OrderedDict(references)
+        return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
