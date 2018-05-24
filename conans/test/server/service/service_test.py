@@ -15,7 +15,6 @@ from time import sleep
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.server.store.disk_adapter import ServerDiskAdapter
-from conans.search.search import DiskSearchManager
 
 
 class MockFileSaver(object):
@@ -90,11 +89,8 @@ class ConanServiceTest(unittest.TestCase):
         adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
         self.paths = SimplePaths(self.tmp_dir)
         self.file_manager = FileManager(self.paths, adapter)
-
-        self.search_manager = DiskSearchManager(self.paths)
-
         self.service = ConanService(authorizer, self.file_manager, "lasote")
-        self.search_service = SearchService(authorizer, self.search_manager, "lasote")
+        self.search_service = SearchService(authorizer, self.paths, "lasote")
 
         files = hello_source_files("test")
         save_files(self.paths.export(self.conan_reference), files)

@@ -29,7 +29,6 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
-from conans.search.search import DiskSearchManager
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
@@ -195,18 +194,15 @@ class ConanAPIV1(object):
             # Adjust global tool variables
             set_global_instances(out, requester)
 
-            # Get a search manager
-            search_manager = DiskSearchManager(client_cache)
-
             # Settings preprocessor
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
+            conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager,
                                settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager,
                  _settings_preprocessor, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -214,7 +210,6 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._search_manager = search_manager
         self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
@@ -224,7 +219,7 @@ class ConanAPIV1(object):
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager, self._search_manager,
+                            self._remote_manager,
                             self._settings_preprocessor, action_recorder, self._registry)
 
     @api_method
