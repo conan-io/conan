@@ -21,7 +21,6 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
 from conans.client.source import merge_directories
-from conans.client.package_installer import raise_package_not_found_error
 import stat
 from conans.util.env_reader import get_env
 
@@ -225,9 +224,6 @@ class RemoteManager(object):
         try:
             urls = self._call_remote(remote, "get_package_urls", package_reference)
             zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
-        except NotFoundException:
-            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference, remote.name))
-        else:
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
@@ -237,6 +233,18 @@ class RemoteManager(object):
                 make_read_only(dest_folder)
             output.success('Package installed %s' % package_id)
             recorder.package_downloaded(package_reference, remote.url)
+        except NotFoundException:
+            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference, remote.name))
+        except BaseException as e:
+            output.error("Exception while getting package: %s" % str(package_reference.package_id))
+            output.error("Exception: %s %s" % (type(e), str(e)))
+            try:
+                output.warn("Trying to remove package folder: %s" % dest_folder)
+                rmdir(dest_folder)
+            except OSError as e:
+                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
+                                     "using it, and retry" % (str(e), dest_folder))
+            raise
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

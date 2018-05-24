@@ -1,67 +1,33 @@
 import os
 
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING
-from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
-from conans.model.ref import PackageReference
+from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.util.files import rmdir
 from conans.util.tracer import log_package_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
-
-
-def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder, remote_url):
-    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-
-    msg = '''Can't find a '%s' package for the specified options and settings:
-- Settings: %s
-- Options: %s
-- Package ID: %s
-''' % (conan_ref, settings_text, options_text, package_id)
-    out.warn(msg)
-    recorder.package_install_error(PackageReference(conan_ref, package_id),
-                                   INSTALL_ERROR_MISSING, msg, remote=remote_url)
-    raise ConanException('''Missing prebuilt package for '%s'
-Try to build it from sources with "--build %s"
-Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (conan_ref, conan_ref.name))
 
 
 def get_package(conanfile, package_ref, package_folder, output, recorder, proxy, update):
     # TODO: This access to proxy attributes has to be improved
     remote_manager = proxy._remote_manager
     registry = proxy.registry
-    try:
-        if update:
-            _remove_if_outdated(package_folder, package_ref, proxy, output)
-        local_package = os.path.exists(package_folder)
-        if local_package:
-            output.success('Already installed!')
-            log_package_got_from_local_cache(package_ref)
-            recorder.package_fetched_from_cache(package_ref)
-            return False
-        else:
-            remote = registry.get_ref(package_ref.conan)
-            # remote will be defined, as package availability has been checked from installer
-            try:
-                remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
-            except NotFoundException:
-                raise_package_not_found_error(conanfile, package_ref.conan, package_ref.package_id,
-                                              output, recorder, remote.url)
-            return True
-    except BaseException as e:
-        output.error("Exception while getting package: %s" % str(package_ref.package_id))
-        output.error("Exception: %s %s" % (type(e), str(e)))
-        _clean_package(package_folder, output)
-        raise
-
-
-def _clean_package(package_folder, output):
-    try:
-        output.warn("Trying to remove package folder: %s" % package_folder)
-        rmdir(package_folder)
-    except OSError as e:
-        raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
-                             "using it, and retry" % (str(e), package_folder))
+    if update:
+        _remove_if_outdated(package_folder, package_ref, proxy, output)
+    local_package = os.path.exists(package_folder)
+    if local_package:
+        output.success('Already installed!')
+        log_package_got_from_local_cache(package_ref)
+        recorder.package_fetched_from_cache(package_ref)
+        return False
+    else:
+        remote = registry.get_ref(package_ref.conan)
+        # remote will be defined, as package availability has been checked from installer
+        try:
+            remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
+        except NotFoundException:
+            from conans.client.installer import raise_package_not_found_error
+            raise_package_not_found_error(conanfile, package_ref.conan, package_ref.package_id,
+                                          output, recorder, remote.url)
+        return True
 
 
 def _remove_if_outdated(package_folder, package_ref, proxy, output):

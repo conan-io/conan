@@ -4,7 +4,8 @@ import shutil
 import platform
 
 from conans.client import tools
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING,\
+    INSTALL_ERROR_MISSING
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
@@ -25,8 +26,7 @@ from conans.client.importer import remove_imports
 
 from conans.util.tracer import log_package_built
 from conans.client.tools.env import pythonpath
-from conans.client.package_installer import raise_package_not_found_error,\
-    get_package
+from conans.client.package_installer import get_package
 
 
 def build_id(conan_file):
@@ -213,6 +213,24 @@ def call_system_requirements(conanfile, output):
     except Exception as e:
         output.error("while executing system_requirements(): %s" % str(e))
         raise ConanException("Error in system requirements")
+
+
+def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder, remote_url):
+    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
+    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
+
+    msg = '''Can't find a '%s' package for the specified options and settings:
+- Settings: %s
+- Options: %s
+- Package ID: %s
+''' % (conan_ref, settings_text, options_text, package_id)
+    out.warn(msg)
+    recorder.package_install_error(PackageReference(conan_ref, package_id),
+                                   INSTALL_ERROR_MISSING, msg, remote=remote_url)
+    raise ConanException('''Missing prebuilt package for '%s'
+Try to build it from sources with "--build %s"
+Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+''' % (conan_ref, conan_ref.name))
 
 
 class ConanInstaller(object):
