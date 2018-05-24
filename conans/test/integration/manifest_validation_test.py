@@ -153,7 +153,7 @@ class ConanFileTest(ConanFile):
         self.client.run("remove Hello* -f")
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
-        self._capture_verify_manifest(".", remote="default:")
+        self._capture_verify_manifest(".", remote="default")
 
     def _failed_verify(self, reference, remote="local cache"):
         self.client.run("install %s --build missing --manifests" % str(reference))
@@ -283,7 +283,7 @@ class ConanFileTest(ConanFile):
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_path = self.client.paths.package(package_reference)
         file_path = os.path.join(package_path, "conaninfo.txt")
-        save(file_path, load(file_path) + "RANDOM STRING")
+        save(file_path, load(file_path) + "  ")
 
         self.client.run("install %s --build missing --manifests" % str(self.reference),
                         ignore_error=True)
