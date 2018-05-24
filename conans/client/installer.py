@@ -83,7 +83,7 @@ class _ConanPackageBuilder(object):
                                  "Close any app using it, and retry" % str(e))
 
         self._out.info('Building your package in %s' % self.build_folder)
-        sources_pointer = self._client_cache.local_sources_pointer(self._conan_ref)
+        sources_pointer = self._client_cache.scm_folder(self._conan_ref)
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else ""
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out)

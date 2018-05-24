@@ -1,41 +1,34 @@
 import os
-import platform
 import subprocess
 
 from six.moves.urllib.parse import urlparse, quote_plus
 
-from conans.client.tools.env import no_op
+from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 
 
 class Git(object):
 
-    def __init__(self, folder, verify_ssl=True, username=None, password=None, force_english=True,
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
                  runner=None):
-        self.folder = folder
+        self.folder = folder or os.getcwd()
+        if not os.path.exists(self.folder):
+            os.mkdir(self.folder)
         self._verify_ssl = verify_ssl
-        self._force_english = force_english
+        self._force_eng = force_english
         self._username = username
         self._password = password
         self._runner = runner
 
     def run(self, command):
-        def english_output(cmd):
-            if not self._force_english:
-                return cmd
-            # Git in german will be forced to output messages in english
-            if platform.system() == "Windows":
-                return "set LC_ALL=en_US.UTF-8 && %s" % cmd
-            else:
-                return "LC_ALL=en_US.UTF-8 %s" % cmd
-
+        command = "git %s" % command
         with chdir(self.folder) if self.folder else no_op():
-            command = english_output('git %s' % command)
-            if not self._runner:
-                return subprocess.check_output(command, shell=True).decode().strip()
-            else:
-                return self._runner(command)
+            with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
+                if not self._runner:
+                    return subprocess.check_output(command, shell=True).decode().strip()
+                else:
+                    return self._runner(command)
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
@@ -56,10 +49,12 @@ class Git(object):
         if os.path.exists(self.folder) and os.listdir(self.folder):
             if not branch:
                 raise ConanException("The destination folder is not empty, "
-                                     "specify a branch to checkout")
+                                     "specify a branch to checkout (not a tag or commit) "
+                                     "or specify a 'subfolder'"
+                                     "attribute in the 'scm'")
             output = self.run("init")
             output += self._configure_ssl_verify()
-            output += self.run("remote add origin %s" % url)
+            output += self.run('remote add origin "%s"' % url)
             output += self.run("fetch ")
             output += self.run("checkout -t origin/%s" % branch)
         else:

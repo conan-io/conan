@@ -20,7 +20,7 @@ from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -846,25 +846,24 @@ class MyConan(ConanFile):
 class GitToolTest(unittest.TestCase):
 
     def test_clone_git(self):
+        path, _ = create_local_git_repo({"myfile": "contents"})
         tmp = temp_folder()
         git = Git(tmp)
-        git.clone("https://github.com/conan-community/conan-zlib.git")
-        self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
 
     def test_clone_existing_folder_git(self):
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        git.clone("https://github.com/conan-community/conan-zlib.git", branch="release/1.2.11")
-        self.assertTrue(os.path.exists(os.path.join(tmp, "LICENSE")))
-
-        # Checkout different branch
-        ret = git.checkout("release/1.2.8")
-        self.assertIn("Branch 'release/1.2.8' set up to track remote branch", ret)
+        git.clone(path, branch="my_release")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
 
         # Checkout a commit
-        git.checkout("feff5efd4660ae0cd07c231d0fa1590d3d7967bf")
-        self.assertEquals(git.get_revision(), "feff5efd4660ae0cd07c231d0fa1590d3d7967bf")
+        git.checkout(commit)
+        self.assertEquals(git.get_revision(), commit)
 
     def test_clone_existing_folder_without_branch(self):
         tmp = temp_folder()
@@ -880,7 +879,7 @@ class GitToolTest(unittest.TestCase):
         url_credentials = git.get_url_with_credentials("https://some.url.com")
         self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
 
-    def test_verify_ssl_and_english(self):
+    def test_verify_ssl(self):
         class MyRunner(object):
             def __init__(self):
                 self.calls = []
@@ -895,13 +894,84 @@ class GitToolTest(unittest.TestCase):
                   force_english=True)
         git.clone(url="https://myrepo.git")
         self.assertIn("git config http.sslVerify true", runner.calls[1])
-        self.assertIn("LC_ALL=en_US.UTF-8", runner.calls[1])
 
         runner = MyRunner()
         git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
                   force_english=False)
         git.clone(url="https://myrepo.git")
         self.assertIn("git config http.sslVerify false", runner.calls[1])
-        self.assertNotIn("LC_ALL=en_US.UTF-8", runner.calls[1])
+
+    def git_helper_in_recipe_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        save(os.path.join(git_repo, "file.h"), "contents")
+        client.runner("git init .", cwd=git_repo)
+        client.runner("git co -b dev", cwd=git_repo)
+        client.runner("git add .", cwd=git_repo)
+        client.runner('git commit -m "comm"', cwd=git_repo)
+
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s", "dev")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Now clone in a subfolder with later checkout
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        tools.mkdir("src")
+        git = tools.Git("./src")
+        git.clone("%s")
+        git.checkout("dev")
+
+    def build(self):
+        assert(os.path.exists(os.path.join("src", "file.h")))
+""" % git_repo
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Base dir, with exports without subfolder and not specifying checkout fails
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel", ignore_error=True)
+        self.assertIn("The destination folder is not empty, "
+                      "specify a branch to checkout", client.out)
+
 
 

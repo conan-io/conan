@@ -99,7 +99,7 @@ def _load_export_conanfile(conanfile_path, output, name, version):
 
 def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
 
-    scm_src_file = paths.local_sources_pointer(conan_ref)
+    scm_src_file = paths.scm_folder(conan_ref)
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 

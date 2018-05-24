@@ -104,7 +104,8 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
 
                     scm = get_scm(conan_file, src_folder)
                     if scm:
-                        if local_sources_path:  # scm.capture_origin before exporting
+                        # scm.capture_origin before exporting
+                        if local_sources_path and os.path.exists(local_sources_path):
                             output.info("Getting sources from folder: %s" % local_sources_path)
                             merge_directories(local_sources_path, src_folder)
                             _clean_source_folder(src_folder)
@@ -112,8 +113,8 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                             output.info("Getting sources from url: '%s'" % scm.url)
                             scm.clone()
                             scm.checkout()
-                    else:
-                        conan_file.source()
+
+                    conan_file.source()
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
