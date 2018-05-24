@@ -1,12 +1,12 @@
 import unittest
 
-from conans.client.recorder.search_recorder import SearchRecoder
+from conans.client.recorder.search_recorder import SearchRecorder
 
 
 class SearchRecorderTest(unittest.TestCase):
 
     def setUp(self):
-        self.recorder = SearchRecoder()
+        self.recorder = SearchRecorder()
 
     def empty_test(self):
         info = self.recorder.get_info()

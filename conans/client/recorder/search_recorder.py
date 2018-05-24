@@ -23,7 +23,7 @@ class _SearchPackage(namedtuple("SearchPackage",
                 "requires": self.requires, "outdated": self.outdated}
 
 
-class SearchRecoder(object):
+class SearchRecorder(object):
 
     def __init__(self):
         self.error = False
