@@ -98,6 +98,26 @@ class Version(str):
         if not isinstance(other, Version):
             other = Version(other)
 
+        # Check equals
+        if len(other.as_list) > len(self.as_list):
+            longer = other.as_list
+            shorter = self.as_list
+        else:
+            longer = self.as_list
+            shorter = other.as_list
+
+        equals = True
+        for ind in range(0, len(longer)):
+            if ind < len(shorter):
+                if longer[ind] != shorter[ind]:
+                    equals = False
+            else:
+                if longer[ind] != 0:
+                    equals = False
+        if equals:
+            return 0
+
+        # Check greater than or less than
         other_list = other.as_list
         for ind, el in enumerate(self.as_list):
             if ind + 1 > len(other_list):
@@ -119,37 +139,19 @@ class Version(str):
             return -1
 
     def __gt__(self, other):
-        return self.__ne__(other) and self.__cmp__(other) == 1
+        return self.__cmp__(other) == 1
 
     def __lt__(self, other):
-        return self.__ne__(other) and self.__cmp__(other) == -1
+        return self.__cmp__(other) == -1
 
     def __le__(self, other):
-        return self.__eq__(other) or self.__cmp__(other) == -1
+        return self.__cmp__(other) in [0, -1]
 
     def __ge__(self, other):
-        return self.__eq__(other) or self.__cmp__(other) == 1
+        return self.__cmp__(other) in [0, 1]
 
     def __eq__(self, other):
-        if other is None:
-            return False
-        if not isinstance(other, Version):
-            other = Version(other)
-        if len(other.as_list) > len(self.as_list):
-            longer = other.as_list
-            shorter = self.as_list
-        else:
-            longer = self.as_list
-            shorter = other.as_list
-
-        for ind in range(0, len(longer)):
-            if ind < len(shorter):
-                if longer[ind] != shorter[ind]:
-                    return False
-            else:
-                if longer[ind] != 0:
-                    return False
-        return True
+        return self.__cmp__(other) == 0
 
     def __ne__(self, other):
         return not self.__eq__(other)

@@ -6,9 +6,6 @@ class VersionTest(unittest.TestCase):
 
     def simple_test(self):
         v1 = Version("1.2.3")
-        print("patch", v1.patch())
-        print("minor", v1.minor())
-        print("major", v1.major())
         self.assertTrue(v1 == "1.2.3")
         self.assertTrue(v1 > "1.1")
         self.assertTrue(v1 > None)
@@ -46,11 +43,10 @@ class VersionTest(unittest.TestCase):
         self.assertFalse(Version("4") > Version("4.0.0"))
         self.assertFalse(Version("4") != Version("4.0.0"))
         self.assertTrue(Version("4") == Version("4.0.0"))
+        self.assertTrue(Version("4") <= Version("4.0.0"))
+        self.assertTrue(Version("4") >= Version("4.0.0"))
 
         self.assertTrue(Version("4.0.0") == Version("4.0.0"))
-        self.assertTrue(Version("4.0") == "4")
-        self.assertTrue(Version("4.0") <= "4")
-        self.assertTrue(Version("4.0") >= "4")
         self.assertTrue(Version("4.0.1") != "4")
         self.assertFalse(Version("4.0.0.1") == "4")
         self.assertTrue(Version("4.0.0.1") >= "4")
