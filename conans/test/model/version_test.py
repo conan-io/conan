@@ -6,13 +6,16 @@ class VersionTest(unittest.TestCase):
 
     def simple_test(self):
         v1 = Version("1.2.3")
+        print("patch", v1.patch())
+        print("minor", v1.minor())
+        print("major", v1.major())
         self.assertTrue(v1 == "1.2.3")
         self.assertTrue(v1 > "1.1")
         self.assertTrue(v1 > None)
         self.assertTrue(v1 < "1.11")
         self.assertTrue(v1 > "1.2")
         self.assertTrue(v1 > "1.2.2.2")
-        self.assertTrue(v1 > "1.2.3.2")
+        self.assertTrue(v1 < "1.2.3.2")
         self.assertEqual(v1.major(), "1.Y.Z")  # 1.X.Y
         self.assertEqual(v1.minor(), "1.2.Z")  # 1.2.Y
         self.assertEqual(v1.patch(), "1.2.3")
@@ -39,13 +42,18 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))
 
-        self.assertTrue(Version("4") > "4.1")
-        self.assertTrue(Version("4") > Version("4.0.7"))
-        self.assertTrue(Version("4") > Version("4.9999.99999"))
-        self.assertTrue(Version("4.7") > Version("4.1.99999"))
-        self.assertTrue(Version("4.99999.1.1") > Version("4.9999.9999"))
-        self.assertTrue(Version("4.1.1.1") < Version("4.9999.99999"))
-        self.assertTrue(Version("4.9999.9999") > Version("4.9999.9999.1"))
+        self.assertFalse(Version("4") < Version("4.0.0"))
+        self.assertFalse(Version("4") > Version("4.0.0"))
+        self.assertFalse(Version("4") != Version("4.0.0"))
+        self.assertTrue(Version("4") == Version("4.0.0"))
+
+        self.assertTrue(Version("4.0.0") == Version("4.0.0"))
+        self.assertTrue(Version("4.0") == "4")
+        self.assertTrue(Version("4.0") <= "4")
+        self.assertTrue(Version("4.0") >= "4")
+        self.assertTrue(Version("4.0.1") != "4")
+        self.assertFalse(Version("4.0.0.1") == "4")
+        self.assertTrue(Version("4.0.0.1") >= "4")
 
     def text_test(self):
         v1 = Version("master+build2")
