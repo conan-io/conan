@@ -99,21 +99,13 @@ class Version(str):
             other = Version(other)
 
         # Check equals
-        if len(other.as_list) > len(self.as_list):
-            longer = other.as_list
-            shorter = self.as_list
-        else:
-            longer = self.as_list
-            shorter = other.as_list
+        def get_el(a_list, index):
+            if len(a_list) - 1 < index:
+                return 0  # out of range, 4 == 4.0 == 4.0.0
+            return a_list[index]
 
-        equals = True
-        for ind in range(0, len(longer)):
-            if ind < len(shorter):
-                if longer[ind] != shorter[ind]:
-                    equals = False
-            else:
-                if longer[ind] != 0:
-                    equals = False
+        equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
+                     for ind in range(0, max(len(other.as_list), len(self.as_list))))
         if equals:
             return 0
 
