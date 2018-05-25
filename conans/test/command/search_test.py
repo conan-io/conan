@@ -489,23 +489,19 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.10@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.11@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.12@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'helloTest/1.4.10@fenix/stable',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'helloTest/1.4.10@fenix/stable'}
                         }
                     ]
                 }
@@ -531,23 +527,19 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.10@fenix/testing',
-                                 'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                 'id': 'Hello/1.4.10@fenix/testing'}
                         },
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.11@fenix/testing',
-                                 'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                 'id': 'Hello/1.4.11@fenix/testing'}
                         },
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.12@fenix/testing',
-                                 'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                 'id': 'Hello/1.4.12@fenix/testing'}
                         },
                         {
                              'recipe': {
-                                 'id': 'helloTest/1.4.10@fenix/stable',
-                                 'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                 'id': 'helloTest/1.4.10@fenix/stable'}
                         }
                     ]
                 },
@@ -556,23 +548,19 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.10@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.11@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.12@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'helloTest/1.4.10@fenix/stable',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'helloTest/1.4.10@fenix/stable'}
                         }
                     ]
                 }
@@ -593,23 +581,19 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.10@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.11@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'Hello/1.4.12@fenix/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'helloTest/1.4.10@fenix/stable',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'}
+                                'id': 'helloTest/1.4.10@fenix/stable'}
                         }
                     ]
                 }

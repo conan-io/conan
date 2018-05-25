@@ -16,8 +16,7 @@ class Search(object):
         if not remote:
             references[None] = []
             refs = search_recipes(self._client_cache, pattern, ignorecase)
-            for ref in refs:
-                references[None].append((ref, self._get_recipe_hash_local(ref)))
+            [references[None].append(ref) for ref in refs]
             return references
 
         if remote == 'all':
@@ -29,17 +28,13 @@ class Search(object):
                     refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if refs:
                         references[remote.name] = []
-                        for ref in refs:
-                            recipe_hash = self._get_recipe_hash_remote(ref, remote)
-                            references[remote.name].append((ref, recipe_hash))
+                        [references[remote.name].append(ref) for ref in refs]
                 return references
         # single remote
         remote = self._registry.remote(remote)
         references[remote.name] = []
         refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-        for ref in refs:
-            recipe_hash = self._get_recipe_hash_remote(ref, remote)
-            references[remote.name].append((ref, recipe_hash))
+        [references[remote.name].append(ref) for ref in refs]
         return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):

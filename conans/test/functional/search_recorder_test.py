@@ -157,12 +157,9 @@ class SearchRecorderTest(unittest.TestCase):
         self.assertEqual(expected_result, info)
 
     def without_packages_test(self):
-        self.recorder.add_recipe("my_remote1", "fake1/0.1@user/channel", "fake1_hash",
-                                 with_packages=False)
-        self.recorder.add_recipe("my_remote2", "fake2/0.1@user/channel", "fake2_hash",
-                                 with_packages=False)
-        self.recorder.add_recipe("my_remote3", "fake3/0.1@user/channel", "fake3_hash",
-                                 with_packages=False)
+        self.recorder.add_recipe("my_remote1", "fake1/0.1@user/channel", None)
+        self.recorder.add_recipe("my_remote2", "fake2/0.1@user/channel", None)
+        self.recorder.add_recipe("my_remote3", "fake3/0.1@user/channel", None)
         info = self.recorder.get_info()
         expected_result = {
                             "error": False,
@@ -172,8 +169,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake1/0.1@user/channel",
-                                                "hash": "fake1_hash"
+                                                "id": "fake1/0.1@user/channel"
                                             }
                                         }
                                     ]
@@ -183,8 +179,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake2/0.1@user/channel",
-                                                "hash": "fake2_hash"
+                                                "id": "fake2/0.1@user/channel"
                                             }
                                         }
                                     ]
@@ -194,8 +189,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake3/0.1@user/channel",
-                                                "hash": "fake3_hash"
+                                                "id": "fake3/0.1@user/channel"
                                             }
                                         }
                                     ]

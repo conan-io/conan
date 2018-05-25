@@ -681,7 +681,7 @@ class ConanAPIV1(object):
 
         for remote, refs in references.items():
             for ref in refs:
-                recorder.add_recipe(str(remote), str(ref[0]), str(ref[1]), with_packages=False)
+                recorder.add_recipe(str(remote), str(ref), None)
         return recorder.get_info()
 
     @api_method
