@@ -164,7 +164,7 @@ class OptionsValues(object):
         if isinstance(values, tuple):
             new_values = []
             for v in values:
-                option, value = v.split("=")
+                option, value = v.split("=", 1)
                 new_values.append((option.strip(), value.strip()))
             values = new_values
 

@@ -26,7 +26,6 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.userio import UserIO
 from conans.model.version import Version
-from conans.search.search import DiskSearchManager
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
@@ -330,8 +329,6 @@ class TestClient(object):
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
 
-        self.search_manager = DiskSearchManager(self.client_cache)
-
         self.requester_class = requester_class
         self.conan_runner = runner
 
@@ -425,7 +422,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          self.search_manager, settings_preprocessor, interactive=interactive)
+                          settings_preprocessor, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

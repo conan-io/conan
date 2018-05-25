@@ -14,9 +14,9 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.search.search import DiskSearchManager
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
+from conans.search.search import search_recipes
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -50,7 +50,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
-    refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
+    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
     if refs and conan_ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"

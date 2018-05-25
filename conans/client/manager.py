@@ -1,4 +1,3 @@
-import fnmatch
 import os
 from collections import Counter
 
@@ -17,7 +16,7 @@ from conans.client.output import ScopedOutput, Color
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
-from conans.client.graph.require_resolver import RequireResolver
+from conans.client.graph.range_resolver import RangeResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -28,80 +27,15 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
-
-
-class BuildMode(object):
-    """ build_mode => ["*"] if user wrote "--build"
-                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
-                   => False if user wrote "never"
-                   => True if user wrote "missing"
-                   => "outdated" if user wrote "--build outdated"
-    """
-    def __init__(self, params, output):
-        self._out = output
-        self.outdated = False
-        self.missing = False
-        self.never = False
-        self.patterns = []
-        self._unused_patterns = []
-        self.all = False
-        if params is None:
-            return
-
-        assert isinstance(params, list)
-        if len(params) == 0:
-            self.all = True
-        else:
-            for param in params:
-                if param == "outdated":
-                    self.outdated = True
-                elif param == "missing":
-                    self.missing = True
-                elif param == "never":
-                    self.never = True
-                else:
-                    self.patterns.append("%s" % param)
-
-            if self.never and (self.outdated or self.missing or self.patterns):
-                raise ConanException("--build=never not compatible with other options")
-        self._unused_patterns = list(self.patterns)
-
-    def forced(self, conan_file, reference):
-        if self.never:
-            return False
-        if self.all:
-            return True
-
-        if conan_file.build_policy_always:
-            out = ScopedOutput(str(reference), self._out)
-            out.info("Building package from source as defined by build_policy='always'")
-            return True
-
-        ref = reference.name
-        # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
-        return force_build
-
-    def allowed(self, conan_file, reference):
-        return (self.missing or self.outdated or self.forced(conan_file, reference) or
-                conan_file.build_policy_missing)
-
-    def check_matches(self, references):
-        for pattern in list(self._unused_patterns):
-            matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if matched:
-                self._unused_patterns.remove(pattern)
-
-    def report_matches(self):
-        for pattern in self._unused_patterns:
-            self._out.error("No package matching '%s' pattern" % pattern)
+from conans.client.graph.build_mode import BuildMode
+from conans.client.cmd.download import download_binaries
 
 
 class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager,
                  settings_preprocessor, recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -109,7 +43,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
@@ -172,16 +105,15 @@ class ConanManager(object):
 
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], scope_options=True)
-        if install_folder and existing_info_files(install_folder):
-            _load_deps_info(install_folder, conanfile, required=True)
-
         graph_builder = self._get_graph_builder(loader, remote_proxy)
         deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False)
 
-        # this is a bit tricky, but works. The loading of a cache package makes the referenced
-        # one, the first of the first level, always existing
-        nodes = deps_graph.direct_requires()
+        # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
+        # which is the exported pkg
+        nodes = deps_graph.root.neighbors()
         conanfile = nodes[0].conanfile
+        if install_folder and existing_info_files(install_folder):
+            _load_deps_info(install_folder, conanfile, required=True)
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
         pkg_reference = PackageReference(reference, pkg_id)
@@ -200,10 +132,11 @@ class ConanManager(object):
         conanfile.develop = True
         package_output = ScopedOutput(str(reference), self._user_io.out)
         if package_folder:
-            packager.export_pkg(conanfile, package_folder, dest_package_folder, package_output)
+            packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
+                                package_output)
         else:
-            packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
-                                    install_folder, package_output, local=True)
+            packager.create_package(conanfile, pkg_id, source_folder, build_folder,
+                                    dest_package_folder, install_folder, package_output, local=True)
 
     def download(self, reference, package_ids, remote_name, recipe):
         """ Download conanfile and specified packages to local repository
@@ -213,14 +146,15 @@ class ConanManager(object):
         @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        remote, _ = remote_proxy._get_remote()
+        output = ScopedOutput(str(reference), self._user_io.out)
+        remote = self._registry.remote(remote_name) if remote_name else self._registry.default_remote
         package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        remote_proxy.get_recipe(reference, check_updates=True, update=True)
+        self._remote_manager.get_recipe(reference, remote)
+        self._registry.set_ref(reference, remote)
 
         if recipe:
             return
@@ -232,16 +166,18 @@ class ConanManager(object):
                                 conanfile, reference)
 
         if package_ids:
-            remote_proxy.download_packages(reference, package_ids)
+            download_binaries(reference, package_ids, self._client_cache, self._remote_manager,
+                              remote, output, self._recorder)
         else:
-            self._user_io.out.info("Getting the complete package list "
-                                   "from '%s'..." % str(reference))
+            output.info("Getting the complete package list "
+                        "from '%s'..." % str(reference))
             packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
                 output.warn("No remote binary packages found in remote")
             else:
-                remote_proxy.download_packages(reference, list(packages_props.keys()))
+                download_binaries(reference, list(packages_props.keys()), self._client_cache,
+                                  self._remote_manager, remote, output, self._recorder)
 
     @staticmethod
     def _inject_require(conanfile, inject_require):
@@ -257,8 +193,7 @@ class ConanManager(object):
         conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, remote_proxy):
-        local_search = self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        resolver = RangeResolver(self._user_io.out, self._client_cache, remote_proxy)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 
@@ -449,7 +384,7 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                   deps_info_required=True)
-        packager.create_package(conanfile, source_folder, build_folder, package_folder,
+        packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
