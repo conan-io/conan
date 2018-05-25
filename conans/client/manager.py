@@ -107,9 +107,9 @@ class ConanManager(object):
         graph_builder = self._get_graph_builder(loader, remote_proxy)
         deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False)
 
-        # this is a bit tricky, but works. The loading of a cache package makes the referenced
-        # one, the first of the first level, always existing
-        nodes = deps_graph.direct_requires()
+        # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
+        # which is the exported pkg
+        nodes = deps_graph.root.neighbors()
         conanfile = nodes[0].conanfile
         if install_folder and existing_info_files(install_folder):
             _load_deps_info(install_folder, conanfile, required=True)

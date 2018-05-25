@@ -44,7 +44,7 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
-        dep_graph.propagate_info()
+        dep_graph.compute_package_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
@@ -123,7 +123,7 @@ class DepsGraphBuilder(object):
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
-                    closure = dep_graph.public_closure(node)
+                    closure = dep_graph.closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
