@@ -72,7 +72,8 @@ class VirtualEnvGenerator(Generator):
                 if platform.system() == "Windows":
                     ret.append('SET %s=%s' % (name, old_value))
                 else:
-                    ret.append('export %s=%s' % (name, old_value))
+                    line = "export %s=%s" % (name, old_value) if old_value else ("unset %s" % name)
+                    ret.append(line)
 
             if platform.system() == "Windows":
                 ret.append("SET PROMPT=%s" % os.environ.get("PROMPT", ""))
