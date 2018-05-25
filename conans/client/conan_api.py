@@ -681,7 +681,7 @@ class ConanAPIV1(object):
 
         for remote, refs in references.items():
             for ref in refs:
-                recorder.add_recipe(str(remote), str(ref), None)
+                recorder.add_recipe(str(remote), str(ref), with_packages=False)
         return recorder.get_info()
 
     @api_method
@@ -698,7 +698,7 @@ class ConanAPIV1(object):
             exc.info = recorder.get_info()
             raise
 
-        recorder.add_recipe(str(remote), str(ref), recipe_hash)
+        recorder.add_recipe(str(remote), str(ref))
         if ordered_packages:
             for package_id, properties in ordered_packages.items():
                 package_recipe_hash = properties.get("recipe_hash", None)

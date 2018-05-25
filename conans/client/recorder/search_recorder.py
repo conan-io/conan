@@ -1,12 +1,11 @@
 from collections import namedtuple, OrderedDict
 
 
-class _SearchRecipe(namedtuple("SearchRecipe", "reference, recipe_hash")):
+class _SearchRecipe(namedtuple("SearchRecipe", "reference")):
+    with_packages = True
 
     def to_dict(self):
         data = {"id": self.reference}
-        if self.recipe_hash:
-            data["hash"] = self.recipe_hash
         return data
 
 
@@ -25,8 +24,9 @@ class SearchRecorder(object):
         self.keyword = "results"
         self._info = OrderedDict()
 
-    def add_recipe(self, remote, reference, recipe_hash):
-        recipe = _SearchRecipe(reference, recipe_hash)
+    def add_recipe(self, remote, reference, with_packages=True):
+        recipe = _SearchRecipe(reference)
+        recipe.with_packages = with_packages
         if remote not in self._info:
             self._info[remote] = OrderedDict()
         self._info[remote][reference] = {"recipe": recipe, "packages": []}
@@ -43,7 +43,7 @@ class SearchRecorder(object):
             remote_info = {"remote": remote, "items": []}
             for reference, item in recipe_pacakges.items():
                 recipe_info = item["recipe"].to_dict()
-                if "hash" in recipe_info:
+                if item["recipe"].with_packages:
                     packages_info = [package.to_dict() for package in item["packages"]]
                     remote_info["items"].append({"recipe": recipe_info, "packages": packages_info})
                 else:

@@ -826,6 +826,9 @@ class Command(object):
                             help='json file path where the search information will be written to')
         args = parser.parse_args(*args)
 
+        if args.table and args.json:
+            raise ConanException("'--table' argument cannot be used together with '--json'")
+
         try:
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
@@ -835,8 +838,8 @@ class Command(object):
         except (TypeError, ConanException):
             reference = None
 
-        info = {"error": False, "results": []}
         cwd = os.getcwd()
+        info = None
 
         try:
             if reference:
@@ -847,10 +850,7 @@ class Command(object):
                                                      args.table)
             else:
                 if args.table:
-                    info["error"] = True
-                    exc = ConanException("'--table' argument can only be used with a reference")
-                    exc.info = info
-                    raise exc
+                    raise ConanException("'--table' argument can only be used with a reference")
 
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 

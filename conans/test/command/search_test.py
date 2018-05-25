@@ -459,11 +459,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                                 ignore_error=True)
         self.assertTrue(error)
         json_path = os.path.join(self.client.current_folder, "search.json")
-        self.assertTrue(os.path.exists(json_path))
-        json_content = load(json_path)
-        output = json.loads(json_content)
-        self.assertTrue(output["error"])
-        self.assertEqual(0, len(output["results"]))
+        self.assertFalse(os.path.exists(json_path))
 
         # Test search packages for unknown reference
         error = self.client.run("search fake/0.1@danimtb/testing --json search.json",
@@ -614,8 +610,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'},
+                                'id': 'Hello/1.4.10@fenix/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
@@ -681,8 +676,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@fenix/testing',
-                                'hash': 'd41d8cd98f00b204e9800998ecf8427e'},
+                                'id': 'Hello/1.4.10@fenix/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
