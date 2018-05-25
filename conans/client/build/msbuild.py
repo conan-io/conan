@@ -117,14 +117,21 @@ class MSBuild(object):
             flags = vs_build_type_flags(self._settings)
             flags.append(vs_std_cpp(self._settings))
 
+        flags_str = " ".join(list(filter(None, flags))) # Removes empty and None elements
+        additional_node = "<AdditionalOptions>" \
+                          "{} %(AdditionalOptions)" \
+                          "</AdditionalOptions>".format(flags_str) if flags_str else ""
+        runtime_node = "<RuntimeLibrary>" \
+                       "{}" \
+                       "</RuntimeLibrary>".format(runtime_library) if runtime_library else ""
         template = """<?xml version="1.0" encoding="utf-8"?>
-    <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-      <ItemDefinitionGroup>
-        <ClCompile>
-          <RuntimeLibrary>{runtime}</RuntimeLibrary>
-          <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
-        </ClCompile>
-      </ItemDefinitionGroup>
-    </Project>""".format(**{"runtime": runtime_library,
-                            "compiler_flags": " ".join([flag for flag in flags if flag])})
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      {runtime_node}
+      {additional_node}
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>""".format(**{"runtime_node": runtime_node,
+                        "additional_node": additional_node})
         return template
