@@ -1,6 +1,5 @@
 import os
 import platform
-import stat
 import subprocess
 import unittest
 
@@ -34,7 +33,7 @@ class TestConan(ConanFile):
         client.run("install .")
         env_cmd = "set" if in_windows else "env"
         extension = "bat" if in_windows else "sh"
-        prefix = "" if in_windows else "sh"
+        prefix = "" if in_windows else "source"
         output = subprocess.check_output(env_cmd, shell=True)
         normal_environment = env_output_to_dict(output)
         client.run("install .")
@@ -48,8 +47,6 @@ class TestConan(ConanFile):
             deactivate_build_content = load(deactivate_build_file)
             self.assertEqual(len(activate_build_content.splitlines()),
                              len(deactivate_build_content.splitlines()))
-        os.chmod(activate_build_file, 555)
-        os.chmod(deactivate_build_file, 555)
         output = subprocess.check_output("%s %s && %s" % (prefix, activate_build_file, env_cmd),
                                          shell=True)
         activate_environment = env_output_to_dict(output)
