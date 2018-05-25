@@ -362,6 +362,13 @@ class CMake(object):
 
         return source_ret, build_ret
 
+    def _run(self, command):
+        if self._compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
+            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+                self._conanfile.run(command)
+        else:
+            self._conanfile.run(command)
+
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None):
 
@@ -383,9 +390,9 @@ class CMake(object):
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
             with tools.remove_from_path("sh"):
-                self._conanfile.run(command)
+                self._run(command)
         else:
-            self._conanfile.run(command)
+            self._run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -412,7 +419,7 @@ class CMake(object):
             args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
-        self._conanfile.run(command)
+        self._run(command)
 
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
