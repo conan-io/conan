@@ -320,10 +320,10 @@ class ConanInstaller(object):
                 else:
                     self._propagate_info(node, flat, deps_graph)
 
-                include_dirs = local_package.includedirs(conan_file.settings)
-                lib_dirs = local_package.libdirs(conan_file.settings)
+                include_dirs = local_package.includedirs
+                lib_dirs = local_package.libdirs
                 if not include_dirs:
-                    package_folder = local_package.local_package_path(conan_file.settings)
+                    package_folder = local_package.local_package_path
                     self._call_package_info(conan_file, package_folder)
                 else:
                     root_folder = os.path.dirname(local_package.conanfile_path)
@@ -356,7 +356,7 @@ class ConanInstaller(object):
                            conanfile_path, profile_build_requires, local_package, update):
         conan_file, conan_ref = node.conanfile, node.conan_ref
         if self._build_mode.never:
-            if local_package.need_build(conan_file.settings):
+            if local_package.need_build:
                 raise_package_not_found_error(conan_file, conan_ref, "local in conan-project", output,
                                               self._recorder, None)
             else:
@@ -370,8 +370,8 @@ class ConanInstaller(object):
         output.highlight("Calling build()")
 
         include_dirs = local_package._includedirs
-        build_folder = local_package.local_build_path(conan_file.settings)
-        package_folder = local_package.local_package_path(conan_file.settings)
+        build_folder = local_package.local_build_path
+        package_folder = local_package.local_package_path
         source_folder = os.path.dirname(conanfile_path)
         mkdir(build_folder)
         mkdir(package_folder)

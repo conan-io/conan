@@ -6,6 +6,7 @@ import re
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.project import CONAN_PROJECT
 from conans import tools
+import platform
 
 
 conanfile = """from conans import ConanFile
@@ -157,18 +158,18 @@ HelloC:
     folder: B
     includedirs: src
     cmakedir: src
-    build: build
-    libdirs: build/{build_type}
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'"
+    libdirs: "'build/{build_type}' if '{os}'=='Windows' else 'build_{build_type}'"
 HelloC:
     folder: C
     includedirs: src
     cmakedir: src
-    build: build
-    libdirs: build/{build_type}
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'"
+    libdirs: "'build/{build_type}' if '{os}'=='Windows' else 'build_{build_type}'"
 HelloA:
     folder: A
     cmakedir: src
-    build: build
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'"
 
 generator: cmake
 name: MyProject
@@ -197,7 +198,9 @@ name: MyProject
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
         client.run("build . -bf=build")
-        command = os.sep.join([".", "build", "Release", "app"])
+        release = os.sep.join(["build", "Release"]) if platform.system() == "Windows" else "build_Release"
+        debug = os.sep.join(["build", "Debug"]) if platform.system() == "Windows" else "build_Debug"
+        command = os.sep.join([".", release, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
@@ -207,27 +210,27 @@ name: MyProject
         client.run("install . -if=build -s build_type=Debug")
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         client.run("build . -bf=build")
-        command = os.sep.join([".", "build", "Debug", "app"])
+        command = os.sep.join([".", debug, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
-        print client.current_folder
         # Now do the same for release
         client.run("install . -if=build -s build_type=Release")
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         client.run("build . -bf=build")
-        command = os.sep.join([".", "build", "Release", "app"])
+        command = os.sep.join([".", release, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        # Testing the super-project
         client.current_folder = base_folder
         client.runner('cmake . -G "Visual Studio 15 Win64"', cwd=base_folder)
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        command = os.sep.join([".", "A", "build", "Release", "app"])
+        command = os.sep.join([".", "A", release, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
@@ -238,13 +241,13 @@ name: MyProject
         tools.replace_in_file(os.path.join(base_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        command = os.sep.join([".", "A", "build", "Release", "app"])
+        command = os.sep.join([".", "A", release, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
-        command = os.sep.join([".", "A", "build", "Debug", "app"])
+        command = os.sep.join([".", "A", debug, "app"])
         client.runner(command, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
@@ -287,7 +290,6 @@ name: MyProject
 
         client.current_folder = os.path.join(base_folder, "A")
         client.run("install . -g cmake --build")
-        print client.out
 
         # Check A
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -303,17 +305,11 @@ name: MyProject
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
         client.run("build .")
-        print "CURRENT FOLDER ", client.current_folder
-        print client.out
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
-        print client.current_folder
-        print client.out
         self.assertIn("Hello HelloA", client.out)
         self.assertIn("Hello HelloB", client.out)
         self.assertIn("Hello HelloC", client.out)
-
-        print load(os.path.join(base_folder, "CMakeLists.txt"))
 
     def basic_test2(self):
         client = TestClient()

@@ -218,6 +218,8 @@ class DepsGraphBuilder(object):
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
 
+        if local_package:
+            local_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
