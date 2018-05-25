@@ -300,12 +300,18 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     new_env = {}
     start_reached = False
     for line in ret.splitlines():
+        line = line.strip()
         if not start_reached:
             if "__BEGINS__" in line:
                 start_reached = True
             continue
-        name_var, value = line.split("=", 1)
-        new_env[name_var] = value
+        if line == "\n" or not line:
+            continue
+        try:
+            name_var, value = line.split("=", 1)
+            new_env[name_var] = value
+        except ValueError:
+            pass
 
     if filter_known_paths:
         def relevant_path(path):
