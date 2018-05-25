@@ -14,10 +14,10 @@ class SearchRecorderTest(unittest.TestCase):
         self.assertEqual(expected_result, info)
 
     def sequential_test(self):
-        self.recorder.add_recipe("remote1", "fake/0.1@user/channel", "fake_hash")
+        self.recorder.add_recipe("remote1", "fake/0.1@user/channel")
         self.recorder.add_package("remote1", "fake/0.1@user/channel", "fake_package_id",
                                   "fake_options", "fake_settings", "fake_requires", False)
-        self.recorder.add_recipe("remote2", "fakefake/0.1@user/channel", "fakefake_hash")
+        self.recorder.add_recipe("remote2", "fakefake/0.1@user/channel")
         self.recorder.add_package("remote2", "fakefake/0.1@user/channel", "fakefake_package_id1",
                                   "fakefake_options1", "fakefake_settings1", "fakefake_requires1",
                                   False)
@@ -33,8 +33,7 @@ class SearchRecorderTest(unittest.TestCase):
                                         "items": [
                                             {
                                                 "recipe": {
-                                                    "id": "fake/0.1@user/channel",
-                                                    "hash": "fake_hash"
+                                                    "id": "fake/0.1@user/channel"
                                                 },
                                                 "packages": [
                                                     {
@@ -53,8 +52,7 @@ class SearchRecorderTest(unittest.TestCase):
                                        "items": [
                                            {
                                                "recipe": {
-                                                   "id": "fakefake/0.1@user/channel",
-                                                   "hash": "fakefake_hash"
+                                                   "id": "fakefake/0.1@user/channel"
                                                },
                                                "packages": [
                                                    {
@@ -80,9 +78,9 @@ class SearchRecorderTest(unittest.TestCase):
         self.assertEqual(expected_result, info)
 
     def unordered_test(self):
-        self.recorder.add_recipe("my_remote1", "fake1/0.1@user/channel", "fake1_hash")
-        self.recorder.add_recipe("my_remote2", "fake2/0.1@user/channel", "fake2_hash")
-        self.recorder.add_recipe("my_remote3", "fake3/0.1@user/channel", "fake3_hash")
+        self.recorder.add_recipe("my_remote1", "fake1/0.1@user/channel")
+        self.recorder.add_recipe("my_remote2", "fake2/0.1@user/channel")
+        self.recorder.add_recipe("my_remote3", "fake3/0.1@user/channel")
         self.recorder.add_package("my_remote1", "fake1/0.1@user/channel", "fake1_package_id1",
                                   "fake1_options1", "fake1_settings1", "fake1_requires1", False)
         self.recorder.add_package("my_remote2", "fake2/0.1@user/channel", "fake2_package_id1",
@@ -98,8 +96,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake1/0.1@user/channel",
-                                                "hash": "fake1_hash"
+                                                "id": "fake1/0.1@user/channel"
                                             },
                                             "packages": [
                                                 {
@@ -118,8 +115,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake2/0.1@user/channel",
-                                                "hash": "fake2_hash"
+                                                "id": "fake2/0.1@user/channel"
                                             },
                                             "packages": [
                                                 {
@@ -145,8 +141,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
-                                                "id": "fake3/0.1@user/channel",
-                                                "hash": "fake3_hash"
+                                                "id": "fake3/0.1@user/channel"
                                             },
                                             "packages": []
                                         }
