@@ -152,5 +152,4 @@ class Pkg(ConanFile):
 
         error = client.run("download pkg/0.1@lasote/stable -p=wrong", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/stable'", client.out)
-        self.assertIn("Package ID: wrong", client.out)
+        self.assertIn("ERROR: Package binary 'pkg/0.1@lasote/stable:wrong' not found in 'default'", client.out)

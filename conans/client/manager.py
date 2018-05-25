@@ -28,6 +28,7 @@ from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.graph.build_mode import BuildMode
+from conans.client.cmd.download import download_binaries
 
 
 class ConanManager(object):
@@ -145,14 +146,15 @@ class ConanManager(object):
         @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        remote, _ = remote_proxy._get_remote()
+        output = ScopedOutput(str(reference), self._user_io.out)
+        remote = self._registry.remote(remote_name) if remote_name else self._registry.default_remote
         package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
         # First of all download package recipe
-        remote_proxy.get_recipe(reference, check_updates=True, update=True)
+        self._remote_manager.get_recipe(reference, remote)
+        self._registry.set_ref(reference, remote)
 
         if recipe:
             return
@@ -164,16 +166,18 @@ class ConanManager(object):
                                 conanfile, reference)
 
         if package_ids:
-            remote_proxy.download_packages(reference, package_ids)
+            download_binaries(reference, package_ids, self._client_cache, self._remote_manager,
+                              remote, output, self._recorder)
         else:
-            self._user_io.out.info("Getting the complete package list "
-                                   "from '%s'..." % str(reference))
+            output.info("Getting the complete package list "
+                        "from '%s'..." % str(reference))
             packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
                 output.warn("No remote binary packages found in remote")
             else:
-                remote_proxy.download_packages(reference, list(packages_props.keys()))
+                download_binaries(reference, list(packages_props.keys()), self._client_cache,
+                                  self._remote_manager, remote, output, self._recorder)
 
     @staticmethod
     def _inject_require(conanfile, inject_require):
