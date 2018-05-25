@@ -28,6 +28,7 @@ from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.build_mode import BuildMode
 from conans.client.cmd.download import download_binaries
+from conans.client.graph.printer import print_graph
 
 
 class ConanManager(object):
@@ -308,6 +309,20 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder)
         installer.install(deps_graph, keep_build)
+
+        if manifest_folder:
+            manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
+                                               client_cache=self._client_cache)
+            for node in deps_graph.nodes:
+                if not node.conan_ref:
+                    continue
+                conanfile = node.conanfile
+                complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                        conanfile, node.conan_ref)
+            manifest_manager.check_graph(deps_graph,
+                                         verify=manifest_verify,
+                                         interactive=manifest_interactive)
+            manifest_manager.print_log()
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,

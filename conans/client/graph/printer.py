@@ -33,4 +33,5 @@ def print_graph(deps_graph, out):
         _recipes(build_requires)
         out.writeln("Build requirements packages", Color.BRIGHT_YELLOW)
         _packages(build_requires)
+
     out.writeln("")
