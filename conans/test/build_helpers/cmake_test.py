@@ -773,6 +773,50 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
 
+
+    def test_missing_settings(self):
+        def instance_with_os_build(os_build):
+            settings = Settings.loads(default_settings_yml)
+            settings.os_build = os_build
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            return CMake(conan_file)
+
+        cmake = instance_with_os_build("Linux")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        cmake = instance_with_os_build("Macos")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        with self.assertRaisesRegexp(ConanException, "You must specify compiler, "
+                                                     "compiler.version and arch"):
+            instance_with_os_build("Windows")
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
+            cmake = instance_with_os_build("Windows")
+            self.assertEquals(cmake.generator, "MyCoolGenerator")
+
+    def test_cmake_system_version_android(self):
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "SomeSystem",
+                                       "CONAN_CMAKE_GENERATOR": "SomeGenerator"}):
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "WindowsStore"
+            settings.os.version = "8.1"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.1")
+
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "Android"
+            settings.os.api_level = "32"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"

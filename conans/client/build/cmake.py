@@ -53,7 +53,10 @@ class CMake(object):
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
-        self._op_system_version = self._settings.get_safe("os.version")
+
+        os_ver_str = "os.api_level" if self._os == "Android" else "os.version"
+        self._op_system_version = self._settings.get_safe(os_ver_str)
+
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
@@ -112,8 +115,11 @@ class CMake(object):
             return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
-            raise ConanException("You must specify compiler, compiler.version and arch in "
-                                 "your settings to use a CMake generator")
+            if self._os_build == "Windows":
+                raise ConanException("You must specify compiler, compiler.version and arch in "
+                                     "your settings to use a CMake generator. You can also declare "
+                                     "the env variable CONAN_CMAKE_GENERATOR.")
+            return "Unix Makefiles"
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',

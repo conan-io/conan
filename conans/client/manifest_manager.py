@@ -1,7 +1,6 @@
 import os
 from conans.paths import SimplePaths
 from conans.model.manifest import FileTreeManifest
-from conans.util.files import load
 from conans.errors import ConanException
 
 
@@ -22,7 +21,7 @@ class ManifestManager(object):
         for log_entry in self._log:
             self._user_io.out.info(log_entry)
 
-    def _handle_add(self, reference, remote, manifest, path):
+    def _handle_add(self, reference, remote, manifest, pkg_folder):
         # query the user for approval
         if self._interactive:
             ok = self._user_io.request_boolean("Installing %s from %s\n"
@@ -32,14 +31,14 @@ class ManifestManager(object):
             ok = True
 
         if ok:
-            manifest.save(os.path.dirname(path), os.path.basename(path))
+            manifest.save(pkg_folder)
             self._log.append("Installed manifest for '%s' from %s" % (str(reference), remote))
         else:
             raise ConanException("Installation of '%s' rejected!" % str(reference))
 
-    def _check(self, reference, manifest, remote, path):
-        if os.path.exists(path):
-            existing_manifest = FileTreeManifest.loads(load(path))
+    def _check(self, reference, manifest, remote, pkg_folder):
+        if os.path.exists(pkg_folder):
+            existing_manifest = FileTreeManifest.load(pkg_folder)
             if existing_manifest == manifest:
                 self._log.append("Manifest for '%s': OK" % str(reference))
                 return
@@ -52,7 +51,7 @@ class ManifestManager(object):
                                  "Remote: %s\nProject manifest doesn't match installed one\n%s"
                                  % (str(reference), remote, error_msg))
 
-        self._handle_add(reference, remote, manifest, path)
+        self._handle_add(reference, remote, manifest, pkg_folder)
 
     def _match_manifests(self, read_manifest, expected_manifest, reference):
         if read_manifest is None or read_manifest != expected_manifest:
@@ -66,7 +65,7 @@ class ManifestManager(object):
         remote = "local cache" if not remote else "%s:%s" % (remote.name, remote.url)
         self._match_manifests(read_manifest, expected_manifest, conan_reference)
 
-        path = self._paths.digestfile_conanfile(conan_reference)
+        path = self._paths.export(conan_reference)
         self._check(conan_reference, read_manifest, remote, path)
 
     def check_package(self, package_reference, remote):
@@ -75,5 +74,5 @@ class ManifestManager(object):
         remote = "local cache" if not remote else "%s:%s" % (remote.name, remote.url)
         self._match_manifests(read_manifest, expected_manifest, package_reference)
 
-        path = self._paths.digestfile_package(package_reference, short_paths=None)
-        self._check(package_reference, read_manifest, remote, path)
+        pkg_folder = self._paths.package(package_reference, short_paths=None)
+        self._check(package_reference, read_manifest, remote, pkg_folder)

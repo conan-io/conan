@@ -46,7 +46,9 @@ class ConanProxy(object):
         # No package in local cache
         if not os.path.exists(package_folder):
             try:
-                remote_info = self.get_package_info(package_ref)
+                # NOTE This call can associate a recently exported recipe, with anything
+                # to a remote containing the recipe reference
+                remote_info = self._get_package_info(package_ref)
             except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
                 return False
 
@@ -102,7 +104,7 @@ class ConanProxy(object):
                             DiskRemover(self._client_cache).remove(conan_reference)
                             output.info("Retrieving from remote '%s'..." % remote.name)
                             self._remote_manager.get_recipe(conan_reference, remote)
-
+                            self._registry.set_ref(conan_reference, remote)
                             output.info("Updated!")
                     elif ret == -1:
                         if not update:
@@ -137,7 +139,8 @@ class ConanProxy(object):
         read_manifest, _ = self._client_cache.conan_manifests(conan_reference)
         if read_manifest:
             try:  # get_conan_manifest can fail, not in server
-                upstream_manifest = self.get_conan_manifest(conan_reference)
+                remote, _ = self._get_remote(conan_reference)
+                upstream_manifest = self._remote_manager.get_conan_manifest(conan_reference, remote)
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except (NotFoundException, NoRemoteAvailable):  # 404
@@ -204,15 +207,6 @@ class ConanProxy(object):
             remote = ref_remote or self._registry.default_remote
         return remote, ref_remote
 
-    def get_conan_manifest(self, conan_ref):
-        """ used by update to check the date of packages, require force if older
-        """
-        remote, current_remote = self._get_remote(conan_ref)
-        result = self._remote_manager.get_conan_manifest(conan_ref, remote)
-        if not current_remote:
-            self._registry.set_ref(conan_ref, remote)
-        return result
-
     def get_package_manifest(self, package_ref):
         """ used by update to check the date of packages, require force if older
         """
@@ -222,7 +216,7 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def get_package_info(self, package_ref):
+    def _get_package_info(self, package_ref):
         """ Gets the package info to check if outdated
         """
         remote, ref_remote = self._get_remote(package_ref.conan)
@@ -241,21 +235,3 @@ class ConanProxy(object):
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             if search_result:
                 return search_result
-
-    def download_packages(self, reference, package_ids):
-        assert(isinstance(package_ids, list))
-        remote, _ = self._get_remote(reference)
-        conanfile_path = self._client_cache.conanfile(reference)
-        if not os.path.exists(conanfile_path):
-            raise Exception("Download recipe first")
-        conanfile = load_conanfile_class(conanfile_path)
-        # FIXME: This is a hack to provide a info object in case it fails and raise_package_not_found_error doesnt fail
-        conanfile.info = ConanInfo.loads("")
-        short_paths = conanfile.short_paths
-        self._registry.set_ref(reference, remote)
-        output = ScopedOutput(str(reference), self._out)
-        for package_id in package_ids:
-            package_ref = PackageReference(reference, package_id)
-            package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
-            self._out.info("Downloading %s" % str(package_ref))
-            self._remote_manager.get_package(conanfile, package_ref, package_folder, remote, output, self._recorder)

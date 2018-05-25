@@ -65,7 +65,7 @@ def is_case_insensitive_os():
 
 
 if is_case_insensitive_os():
-    def _check_ref_case(conan_reference, conan_folder, store_folder):
+    def check_ref_case(conan_reference, conan_folder, store_folder):
         if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
             return
         # If exists, lets check path
@@ -83,7 +83,7 @@ if is_case_insensitive_os():
                                      % (str(conan_reference), offending))
             tmp = os.path.normpath(tmp + os.sep + part)
 else:
-    def _check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
+    def check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
         pass
 
 
@@ -121,17 +121,8 @@ class SimplePaths(object):
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
+        check_ref_case(conan_reference, export, self.store)
         return normpath(join(export, CONANFILE))
-
-    def digestfile_conanfile(self, conan_reference):
-        export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
-        return normpath(join(export, CONAN_MANIFEST))
-
-    def digestfile_package(self, package_reference, short_paths=False):
-        assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.package(package_reference, short_paths), CONAN_MANIFEST))
 
     def builds(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -161,4 +152,3 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
-

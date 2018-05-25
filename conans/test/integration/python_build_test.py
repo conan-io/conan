@@ -137,12 +137,19 @@ class ToolsTest(ConanFile):
         self.assertNotIn("Hello Bar", client.user_io.out)
         self.assertIn("Hello Foo", client.user_io.out)
 
+        client.run("package . -pf=mypkg")
+        self.assertNotIn("Hello Bar", client.user_io.out)
+        self.assertIn("Hello Boom", client.user_io.out)
+
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
+
+        client.run("export-pkg . lasote/stable -f")
+        self.assertIn("Hello Boom", client.out)
 
     def upload_reuse_test(self):
         server = TestServer()

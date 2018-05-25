@@ -83,5 +83,5 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'default'",
                       str(client_b.user_io.out))
         client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Updates: The local file is newer than remote's one (local)",
+        self.assertIn("Updates: You have the latest version (default)",
                       str(client_b.user_io.out))

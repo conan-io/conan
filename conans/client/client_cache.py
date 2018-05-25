@@ -1,4 +1,5 @@
 import os
+import shutil
 from os.path import join, normpath
 from collections import OrderedDict
 
@@ -12,10 +13,10 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
+from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS, check_ref_case,\
+    CONAN_MANIFEST
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
-import shutil
 from conans.unicode import get_cwd
 
 
@@ -214,13 +215,14 @@ class ClientCache(SimplePaths):
     def load_manifest(self, conan_reference):
         """conan_id = sha(zip file)"""
         assert isinstance(conan_reference, ConanFileReference)
-        filename = self.digestfile_conanfile(conan_reference)
-        return FileTreeManifest.loads(load(filename))
+        export_folder = self.export(conan_reference)
+        check_ref_case(conan_reference, export_folder, self.store)
+        return FileTreeManifest.load(export_folder)
 
     def load_package_manifest(self, package_reference):
         """conan_id = sha(zip file)"""
-        filename = self.digestfile_package(package_reference, short_paths=None)
-        return FileTreeManifest.loads(load(filename))
+        package_folder = self.package(package_reference, short_paths=None)
+        return FileTreeManifest.load(package_folder)
 
     @staticmethod
     def read_package_recipe_hash(package_folder):
@@ -230,23 +232,23 @@ class ClientCache(SimplePaths):
 
     def conan_manifests(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
-        digest_path = self.digestfile_conanfile(conan_reference)
-        if not os.path.exists(digest_path):
+        export_folder = self.export(conan_reference)
+        check_ref_case(conan_reference, export_folder, self.store)
+        if not os.path.exists(os.path.join(export_folder, CONAN_MANIFEST)):
             return None, None
         export_sources_path = self.export_sources(conan_reference, short_paths=None)
-        return self._digests(digest_path, export_sources_path)
+        return self._digests(export_folder, export_sources_path)
 
     def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference, short_paths=None)
-        if not os.path.exists(digest_path):
+        package_folder = self.package(package_reference, short_paths=None)
+        if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
             return None, None
-        return self._digests(digest_path)
+        return self._digests(package_folder)
 
     @staticmethod
-    def _digests(digest_path, exports_sources_folder=None):
-        readed_digest = FileTreeManifest.loads(load(digest_path))
-        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path),
-                                                  exports_sources_folder)
+    def _digests(folder, exports_sources_folder=None):
+        readed_digest = FileTreeManifest.load(folder)
+        expected_digest = FileTreeManifest.create(folder, exports_sources_folder)
         return readed_digest, expected_digest
 
     def delete_empty_dirs(self, deleted_refs):

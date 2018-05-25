@@ -99,3 +99,34 @@ class HelloConan(ConanFile):
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+
+    def reuse_msbuild_object_test(self):
+        # https://github.com/conan-io/conan/issues/2865
+        if platform.system() != "Windows":
+            return
+        conan_build_vs = """
+from conans import ConanFile, MSBuild
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2.1"
+    exports = "*"
+    settings = "os", "build_type", "arch", "compiler", "cppstd"
+
+    def configure(self):
+        del self.settings.compiler.runtime
+        del self.settings.build_type
+
+    def build(self):
+        msbuild = MSBuild(self)
+        msbuild.build("MyProject.sln", build_type="Release")
+        msbuild.build("MyProject.sln", build_type="Debug")
+        self.output.info("build() completed")
+"""
+        client = TestClient()
+        files = get_vs_project_files()
+        files[CONANFILE] = conan_build_vs
+
+        client.save(files)
+        client.run("create . danimtb/testing")
+        self.assertIn("build() completed", client.out)

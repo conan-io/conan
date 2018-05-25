@@ -17,4 +17,3 @@ SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
 
 __version__ = '1.4.0-dev'
-
