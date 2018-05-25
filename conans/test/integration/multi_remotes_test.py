@@ -81,6 +81,5 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.user_io.out))
         client_b.run("info Hello0/0.0@lasote/stable -u")
-
         self.assertIn("Recipe: UPDATED", client_b.out)
         self.assertIn("Updates: INSTALLED", client_b.out)

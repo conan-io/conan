@@ -119,7 +119,7 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def compute_packages_ids(self):
+    def compute_package_ids(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
