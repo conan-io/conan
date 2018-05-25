@@ -3,6 +3,7 @@ import shutil
 import tarfile
 import time
 import traceback
+import stat
 
 from requests.exceptions import ConnectionError
 
@@ -21,7 +22,6 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
 from conans.client.source import merge_directories
-import stat
 from conans.util.env_reader import get_env
 
 
@@ -231,8 +231,8 @@ class RemoteManager(object):
             touch_folder(dest_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(dest_folder)
-            output.success('Package installed %s' % package_id)
             recorder.package_downloaded(package_reference, remote.url)
+            output.success('Package installed %s' % package_id)
         except NotFoundException:
             raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference, remote.name))
         except BaseException as e:

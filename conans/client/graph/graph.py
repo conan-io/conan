@@ -10,6 +10,7 @@ class Node(object):
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
+        self.remote = None
 
     def add_edge(self, edge):
         if edge.src == self:
