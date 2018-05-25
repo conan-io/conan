@@ -493,9 +493,4 @@ class ConanInstaller(object):
 
                 nodes_to_build.append((node, package_id, build_node))
 
-        # A check to be sure that if introduced a pattern, something is going to be built
-        if self._build_mode.patterns:
-            to_build = [str(n[0].conan_ref.name) for n in nodes_to_build if n[2]]
-            self._build_mode.check_matches(to_build)
-
         return nodes_to_build
