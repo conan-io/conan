@@ -452,12 +452,12 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
-
     def search_json_test(self):
         # Test invalid arguments
         error = self.client.run("search h* -r all --json search.json --table table.html",
                                 ignore_error=True)
         self.assertTrue(error)
+        self.assertIn("'--table' argument cannot be used together with '--json'", self.client.out)
         json_path = os.path.join(self.client.current_folder, "search.json")
         self.assertFalse(os.path.exists(json_path))
 
