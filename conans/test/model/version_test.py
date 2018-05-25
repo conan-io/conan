@@ -45,6 +45,7 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("4") == Version("4.0.0"))
         self.assertTrue(Version("4") <= Version("4.0.0"))
         self.assertTrue(Version("4") >= Version("4.0.0"))
+        self.assertTrue(Version("4.0") == Version("4.0.0"))
 
         self.assertTrue(Version("4.0.0") == Version("4.0.0"))
         self.assertTrue(Version("4.0.1") != "4")
