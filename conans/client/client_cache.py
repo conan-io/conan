@@ -8,12 +8,11 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
-from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS, check_ref_case,\
+from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case,\
     CONAN_MANIFEST
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
@@ -223,21 +222,6 @@ class ClientCache(SimplePaths):
         """conan_id = sha(zip file)"""
         package_folder = self.package(package_reference, short_paths=None)
         return FileTreeManifest.load(package_folder)
-
-    @staticmethod
-    def read_package_recipe_hash(package_folder):
-        filename = join(package_folder, CONANINFO)
-        info = ConanInfo.loads(load(filename))
-        return info.recipe_hash
-
-    def conan_manifests(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        export_folder = self.export(conan_reference)
-        check_ref_case(conan_reference, export_folder, self.store)
-        if not os.path.exists(os.path.join(export_folder, CONAN_MANIFEST)):
-            return None, None
-        export_sources_path = self.export_sources(conan_reference, short_paths=None)
-        return self._digests(export_folder, export_sources_path)
 
     def package_manifests(self, package_reference):
         package_folder = self.package(package_reference, short_paths=None)

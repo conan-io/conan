@@ -12,11 +12,8 @@ from conans.client.graph.graph import DepsGraph, Node
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver):
-        """ param retriever: something that implements retrieve_conanfile for installed conans
-        :param loader: helper ConanLoader to be able to load user space conanfile
-        """
-        self._retriever = retriever
+    def __init__(self, proxy, output, loader, resolver):
+        self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
@@ -26,7 +23,7 @@ class DepsGraphBuilder(object):
         returns a dict of conan_reference: 1 if there is an update,
         0 if don't and -1 if local is newer
         """
-        return {node.conan_ref: self._retriever.update_available(node.conan_ref)
+        return {node.conan_ref: self._proxy.update_available(node.conan_ref)
                 for node in deps_graph.nodes}
 
     def load_graph(self, conanfile, check_updates, update):
@@ -207,7 +204,9 @@ class DepsGraphBuilder(object):
                          check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference, check_updates, update)
+        result = self._proxy.get_recipe(requirement.conan_reference,
+                                        check_updates, update)
+        conanfile_path, remote = result
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
@@ -221,6 +220,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node.remote = remote
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         if not requirement.private:

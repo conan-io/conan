@@ -2,10 +2,10 @@ import copy
 import fnmatch
 from collections import OrderedDict
 
-from conans.client.printer import Printer
 from conans.errors import conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
 from conans.model.conan_file import get_env_context_manager
+from conans.client.graph.printer import print_graph
 
 
 def _apply_build_requires(deps_graph, conanfile, package_build_requires):
@@ -113,7 +113,7 @@ class BuildRequires(object):
 
         # compute and print the graph of transitive build-requires
         deps_graph = self._graph_builder.load_graph(virtual, check_updates=False, update=update)
-        Printer(output).print_graph(deps_graph, self._registry)
+        print_graph(deps_graph, output)
         # install them, recursively
         installer.install(deps_graph, profile_build_requires, update=update)
         _apply_build_requires(deps_graph, conanfile, build_requires)

@@ -392,8 +392,6 @@ class ConanInstaller(object):
                                                      str(exc), remote=None)
                 raise exc
             else:
-                self._remote_proxy.handle_package_manifest(package_ref)
-
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
                 self._built_packages.add((conan_ref, package_id))
@@ -401,7 +399,6 @@ class ConanInstaller(object):
     def _get_existing_package(self, conan_file, package_reference, output, package_folder, update):
         installed = get_package(conan_file, package_reference, package_folder, output,
                                 self._recorder, self._remote_proxy, update=update)
-        self._remote_proxy.handle_package_manifest(package_reference)
         if installed:
             _handle_system_requirements(conan_file, package_reference,
                                         self._client_cache, output)
