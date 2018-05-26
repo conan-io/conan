@@ -166,10 +166,10 @@ Hello/1.4.10@fenix/testing""".format(remote)
                 self.assertIn(expected, self.client.out)
 
         self.client.run("search Hello/1.4.10@fenix/testing -r=all")
-        check()
+        check_full_match()
 
         self.client.run("search Hello/1.4.10@fenix/testing -r=all --raw")
-        check()
+        check_full_match()
 
     def recipe_search_test(self):
         self.client.run("search Hello*")
