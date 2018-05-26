@@ -832,7 +832,7 @@ class Command(object):
         except (TypeError, ConanException):
             reference = None
 
-        if reference:
+        if reference and args.remote != 'all':
             ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
                                               outdated=args.outdated)
             ordered_packages, reference, recipe_hash, packages_query = ret
