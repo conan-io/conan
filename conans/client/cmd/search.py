@@ -1,7 +1,7 @@
 from conans.search.search import filter_outdated, search_recipes,\
     search_packages
 from collections import OrderedDict
-
+from conans.errors import ConanConnectionError
 
 class Search(object):
     def __init__(self, client_cache, remote_manager, remote_registry):
@@ -21,9 +21,12 @@ class Search(object):
             if 'all' not in (r.name for r in remotes):
                 references = {}
                 for remote in remotes:
-                    result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                    if result:
-                        references[remote.name] = result
+                    try:
+                        result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+                        if result:
+                            references[remote.name] = result
+                    except ConanConnectionError as exc:
+                        references[remote.name] = str(exc).splitlines()[-1]
                 return references
         # single remote
         remote = self._registry.remote(remote)

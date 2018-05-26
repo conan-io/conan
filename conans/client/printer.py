@@ -161,8 +161,12 @@ class Printer(object):
             if isinstance(references, dict):
                 for remote, refs in references.items():
                     self._out.highlight("Remote '%s':" % str(remote))
-                    for conan_ref in sorted(refs):
-                        self._print_colored_line(str(conan_ref), indent=0)
+
+                    if isinstance(refs, list):
+                        for conan_ref in sorted(refs):
+                            self._print_colored_line(str(conan_ref), indent=0)
+                    else:
+                        self._print_colored_line(str(refs), indent=0, color=Color.BRIGHT_RED)
             else:
                 for conan_ref in sorted(references):
                     self._print_colored_line(str(conan_ref), indent=0)
