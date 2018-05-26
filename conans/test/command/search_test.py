@@ -143,7 +143,6 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         os.rmdir(self.servers["search_able"].paths.store)
         shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
-        self.client.run("search Hello* -r=all")
 
         def check():
             for remote in ("local", "search_able"):
@@ -154,8 +153,22 @@ Hello/1.4.12@fenix/testing
 helloTest/1.4.10@fenix/stable""".format(remote)
                 self.assertIn(expected, self.client.out)
 
+        self.client.run("search Hello* -r=all")
         check()
+
         self.client.run("search Hello* -r=all --raw")
+        check()
+
+        def check_full_match():
+            for remote in ("local", "search_able"):
+                expected = """Remote '{}':
+Hello/1.4.10@fenix/testing""".format(remote)
+                self.assertIn(expected, self.client.out)
+
+        self.client.run("search Hello/1.4.10@fenix/testing -r=all")
+        check()
+
+        self.client.run("search Hello/1.4.10@fenix/testing -r=all --raw")
         check()
 
     def recipe_search_test(self):
