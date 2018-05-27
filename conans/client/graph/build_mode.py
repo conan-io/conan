@@ -53,18 +53,18 @@ class BuildMode(object):
 
         ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
-        return force_build
+        for pattern in self.patterns:
+            if fnmatch.fnmatch(ref, pattern):
+                try:
+                    self._unused_patterns.remove(pattern)
+                except ValueError:
+                    pass
+                return True
+        return False
 
     def allowed(self, conan_file, reference):
         return (self.missing or self.outdated or self.forced(conan_file, reference) or
                 conan_file.build_policy_missing)
-
-    def check_matches(self, references):
-        for pattern in list(self._unused_patterns):
-            matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if matched:
-                self._unused_patterns.remove(pattern)
 
     def report_matches(self):
         for pattern in self._unused_patterns:

@@ -57,7 +57,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("-std=c++1z", expected)
+        self.assertIn("-std=c++17", expected)
 
         # Invalid one for GCC
         settings = MockSettings({"build_type": "Release",

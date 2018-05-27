@@ -3,9 +3,36 @@ from conans.test.utils.tools import TestClient
 import unittest
 import os
 from parameterized.parameterized import parameterized
+from conans.util.files import load
 
 
 class CreateTest(unittest.TestCase):
+
+    def dependencies_order_matches_requires_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+import os
+class Pkg(ConanFile):
+    def package(self):
+        save(os.path.join(self.package_folder, "include/file.h"), "//file")
+    def package_info(self):
+        self.cpp_info.libs = ["Lib%s"]
+"""
+        client.save({"conanfile.py": conanfile % "A"})
+        client.run("create . PkgA/0.1@user/testing")
+        client.save({"conanfile.py": conanfile % "B"})
+        client.run("create . PkgB/0.1@user/testing")
+        conanfile = """[requires]
+PkgB/0.1@user/testing
+PkgA/0.1@user/testing"""
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install . -g txt -g cmake")
+        text = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        txt = ";".join(text.splitlines())
+        self.assertIn("[libs];LibB;LibA", txt)
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
 
     def transitive_same_name_test(self):
         # https://github.com/conan-io/conan/issues/1366
