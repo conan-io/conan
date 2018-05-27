@@ -57,7 +57,7 @@ class BuildMode(object):
             if fnmatch.fnmatch(ref, pattern):
                 try:
                     self._unused_patterns.remove(pattern)
-                except:
+                except ValueError:
                     pass
                 return True
         return False
