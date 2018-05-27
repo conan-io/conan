@@ -158,6 +158,18 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.client.run("search Hello* -r=all --raw")
         check()
 
+        # Check that unreachable remotes don't break search
+        self.client.run("remote add unreachable https://unreachable")
+        self.client.run("search Hello* -r=all")
+        check()
+
+        def check_unreachable_info():
+            expected = """Remote 'unreachable':
+Unable to connect to unreachable=https://unreachable"""
+            self.assertIn(expected, self.client.out)
+
+        check_unreachable_info()
+
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
