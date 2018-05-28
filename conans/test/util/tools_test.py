@@ -678,7 +678,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vars = tools.vcvars_dict(None)
+                vars = tools.vcvars_dict(None, only_diff=False)
                 self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
