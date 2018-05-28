@@ -47,10 +47,10 @@ class SCM(object):
     def checkout(self):
         return self.repo.checkout(self.revision)
 
-    def get_repo_url(self):
+    def get_remote_url(self):
         return self.repo.get_remote_url()
 
-    def get_repo_revision(self):
+    def get_revision(self):
         return self.repo.get_revision()
 
     def __repr__(self):

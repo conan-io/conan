@@ -9,8 +9,9 @@ from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
+from conans.client.source import get_scm
 from conans.errors import ConanException
-from conans.model.conan_file import create_exports, create_exports_sources, get_scm
+from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
@@ -109,16 +110,16 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
         return
 
     if scm.url == "auto":
-        origin = scm.get_repo_url()
+        origin = scm.get_remote_url()
         if not origin:
-            raise Exception("Repo origin cannot be deduced by 'auto', using source folder")
+            raise ConanException("Repo origin cannot be deduced by 'auto', using source folder")
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm.url = origin
     if scm.revision == "auto":
-        scm.revision = scm.get_repo_revision()
+        scm.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm.revision)
 
-    # Generate the export.src file pointing to the src_path
+    # Generate the scm_folder.txt file pointing to the src_path
     save(scm_src_file, src_path.replace("\\", "/"))
     scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
 

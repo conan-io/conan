@@ -4,11 +4,18 @@ import shutil
 import six
 
 from conans import tools
-from conans.model.conan_file import get_env_context_manager, get_scm
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
+from conans.model.conan_file import get_env_context_manager
+from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
+
+
+def get_scm(conanfile, src_folder):
+    data = getattr(conanfile, "scm", None)
+    if data is not None:
+        return SCM(data, src_folder)
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
@@ -146,8 +153,8 @@ def config_source_local(dest_dir, conan_file, conanfile_folder, output):
                             output.info("Getting sources from url: '%s'" % scm.url)
                             scm.clone()
                             scm.checkout()
-                    else:
-                        conan_file.source()
+
+                    conan_file.source()
         except ConanExceptionInUserConanfileMethod:
             raise
         except Exception as e:

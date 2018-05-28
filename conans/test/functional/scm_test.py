@@ -75,11 +75,12 @@ class SCMTest(unittest.TestCase):
         self.assertIn("My file is copied", self.client.out)
 
     def test_deleted_source_folder(self):
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
-        self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
+        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=curdir)
         self.client.run("export . user/channel")
 
         new_curdir = temp_folder()
@@ -88,25 +89,35 @@ class SCMTest(unittest.TestCase):
         rmdir(curdir)
         error = self.client.run("install lib/0.1@user/channel --build", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Getting sources from url: 'https://myrepo.com.git'", self.client.out)
+        self.assertIn("Getting sources from url: '%s'" % path.replace("\\", "/"), self.client.out)
 
     def test_local_source(self):
         curdir = self.client.current_folder
         conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile += """
+    def source(self):
+        self.output.warn("SOURCE METHOD CALLED")
+"""
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
         self.client.save({"aditional_file.txt": "contents"})
 
         self.client.run("source . --source-folder=./source")
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "myfile.txt")))
+        self.assertIn("SOURCE METHOD CALLED", self.client.out)
         # Even the not commited files are copied
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "aditional_file.txt")))
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir.replace("\\", "/"))
-        self.client.save({"conanfile.py": base.format(directory="None",
-                                                      url=curdir.replace("\\", "/"), revision=git.get_revision()),
+        conanfile = base.format(directory="None",
+                                url=curdir.replace("\\", "/"), revision=git.get_revision())
+        conanfile += """
+    def source(self):
+        self.output.warn("SOURCE METHOD CALLED")
+"""
+        self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
         self._commit_contents()
         self.client.run("source . --source-folder=./source2")
@@ -114,6 +125,7 @@ class SCMTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source2", "myfile.txt")))
         self.assertIn("Getting sources from url: '%s'" % curdir.replace("\\", "/"), self.client.out)
+        self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
     def test_install_checked_out(self):
         test_server = TestServer()
