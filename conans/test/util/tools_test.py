@@ -14,6 +14,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.win import vcvars_dict
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
@@ -614,7 +615,7 @@ class MyConan(ConanFile):
     settings = "os", "compiler"
 
     def build(self):
-        with tools.vcvars(self.settings):
+        with tools.vcvars(self.settings, only_diff=True):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
@@ -626,6 +627,27 @@ class MyConan(ConanFile):
         else:
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_dict_diff_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        with tools.environment_append({"MYVAR": "1"}):
+            ret = vcvars_dict(settings, only_diff=False)
+            self.assertIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+            ret = vcvars_dict(settings)
+            self.assertNotIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
@@ -657,7 +679,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vars = tools.vcvars_dict(None)
+                vars = tools.vcvars_dict(None, only_diff=False)
                 self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
