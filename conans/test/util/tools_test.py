@@ -14,6 +14,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.win import vcvars_dict
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
@@ -625,6 +626,27 @@ class MyConan(ConanFile):
         else:
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_dict_diff_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        with tools.environment_append({"MYVAR": "1"}):
+            ret = vcvars_dict(settings)
+            self.assertIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+            ret = vcvars_dict(settings, only_diff=True)
+            self.assertNotIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
