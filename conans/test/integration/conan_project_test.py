@@ -1,5 +1,4 @@
 import unittest
-import shutil
 import os
 import re
 import platform
@@ -180,8 +179,6 @@ name: MyProject
 
         release = "build" if platform.system() == "Windows" else "build_release"
         debug = "build" if platform.system() == "Windows" else "build_debug"
-        release_dir = "build/Release" if platform.system() == "Windows" else "build_release"
-        debug_dir = "build/Debug" if platform.system() == "Windows" else "build_debug"
 
         base_folder = client.current_folder
         client.current_folder = os.path.join(base_folder, "A")
@@ -191,7 +188,7 @@ name: MyProject
         # Make sure nothing in local cache
         client.run("search")
         self.assertIn("There are no packages", client.out)
-  
+
         # Check A
         content = load(os.path.join(client.current_folder, "%s/conanbuildinfo.cmake" % release))
         include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
@@ -204,9 +201,14 @@ name: MyProject
         include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
-        client.run("build . -bf=%s" % release)   
-        command = os.sep.join([".", release_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        client.run("build . -bf=%s" % release)
+        if platform.system() == "Windows":
+            cmd_release = r".\build\Release\app"
+            cmd_debug = r".\build\Debug\app"
+        else:
+            cmd_release = "./build_release/app"
+            cmd_debug = "./build_debug/app"
+        client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -215,8 +217,7 @@ name: MyProject
         client.run("install . -if=%s -s build_type=Debug" % debug)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         client.run("build . -bf=%s" % debug)
-        command = os.sep.join([".", debug_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -225,8 +226,7 @@ name: MyProject
         client.run("install . -if=%s -s build_type=Release" % release)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         client.run("build . -bf=%s" % release)
-        command = os.sep.join([".", release_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -236,8 +236,14 @@ name: MyProject
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_folder)
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        command = os.sep.join([".", "A", release_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        if platform.system() == "Windows":
+            cmd_release = r".\A\build\Release\app"
+            cmd_debug = r".\A\build\Debug\app"
+        else:
+            cmd_release = "./A/build_release/app"
+            cmd_debug = "./A/build_debug/app"
+
+        client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -247,8 +253,7 @@ name: MyProject
         tools.replace_in_file(os.path.join(base_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        command = os.sep.join([".", "A", release_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -256,8 +261,7 @@ name: MyProject
         client.run("install A -if=A/%s -s build_type=Debug" % debug)
         client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
-        command = os.sep.join([".", "A", debug_dir, "app"])
-        client.runner(command, cwd=client.current_folder)
+        client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
