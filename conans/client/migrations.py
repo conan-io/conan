@@ -28,13 +28,14 @@ class ClientMigrator(Migrator):
         if current_settings != default_settings_yml:
             self.out.warn("Migration: Updating settings.yml")
             if current_settings != old_settings:
-                backup_path = self.client_cache.settings_path + ".backup"
-                save(backup_path, current_settings)
+                new_path = self.client_cache.settings_path + ".new"
+                save(new_path, default_settings_yml)
                 self.out.warn("*" * 40)
-                self.out.warn("A new settings.yml has been defined")
-                self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
+                self.out.warn("settings.yml is locally modified, can't be updated")
+                self.out.warn("The new settings.yml has been stored in: %s" % new_path)
                 self.out.warn("*" * 40)
-            save(self.client_cache.settings_path, default_settings_yml)
+            else:
+                save(self.client_cache.settings_path, default_settings_yml)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
