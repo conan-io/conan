@@ -135,8 +135,11 @@ project({name} CXX)
             for _, local_package in self._local_packages.items():
                 if not local_package.conanfile:
                     local_package.conanfile = conanfile
-                build_folder = "/".join([local_package.conanfile_folder, local_package.build_folder])
-                cmake += "add_subdirectory(%s %s)\n" % (local_package.local_cmakedir, build_folder)
+                build_folder = os.path.join(self._base_folder,
+                                            "/".join([local_package.conanfile_folder,
+                                                      local_package.build_folder]))
+                build_folder = build_folder.replace("\\", "/")
+                cmake += 'add_subdirectory(%s "%s")\n' % (local_package.local_cmakedir, build_folder)
             cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
             if os.path.exists(cmake_path) and not load(cmake_path).startswith("# conan-project"):
                 raise ConanException("Can't generate CMakeLists.txt, will overwrite existingone")
