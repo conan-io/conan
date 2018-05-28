@@ -613,7 +613,7 @@ class MyConan(ConanFile):
     settings = "os", "compiler"
 
     def build(self):
-        with tools.vcvars(self.settings):
+        with tools.vcvars(self.settings, only_diff=True):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
