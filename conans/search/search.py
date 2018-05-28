@@ -1,7 +1,6 @@
 import re
 import os
 
-from functools import reduce
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
