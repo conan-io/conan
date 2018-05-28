@@ -640,11 +640,11 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings)
+            ret = vcvars_dict(settings, only_diff=False)
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings, only_diff=True)
+            ret = vcvars_dict(settings)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
