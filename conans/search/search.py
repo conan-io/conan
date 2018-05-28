@@ -97,11 +97,19 @@ def search_recipes(paths, pattern=None, ignorecase=True):
 
 
 def _partial_match(pattern, conan_ref):
+    """
+    Finds if pattern matches any of partial sums of tokens of conan reference
+    """
+    
     tokens = str(conan_ref).replace('/', ' / ').replace('@', ' @ ').split()
 
-    partial_sums = reduce(lambda c, x: c + [c[-1] + x], tokens, [''])[1:]
+    def partial_sums(iterable):
+        sum = ''
+        for i in iterable:
+            sum += i
+            yield sum
 
-    return any(map(pattern.match, partial_sums))
+    return any(map(pattern.match, list(partial_sums(tokens))))
 
 def search_packages(paths, reference, query):
     """ Return a dict like this:
