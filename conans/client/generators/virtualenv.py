@@ -11,7 +11,6 @@ class VirtualEnvGenerator(Generator):
         self.conanfile = conanfile
         self.env = conanfile.env
         self.venv_name = "conanenv"
-        super(VirtualEnvGenerator, self).__init__(conanfile)
 
     @property
     def filename(self):
