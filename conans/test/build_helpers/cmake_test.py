@@ -843,6 +843,7 @@ class ConanFileMock(ConanFile):
         self.should_configure = True
         self.should_build = True
         self.should_install = True
+        self.generators = []
 
     def run(self, command):
         self.command = command
