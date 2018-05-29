@@ -181,6 +181,14 @@ def relative_dirs(path):
     return ret
 
 
+def get_abs_path(folder, origin):
+    if folder:
+        if os.path.isabs(folder):
+            return folder
+        return os.path.join(origin, folder)
+    return origin
+
+
 def _change_permissions(func, path, exc_info):
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)

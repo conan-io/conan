@@ -1,16 +1,18 @@
+import os
 import platform
 import unittest
-
-from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
-from conans import tools
-from conans.client.tools.oss import cpu_count
-from conans.paths import CONANFILE
-from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
-from conans.test.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestClient
-from conans.test.build_helpers.cmake_test import ConanFileMock
-from conans.model.settings import Settings
 from collections import namedtuple
+
+from conans import tools
+from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
+from conans.client.tools.oss import cpu_count
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.paths import CONANFILE
+from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
+from conans.test.utils.tools import TestClient
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -416,9 +418,12 @@ class HelloConan(ConanFile):
         self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'",
-                                             "pkg_config_paths=['/tmp/hello', '/tmp/foo']")})
+                                             "pkg_config_paths=['/tmp/hello', 'foo']")})
         client.run("create . conan/testing")
-        self.assertIn("PKG_CONFIG_PATH=/tmp/hello:/tmp/foo", client.out)
+        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
+        builds_folder = client.client_cache.builds(ref)
+        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
+        self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo" % bf, client.out)
 
     def cross_build_command_test(self):
         runner = RunnerMock()

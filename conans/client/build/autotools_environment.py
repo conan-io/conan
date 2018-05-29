@@ -14,6 +14,7 @@ from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
                           detected_architecture, get_gnu_triplet)
 from conans.errors import ConanException
+from conans.util.files import get_abs_path
 
 
 class AutoToolsBuildEnvironment(object):
@@ -131,7 +132,9 @@ class AutoToolsBuildEnvironment(object):
                 triplet_args.append("--target=%s" % (target or self.target))
 
         if pkg_config_paths:
-            pkg_env = {"PKG_CONFIG_PATH": os.pathsep.join(pkg_config_paths)}
+            pkg_env = {"PKG_CONFIG_PATH":
+                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
