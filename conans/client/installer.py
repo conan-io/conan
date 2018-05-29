@@ -10,8 +10,8 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
-from conans.util.files import save, rmdir, mkdir, make_read_only,\
-    set_dirty, clean_dirty
+from conans.util.files import (save, rmdir, mkdir, make_read_only,
+                               set_dirty, clean_dirty, load)
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import (ConanException, conanfile_exception_formatter,
@@ -83,7 +83,9 @@ class _ConanPackageBuilder(object):
                                  "Close any app using it, and retry" % str(e))
 
         self._out.info('Building your package in %s' % self.build_folder)
-        config_source(export_folder, export_source_folder, self.source_folder,
+        sources_pointer = self._client_cache.scm_folder(self._conan_ref)
+        local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
+        config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out)
         self._out.info('Copying sources to build folder')
 

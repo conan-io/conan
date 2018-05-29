@@ -14,7 +14,8 @@ from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
-from conans.client.recorder.upload_recoder import UploadRecoder
+from conans.client.recorder.search_recorder import SearchRecorder
+from conans.client.recorder.upload_recoder import UploadRecorder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -668,14 +669,45 @@ class ConanAPIV1(object):
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
+        recorder = SearchRecorder()
         search = Search(self._client_cache, self._remote_manager, self._registry)
-        return search.search_recipes(pattern, remote, case_sensitive)
+
+        try:
+            references = search.search_recipes(pattern, remote, case_sensitive)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
+
+        for remote, refs in references.items():
+            for ref in refs:
+                recorder.add_recipe(str(remote), str(ref), with_packages=False)
+        return recorder.get_info()
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
+        recorder = SearchRecorder()
         search = Search(self._client_cache, self._remote_manager, self._registry)
-        return search.search_packages(reference, remote, query=query,
-                                      outdated=outdated)
+
+        try:
+            ordered_packages, ref, recipe_hash = search.search_packages(reference, remote,
+                                                                        query=query,
+                                                                        outdated=outdated)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
+
+        recorder.add_recipe(str(remote), str(ref))
+        if ordered_packages:
+            for package_id, properties in ordered_packages.items():
+                package_recipe_hash = properties.get("recipe_hash", None)
+                recorder.add_package(str(remote), str(reference), package_id,
+                                     properties.get("options", []),
+                                     properties.get("settings", []),
+                                     properties.get("full_requires", []),
+                                     recipe_hash != package_recipe_hash)
+        return recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
@@ -684,7 +716,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
-        recorder = UploadRecoder()
+        recorder = UploadRecorder()
 
         if force and no_overwrite:
             exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")

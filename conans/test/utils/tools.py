@@ -24,6 +24,7 @@ from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools.scm import Git
 from conans.client.userio import UserIO
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
@@ -253,6 +254,20 @@ class TestBufferConanOutput(ConanOutput):
 
     def __contains__(self, value):
         return value in self.__repr__()
+
+
+def create_local_git_repo(files, branch=None):
+    tmp = temp_folder()
+    save_files(tmp, files)
+    git = Git(tmp)
+    git.run("init .")
+    if branch:
+        git.run("checkout -b %s" % branch)
+    git.run("add .")
+    git.run('config user.email "you@example.com"')
+    git.run('config user.name "Your Name"')
+    git.run('commit -m "message"')
+    return tmp.replace("\\", "/"), git.get_revision()
 
 
 class MockedUserIO(UserIO):
