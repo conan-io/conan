@@ -729,6 +729,10 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
+    def search_packages_with_reference_not_exported_test(self):
+        error = self.client.run("search my_pkg/1.0@conan/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):

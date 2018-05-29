@@ -103,7 +103,7 @@ def search_packages(paths, reference, query):
                            settings: {os: Windows}}}
     param conan_ref: ConanFileReference object
     """
-    if not search_recipes(paths, reference):
+    if not os.path.exists(paths.conan(reference)):
         raise ConanException("Recipe not found: %s" % str(reference))
     infos = _get_local_infos_min(paths, reference)
     return filter_packages(query, infos)
