@@ -339,7 +339,7 @@ class CMake(object):
 
         # Adjust automatically the module path in case the conanfile is using the cmake_find_package
         if "cmake_find_package" in self._conanfile.generators:
-            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder
+            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
         return ret
 

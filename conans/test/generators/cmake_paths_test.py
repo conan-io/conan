@@ -148,6 +148,7 @@ class TestConan(ConanFile):
     name = "Consumer"
     version = "0.1"
     exports = "*"
+    settings = "compiler", "arch"
     generators = "cmake_find_package", "cmake"
     requires = "Zlib/0.1@user/channel"
 
