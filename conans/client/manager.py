@@ -13,7 +13,6 @@ from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
-from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
 from conans.client.graph.range_resolver import RangeResolver
@@ -29,6 +28,7 @@ from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.graph.build_mode import BuildMode
 from conans.client.cmd.download import download_binaries
+from conans.client.graph.printer import print_graph
 
 
 class ConanManager(object):
@@ -89,10 +89,9 @@ class ConanManager(object):
             self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
-    def get_proxy(self, remote_name=None, manifest_manager=None):
+    def get_proxy(self, remote_name=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
-                                  remote_name=remote_name, recorder=self._recorder, registry=self._registry,
-                                  manifest_manager=manifest_manager)
+                                  remote_name=remote_name, recorder=self._recorder, registry=self._registry)
         return remote_proxy
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
@@ -272,11 +271,7 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
-        manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
-                                           client_cache=self._client_cache,
-                                           verify=manifest_verify,
-                                           interactive=manifest_interactive) if manifest_folder else None
-        remote_proxy = self.get_proxy(remote_name=remote_name, manifest_manager=manifest_manager)
+        remote_proxy = self.get_proxy(remote_name=remote_name)
 
         loader = self.get_loader(profile)
         if not install_reference:
@@ -297,7 +292,7 @@ class ConanManager(object):
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.highlight("Installing package")
-        Printer(self._user_io.out).print_graph(deps_graph, self._registry)
+        print_graph(deps_graph, self._user_io.out)
 
         try:
             if cross_building(loader._settings):
@@ -318,6 +313,20 @@ class ConanManager(object):
 
         installer.install(deps_graph, profile.build_requires, keep_build, update=update)
         build_mode.report_matches()
+
+        if manifest_folder:
+            manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
+                                               client_cache=self._client_cache)
+            for node in deps_graph.nodes:
+                if not node.conan_ref:
+                    continue
+                conanfile = node.conanfile
+                complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                        conanfile, node.conan_ref)
+            manifest_manager.check_graph(deps_graph,
+                                         verify=manifest_verify,
+                                         interactive=manifest_interactive)
+            manifest_manager.print_log()
 
         if install_folder:
             # Write generators
@@ -341,9 +350,6 @@ class ConanManager(object):
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder, output)
 
-        if manifest_manager:
-            manifest_manager.print_log()
-
     def source(self, conanfile_path, source_folder, info_folder):
         """
         :param conanfile_path: Absolute path to a conanfile
@@ -358,9 +364,8 @@ class ConanManager(object):
         conanfile_folder = os.path.dirname(conanfile_path)
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
-            _execute_export(conanfile_path, conanfile, source_folder,
-                            source_folder, output)
-        config_source_local(source_folder, conanfile, output)
+            _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
+        config_source_local(source_folder, conanfile, conanfile_folder, output)
 
     def imports(self, conan_file_path, dest_folder, info_folder):
         """

@@ -12,7 +12,7 @@ from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir
+from conans.util.files import mkdir, get_abs_path
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
@@ -28,7 +28,8 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None, toolset=None, make_program=None, set_cmake_flags=False):
+                 parallel=True, build_type=None, toolset=None, make_program=None,
+                 set_cmake_flags=False):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -320,7 +321,7 @@ class CMake(object):
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder.replace("\\", "/")
         except AttributeError:
             pass
 
@@ -366,8 +367,16 @@ class CMake(object):
 
         return source_ret, build_ret
 
+    def _run(self, command):
+        if self._compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
+            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+                self._conanfile.run(command)
+        else:
+            self._conanfile.run(command)
+
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  source_folder=None, build_folder=None, cache_build_folder=None):
+                  source_folder=None, build_folder=None, cache_build_folder=None,
+                  pkg_config_paths=None):
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         if not self._conanfile.should_configure:
@@ -384,12 +393,26 @@ class CMake(object):
             defs_to_string(defs),
             args_to_string([source_dir])
         ])
-        command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
-        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-            with tools.remove_from_path("sh"):
-                self._conanfile.run(command)
+
+
+        if pkg_config_paths:
+            pkg_env = {"PKG_CONFIG_PATH":
+                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)}
         else:
-            self._conanfile.run(command)
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            set_env = "pkg_config" in self._conanfile.generators \
+                      and "PKG_CONFIG_PATH" not in os.environ
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
+
+        with tools.environment_append(pkg_env):
+            command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+            if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
+                with tools.remove_from_path("sh"):
+                    self._conanfile.run(command)
+            else:
+                self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -416,7 +439,7 @@ class CMake(object):
             args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
-        self._conanfile.run(command)
+        self._run(command)
 
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:

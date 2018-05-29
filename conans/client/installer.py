@@ -11,7 +11,7 @@ from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir, make_read_only, is_dirty,\
-    set_dirty, clean_dirty
+    set_dirty, clean_dirty, load
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import (ConanException, conanfile_exception_formatter,
@@ -83,7 +83,9 @@ class _ConanPackageBuilder(object):
                                  "Close any app using it, and retry" % str(e))
 
         self._out.info('Building your package in %s' % self.build_folder)
-        config_source(export_folder, export_source_folder, self.source_folder,
+        sources_pointer = self._client_cache.scm_folder(self._conan_ref)
+        local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
+        config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out)
         self._out.info('Copying sources to build folder')
 
@@ -392,8 +394,6 @@ class ConanInstaller(object):
                                                      str(exc), remote=None)
                 raise exc
             else:
-                self._remote_proxy.handle_package_manifest(package_ref)
-
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
                 self._built_packages.add((conan_ref, package_id))
@@ -401,7 +401,6 @@ class ConanInstaller(object):
     def _get_existing_package(self, conan_file, package_reference, output, package_folder, update):
         installed = get_package(conan_file, package_reference, package_folder, output,
                                 self._recorder, self._remote_proxy, update=update)
-        self._remote_proxy.handle_package_manifest(package_reference)
         if installed:
             _handle_system_requirements(conan_file, package_reference,
                                         self._client_cache, output)
@@ -495,10 +494,5 @@ class ConanInstaller(object):
                         build_node = not available
 
                 nodes_to_build.append((node, package_id, build_node))
-
-        # A check to be sure that if introduced a pattern, something is going to be built
-        if self._build_mode.patterns:
-            to_build = [str(n[0].conan_ref.name) for n in nodes_to_build if n[2]]
-            self._build_mode.check_matches(to_build)
 
         return nodes_to_build
