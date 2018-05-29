@@ -298,7 +298,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                only_diff=True, vcvars_ver=None, winsdk_version=None):
+                vcvars_ver=None, winsdk_version=None, only_diff=True):
 
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
