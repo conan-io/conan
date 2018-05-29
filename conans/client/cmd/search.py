@@ -14,9 +14,7 @@ class Search(object):
 
         references = OrderedDict()
         if not remote:
-            references[None] = []
-            refs = search_recipes(self._client_cache, pattern, ignorecase)
-            references[None].extend(refs)
+            references[None] = search_recipes(self._client_cache, pattern, ignorecase)
             return references
 
         if remote == 'all':
@@ -27,14 +25,12 @@ class Search(object):
                 for remote in remotes:
                     refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if refs:
-                        references[remote.name] = []
-                        references[remote.name].extend(refs)
+                        references[remote.name] = refs
                 return references
         # single remote
         remote = self._registry.remote(remote)
-        references[remote.name] = []
         refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-        references[remote.name].extend(refs)
+        references[remote.name] = refs
         return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
@@ -51,24 +47,15 @@ class Search(object):
             remote = self._registry.remote(remote_name)
             packages_props = self._remote_manager.search_packages(remote, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            recipe_hash = self._get_recipe_hash_remote(reference, remote)
+            manifest = self._remote_manager.get_conan_manifest(reference, remote)
+            recipe_hash = manifest.summary_hash
         else:
             packages_props = search_packages(self._client_cache, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            recipe_hash = self._get_recipe_hash_local(reference)
+            try:
+                recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+            except IOError:  # It could not exist in local
+                recipe_hash = None
         if outdated and recipe_hash:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
         return ordered_packages, reference, recipe_hash
-
-    def _get_recipe_hash_local(self, reference):
-        try:
-            recipe_hash = self._client_cache.load_manifest(reference).summary_hash
-        except IOError:  # It could not exist in local
-            recipe_hash = None
-        return recipe_hash
-
-    def _get_recipe_hash_remote(self, reference, remote):
-        manifest = self._remote_manager.get_conan_manifest(reference, remote)
-        recipe_hash = manifest.summary_hash
-        return recipe_hash
-
