@@ -364,9 +364,8 @@ class ConanManager(object):
         conanfile_folder = os.path.dirname(conanfile_path)
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
-            _execute_export(conanfile_path, conanfile, source_folder,
-                            source_folder, output)
-        config_source_local(source_folder, conanfile, output)
+            _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
+        config_source_local(source_folder, conanfile, conanfile_folder, output)
 
     def imports(self, conan_file_path, dest_folder, info_folder):
         """

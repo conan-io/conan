@@ -228,7 +228,7 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None, winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -274,6 +274,10 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
                            'call "%s" %s' % (vcvars_path, vcvars_arch))
+                if winsdk_version:
+                    command += " %s" % winsdk_version
+                if vcvars_ver:
+                    command += " -vcvars_ver=%s" % vcvars_ver
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
                 command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
@@ -294,9 +298,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                only_diff=False):
+                vcvars_ver=None, winsdk_version=None, only_diff=True):
+
     cmd = vcvars_command(settings, arch=arch,
-                         compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
+                         compiler_version=compiler_version, force=force,
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}
     start_reached = False
