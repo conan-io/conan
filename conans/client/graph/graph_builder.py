@@ -12,11 +12,8 @@ from conans.client.graph.graph import DepsGraph, Node
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver):
-        """ param retriever: something that implements retrieve_conanfile for installed conans
-        :param loader: helper ConanLoader to be able to load user space conanfile
-        """
-        self._retriever = retriever
+    def __init__(self, proxy, output, loader, resolver):
+        self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
@@ -26,7 +23,7 @@ class DepsGraphBuilder(object):
         returns a dict of conan_reference: 1 if there is an update,
         0 if don't and -1 if local is newer
         """
-        return {node.conan_ref: self._retriever.update_available(node.conan_ref)
+        return {node.conan_ref: self._proxy.update_available(node.conan_ref)
                 for node in deps_graph.nodes}
 
     def load_graph(self, conanfile, check_updates, update):
@@ -44,7 +41,7 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
-        dep_graph.propagate_info()
+        dep_graph.compute_package_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
@@ -99,10 +96,8 @@ class DepsGraphBuilder(object):
             new_loop_ancestors.append(require.conan_reference)
             previous = public_deps.get(name)
             if require.private or not previous:  # new node, must be added and expanded
-                # TODO: if we could detect that current node has an available package
-                # we could not download the private dep. See installer _compute_private_nodes
-                # maybe we could move these functionality to here and build only the graph
-                # with the nodes to be took in account
+                if require.private:  # Make sure the subgraph is truly private
+                    public_deps = {}
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
                                                  aliased, check_updates, update)
                 # RECURSION!
@@ -123,7 +118,7 @@ class DepsGraphBuilder(object):
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
-                    closure = dep_graph.public_closure(node)
+                    closure = dep_graph.closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
@@ -207,7 +202,9 @@ class DepsGraphBuilder(object):
                          check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_recipe(requirement.conan_reference, check_updates, update)
+        result = self._proxy.get_recipe(requirement.conan_reference,
+                                        check_updates, update)
+        conanfile_path, remote = result
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
@@ -221,6 +218,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node.remote = remote
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         if not requirement.private:

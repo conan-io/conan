@@ -39,6 +39,19 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))
 
+        self.assertFalse(Version("4") < Version("4.0.0"))
+        self.assertFalse(Version("4") > Version("4.0.0"))
+        self.assertFalse(Version("4") != Version("4.0.0"))
+        self.assertTrue(Version("4") == Version("4.0.0"))
+        self.assertTrue(Version("4") <= Version("4.0.0"))
+        self.assertTrue(Version("4") >= Version("4.0.0"))
+        self.assertTrue(Version("4.0") == Version("4.0.0"))
+
+        self.assertTrue(Version("4.0.0") == Version("4.0.0"))
+        self.assertTrue(Version("4.0.1") != "4")
+        self.assertFalse(Version("4.0.0.1") == "4")
+        self.assertTrue(Version("4.0.0.1") >= "4")
+
     def text_test(self):
         v1 = Version("master+build2")
         self.assertEqual(v1.major(), "master")

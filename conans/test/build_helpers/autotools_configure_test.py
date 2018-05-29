@@ -57,7 +57,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("-std=c++1z", expected)
+        self.assertIn("-std=c++17", expected)
 
         # Invalid one for GCC
         settings = MockSettings({"build_type": "Release",
@@ -543,3 +543,40 @@ class HelloConan(ConanFile):
             # TEST with custom vars
             mocked_result = be.configure(vars=my_vars)
             self.assertEqual(mocked_result, my_vars)
+
+    def autotools_fpic_test(self):
+        runner = None
+        settings = MockSettings({"os": "Linux"})
+        options = MockOptions({"fPIC": True, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": True, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": False, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": False, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+
+        settings = MockSettings({"os": "Windows"})
+        options = MockOptions({"fPIC": True, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+
+        settings = MockSettings({"os": "Macos", "compiler": "clang"})
+        options = MockOptions({"fPIC": False, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+        ab.fpic = True
+        self.assertIn("-fPIC", ab.vars["CXXFLAGS"])

@@ -173,59 +173,60 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
         conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
-        cmake = CMake(conan_file)
-        cmake.configure(source_dir="../subdir", build_dir="build")
-        linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                      '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
-        generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        base_cmd = ' && cmake -G "%s" -DCMAKE_BUILD_TYPE="Release" %s' \
-                   '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
-                   '-DCONAN_COMPILER_VERSION="6.3" ' \
-                   '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
-                   '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % (generator, linux_stuff)
-        build_expected = quote_var("build")
-        source_expected = quote_var("../subdir")
+        with tools.chdir(self.tempdir):
+            cmake = CMake(conan_file)
+            cmake.configure(source_dir="../subdir", build_dir="build")
+            linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
+                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
+            generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
+            base_cmd = ' && cmake -G "%s" -DCMAKE_BUILD_TYPE="Release" %s' \
+                       '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
+                       '-DCONAN_COMPILER_VERSION="6.3" ' \
+                       '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
+                       '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % (generator, linux_stuff)
+            build_expected = quote_var("build")
+            source_expected = quote_var("../subdir")
 
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure(build_dir="build")
-        build_expected = quote_var("build")
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure(build_dir="build")
+            build_expected = quote_var("build")
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure()
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure()
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure(source_folder="source", build_folder="build")
-        build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
-        source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure(source_folder="source", build_folder="build")
+            build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
+            source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = True
-        cmake.configure(source_folder="source", build_folder="build",
-                        cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = True
+            cmake.configure(source_folder="source", build_folder="build",
+                            cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = False
-        cmake.configure(source_folder="source", build_folder="build",
-                        cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = False
+            cmake.configure(source_folder="source", build_folder="build",
+                            cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = True
-        cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = True
+            cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        # Raise mixing
-        with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
-            cmake.configure(source_folder="source", build_dir="build")
+            # Raise mixing
+            with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+                cmake.configure(source_folder="source", build_dir="build")
 
     def build_type_ovewrite_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -627,7 +628,7 @@ build_type: [ Release]
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        settings.compiler.version = "12"
+        settings.compiler.version = "14"
         settings.compiler.runtime = "MDd"
         settings.arch = "x86"
         settings.build_type = None
@@ -772,7 +773,6 @@ build_type: [ Release]
 
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
-
 
     def test_missing_settings(self):
         def instance_with_os_build(os_build):
