@@ -670,7 +670,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
        
 """.encode("utf-8")
 
-        def vcvars_command_mock(settings, arch, compiler_version, force):  # @UnusedVariable
+        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version):  # @UnusedVariable
             return "unused command"
 
         def subprocess_check_output_mock(cmd, shell):
