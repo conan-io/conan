@@ -688,6 +688,38 @@ build_type: [ Release]
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
+    def test_pkg_config_path(self):
+        conanfile = ConanFileMock()
+        conanfile.generators = ["pkg_config"]
+        conanfile.install_folder = "/my_install/folder/"
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        cmake.configure()
+        self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"], "/my_install/folder/")
+
+        conanfile.generators = []
+        cmake = CMake(conanfile)
+        cmake.configure()
+        self.assertNotIn("PKG_CONFIG_PATH", conanfile.captured_env)
+
+        cmake = CMake(conanfile)
+        cmake.configure(pkg_config_paths=["reldir1", "/abspath2/to/other"])
+        self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"],
+                          os.path.pathsep.join(["/my_install/folder/reldir1",
+                                                "/abspath2/to/other"]))
+
+        # If there is already a PKG_CONFIG_PATH do not set it
+        conanfile.generators = ["pkg_config"]
+        cmake = CMake(conanfile)
+        with tools.environment_append({"PKG_CONFIG_PATH": "do_not_mess_with_this"}):
+            cmake.configure()
+            self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"], "do_not_mess_with_this")
+
     def test_shared(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
@@ -843,7 +875,10 @@ class ConanFileMock(ConanFile):
         self.should_configure = True
         self.should_build = True
         self.should_install = True
+        self.generators = []
+        self.captured_env = {}
 
     def run(self, command):
         self.command = command
         self.path = os.environ["PATH"]
+        self.captured_env = {key: value for key, value in os.environ.items()}
