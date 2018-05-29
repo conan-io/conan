@@ -321,7 +321,7 @@ class CMake(object):
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder.replace("\\", "/")
+                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
         except AttributeError:
             pass
 
