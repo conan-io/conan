@@ -96,10 +96,8 @@ class DepsGraphBuilder(object):
             new_loop_ancestors.append(require.conan_reference)
             previous = public_deps.get(name)
             if require.private or not previous:  # new node, must be added and expanded
-                # TODO: if we could detect that current node has an available package
-                # we could not download the private dep. See installer _compute_private_nodes
-                # maybe we could move these functionality to here and build only the graph
-                # with the nodes to be took in account
+                if require.private:  # Make sure the subgraph is truly private
+                    public_deps = {}
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
                                                  aliased, check_updates, update)
                 # RECURSION!

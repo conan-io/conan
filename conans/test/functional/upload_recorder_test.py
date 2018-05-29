@@ -1,13 +1,13 @@
 import unittest
 
 from datetime import datetime
-from conans.client.recorder.upload_recoder import UploadRecoder
+from conans.client.recorder.upload_recoder import UploadRecorder
 
 
 class UploadRecorderTest(unittest.TestCase):
 
     def setUp(self):
-        self.recorder = UploadRecoder()
+        self.recorder = UploadRecorder()
 
     def empty_test(self):
         info = self.recorder.get_info()

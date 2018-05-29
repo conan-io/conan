@@ -23,7 +23,7 @@ class _UploadPackage(namedtuple("UploadPackage", "package_id, time")):
         return {"id": self.package_id, "time": self.time}
 
 
-class UploadRecoder(object):
+class UploadRecorder(object):
 
     def __init__(self):
         self.error = False

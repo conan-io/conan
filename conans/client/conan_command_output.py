@@ -91,17 +91,17 @@ class CommandOutputer(object):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
 
-    def print_search_references(self, references, pattern, raw):
+    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self.user_io.out)
-        printer.print_search_recipes(references, pattern, raw)
+        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query, table):
+    def print_search_packages(self, search_info, reference, packages_query, table):
         if table:
             from conans.client.graph.grapher import html_binary_graph
-            html_binary_graph(pattern, ordered_packages, recipe_hash, table)
+            html_binary_graph(search_info, table)
         else:
             printer = Printer(self.user_io.out)
-            printer.print_search_packages(ordered_packages, pattern, recipe_hash, packages_query)
+            printer.print_search_packages(search_info, reference, packages_query)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:

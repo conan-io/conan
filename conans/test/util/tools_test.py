@@ -14,13 +14,15 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.win import vcvars_dict
+from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -613,7 +615,7 @@ class MyConan(ConanFile):
     settings = "os", "compiler"
 
     def build(self):
-        with tools.vcvars(self.settings):
+        with tools.vcvars(self.settings, only_diff=True):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
@@ -625,6 +627,27 @@ class MyConan(ConanFile):
         else:
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_dict_diff_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        with tools.environment_append({"MYVAR": "1"}):
+            ret = vcvars_dict(settings, only_diff=False)
+            self.assertIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+            ret = vcvars_dict(settings)
+            self.assertNotIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
@@ -647,7 +670,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
        
 """.encode("utf-8")
 
-        def vcvars_command_mock(settings, arch, compiler_version, force):  # @UnusedVariable
+        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version):  # @UnusedVariable
             return "unused command"
 
         def subprocess_check_output_mock(cmd, shell):
@@ -656,7 +679,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vars = tools.vcvars_dict(None)
+                vars = tools.vcvars_dict(None, only_diff=False)
                 self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
@@ -878,3 +901,136 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
+
+
+class GitToolTest(unittest.TestCase):
+
+    def test_clone_git(self):
+        path, _ = create_local_git_repo({"myfile": "contents"})
+        tmp = temp_folder()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+    def test_clone_existing_folder_git(self):
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        git.clone(path, branch="my_release")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+        # Checkout a commit
+        git.checkout(commit)
+        self.assertEquals(git.get_revision(), commit)
+
+    def test_clone_existing_folder_without_branch(self):
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
+                                                     "specify a branch to checkout"):
+            git.clone("https://github.com/conan-community/conan-zlib.git")
+
+    def test_credentials(self):
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool")
+        url_credentials = git.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+
+    def test_verify_ssl(self):
+        class MyRunner(object):
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, *args, **kwargs):
+                self.calls.append(args[0])
+                return ""
+
+        runner = MyRunner()
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
+                  force_english=True)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify true", runner.calls[1])
+
+        runner = MyRunner()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
+                  force_english=False)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify false", runner.calls[1])
+
+    def git_helper_in_recipe_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        save(os.path.join(git_repo, "file.h"), "contents")
+        client.runner("git init .", cwd=git_repo)
+        client.runner('git config user.email "you@example.com"', cwd=git_repo)
+        client.runner('git config user.name "Your Name"', cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
+        client.runner("git add .", cwd=git_repo)
+        client.runner('git commit -m "comm"', cwd=git_repo)
+
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s", "dev")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Now clone in a subfolder with later checkout
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        tools.mkdir("src")
+        git = tools.Git("./src")
+        git.clone("%s")
+        git.checkout("dev")
+
+    def build(self):
+        assert(os.path.exists(os.path.join("src", "file.h")))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Base dir, with exports without subfolder and not specifying checkout fails
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel", ignore_error=True)
+        self.assertIn("The destination folder is not empty, "
+                      "specify a branch to checkout", client.out)
