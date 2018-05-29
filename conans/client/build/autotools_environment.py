@@ -131,7 +131,7 @@ class AutoToolsBuildEnvironment(object):
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.build_folder} \
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} \
                 if "pkg_config" in self._conanfile.generators else {}
 
         if self._conanfile.package_folder is not None:

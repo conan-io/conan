@@ -337,6 +337,10 @@ class CMake(object):
                 shared = self._conanfile.options.get_safe("shared")
                 ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
 
+        # Adjust automatically the module path in case the conanfile is using the cmake_find_package
+        if "cmake_find_package" in self._conanfile.generators:
+            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder
+
         return ret
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
