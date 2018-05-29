@@ -1,9 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER, CONAN_MANIFEST
+import json
 import os
-from conans.model.manifest import FileTreeManifest
 import shutil
+import unittest
+
+from conans.test.utils.tools import TestClient, TestServer
+from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
+from conans.model.manifest import FileTreeManifest
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.util.files import load
 
@@ -92,7 +94,7 @@ class SearchTest(unittest.TestCase):
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
-        self.root_folder1 = 'Hello/1.4.10/fenix/testing'
+        root_folder1 = 'Hello/1.4.10/fenix/testing'
         root_folder2 = 'helloTest/1.4.10/fenix/stable'
         root_folder3 = 'Bye/0.14/fenix/testing'
         root_folder4 = 'NodeInfo/1.0.2/fenix/stable'
@@ -101,7 +103,7 @@ class SearchTest(unittest.TestCase):
         root_folder12 = 'Hello/1.4.12/fenix/testing'
 
         self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
-                          "%s/%s/WindowsPackageSHA/%s" % (self.root_folder1,
+                          "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder11,
@@ -110,10 +112,10 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder12,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
-                          "%s/%s/PlatformIndependantSHA/%s" % (self.root_folder1,
+                          "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
                                                                PACKAGES_FOLDER,
                                                                CONANINFO): conan_vars1b,
-                          "%s/%s/LinuxPackageSHA/%s" % (self.root_folder1,
+                          "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
                           "%s/%s/a44f541cd44w57/%s" % (root_folder2,
@@ -132,11 +134,13 @@ class SearchTest(unittest.TestCase):
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        fake_manifest.save(os.path.join(self.client.paths.store, self.root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder1, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder2, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder3, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder4, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder11, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder12, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
@@ -435,8 +439,9 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def search_with_no_local_test(self):
         client = TestClient()
-        client.run("search nonexist/1.0@lasote/stable")
-        self.assertIn("There are no packages", self.client.user_io.out)
+        error = client.run("search nonexist/1.0@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Recipe not found: nonexist/1.0@lasote/stable", client.out)
 
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
@@ -447,6 +452,287 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
+    def search_json_test(self):
+        # Test invalid arguments
+        error = self.client.run("search h* -r all --json search.json --table table.html",
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("'--table' argument cannot be used together with '--json'", self.client.out)
+        json_path = os.path.join(self.client.current_folder, "search.json")
+        self.assertFalse(os.path.exists(json_path))
+
+        # Test search packages for unknown reference
+        error = self.client.run("search fake/0.1@danimtb/testing --json search.json",
+                                ignore_error=True)
+        self.assertTrue(error)
+        json_path = os.path.join(self.client.current_folder, "search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        self.assertTrue(output["error"])
+        self.assertEqual(0, len(output["results"]))
+
+        # Test search recipes local
+        self.client.run("search Hello* --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'None',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.11@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.12@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'helloTest/1.4.10@fenix/stable'}
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+        # Test search recipes all remotes
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run("search Hello* -r=all --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'local',
+                    'items': [
+                        {
+                             'recipe': {
+                                 'id': 'Hello/1.4.10@fenix/testing'}
+                        },
+                        {
+                             'recipe': {
+                                 'id': 'Hello/1.4.11@fenix/testing'}
+                        },
+                        {
+                             'recipe': {
+                                 'id': 'Hello/1.4.12@fenix/testing'}
+                        },
+                        {
+                             'recipe': {
+                                 'id': 'helloTest/1.4.10@fenix/stable'}
+                        }
+                    ]
+                },
+                {
+                    'remote': 'search_able',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.11@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.12@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'helloTest/1.4.10@fenix/stable'}
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+        # Test search recipe remote
+        self.client.run("search Hello* -r=local --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'local',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.11@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.12@fenix/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'helloTest/1.4.10@fenix/stable'}
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+        # Test search packages local
+        self.client.run("search Hello/1.4.10@fenix/testing --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'None',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+        # Test search packages remote
+        self.client.run("search Hello/1.4.10@fenix/testing -r search_able --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'search_able',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+    def search_packages_with_reference_not_exported_test(self):
+        error = self.client.run("search my_pkg/1.0@conan/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
