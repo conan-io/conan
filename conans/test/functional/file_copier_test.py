@@ -101,6 +101,20 @@ class FileCopierTest(unittest.TestCase):
         self.assertTrue(os.path.islink(symlink))
         self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
 
+    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    def linked_folder_nested_test(self):
+        # https://github.com/conan-io/conan/issues/2959
+        folder1 = temp_folder()
+        sub1 = os.path.join(folder1, "lib/icu/60.2")
+        sub2 = os.path.join(folder1, "lib/icu/current")
+        os.makedirs(sub1)
+        os.symlink("60.2", sub2)  # @UndefinedVariable
+
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copied = copier("*.cpp", links=True)
+        self.assertEqual(copied, [])
+
     def excludes_test(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "subdir1")
