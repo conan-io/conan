@@ -4,9 +4,9 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
-from conans.search.search import DiskSearchManager
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
+from conans.search.search import search_recipes
 
 
 def _is_a_reference(ref):
@@ -25,7 +25,6 @@ class CmdUpload(object):
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
-        self._cache_search = DiskSearchManager(self._client_cache)
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
@@ -41,7 +40,7 @@ class CmdUpload(object):
             references = [ref, ]
             confirm = True
         else:
-            references = self._cache_search.search_recipes(reference_or_pattern)
+            references = search_recipes(self._client_cache, reference_or_pattern)
             if not references:
                 raise NotFoundException(("No packages found matching pattern '%s'" %
                                          reference_or_pattern))
@@ -57,7 +56,7 @@ class CmdUpload(object):
                     conan_file = load_conanfile_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
-                                          str(conan_ref)))
+                                             str(conan_ref)))
                 if all_packages:
                     packages_ids = self._client_cache.conan_packages(conan_ref)
                 elif package_id:

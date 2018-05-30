@@ -266,7 +266,7 @@ class ExportTest(unittest.TestCase):
         """ simple registration of a new conans
         """
         reg_path = self.conan.paths.export(self.conan_ref)
-        manif = FileTreeManifest.loads(load(self.conan.paths.digestfile_conanfile(self.conan_ref)))
+        manif = FileTreeManifest.load(self.conan.paths.export(self.conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(self.conan_ref),
                       self.conan.user_io.out)
@@ -346,7 +346,7 @@ class OpenSSLConan(ConanFile):
         conan2.save(files2)
         conan2.run("export . lasote/stable")
         reg_path2 = conan2.paths.export(self.conan_ref)
-        digest2 = FileTreeManifest.loads(load(conan2.paths.digestfile_conanfile(self.conan_ref)))
+        digest2 = FileTreeManifest.load(conan2.paths.export(self.conan_ref))
 
         self.assertNotIn('A new Conan version was exported', conan2.user_io.out)
         self.assertNotIn('Cleaning the old builds ...', conan2.user_io.out)
@@ -382,7 +382,7 @@ class OpenSSLConan(ConanFile):
         conan2.run("export . lasote/stable")
 
         reg_path3 = conan2.paths.export(self.conan_ref)
-        digest3 = FileTreeManifest.loads(load(conan2.paths.digestfile_conanfile(self.conan_ref)))
+        digest3 = FileTreeManifest.load(conan2.paths.export(self.conan_ref))
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(self.conan_ref),
                       self.conan.user_io.out)

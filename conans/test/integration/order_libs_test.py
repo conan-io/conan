@@ -50,7 +50,7 @@ class HelloReuseConan(ConanFile):
         self.client.run("install . --build missing")
         self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
 
-        expected_libs = ['SDL2_ttf', 'SDL2', 'rt', 'pthread', 'dl', 'freeType',
+        expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']
         conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
         libs = os.linesep.join(expected_libs)

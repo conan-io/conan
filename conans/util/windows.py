@@ -45,6 +45,9 @@ def path_shortener(path, short_paths):
     elif short_paths is None:
         return path
 
+    if os.path.exists(path):
+        rmdir(path)
+
     short_home = os.getenv("CONAN_USER_HOME_SHORT")
     if not short_home:
         drive = os.path.splitdrive(path)[0]
