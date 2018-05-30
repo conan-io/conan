@@ -1,5 +1,6 @@
 from os.path import join
 
+from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
@@ -9,6 +10,8 @@ from .virtualrunenv import VirtualRunEnvGenerator
 from .text import TXTGenerator
 from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
+from .cmake_paths import CMakePathsGenerator
+from .cmake_multi import CMakeMultiGenerator
 from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
 from .scons import SConsGenerator
@@ -18,7 +21,6 @@ from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
-from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .boostbuild import BoostBuildGenerator
 from .json_generator import JsonGenerator
@@ -52,6 +54,8 @@ registered_generators.add("gcc", GCCGenerator)
 registered_generators.add("compiler_args", CompilerArgsGenerator)
 registered_generators.add("cmake", CMakeGenerator)
 registered_generators.add("cmake_multi", CMakeMultiGenerator)
+registered_generators.add("cmake_paths", CMakePathsGenerator)
+registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
 registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)

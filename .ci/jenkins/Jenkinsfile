@@ -4,10 +4,10 @@ def slaves = ['Linux', 'Windows', 'Macos']
 
 def pyvers 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
-    pyvers = ['py36', 'py27', 'py34']
+    pyvers = ['py36', 'py34', 'py27']
 }
 else{
-	pyvers = ['py27', 'py36']
+	pyvers = ['py36', 'py27']
 }
 
 def module = "\"conans.test\""

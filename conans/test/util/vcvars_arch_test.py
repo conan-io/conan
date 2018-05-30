@@ -71,3 +71,39 @@ class VCVarsArchTest(unittest.TestCase):
 
         with self.assertRaises(ConanException):
             tools.vcvars_command(settings, arch='mips')
+
+    def test_vcvars_ver_override(self):
+        if platform.system() != "Windows":
+            return
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '15'
+        settings.arch = 'x86_64'
+
+        command = tools.vcvars_command(settings, vcvars_ver='14.14')
+        self.assertIn('vcvarsall.bat', command)
+        self.assertIn('-vcvars_ver=14.14', command)
+
+        settings.compiler.version = '14'
+
+        command = tools.vcvars_command(settings, vcvars_ver='14.14')
+        self.assertIn('vcvarsall.bat', command)
+        self.assertNotIn('-vcvars_ver', command)
+
+    def test_winsdk_version_override(self):
+        if platform.system() != "Windows":
+            return
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '15'
+        settings.arch = 'x86_64'
+
+        command = tools.vcvars_command(settings, winsdk_version='8.1')
+        self.assertIn('vcvarsall.bat', command)
+        self.assertIn('8.1', command)
+
+        settings.compiler.version = '14'
+
+        command = tools.vcvars_command(settings, winsdk_version='8.1')
+        self.assertIn('vcvarsall.bat', command)
+        self.assertNotIn('8.1', command)
