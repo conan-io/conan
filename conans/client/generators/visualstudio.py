@@ -48,7 +48,7 @@ class VisualStudioGenerator(Generator):
         sections = []
         for dep_name, cpp_info in self.deps_build_info.dependencies:
             fields = {
-                'root_dir': cpp_info.rootpath,
+                'root_dir': cpp_info.rootpath.replace("\\", "/"),
                 'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)
@@ -75,4 +75,5 @@ class VisualStudioGenerator(Generator):
             'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
             'exe_flags': " ".join(self._deps_build_info.exelinkflags)
         }
-        return self.template.format(**fields)
+        formatted_template = self.template.format(**fields)
+        return formatted_template

@@ -12,7 +12,7 @@ from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir
+from conans.util.files import mkdir, get_abs_path
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
@@ -28,7 +28,8 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None, toolset=None, make_program=None, set_cmake_flags=False):
+                 parallel=True, build_type=None, toolset=None, make_program=None,
+                 set_cmake_flags=False):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -53,7 +54,10 @@ class CMake(object):
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
-        self._op_system_version = self._settings.get_safe("os.version")
+
+        os_ver_str = "os.api_level" if self._os == "Android" else "os.version"
+        self._op_system_version = self._settings.get_safe(os_ver_str)
+
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
@@ -112,8 +116,11 @@ class CMake(object):
             return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
-            raise ConanException("You must specify compiler, compiler.version and arch in "
-                                 "your settings to use a CMake generator")
+            if self._os_build == "Windows":
+                raise ConanException("You must specify compiler, compiler.version and arch in "
+                                     "your settings to use a CMake generator. You can also declare "
+                                     "the env variable CONAN_CMAKE_GENERATOR.")
+            return "Unix Makefiles"
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
@@ -331,6 +338,10 @@ class CMake(object):
                 shared = self._conanfile.options.get_safe("shared")
                 ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
 
+        # Adjust automatically the module path in case the conanfile is using the cmake_find_package
+        if "cmake_find_package" in self._conanfile.generators:
+            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+
         return ret
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
@@ -356,8 +367,16 @@ class CMake(object):
 
         return source_ret, build_ret
 
+    def _run(self, command):
+        if self._compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
+            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+                self._conanfile.run(command)
+        else:
+            self._conanfile.run(command)
+
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  source_folder=None, build_folder=None, cache_build_folder=None):
+                  source_folder=None, build_folder=None, cache_build_folder=None,
+                  pkg_config_paths=None):
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         if not self._conanfile.should_configure:
@@ -374,12 +393,26 @@ class CMake(object):
             defs_to_string(defs),
             args_to_string([source_dir])
         ])
-        command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
-        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-            with tools.remove_from_path("sh"):
-                self._conanfile.run(command)
+
+
+        if pkg_config_paths:
+            pkg_env = {"PKG_CONFIG_PATH":
+                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)}
         else:
-            self._conanfile.run(command)
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            set_env = "pkg_config" in self._conanfile.generators \
+                      and "PKG_CONFIG_PATH" not in os.environ
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
+
+        with tools.environment_append(pkg_env):
+            command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+            if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
+                with tools.remove_from_path("sh"):
+                    self._conanfile.run(command)
+            else:
+                self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -406,7 +439,7 @@ class CMake(object):
             args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
-        self._conanfile.run(command)
+        self._run(command)
 
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:

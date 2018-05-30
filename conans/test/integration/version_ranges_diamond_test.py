@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.util.files import load, save
 import os
 from parameterized import parameterized
@@ -74,7 +74,7 @@ class HelloReuseConan(ConanFile):
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
         conan_reference = ConanFileReference.loads("Pkg/1.2@lasote/testing")
-        manifest = client2.client_cache.digestfile_conanfile(conan_reference)
+        manifest = os.path.join(client2.client_cache.export(conan_reference), CONAN_MANIFEST)
         # Make sure timestamp increases, in some machines in testing, it can fail due to same timestamp
         content = load(manifest).splitlines()
         content[0] = str(int(content[0]) + 1)

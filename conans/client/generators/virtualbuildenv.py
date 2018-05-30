@@ -1,6 +1,7 @@
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
+from conans.tools import vcvars_dict
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
@@ -9,12 +10,11 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         super(VirtualBuildEnvGenerator, self).__init__(conanfile)
         self.venv_name = "conanbuildenv"
         compiler = conanfile.settings.get_safe("compiler")
-        if compiler != "Visual Studio":
-            tools = AutoToolsBuildEnvironment(conanfile)
+        if compiler == "Visual Studio":
+            self.env = VisualStudioBuildEnvironment(conanfile).vars_dict
+            self.env.update(vcvars_dict(conanfile.settings))
         else:
-            tools = VisualStudioBuildEnvironment(conanfile)
-
-        self.env = tools.vars_dict
+            self.env = AutoToolsBuildEnvironment(conanfile).vars_dict
 
     @property
     def content(self):

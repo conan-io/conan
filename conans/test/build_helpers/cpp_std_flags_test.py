@@ -41,14 +41,20 @@ class CompilerFlagsTest(unittest.TestCase):
 
         self.assertEquals(cppstd_flag("gcc", "7", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("gcc", "7", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("gcc", "7", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("gcc", "7", "17"), '-std=c++17')
+
+        self.assertEquals(cppstd_flag("gcc", "8", "11"), '-std=c++11')
+        self.assertEquals(cppstd_flag("gcc", "8", "14"), '-std=c++14')
+        self.assertEquals(cppstd_flag("gcc", "8", "17"), '-std=c++17')
+        self.assertEquals(cppstd_flag("gcc", "8", "20"), '-std=c++2a')
 
     def test_gcc_cppstd_defaults(self):
         self.assertEquals(cppstd_default("gcc", "4"), "gnu98")
         self.assertEquals(cppstd_default("gcc", "5"), "gnu98")
-        self.assertEquals(cppstd_default("gcc", "6"), "gnu98")
+        self.assertEquals(cppstd_default("gcc", "6"), "gnu14")
         self.assertEquals(cppstd_default("gcc", "6.1"), "gnu14")
         self.assertEquals(cppstd_default("gcc", "7.3"), "gnu14")
+        self.assertEquals(cppstd_default("gcc", "8.1"), "gnu14")
 
     def test_clang_cppstd_flags(self):
         self.assertEquals(cppstd_flag("clang", "2.0", "98"), None)
@@ -84,9 +90,10 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("clang", "5.1", "14"), '-std=c++14')
         self.assertEquals(cppstd_flag("clang", "5.1", "17"), '-std=c++17')
 
-        self.assertEquals(cppstd_flag("clang", "7", "11"), '-std=c++11')
-        self.assertEquals(cppstd_flag("clang", "7", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++17')
+        self.assertEquals(cppstd_flag("clang", "6", "11"), '-std=c++11')
+        self.assertEquals(cppstd_flag("clang", "6", "14"), '-std=c++14')
+        self.assertEquals(cppstd_flag("clang", "6", "17"), '-std=c++17')
+        self.assertEquals(cppstd_flag("clang", "6", "20"), '-std=c++2a')
 
     def test_clang_cppstd_defaults(self):
         self.assertEquals(cppstd_default("clang", "2"), "gnu98")
@@ -97,6 +104,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_default("clang", "3.5"), "gnu98")
         self.assertEquals(cppstd_default("clang", "5"), "gnu98")
         self.assertEquals(cppstd_default("clang", "5.1"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "6"), "gnu14")
         self.assertEquals(cppstd_default("clang", "7"), "gnu14")
 
     def test_apple_clang_cppstd_flags(self):
@@ -162,6 +170,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("Visual Studio", "17", "11"), None)
         self.assertEquals(cppstd_flag("Visual Studio", "17", "14"), '/std:c++14')
         self.assertEquals(cppstd_flag("Visual Studio", "17", "17"), '/std:c++17')
+        self.assertEquals(cppstd_flag("Visual Studio", "17", "20"), '/std:c++latest')
 
     def test_visual_cppstd_defaults(self):
         self.assertEquals(cppstd_default("Visual Studio", "11"), None)

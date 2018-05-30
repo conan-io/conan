@@ -8,6 +8,7 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
+from conans.client.remote_registry import RemoteRegistry
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -821,31 +822,53 @@ class Command(object):
         parser.add_argument('--table', action=OnceArgument,
                             help="Outputs html file with a table of binaries. Only valid for a "
                             "reference search")
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the search information will be written to')
         args = parser.parse_args(*args)
+
+        if args.table and args.json:
+            raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
-                # Fixes a version with only a wilcard (valid reference) but not real reference
+                # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.j: conan search lib/*@lasote/stable
                 reference = None
         except (TypeError, ConanException):
             reference = None
 
-        if reference:
-            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
-                                              outdated=args.outdated)
-            ordered_packages, reference, recipe_hash, packages_query = ret
-            self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
-                                                 packages_query, args.table)
-        else:
-            if args.table:
-                raise ConanException("'--table' argument can only be used with a reference")
+        cwd = os.getcwd()
+        info = None
 
-            refs = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
-                                              case_sensitive=args.case_sensitive)
-            self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
-            self._outputer.print_search_references(refs, args.pattern_or_reference, args.raw)
+        try:
+            if reference:
+                info = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                                                   outdated=args.outdated)
+                # search is done for one reference and one remote
+                self._outputer.print_search_packages(info["results"], reference, args.query,
+                                                     args.table)
+            else:
+                if args.table:
+                    raise ConanException("'--table' argument can only be used with a reference")
+
+                self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
+
+                info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
+                                                  case_sensitive=args.case_sensitive)
+                # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
+                remote_registry = RemoteRegistry(self._client_cache.registry, None)
+                all_remotes_search = ("all" not in (r.name for r in remote_registry.remotes) and
+                                      args.remote == "all")
+
+                self._outputer.print_search_references(info["results"], args.pattern_or_reference,
+                                                       args.raw, all_remotes_search)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def upload(self, *args):
         """Uploads a recipe and binary packages to a remote.
@@ -878,7 +901,7 @@ class Command(object):
                             action=OnceArgument, const="all",
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the install information will be written to')
+                            help='json file path where the upload information will be written to')
 
         args = parser.parse_args(*args)
 
