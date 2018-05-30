@@ -2,6 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
+from collections import OrderedDict
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -57,7 +58,9 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
 
     def test_binary_defines_remote(self):
-        servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
+        servers = OrderedDict([("server1", TestServer()),
+                               ("server2", TestServer()),
+                               ("server3", TestServer())])
         client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
                                                     "server2": [("lasote", "mypass")],
                                                     "server3": [("lasote", "mypass")]})
