@@ -98,7 +98,7 @@ compiler:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1"]
         libcxx: [libstdc++, libc++]
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
 """
             self._update_settings_yml(old_settings)
 
