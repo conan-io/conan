@@ -18,7 +18,7 @@ arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, s
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
-os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino, QNX, VxWorks, Integrity, LynxOS]
 arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 
 # Rest of the settings are "host" settings:
@@ -43,6 +43,14 @@ os:
     SunOS:
     Arduino:
         board: ANY
+    QNX:
+        version: ["6.5", "6.6"]
+    VxWorks:
+        version: ["6.8", "6.9", "7.0"]
+    Integrity:
+        version: ["10.0", "11.0"]
+    LynxOS:
+        version: ["5.0", "6.0", "7.0"]
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 compiler:
     sun-cc:
