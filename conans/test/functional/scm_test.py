@@ -40,6 +40,31 @@ class SCMTest(unittest.TestCase):
         self.client.runner("git add .", cwd=self.client.current_folder)
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
+    def test_repeat_clone_changing_subfolder(self):
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}",
+        "subfolder": "onesubfolder"
+    }}
+'''
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+        conanfile = tmp.format(url=path, revision=commit)
+        self.client.save({"conanfile.py": conanfile,
+                          "myfile.txt": "My file is copied"})
+        self.client.run("create . user/channel")
+        conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        self.assertIn("othersubfolder", os.listdir(folder))
+
     def test_auto_git(self):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
@@ -47,7 +72,7 @@ class SCMTest(unittest.TestCase):
         self._commit_contents()
         error = self.client.run("export . user/channel", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Repo origin cannot be deduced by 'auto', using source folder",
+        self.assertIn("Repo origin cannot be deduced by 'auto'",
                       self.client.out)
 
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
