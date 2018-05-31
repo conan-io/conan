@@ -17,50 +17,58 @@ class VirtualEnvGenerator(Generator):
         return
 
     def _variable_placeholder(self, flavor, name):
-        ''' Returns a placeholder for the variable name formatted for a certain
-        execution environment. (e.g., cmd, ps1, sh).
-        '''
+        """
+        :param flavor: flavor of the execution environment
+        :param name: variable name
+        :return: placeholder for the variable name formatted for a certain execution environment.
+        (e.g., cmd, ps1, sh).
+        """
         if flavor == "cmd":
             return "%%%s%%" % name
         if flavor == "ps1":
             return "$env:%s" % name
-        # flavor == sh
-        return "$%s" % name
+        return "$%s" % name  # flavor == sh
 
     def format_values(self, flavor, variables=None, env=None):
-        '''Formats the values for the different supported script language flavors.
-        '''
+        """
+        Formats the values for the different supported script language flavors.
+        :param flavor: flavor of the execution environment
+        :param variables: variables to be formatted (otherwise self.env)
+        :param env: custom environment (otherwise os.environ)
+        :return:
+        """
         variables = variables or self.env.items()
         env = env or os.environ
-        pathsep,quoteElements,quoteFullValue,enableSpacePathsep = ":",True,False,True
+        path_sep, quote_elements, quote_full_value, enable_space_path_sep = ":", True, False, True
         if flavor in ["cmd", "ps1"]:
-            pathsep,quoteElements,enableSpacePathsep = ";",False,False
+            path_sep, quote_elements, enable_space_path_sep = ";", False, False
         if flavor in ["ps1"]:
-            quoteFullValue = True
+            quote_full_value = True
 
         ret = []
         for name, value in variables:
             # activate values
             if isinstance(value, list):
                 placeholder = self._variable_placeholder(flavor, name)
-                if enableSpacePathsep and name in self.append_with_spaces:
+                if enable_space_path_sep and name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
                     value = "\"%s\"" % value if value else ""
                 else:
-                    # Quoted variables joined with pathset may look like: PATH="one path":"two paths"
+                    # Quoted variables joined with pathset may look like:
+                    # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
-                    value = ["\"%s\"" % v for v in value] if quoteElements else value
-                    value = pathsep.join(value+[placeholder])
+                    value = ["\"%s\"" % v for v in value] if quote_elements else value
+                    value = path_sep.join(value+[placeholder])
             else:
                 # single value
-                value = "\"%s\"" % value if quoteElements else value
-            activate_value = "\"%s\"" % value if quoteFullValue else value
+                value = "\"%s\"" % value if quote_elements else value
+            activate_value = "\"%s\"" % value if quote_full_value else value
 
             # deactivate values
-            value = env.get( name, "" )
-            deactivate_value = "\"%s\"" % value if quoteFullValue or quoteElements else value
-            ret.append( (name, activate_value, deactivate_value) )
+            value = env.get(name, "")
+            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
+            ret.append((name, activate_value, deactivate_value))
         return ret
 
     def _sh_lines(self):
@@ -71,10 +79,13 @@ class VirtualEnvGenerator(Generator):
         activate_lines = []
         deactivate_lines = []
         for name, activate, deactivate in self.format_values("sh", variables):
-            activate_lines.append("%s=%s" % (name,activate))
+            activate_lines.append("%s=%s" % (name, activate))
             activate_lines.append("export %s" % name)
-            deactivate_lines.append("%s=%s" % (name,deactivate))
-            deactivate_lines.append("export %s" % name)
+            if deactivate == '""':
+                deactivate_lines.append("unset %s" % name)
+            else:
+                deactivate_lines.append("%s=%s" % (name, deactivate))
+                deactivate_lines.append("export %s" % name)
         activate_lines.append('')
         deactivate_lines.append('')
         return activate_lines, deactivate_lines
@@ -86,8 +97,8 @@ class VirtualEnvGenerator(Generator):
         activate_lines = ["@echo off"]
         deactivate_lines = ["@echo off"]
         for name, activate, deactivate in self.format_values("cmd", variables):
-            activate_lines.append("SET %s=%s" % (name,activate))
-            deactivate_lines.append("SET %s=%s" % (name,deactivate))
+            activate_lines.append("SET %s=%s" % (name, activate))
+            deactivate_lines.append("SET %s=%s" % (name, deactivate))
         activate_lines.append('')
         deactivate_lines.append('')
         return activate_lines, deactivate_lines
