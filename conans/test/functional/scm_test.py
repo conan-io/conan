@@ -47,7 +47,6 @@ from conans import ConanFile, tools
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
-    short_paths = True
     scm = {{
         "type": "git",
         "url": "{url}",
