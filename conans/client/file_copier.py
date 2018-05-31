@@ -3,7 +3,7 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
-from conans import tools
+from conans.util.files import mkdir
 
 
 def report_copied_files(copied, output):
@@ -146,6 +146,7 @@ class FileCopier(object):
                 pass
             # link is a string relative to linked_folder
             # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+            mkdir(os.path.dirname(dst_link))
             os.symlink(link, dst_link)
         # Remove empty links
         for linked_folder in linked_folders:
