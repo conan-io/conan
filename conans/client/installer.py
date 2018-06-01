@@ -27,6 +27,7 @@ from conans.client.importer import remove_imports
 from conans.util.tracer import log_package_built
 from conans.client.tools.env import pythonpath
 from conans.client.package_installer import get_package
+from conans.client.file_copier import report_copied_files
 
 
 def build_id(conan_file):
@@ -329,26 +330,23 @@ class ConanInstaller(object):
 
             local_package = self._conan_project[conan_ref] if self._conan_project else None
             if local_package:
-                if build_needed and (conan_ref, package_id) not in self._built_packages:
-                    conanfile_path = local_package.conanfile_path
-                    self._build_project_pkg(node, output, inverse_levels,
-                                            deps_graph, conanfile_path, profile_build_requires,
-                                            local_package, update)
-                else:
-                    self._propagate_info(node, inverse_levels, deps_graph)
-
                 include_dirs = local_package.includedirs
                 lib_dirs = local_package.libdirs
-                if not include_dirs:
-                    package_folder = local_package.local_package_path
-                    self._call_package_info(conan_file, package_folder)
-                else:
-                    root_folder = os.path.dirname(local_package.conanfile_path)
-                    self._call_package_info(conan_file, root_folder)
-                    if include_dirs:
-                        conan_file.cpp_info.includedirs = include_dirs
-                    if lib_dirs:
-                        conan_file.cpp_info.libdirs = lib_dirs
+                self._call_package_info(conan_file, local_package.package_folder)
+                if include_dirs:
+                    conan_file.cpp_info.includedirs = include_dirs
+                if lib_dirs:
+                    conan_file.cpp_info.libdirs = lib_dirs
+
+                self._propagate_info(node, inverse_levels, deps_graph)
+
+                build_folder = local_package.build_folder
+                write_generators(conan_file, build_folder, output)
+                # Build step might need DLLs, binaries as protoc to generate source files
+                # So execute imports() before build, storing the list of copied_files
+                from conans.client.importer import run_imports
+                copied_files = run_imports(conan_file, build_folder, output)
+                report_copied_files(copied_files, output)
             else:
                 package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref,
@@ -368,51 +366,6 @@ class ConanInstaller(object):
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph)
-
-    def _build_project_pkg(self, node, output, inverse_levels, deps_graph,
-                           conanfile_path, profile_build_requires, local_package, update):
-        conan_file, conan_ref = node.conanfile, node.conan_ref
-        if self._build_mode.never:
-            if local_package.need_build:
-                raise_package_not_found_error(conan_file, conan_ref, "local in conan-project", output,
-                                              self._recorder, None)
-            else:
-                output.warn("Not building local package as specified by --build=never")
-                return
-        self._build_requires.install(conan_ref, conan_file, self,
-                                     profile_build_requires, output, update)
-
-        # Assign to node the propagated info
-        self._propagate_info(node, inverse_levels, deps_graph)
-        output.highlight("Calling build()")
-
-        include_dirs = local_package._includedirs
-        build_folder = local_package.local_build_path
-        package_folder = local_package.local_package_path
-        source_folder = os.path.dirname(conanfile_path)
-        mkdir(build_folder)
-        mkdir(package_folder)
-        os.chdir(build_folder)
-        conan_file.source_folder = source_folder
-        conan_file.build_folder = build_folder
-        conan_file.package_folder = package_folder
-        write_generators(conan_file, build_folder, output)
-        # In local cache, install folder always is build_folder
-        conan_file.install_folder = build_folder
-        with conanfile_exception_formatter(str(conan_file), "build"):
-            conan_file.build()
-
-        output.success("Package '%s' built" % conan_file.info.package_id())
-        output.info("Build folder %s" % build_folder)
-        # Creating ***info.txt files
-        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-        output.info("Generated %s" % CONANINFO)
-        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
-        output.info("Generated %s" % BUILD_INFO)
-
-        if not include_dirs:
-            create_package(conan_file, None, source_folder, build_folder, package_folder,
-                           build_folder, output)
 
     def _build_package(self, node, package_id, package_ref, output, keep_build,
                        profile_build_requires, inverse_levels, deps_graph, update):
@@ -563,7 +516,7 @@ class ConanInstaller(object):
                     else:
                         if local_project:
                             # Maybe the folder is not there, check it!
-                            build_node = True
+                            build_node = False
                         else:
                             available = self._remote_proxy.package_available(package_reference,
                                                                              package_folder,

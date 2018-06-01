@@ -247,6 +247,29 @@ class ConanManager(object):
 
         return deps_graph, graph_updates_info, self._get_project_reference(reference, conanfile)
 
+    def install_workspace(self, profile, workspace, remote_name, build_modes, update):
+        loader = self.get_loader(profile)
+        references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
+        conanfile = loader.load_virtual(references)
+        remote_proxy = self.get_proxy(remote_name=remote_name)
+        graph_builder = self._get_graph_builder(loader, remote_proxy)
+        graph_builder._conan_project = workspace
+        deps_graph = graph_builder.load_graph(conanfile, False, update)
+
+        output = ScopedOutput(str("Workspace"), self._user_io.out)
+        output.highlight("Installing...")
+        print_graph(deps_graph, self._user_io.out)
+
+        build_mode = BuildMode(build_modes, self._user_io.out)
+        build_requires = BuildRequires(loader, graph_builder, self._registry)
+        installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
+                                   build_requires, recorder=self._recorder)
+        installer._conan_project = workspace
+
+        installer.install(deps_graph, profile.build_requires, keep_build=False, update=update)
+        build_mode.report_matches()
+        workspace.generate()
+
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, inject_require=None,
@@ -268,10 +291,6 @@ class ConanManager(object):
         @param inject_require: Reference to add as a requirement to the conanfile
         """
 
-        conan_project = ConanProject.get_conan_project(reference)
-        if conan_project:
-            self._user_io.out.success("Using conan-project.yml file from %s" % conan_project._base_folder)
-
         if generators is not False:
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
@@ -289,8 +308,6 @@ class ConanManager(object):
             self._inject_require(conanfile, inject_require)
 
         graph_builder = self._get_graph_builder(loader, remote_proxy)
-        graph_builder._conan_project = conan_project
-
         deps_graph = graph_builder.load_graph(conanfile, False, update)
 
         if not isinstance(reference, ConanFileReference):
@@ -315,17 +332,12 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires, recorder=self._recorder)
 
-        installer._conan_project = conan_project
-
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer, profile.build_requires, output, update)
 
         installer.install(deps_graph, profile.build_requires, keep_build, update=update)
         build_mode.report_matches()
-
-        if conan_project:
-            conan_project.generate(conanfile)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,

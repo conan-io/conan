@@ -1,21 +1,21 @@
 from collections import OrderedDict
 from conans.errors import ConanException
 import os
-from conans.util.files import load, save
+from conans.util.files import load, save, mkdir
 import yaml
 from conans.model.ref import ConanFileReference
 import platform
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, data):
+    def __init__(self, base_folder, install_folder, data):
         self._base_folder = base_folder
+        self._install_folder = install_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         self._source_folder = data.get("source")  # By default the conanfile_folder
-        self._build_folder = data.get("build", "build")
+        self._build_folder = data.get("build", "")
         # package_folder can be None, then it will directly use build_folder
-        self._package_folder = data.get("package", "package")
-        self._install_folder = data.get("install")
+        self._package_folder = data.get("package", "")
         self._cmakedir = data.get("cmakedir")
         includedirs = data.get("includedirs", [])  # To override include dirs, mainly for build_folder
         self._includedirs = [includedirs] if not isinstance(includedirs, list) else includedirs
@@ -24,20 +24,22 @@ class LocalPackage(object):
         self.conanfile = None
 
     @property
-    def conanfile_folder(self):
-        return self._conanfile_folder
-
-    @property
     def conanfile_path(self):
         return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "conanfile.py"))
 
     @property
     def build_folder(self):
-        return self._evaluate(self._build_folder)
+        folder = self._evaluate(self._build_folder)
+        pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        mkdir(pkg_folder)
+        return pkg_folder
 
     @property
     def package_folder(self):
-        return self._evaluate(self._package_folder)
+        folder = self._evaluate(self._package_folder)
+        pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        mkdir(pkg_folder)
+        return pkg_folder
 
     @property
     def install_folder(self):
@@ -45,25 +47,12 @@ class LocalPackage(object):
 
     @property
     def includedirs(self):
-        return [self._evaluate(v) for v in self._includedirs]
+        return [os.path.join(self._base_folder, self._conanfile_folder, v)
+                for v in self._includedirs]
 
     @property
     def libdirs(self):
         return [self._evaluate(v) for v in self._libdirs]
-
-    @property
-    def need_build(self):
-        libdirs = self.libdirs
-        if libdirs:
-            for libdir in libdirs:
-                abs_path = os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder,
-                                                        libdir))
-                if os.path.exists(abs_path) and os.listdir(abs_path):
-                    return False
-            return True
-        else:
-            package_folder = self.local_package_path
-            return not os.path.exists(package_folder) or not os.listdir(package_folder)
 
     def _evaluate(self, value):
         settings = self.conanfile.settings
@@ -77,33 +66,10 @@ class LocalPackage(object):
         return result
 
     @property
-    def local_package_path(self):
-        package = self._evaluate(self._package_folder)
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, package))
-
-    @property
-    def local_source_path(self):
-        if not self._source_folder:
-            return None
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, self._source_folder))
-
-    @property
     def local_cmakedir(self):
         if not self._cmakedir:
             return self._conanfile_folder
         return os.path.join(self._conanfile_folder, self._cmakedir).replace("\\", "/")
-
-    @property
-    def local_build_path(self):
-        build = self._evaluate(self._build_folder)
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, build))
-
-    @property
-    def local_install_path(self):
-        if not self._install_folder:
-            return None
-        install = self._evaluate(self._install_folder)
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, install))
 
 
 CONAN_PROJECT = "conan-project.yml"
@@ -111,20 +77,20 @@ CONAN_PROJECT = "conan-project.yml"
 
 class ConanProject(object):
     @staticmethod
-    def get_conan_project(folder):
+    def get_conan_project(folder, install_folder):
         if isinstance(folder, ConanFileReference):
             return None
         if not os.path.exists(folder):
             return None
-        path = os.path.join(folder, CONAN_PROJECT)
+        path = os.path.abspath(os.path.join(folder, CONAN_PROJECT))
         if os.path.exists(path):
-            return ConanProject(path)
+            return ConanProject(path, install_folder)
         parent = os.path.dirname(folder)
         if parent and parent != folder:
             return ConanProject.get_conan_project(parent)
         return None
 
-    def generate(self, conanfile):
+    def generate(self):
         if self._generator == "cmake":
             template = """# conan-project
 cmake_minimum_required(VERSION 3.3)
@@ -133,11 +99,7 @@ project({name} CXX)
 """
             cmake = template.format(name=self._name)
             for _, local_package in self._local_packages.items():
-                if not local_package.conanfile:
-                    local_package.conanfile = conanfile
-                build_folder = os.path.join(self._base_folder,
-                                            "/".join([local_package.conanfile_folder,
-                                                      local_package.build_folder]))
+                build_folder = local_package.build_folder
                 build_folder = build_folder.replace("\\", "/")
                 cmake += 'add_subdirectory(%s "%s")\n' % (local_package.local_cmakedir, build_folder)
             cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
@@ -145,7 +107,8 @@ project({name} CXX)
                 raise ConanException("Can't generate CMakeLists.txt, will overwrite existingone")
             save(cmake_path, cmake)
 
-    def __init__(self, path):
+    def __init__(self, path, install_folder):
+        self._install_folder = install_folder
         self._generator = None
         self._name = "conan-project"
         self._local_packages = OrderedDict()  # {reference: LocalPackage}
@@ -158,13 +121,23 @@ project({name} CXX)
     def __getitem__(self, reference):
         return self._local_packages.get(reference.name)
 
+    @property
+    def root(self):
+        return self._root
+
     def _loads(self, text):
         try:
             yml = yaml.load(text)
             self._generator = yml.pop("generator", None)
             self._name = yml.pop("name", None)
+            self._root = [s.strip() for s in yml.pop("root", "").split(",")]
+            if not self._root:
+                raise ConanException("conan-project needs at least 1 root conanfile")
             for package_name, data in yml.items():
-                local_package = LocalPackage(self._base_folder, data)
+                local_package = LocalPackage(self._base_folder, self._install_folder, data)
                 self._local_packages[package_name] = local_package
+            for package_name in self._root:
+                if package_name not in self._local_packages:
+                    raise ConanException("Root %s is not a local package" % package_name)
         except Exception as e:
             raise ConanException("There was an error parsing conan-project: %s" % str(e))
