@@ -87,7 +87,7 @@ class ConanProject(object):
             return ConanProject(path, install_folder)
         parent = os.path.dirname(folder)
         if parent and parent != folder:
-            return ConanProject.get_conan_project(parent)
+            return ConanProject.get_conan_project(parent, install_folder)
         return None
 
     def generate(self):
