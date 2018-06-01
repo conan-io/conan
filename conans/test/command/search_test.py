@@ -163,18 +163,6 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.client.run("search Hello* -r=all --raw")
         check()
 
-        def check_full_match():
-            for remote in ("local", "search_able"):
-                expected = """Remote '{}':
-Hello/1.4.10@fenix/testing""".format(remote)
-                self.assertIn(expected, self.client.out)
-
-        self.client.run("search Hello/1.4.10@fenix/testing -r=all")
-        check_full_match()
-
-        self.client.run("search Hello/1.4.10@fenix/testing -r=all --raw")
-        check_full_match()
-
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
@@ -218,6 +206,22 @@ Hello/1.4.10@fenix/testing""".format(remote)
         self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
+        
+    def search_html_table_all_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -r=all --table=table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
+
+        self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
+        self.assertIn("<h2>'local':</h2>", html)
+        self.assertIn("<h2>'search_able':</h2>", html)
+
+        self.assertEqual(html.count("<td>Linux gcc 4.5 (libstdc++11)</td>"), 2)
+        self.assertEqual(html.count("<td>Windows Visual Studio 8.1</td>"), 2)
 
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", ignore_error=True)
@@ -272,7 +276,7 @@ Hello/1.4.10@fenix/testing""".format(remote)
         # Now search with a remote
         os.rmdir(self.servers["local"].paths.store)
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
-        self.client.run("remove Hello* -f")
+
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
         self.assertIn("Outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
@@ -282,6 +286,21 @@ Hello/1.4.10@fenix/testing""".format(remote)
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++" -r local')
         self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+
+        # Now search in all remotes
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
+        self.assertEqual(str(self.client.user_io.out).count("Outdated from recipe: False"), 2)
+        self.assertEqual(str(self.client.user_io.out).count("LinuxPackageSHA"), 2)
+        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++" -r all')
+        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertEqual(str(self.client.user_io.out).count("PlatformIndependantSHA"), 2)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
 
     def _assert_pkg_q(self, query, packages_found, remote):
@@ -355,6 +374,20 @@ Hello/1.4.10@fenix/testing""".format(remote)
 
         # test in remote with search capabilities
         test_cases(remote="search_able")
+
+    def package_search_all_remotes_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -r=all")
+        self.assertIn("Existing recipe in remote 'local':", self.client.user_io.out)
+        self.assertIn("Existing recipe in remote 'search_able':", self.client.user_io.out)
+
+        self.assertEqual(str(self.client.user_io.out).count("WindowsPackageSHA"), 2)
+        self.assertEqual(str(self.client.user_io.out).count("PlatformIndependantSHA"), 2)
+        self.assertEqual(str(self.client.user_io.out).count("LinuxPackageSHA"), 2)
 
     def package_search_with_invalid_query_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing -q 'invalid'", ignore_error=True)
@@ -684,6 +717,126 @@ Hello/1.4.10@fenix/testing""".format(remote)
         expected_output = {
             'error': False,
             'results': [
+                {
+                    'remote': 'search_able',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
+        # Test search packages remote ALL
+        self.client.run("search Hello/1.4.10@fenix/testing -r all --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'local',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     'remote': 'search_able',
                     'items': [
