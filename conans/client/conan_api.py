@@ -690,23 +690,24 @@ class ConanAPIV1(object):
         search = Search(self._client_cache, self._remote_manager, self._registry)
 
         try:
-            ordered_packages, ref, recipe_hash = search.search_packages(reference, remote,
-                                                                        query=query,
-                                                                        outdated=outdated)
+            references = search.search_packages(reference, remote,
+                                                query=query,
+                                                outdated=outdated)
         except ConanException as exc:
             recorder.error = True
             exc.info = recorder.get_info()
             raise
 
-        recorder.add_recipe(str(remote), str(ref))
-        if ordered_packages:
-            for package_id, properties in ordered_packages.items():
-                package_recipe_hash = properties.get("recipe_hash", None)
-                recorder.add_package(str(remote), str(reference), package_id,
+        for remote, remote_ref in references.items():
+            recorder.add_recipe(str(remote), str(reference))
+            if remote_ref.ordered_packages:
+                for package_id, properties in remote_ref.ordered_packages.items():
+                    package_recipe_hash = properties.get("recipe_hash", None)
+                    recorder.add_package(str(remote), str(reference), package_id,
                                      properties.get("options", []),
                                      properties.get("settings", []),
                                      properties.get("full_requires", []),
-                                     recipe_hash != package_recipe_hash)
+                                     remote_ref.recipe_hash != package_recipe_hash)
         return recorder.get_info()
 
     @api_method
