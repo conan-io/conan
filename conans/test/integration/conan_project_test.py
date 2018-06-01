@@ -127,8 +127,8 @@ name: MyProject
             cmd_release = r".\build\A\Release\app"
             cmd_debug = r".\build\A\Debug\app"
         else:
-            cmd_release = "./A/app"
-            cmd_debug = "./A/app"
+            cmd_release = "./build/A/app"
+            cmd_debug = "./build/A/app"
 
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Hello World C Release!", client.out)
