@@ -1,6 +1,7 @@
 import unittest
 import os
 import platform
+import shutil
 
 from conans.test.utils.tools import TestClient
 from conans.model.project import CONAN_PROJECT
@@ -144,6 +145,8 @@ name: MyProject
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        shutil.rmtree(os.path.join(client.current_folder, "build"))
+        client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         client.runner(cmd_debug, cwd=client.current_folder)
