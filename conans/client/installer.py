@@ -330,6 +330,7 @@ class ConanInstaller(object):
 
             local_package = self._conan_project[conan_ref] if self._conan_project else None
             if local_package:
+                output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
                 include_dirs = local_package.includedirs
                 lib_dirs = local_package.libdirs
                 self._call_package_info(conan_file, local_package.package_folder)
@@ -342,6 +343,10 @@ class ConanInstaller(object):
 
                 build_folder = local_package.build_folder
                 write_generators(conan_file, build_folder, output)
+                save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
+                output.info("Generated %s" % CONANINFO)
+                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
+                output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
                 from conans.client.importer import run_imports
