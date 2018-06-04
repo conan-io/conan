@@ -248,7 +248,7 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
         self._recorder = recorder
-        self._conan_project = None
+        self._workspace = None
 
     def install(self, deps_graph, profile_build_requires, keep_build=False, update=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
@@ -328,12 +328,12 @@ class ConanInstaller(object):
             conan_ref, conan_file = node.conan_ref, node.conanfile
             output = ScopedOutput(str(conan_ref), self._out)
 
-            local_package = self._conan_project[conan_ref] if self._conan_project else None
-            if local_package:
+            workspace_package = self._workspace[conan_ref] if self._workspace else None
+            if workspace_package:
                 output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
-                include_dirs = local_package.includedirs
-                lib_dirs = local_package.libdirs
-                self._call_package_info(conan_file, local_package.package_folder)
+                include_dirs = workspace_package.includedirs
+                lib_dirs = workspace_package.libdirs
+                self._call_package_info(conan_file, workspace_package.package_folder)
                 if include_dirs:
                     conan_file.cpp_info.includedirs = include_dirs
                 if lib_dirs:
@@ -341,7 +341,7 @@ class ConanInstaller(object):
 
                 self._propagate_info(node, inverse_levels, deps_graph)
 
-                build_folder = local_package.build_folder
+                build_folder = workspace_package.build_folder
                 write_generators(conan_file, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
                 output.info("Generated %s" % CONANINFO)
@@ -507,7 +507,7 @@ class ConanInstaller(object):
                     package_folder = self._client_cache.package(package_reference,
                                                                 short_paths=conan_file.short_paths)
 
-                    local_project = self._conan_project[conan_ref] if self._conan_project else None
+                    local_project = self._workspace[conan_ref] if self._workspace else None
                     if not local_project:
                         with self._client_cache.package_lock(package_reference):
                             if is_dirty(package_folder):

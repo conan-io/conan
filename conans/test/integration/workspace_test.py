@@ -3,9 +3,12 @@ import os
 import platform
 import shutil
 
+from parameterized.parameterized import parameterized
+
 from conans.test.utils.tools import TestClient
-from conans.model.project import CONAN_PROJECT
+from conans.model.workspace import WORKSPACE_FILE
 from conans import tools
+import time
 
 
 conanfile = """from conans import ConanFile
@@ -80,20 +83,32 @@ add_library(hello{name} hello.cpp)
 target_link_libraries(hello{name} ${{CONAN_LIBS}})
 """
 
+cmake_targets = """set(CMAKE_CXX_COMPILER_WORKS 1)
+project(Hello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${{CMAKE_CURRENT_BINARY_DIR}}/conanbuildinfo.cmake)
+conan_basic_setup(NO_OUTPUT_DIRS TARGETS)
+add_library(hello{name} hello.cpp)
+target_link_libraries(hello{name} {dep})
+"""
 
-class ConanProjectTest(unittest.TestCase):
 
-    def outsource_build_test(self):
+class WorkspaceTest(unittest.TestCase):
+
+    @parameterized.expand([(True, ), (False, )])
+    def cmake_outsource_build_test(self, targets):
         client = TestClient()
 
         def files(name, depend=None):
             includes = ('#include "hello%s.h"' % depend) if depend else ""
             calls = ('hello%s();' % depend) if depend else ""
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            dep = "CONAN_PKG::Hello%s" % depend if depend else ""
+            used_cmake = cmake_targets.format(dep=dep, name=name) if targets else cmake.format(name=name)
             return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
                     "src/hello%s.h" % name: hello_h.format(name=name),
                     "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
-                    "src/CMakeLists.txt": cmake.format(name=name)}
+                    "src/CMakeLists.txt": used_cmake}
 
         client.save(files("C"), path=os.path.join(client.current_folder, "C"))
         client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
@@ -118,7 +133,7 @@ root: HelloA
 generator: cmake
 name: MyProject
 """
-        client.save({CONAN_PROJECT: project})
+        client.save({WORKSPACE_FILE: project})
         client.run("install . -if=build")
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         base_folder = os.path.join(client.current_folder, "build")
@@ -140,6 +155,7 @@ name: MyProject
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
         client.runner('cmake --build . --config Release', cwd=base_folder)
+        time.sleep(2)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
@@ -148,6 +164,7 @@ name: MyProject
         shutil.rmtree(os.path.join(client.current_folder, "build"))
         client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
+        time.sleep(2)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
@@ -157,6 +174,7 @@ name: MyProject
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Bye Moon", "Bye! Mars")
         client.runner('cmake --build . --config Debug', cwd=base_folder)
+        time.sleep(2)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye! Mars B Debug!", client.out)

@@ -46,7 +46,7 @@ from conans.client.importer import undo_imports
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
-from conans.model.project import ConanProject
+from conans.model.workspace import Workspace
 
 
 default_manifest_folder = '.conan_manifests'
@@ -451,9 +451,9 @@ class ConanAPIV1(object):
             profile = profile_from_args(profile_name, settings, options, env, cwd,
                                         self._client_cache)
 
-            workspace = ConanProject.get_conan_project(path, install_folder)
+            workspace = Workspace.get_workspace(path, install_folder)
             if workspace:
-                self._user_io.out.success("Using conan-project.yml file from %s" % workspace._base_folder)
+                self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
                 manager = self._init_manager(recorder)
                 manager.install_workspace(profile, workspace, remote, build, update)
                 return

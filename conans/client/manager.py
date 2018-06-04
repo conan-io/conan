@@ -25,7 +25,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
-from conans.model.project import ConanProject
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.graph.build_mode import BuildMode
 from conans.client.cmd.download import download_binaries
@@ -253,7 +252,7 @@ class ConanManager(object):
         conanfile = loader.load_virtual(references)
         remote_proxy = self.get_proxy(remote_name=remote_name)
         graph_builder = self._get_graph_builder(loader, remote_proxy)
-        graph_builder._conan_project = workspace
+        graph_builder._workspace = workspace
         deps_graph = graph_builder.load_graph(conanfile, False, update)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
@@ -264,7 +263,7 @@ class ConanManager(object):
         build_requires = BuildRequires(loader, graph_builder, self._registry)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires, recorder=self._recorder)
-        installer._conan_project = workspace
+        installer._workspace = workspace
 
         installer.install(deps_graph, profile.build_requires, keep_build=False, update=update)
         build_mode.report_matches()
