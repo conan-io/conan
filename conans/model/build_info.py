@@ -95,6 +95,11 @@ class CppInfo(_CppInfo):
             result = _CppInfo()
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
+            result.includedirs.append(DEFAULT_INCLUDE)
+            result.libdirs.append(DEFAULT_LIB)
+            result.bindirs.append(DEFAULT_BIN)
+            result.resdirs.append(DEFAULT_RES)
+            result.builddirs.append("")
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
