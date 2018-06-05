@@ -26,20 +26,30 @@ class LocalPackage(object):
         self.conanfile = None
 
     @property
+    def root_folder(self):
+        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder))
+
+    @property
     def conanfile_path(self):
-        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "conanfile.py"))
+        return os.path.join(self.root_folder, "conanfile.py")
 
     @property
     def build_folder(self):
         folder = self._evaluate(self._build_folder)
-        pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        if self._install_folder:
+            pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        else:
+            pkg_folder = os.path.join(self.root_folder, folder)
         mkdir(pkg_folder)
         return pkg_folder
 
     @property
     def package_folder(self):
         folder = self._evaluate(self._package_folder)
-        pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        if self._install_folder:
+            pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
+        else:
+            pkg_folder = os.path.join(self.root_folder, folder)
         mkdir(pkg_folder)
         return pkg_folder
 
@@ -84,7 +94,7 @@ class Workspace(object):
             return None
         if not os.path.exists(folder):
             return None
-        path = os.path.abspath(os.path.join(folder, WORKSPACE_FILE))
+        path = os.path.join(folder, WORKSPACE_FILE)
         if os.path.exists(path):
             return Workspace(path, install_folder)
         parent = os.path.dirname(folder)
@@ -132,7 +142,7 @@ project({name} CXX)
             yml = yaml.load(text)
             self._generator = yml.pop("generator", None)
             self._name = yml.pop("name", None)
-            self._root = [s.strip() for s in yml.pop("root", "").split(",")]
+            self._root = [s.strip() for s in yml.pop("root", "").split(",") if s.strip()]
             if not self._root:
                 raise ConanException("Conan workspace needs at least 1 root conanfile")
             for package_name, data in yml.items():

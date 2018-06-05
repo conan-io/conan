@@ -338,6 +338,11 @@ class ConanInstaller(object):
                     conan_file.cpp_info.includedirs = include_dirs
                 if lib_dirs:
                     conan_file.cpp_info.libdirs = lib_dirs
+                    # Make sure the folders exists, otherwise they will be filtered out
+                    lib_paths = [os.path.join(conan_file.cpp_info.rootpath, p)
+                                 if not os.path.isabs(p) else p for p in lib_dirs]
+                    for p in lib_paths:
+                        mkdir(p)
 
                 self._propagate_info(node, inverse_levels, deps_graph)
 

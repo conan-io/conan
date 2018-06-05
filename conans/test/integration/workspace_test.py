@@ -9,6 +9,8 @@ from conans.test.utils.tools import TestClient
 from conans.model.workspace import WORKSPACE_FILE
 from conans import tools
 import time
+from conans.util.files import load
+import re
 
 
 conanfile = """from conans import ConanFile
@@ -178,4 +180,93 @@ name: MyProject
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye! Mars B Debug!", client.out)
+        self.assertIn("Hello World A Debug!", client.out)
+
+    def insource_build_test(self):
+        client = TestClient()
+
+        def files(name, depend=None):
+            includes = ('#include "hello%s.h"' % depend) if depend else ""
+            calls = ('hello%s();' % depend) if depend else ""
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
+                    "src/hello%s.h" % name: hello_h.format(name=name),
+                    "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
+                    "src/CMakeLists.txt": cmake.format(name=name)}
+
+        C = os.path.join(client.current_folder, "C")
+        B = os.path.join(client.current_folder, "B")
+        A = os.path.join(client.current_folder, "A")
+        client.save(files("C"), path=C)
+        client.save(files("B", "C"), path=B)
+        a = files("A", "B")
+        a["src/CMakeLists.txt"] += "add_executable(app main.cpp)\ntarget_link_libraries(app helloA)\n"
+        a["src/main.cpp"] = main_cpp
+        client.save(a, path=A)
+
+        project = """HelloB:
+    folder: B
+    includedirs: src
+    cmakedir: src
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'.lower()"
+    libdirs: "'build/{build_type}' if '{os}'=='Windows' else 'build_{build_type}'.lower()"
+HelloC:
+    folder: C
+    includedirs: src
+    cmakedir: src
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'.lower()"
+    libdirs: "'build/{build_type}' if '{os}'=='Windows' else 'build_{build_type}'.lower()"
+HelloA:
+    folder: A
+    cmakedir: src
+    build: "'build' if '{os}'=='Windows' else 'build_{build_type}'.lower()"
+
+root: HelloA
+"""
+        client.save({WORKSPACE_FILE: project})
+
+        release = "build" if platform.system() == "Windows" else "build_release"
+        debug = "build" if platform.system() == "Windows" else "build_debug"
+
+        base_folder = client.current_folder
+        client.run("install .")
+
+        # Make sure nothing in local cache
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
+
+        # Check A
+        content = load(os.path.join(client.current_folder, "A/%s/conanbuildinfo.cmake" % release))
+        include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
+        self.assertIn("void helloB();", load(os.path.join(include_dirs_hellob, "helloB.h")))
+        include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertIn("void helloC();", load(os.path.join(include_dirs_helloc, "helloC.h")))
+
+        # Check B
+        content = load(os.path.join(base_folder, "B/%s/conanbuildinfo.cmake" % release))
+        include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
+
+        client.run("build C -bf=C/%s" % release)
+        client.run("build B -bf=B/%s" % release)
+        client.run("build A -bf=A/%s" % release)
+        if platform.system() == "Windows":
+            cmd_release = r".\A\build\Release\app"
+            cmd_debug = r".\A\build\Debug\app"
+        else:
+            cmd_release = "./A/build_release/app"
+            cmd_debug = "./A/build_debug/app"
+        client.runner(cmd_release, cwd=client.current_folder)
+        self.assertIn("Hello World C Release!", client.out)
+        self.assertIn("Hello World B Release!", client.out)
+        self.assertIn("Hello World A Release!", client.out)
+
+        # Now do the same for debug
+        client.run("install . -s build_type=Debug")
+        client.run("build C -bf=C/%s" % debug)
+        client.run("build B -bf=B/%s" % debug)
+        client.run("build A -bf=A/%s" % debug)
+        client.runner(cmd_debug, cwd=client.current_folder)
+        self.assertIn("Hello World C Debug!", client.out)
+        self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
