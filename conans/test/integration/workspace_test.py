@@ -156,8 +156,9 @@ name: MyProject
                               "Hello World", "Bye Moon")
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
+        time.sleep(0.2)
         client.runner('cmake --build . --config Release', cwd=base_folder)
-        time.sleep(2)
+        time.sleep(0.2)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
@@ -166,7 +167,7 @@ name: MyProject
         shutil.rmtree(os.path.join(client.current_folder, "build"))
         client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
-        time.sleep(2)
+        time.sleep(0.2)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
@@ -175,8 +176,9 @@ name: MyProject
 
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Bye Moon", "Bye! Mars")
+        time.sleep(0.2)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
-        time.sleep(2)
+        time.sleep(0.2)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye! Mars B Debug!", client.out)
