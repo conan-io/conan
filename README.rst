@@ -109,19 +109,22 @@ Running the tests
 
 **Install python requirements**
 
-    .. code-block:: bash
+.. code-block:: bash
 
-        $ pip install -r conans/requirements.txt
-        $ pip install -r conans/requirements_server.txt
-        $ pip install -r conans/requirements_dev.txt
+    $ pip install -r conans/requirements.txt
+    $ pip install -r conans/requirements_server.txt
+    $ pip install -r conans/requirements_dev.txt
 
-    Only in OSX:
 
-    .. code-block:: bash
+Only in OSX:
 
-        $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
 
-  If you are not Windows and you are not using a python virtual environment, you will need to run these
+.. code-block:: bash
+
+    $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
+
+
+If you are not Windows and you are not using a python virtual environment, you will need to run these
 commands using `sudo`.
 
 Before you can run the tests, you need to set a few environment variables first.
