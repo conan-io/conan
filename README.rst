@@ -69,6 +69,40 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
   If you are in Windows, using ``sudo`` is not required.
 
+- **You are ready, try to run conan:**
+
+  .. code-block::
+
+    $ conan --help
+
+    Consumer commands
+      install    Installs the requirements specified in a conanfile (.py or .txt).
+      config     Manages configuration. Edits the conan.conf or installs config files.
+      get        Gets a file or list a directory of a given reference or package.
+      info       Gets information about the dependency graph of a recipe.
+      search     Searches package recipes and binaries in the local cache or in a remote.
+    Creator commands
+      new        Creates a new package recipe template with a 'conanfile.py'.
+      create     Builds a binary package for recipe (conanfile.py) located in current dir.
+      upload     Uploads a recipe and binary packages to a remote.
+      export     Copies the recipe (conanfile.py & associated files) to your local cache.
+      export-pkg Exports a recipe & creates a package with given files calling 'package'.
+      test       Test a package, consuming it with a conanfile recipe with a test() method.
+    Package development commands
+      source     Calls your local conanfile.py 'source()' method.
+      build      Calls your local conanfile.py 'build()' method.
+      package    Calls your local conanfile.py 'package()' method.
+    Misc commands
+      profile    Lists profiles in the '.conan/profiles' folder, or shows profile details.
+      remote     Manages the remote list and the package recipes associated to a remote.
+      user       Authenticates against a remote with user/pass, caching the auth token.
+      imports    Calls your local conanfile.py or conanfile.txt 'imports' method.
+      copy       Copies conan recipes and packages to another user/channel.
+      remove     Removes packages or binaries matching pattern from local cache or remote.
+      alias      Creates and exports an 'alias recipe'.
+      download   Downloads recipe and binaries to the local cache, without using settings.
+
+    Conan commands. Type "conan <command> -h" for help
 
 Running the tests
 =================
