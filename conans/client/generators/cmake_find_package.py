@@ -49,7 +49,7 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
           INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
         endif()
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}})
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.defines})
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.compile_definitions})
     endif()
     {find_dependencies}
 endif()
@@ -89,7 +89,6 @@ class CMakeFindPackageGenerator(Generator):
                 return ["get_target_property(tmp %s %s)" % (dep_t, prop),
                         "if(tmp)",
                         "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
-                        '  message("${tmp}")',
                         'endif()']
 
             lines.append("find_dependency(%s REQUIRED)" % dep)

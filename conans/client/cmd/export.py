@@ -112,7 +112,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     if scm.url == "auto":
         origin = scm.get_remote_url()
         if not origin:
-            raise ConanException("Repo origin cannot be deduced by 'auto', using source folder")
+            raise ConanException("Repo origin cannot be deduced by 'auto'")
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm.url = origin
     if scm.revision == "auto":
