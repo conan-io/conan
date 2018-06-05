@@ -107,7 +107,7 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 Running the tests
 =================
 
-- **Install python requirements**
+**Install python requirements**
 
     .. code-block:: bash
 
