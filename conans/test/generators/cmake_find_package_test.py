@@ -27,6 +27,7 @@ class Consumer(ConanFile):
     requires = "Test/0.1@user/channel"
     generators = "cmake_find_package"
     exports_sources = "CMakeLists.txt"
+    settings = "os", "arch", "compiler"
 
     def build(self):
         cmake = CMake(self)
