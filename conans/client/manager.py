@@ -85,9 +85,9 @@ class ConanManager(object):
             self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
-    def get_proxy(self, remote_name=None):
+    def get_proxy(self):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
-                                  remote_name=remote_name, recorder=self._recorder, registry=self._registry)
+                                  recorder=self._recorder, registry=self._registry)
         return remote_proxy
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
@@ -226,7 +226,7 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
-        remote_proxy = self.get_proxy(remote_name=remote_name)
+        remote_proxy = self.get_proxy()
 
         loader = self.get_loader(profile)
         if not install_reference:

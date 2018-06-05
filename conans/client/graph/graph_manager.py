@@ -92,7 +92,7 @@ class GraphManager(object):
     def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
                    profile_build_requires=None):
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
-        graph = builder.load_graph(conanfile, check_updates, update)
+        graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
