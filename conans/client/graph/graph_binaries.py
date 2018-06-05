@@ -90,7 +90,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = "DOWNLOAD"
                 package_hash = remote_info.recipe_hash
             else:
-                if build_mode.allowed(conanfile):
+                if build_mode.allowed(conanfile, conan_ref):
                     node.binary = "BUILD"
                 else:
                     node.binary = "MISSING"
