@@ -107,10 +107,24 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 Running the tests
 =================
 
-Make sure that the Python requirements for testing have been installed, as explained above.
+- **Install python requirements**
 
-Before you can run the tests, you need to set a few environment
-variables first.
+    .. code-block:: bash
+
+        $ pip install -r conans/requirements.txt
+        $ pip install -r conans/requirements_server.txt
+        $ pip install -r conans/requirements_dev.txt
+
+    Only in OSX:
+
+    .. code-block:: bash
+
+        $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
+
+  If you are not Windows and you are not using a python virtual environment, you will need to run these
+commands using `sudo`.
+
+Before you can run the tests, you need to set a few environment variables first.
 
 .. code-block:: bash
 
@@ -129,9 +143,8 @@ version with the following command:
 
     $ cmake --version
 
-The appropriate values of ``CONAN_COMPILER`` and
-``CONAN_COMPILER_VERSION`` depend on your operating system and your
-requirements.
+The appropriate values of ``CONAN_COMPILER`` and ``CONAN_COMPILER_VERSION`` depend on your
+operating system and your requirements.
 
 These should work for the GCC from ``build-essential`` on Ubuntu 14.04:
 
