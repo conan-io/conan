@@ -54,7 +54,7 @@ updown_secret: {updown_secret}
 #
 #   opencv/*@lasote/testing: default_user default_user2
 #   internal/*@*/*: ?
-#   *:*@*/*: *
+#   */*@*/*: *
 #
 # By default all users can read all blocks
 #

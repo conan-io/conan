@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+import mock
 import os
 import platform
 import unittest
@@ -11,18 +14,20 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.win import vcvars_dict
+from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
 
-from conans.test.utils.context_manager import which
+from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load
+from conans.util.files import save, load, md5
 import requests
 
 
@@ -31,7 +36,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -66,6 +71,18 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def load_save_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        save(path, u"äüïöñç")
+        content = load(path)
+        self.assertEqual(content, u"äüïöñç")
+
+    def md5_test(self):
+        result = md5(u"äüïöñç")
+        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
+
     def cpu_count_test(self):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
@@ -267,26 +284,24 @@ class HelloConan(ConanFile):
             spt.update()
             self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
 
-            
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo yum install -y a_package")
-            
+
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
                 self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
-                
+
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "dpkg -s a_package")
 
-            
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
@@ -318,7 +333,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
 
@@ -384,7 +400,8 @@ class HelloConan(ConanFile):
                 spt.install("a_package", force=True)
                 self.assertEquals(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+                self.assertEquals(runner.command_called,
+                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
@@ -425,7 +442,7 @@ class HelloConan(ConanFile):
                 self.calls = 0
                 self.expected = expected
 
-            def __call__(self, command, *args, **kwargs):
+            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
                 self.calls += 1
                 return 0 if command in self.expected else 1
 
@@ -598,7 +615,7 @@ class MyConan(ConanFile):
     settings = "os", "compiler"
 
     def build(self):
-        with tools.vcvars(self.settings):
+        with tools.vcvars(self.settings, only_diff=True):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
@@ -611,39 +628,99 @@ class MyConan(ConanFile):
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_dict_diff_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        with tools.environment_append({"MYVAR": "1"}):
+            ret = vcvars_dict(settings, only_diff=False)
+            self.assertIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+            ret = vcvars_dict(settings)
+            self.assertNotIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+    def vcvars_dict_test(self):
+        # https://github.com/conan-io/conan/issues/2904
+        output_with_newline_and_spaces = """__BEGINS__
+     PROCESSOR_ARCHITECTURE=AMD64
+
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
+
+
+ PROCESSOR_LEVEL=6 
+
+PROCESSOR_REVISION=9e09    
+
+                         
+set nl=^
+env_var=
+without_equals_sign
+
+ProgramFiles(x86)=C:\Program Files (x86)
+       
+""".encode("utf-8")
+
+        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version):  # @UnusedVariable
+            return "unused command"
+
+        def subprocess_check_output_mock(cmd, shell):
+            self.assertIn("unused command", cmd)
+            return output_with_newline_and_spaces
+
+        with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
+            with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
+                vars = tools.vcvars_dict(None, only_diff=False)
+                self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
+                self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
+                self.assertEqual(vars["PROCESSOR_REVISION"], "9e09")
+                self.assertEqual(vars["ProgramFiles(x86)"], "C:\Program Files (x86)")
+
     def run_in_bash_test(self):
         if platform.system() != "Windows":
             return
 
         class MockConanfile(object):
             def __init__(self):
-                self.command = ""
-                self.output = namedtuple("output", "info")(lambda x: None)
+
+                self.output = namedtuple("output", "info")(lambda x: None)  # @UnusedVariable
                 self.env = {"PATH": "/path/to/somewhere"}
 
-            def run(self, command, win_bash=False):
-                self.command = command
+                class MyRun(object):
+                    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):  # @UnusedVariable
+                        self.command = command
+                self._runner = MyRun()
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile.command)
-        self.assertIn("--login -c", conanfile.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile.command)
+        self.assertIn("bash", conanfile._runner.command)
+        self.assertIn("--login -c", conanfile._runner.command)
+        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
                                                                                        "MYVAR": "34"})
         self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile.command)
+                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
@@ -824,3 +901,136 @@ class MyConan(ConanFile):
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
+
+
+class GitToolTest(unittest.TestCase):
+
+    def test_clone_git(self):
+        path, _ = create_local_git_repo({"myfile": "contents"})
+        tmp = temp_folder()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+    def test_clone_existing_folder_git(self):
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        git.clone(path, branch="my_release")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+        # Checkout a commit
+        git.checkout(commit)
+        self.assertEquals(git.get_revision(), commit)
+
+    def test_clone_existing_folder_without_branch(self):
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
+                                                     "specify a branch to checkout"):
+            git.clone("https://github.com/conan-community/conan-zlib.git")
+
+    def test_credentials(self):
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool")
+        url_credentials = git.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+
+    def test_verify_ssl(self):
+        class MyRunner(object):
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, *args, **kwargs):
+                self.calls.append(args[0])
+                return ""
+
+        runner = MyRunner()
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
+                  force_english=True)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify true", runner.calls[1])
+
+        runner = MyRunner()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
+                  force_english=False)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify false", runner.calls[1])
+
+    def git_helper_in_recipe_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        save(os.path.join(git_repo, "file.h"), "contents")
+        client.runner("git init .", cwd=git_repo)
+        client.runner('git config user.email "you@example.com"', cwd=git_repo)
+        client.runner('git config user.name "Your Name"', cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
+        client.runner("git add .", cwd=git_repo)
+        client.runner('git commit -m "comm"', cwd=git_repo)
+
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s", "dev")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Now clone in a subfolder with later checkout
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        tools.mkdir("src")
+        git = tools.Git("./src")
+        git.clone("%s")
+        git.checkout("dev")
+
+    def build(self):
+        assert(os.path.exists(os.path.join("src", "file.h")))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Base dir, with exports without subfolder and not specifying checkout fails
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel", ignore_error=True)
+        self.assertIn("The destination folder is not empty, "
+                      "specify a branch to checkout", client.out)

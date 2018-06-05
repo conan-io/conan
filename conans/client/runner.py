@@ -15,7 +15,7 @@ class ConanRunner(object):
         self._generate_run_log_file = generate_run_log_file
         self._log_run_to_output = log_run_to_output
 
-    def __call__(self, command, output, log_filepath=None, cwd=None):
+    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
@@ -38,7 +38,7 @@ class ConanRunner(object):
             stream_output.write(call_message)
 
         # No output has to be redirected to logs or buffer or omitted
-        if output is True and not log_filepath and self._log_run_to_output:
+        if output is True and not log_filepath and self._log_run_to_output and not subprocess:
             return self._simple_os_call(command, cwd)
         elif log_filepath:
             if stream_output:

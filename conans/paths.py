@@ -38,6 +38,7 @@ CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
+SCM_FOLDER = "scm_folder.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -65,7 +66,7 @@ def is_case_insensitive_os():
 
 
 if is_case_insensitive_os():
-    def _check_ref_case(conan_reference, conan_folder, store_folder):
+    def check_ref_case(conan_reference, conan_folder, store_folder):
         if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
             return
         # If exists, lets check path
@@ -83,7 +84,7 @@ if is_case_insensitive_os():
                                      % (str(conan_reference), offending))
             tmp = os.path.normpath(tmp + os.sep + part)
 else:
-    def _check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
+    def check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
         pass
 
 
@@ -121,17 +122,8 @@ class SimplePaths(object):
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
+        check_ref_case(conan_reference, export, self.store)
         return normpath(join(export, CONANFILE))
-
-    def digestfile_conanfile(self, conan_reference):
-        export = self.export(conan_reference)
-        _check_ref_case(conan_reference, export, self.store)
-        return normpath(join(export, CONAN_MANIFEST))
-
-    def digestfile_package(self, package_reference, short_paths=False):
-        assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.package(package_reference, short_paths), CONAN_MANIFEST))
 
     def builds(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -162,3 +154,5 @@ class SimplePaths(object):
                           package_reference.package_id))
         return path_shortener(p, short_paths)
 
+    def scm_folder(self, conan_reference):
+        return normpath(join(self.conan(conan_reference), SCM_FOLDER))

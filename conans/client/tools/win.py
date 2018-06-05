@@ -1,4 +1,3 @@
-import glob
 import json
 import os
 import platform
@@ -228,7 +227,7 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None, winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -274,6 +273,10 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
                            'call "%s" %s' % (vcvars_path, vcvars_arch))
+                if winsdk_version:
+                    command += " %s" % winsdk_version
+                if vcvars_ver:
+                    command += " -vcvars_ver=%s" % vcvars_ver
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
                 command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
@@ -293,19 +296,30 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     return command
 
 
-def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False):
+def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
+                vcvars_ver=None, winsdk_version=None, only_diff=True):
+
     cmd = vcvars_command(settings, arch=arch,
-                         compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
+                         compiler_version=compiler_version, force=force,
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}
     start_reached = False
     for line in ret.splitlines():
+        line = line.strip()
         if not start_reached:
             if "__BEGINS__" in line:
                 start_reached = True
             continue
-        name_var, value = line.split("=", 1)
-        new_env[name_var] = value
+
+        if line == "\n" or not line:
+            continue
+        try:
+            name_var, value = line.split("=", 1)
+            if not only_diff or os.environ.get(name_var) != value:
+                new_env[name_var] = value
+        except ValueError:
+            pass
 
     if filter_known_paths:
         def relevant_path(path):
@@ -346,17 +360,22 @@ def get_cased_path(name):
         return name
     if not os.path.isabs(name):
         name = os.path.abspath(name)
-    dirs = name.split('\\')
-    # disk letter
-    test_name = [dirs[0].upper()]
-    for d in dirs[1:]:
-        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
 
-    res = glob.glob('\\'.join(test_name))
-    if not res:
-        # File not found
-        return None
-    return res[0]
+    result = []
+    current = name
+    while True:
+        parent, child = os.path.split(current)
+        if parent == current:
+            break
+        children = os.listdir(parent)
+        for c in children:
+            if c.upper() == child.upper():
+                result.append(c)
+                break
+        current = parent
+    drive, _ = os.path.splitdrive(current)
+    result.append(drive)
+    return os.sep.join(reversed(result))
 
 
 MSYS2 = 'msys2'
@@ -443,4 +462,5 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-        return conanfile.run(wincmd, win_bash=False)
+        # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
+        return conanfile._runner(wincmd, output=conanfile.output, subprocess=True)

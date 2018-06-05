@@ -1,15 +1,28 @@
-from conans.client.store.sqlite import SQLiteDB
+import os
+import sqlite3
+
 from conans.errors import ConanException
+
 
 REMOTES_USER_TABLE = "users_remotes"
 
 
-class LocalDB(SQLiteDB):
+class LocalDB(object):
 
     def __init__(self, dbfile):
+        if not os.path.exists(dbfile):
+            par = os.path.dirname(dbfile)
+            if not os.path.exists(par):
+                os.makedirs(par)
+            db = open(dbfile, 'w+')
+            db.close()
         self.dbfile = dbfile
-        super(LocalDB, self).__init__(dbfile)
-        self.connect()
+        try:
+            self.connection = sqlite3.connect(self.dbfile,
+                                              detect_types=sqlite3.PARSE_DECLTYPES)
+            self.connection.text_factory = str
+        except Exception as e:
+            raise ConanException('Could not connect to local cache', e)
         self.init()
 
     def init(self, clean=False):

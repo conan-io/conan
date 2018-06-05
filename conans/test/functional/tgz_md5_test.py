@@ -1,9 +1,10 @@
+import os
+import time
 import unittest
+
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, md5sum
 from conans.paths import PACKAGE_TGZ_NAME
-import os
-import time
 from conans.client.remote_manager import compress_files
 
 
@@ -24,6 +25,7 @@ class TgzMd5Test(unittest.TestCase):
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
+        self.assertEqual(md5_a, "df220cfbc0652e8992a89a77666c03b5")
 
         time.sleep(1)  # Timestamps change
 

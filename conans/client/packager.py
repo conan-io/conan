@@ -11,7 +11,7 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def export_pkg(conanfile, src_package_folder, package_folder, output):
+def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output):
     mkdir(package_folder)
 
     output.info("Exporting to cache existing package from user folder")
@@ -27,10 +27,10 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
-    output.success("Package '%s' created" % os.path.basename(package_folder))
+    output.success("Package '%s' created" % pkg_id)
 
 
-def create_package(conanfile, source_folder, build_folder, package_folder, install_folder,
+def create_package(conanfile, pkg_id, source_folder, build_folder, package_folder, install_folder,
                    output, local=False, copy_info=False):
     """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
@@ -82,7 +82,8 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         raise ConanException(e)
 
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
-    output.success("Package '%s' created" % os.path.basename(package_folder))
+    pkg_id = pkg_id or os.path.basename(package_folder)
+    output.success("Package '%s' created" % pkg_id)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):

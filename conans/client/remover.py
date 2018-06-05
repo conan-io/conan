@@ -5,7 +5,8 @@ from conans.util.log import logger
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.model.ref import ConanFileReference
-from conans.search.search import filter_outdated, DiskSearchManager
+from conans.search.search import filter_outdated, search_recipes,\
+    search_packages
 
 
 class DiskRemover(object):
@@ -80,9 +81,8 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_proxy, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
         self._user_io = user_io
-        self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._remote_manager = remote_manager
         self._registry = remote_registry
@@ -129,8 +129,7 @@ class ConanRemover(object):
             remote = self._registry.remote(remote)
             references = self._remote_manager.search_recipes(remote, pattern)
         else:
-            disk_search = DiskSearchManager(self._client_cache)
-            references = disk_search.search_recipes(pattern)
+            references = search_recipes(self._client_cache, pattern)
         if not references:
             self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
@@ -144,10 +143,10 @@ class ConanRemover(object):
                 if remote:
                     packages = self._remote_manager.search_packages(remote, reference, packages_query)
                 else:
-                    packages = disk_search.search_packages(reference, packages_query)
+                    packages = search_packages(self._client_cache, reference, packages_query)
                 if outdated:
                     if remote:
-                        recipe_hash = self._remote_proxy.get_conan_manifest(reference).summary_hash
+                        recipe_hash = self._remote_manager.get_conan_manifest(reference, remote).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
                     packages = filter_outdated(packages, recipe_hash)

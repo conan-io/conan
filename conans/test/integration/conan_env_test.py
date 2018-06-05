@@ -445,9 +445,12 @@ class HelloConan(ConanFile):
             self.assertIn("PATH=/dir", activate_contents)
         else:
             self.assertIn("PATH=\"/dir\"", activate_contents)
-
-        self.assertIn('var1=', deactivate_contents)
-        self.assertIn('var2=', deactivate_contents)
+        if platform.system() == "Windows":
+            self.assertIn('var1=', deactivate_contents)
+            self.assertIn('var2=', deactivate_contents)
+        else:
+            self.assertIn('unset var1', deactivate_contents)
+            self.assertIn('unset var2', deactivate_contents)
 
     def test_conan_info_cache_and_priority(self):
         client = TestClient()

@@ -1,4 +1,5 @@
-from conans.search.search import DiskSearchManager, filter_outdated
+from conans.search.search import filter_outdated, search_recipes,\
+    search_packages
 from collections import OrderedDict
 
 
@@ -10,23 +11,27 @@ class Search(object):
 
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         ignorecase = not case_sensitive
+
+        references = OrderedDict()
         if not remote:
-            return DiskSearchManager(self._client_cache).search_recipes(pattern, ignorecase)
+            references[None] = search_recipes(self._client_cache, pattern, ignorecase)
+            return references
 
         if remote == 'all':
             remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
-                references = {}
                 for remote in remotes:
-                    result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                    if result:
-                        references[remote.name] = result
+                    refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+                    if refs:
+                        references[remote.name] = refs
                 return references
         # single remote
         remote = self._registry.remote(remote)
-        return self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        references[remote.name] = refs
+        return references
 
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
@@ -45,8 +50,7 @@ class Search(object):
             manifest = self._remote_manager.get_conan_manifest(reference, remote)
             recipe_hash = manifest.summary_hash
         else:
-            searcher = DiskSearchManager(self._client_cache)
-            packages_props = searcher.search_packages(reference, query)
+            packages_props = search_packages(self._client_cache, reference, query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
             try:
                 recipe_hash = self._client_cache.load_manifest(reference).summary_hash
@@ -54,4 +58,4 @@ class Search(object):
                 recipe_hash = None
         if outdated and recipe_hash:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-        return ordered_packages, reference, recipe_hash, query
+        return ordered_packages, reference, recipe_hash
