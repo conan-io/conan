@@ -7,6 +7,48 @@ from nose.plugins.attrib import attr
 @attr('slow')
 class CMakeFindPathGeneratorTest(unittest.TestCase):
 
+    def cmake_find_package_system_libs_test(self):
+        conanfile = """from conans import ConanFile, tools
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+
+    def package_info(self):
+        self.cpp_info.libs.append("fake_lib")
+    """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . user/channel")
+
+        conanfile = """from conans import ConanFile, tools, CMake
+class Consumer(ConanFile):
+    name = "consumer"
+    version = "0.1"
+    requires = "Test/0.1@user/channel"
+    generators = "cmake_find_package"
+    exports_sources = "CMakeLists.txt"
+    settings = "os", "arch", "compiler"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+
+    """
+        cmakelists = """
+project(consumer)
+cmake_minimum_required(VERSION 3.1)
+find_package(Test)
+message("Libraries to Link: ${Test_LIBS}")
+
+get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+message("Target libs: ${tmp}")
+"""
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("create . user/channel --build missing")
+        self.assertIn("Library fake_lib not found in package, might be system one", client.out)
+        self.assertIn("Libraries to Link: fake_lib", client.out)
+        self.assertIn("Target libs: fake_lib", client.out)
+
     def cmake_find_package_test(self):
         """First package without custom find_package"""
         client = TestClient()
