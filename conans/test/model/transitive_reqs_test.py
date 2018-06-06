@@ -37,9 +37,9 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariable
+    def get_recipe(self, conan_ref, check_updates, update, remote_name):  # @UnusedVariable
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None, None, None
+        return conan_path, None, None
 
 
 say_content = """
@@ -120,7 +120,7 @@ def _get_edges(graph):
 
 
 class MockRequireResolver(object):
-    def resolve(self, rquire, conanref, update):  # @UnusedVariable
+    def resolve(self, rquire, conanref, update, remote_name):  # @UnusedVariable
         return
 
 
@@ -135,7 +135,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_basic(self):
@@ -1517,7 +1517,7 @@ class ConsumerConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1632,7 +1632,7 @@ class CoreSettingsTest(unittest.TestCase):
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
-        deps_graph = builder.load_graph(root_conan, False, False)
+        deps_graph = builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_basic(self):
@@ -1920,7 +1920,7 @@ class ChatConan(ConanFile):
         retriever.conan(hello_ref, hello_content)
 
         root_conan = retriever.root(chat_content)
-        deps_graph = builder.load_graph(root_conan, False, False)
+        deps_graph = builder.load_graph(root_conan, False, False, None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

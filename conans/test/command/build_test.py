@@ -199,6 +199,9 @@ class AConan(ConanFile):
     def build_dots_names_test(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
+        import cProfile, pstats, StringIO
+        pr = cProfile.Profile()
+        pr.enable()
         client = TestClient()
         conanfile_dep = """
 from conans import ConanFile
@@ -225,6 +228,13 @@ class AConan(ConanFile):
 
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
+        
+        pr.disable()
+        s = StringIO.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print s.getvalue()
 
     def build_cmake_install_test(self):
         client = TestClient()

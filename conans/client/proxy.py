@@ -16,10 +16,10 @@ class ConanProxy(object):
     getting conanfiles, uploading, removing from remote, etc.
     It uses the registry to control where the packages come from.
     """
-    def __init__(self, client_cache, user_io, remote_manager, recorder, registry):
+    def __init__(self, client_cache, output, remote_manager, recorder, registry):
         # collaborators
         self._client_cache = client_cache
-        self._out = user_io.out
+        self._out = output
         self._remote_manager = remote_manager
         self._registry = registry
         self._recorder = recorder

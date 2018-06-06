@@ -115,7 +115,8 @@ class DepsGraphBuilder(object):
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
-                                    new_options, new_loop_ancestors, aliased, check_updates, update)
+                                    new_options, new_loop_ancestors, aliased, check_updates, update,
+                                    remote_name)
 
     def _recurse(self, closure, new_reqs, new_options):
         """ For a given closure, if some requirements or options coming from downstream

@@ -97,7 +97,7 @@ class GraphManager(object):
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
                                                   self._remote_manager, self._registry)
-        binaries_analyzer.evaluate_graph(graph, build_mode, update)
+        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
                                      profile_build_requires)

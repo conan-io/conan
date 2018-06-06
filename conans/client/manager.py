@@ -11,7 +11,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
 from conans.client.profile_loader import read_conaninfo_profile
-from conans.client.proxy import ConanProxy
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
@@ -31,7 +30,7 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager, proxy,
                  settings_preprocessor, recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -39,6 +38,7 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self._proxy = proxy
         self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
@@ -85,22 +85,15 @@ class ConanManager(object):
             self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
-    def get_proxy(self):
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
-                                  recorder=self._recorder, registry=self._registry)
-        return remote_proxy
-
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
 
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        remote_proxy = self.get_proxy()
-
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], scope_options=True)
-        graph_builder = self._get_graph_builder(loader, remote_proxy)
+        graph_builder = self._get_graph_builder(loader, self._proxy)
         deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False,
                                               build_mode=None)
 
@@ -153,26 +146,27 @@ class ConanManager(object):
                                      self._client_cache, self._registry, self._remote_manager)
         return graph_builder
 
-    def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update, build_mode):
+    def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update, build_mode,
+                        remote_name):
         loader = self.get_loader(profile)
         conanfile = self._load_install_conanfile(loader, reference)
         graph_builder = self._get_graph_builder(loader, remote_proxy)
         build_mode = BuildMode(build_mode, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
-                                              build_mode=build_mode)
+                                              build_mode=build_mode, remote_name=remote_name)
         return deps_graph, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, _ = self._get_deps_graph(reference, profile, remote_proxy, update=False,
-                                             check_updates=check_updates, build_mode=["missing"])
+        deps_graph, _ = self._get_deps_graph(reference, profile, self._proxy, update=False,
+                                             check_updates=check_updates, build_mode=["missing"],
+                                             remote_name=remote_name)
         result = deps_graph.build_order(build_order)
         return result
 
     def info_nodes_to_build(self, reference, profile, build_mode, remote_name, check_updates):
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy, update=False,
-                                                     check_updates=check_updates, build_mode=build_mode)
+        deps_graph, conanfile = self._get_deps_graph(reference, profile, self._proxy, update=False,
+                                                     check_updates=check_updates, build_mode=build_mode,
+                                                     remote_name=remote_name)
         ret = []
         for level in deps_graph.by_levels():
             for node in level:
@@ -194,10 +188,9 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param remote: install only from that remote
         """
-        remote_proxy = self.get_proxy(remote_name=remote_name)
-        deps_graph, conanfile = self._get_deps_graph(reference, profile, remote_proxy,
+        deps_graph, conanfile = self._get_deps_graph(reference, profile, self._proxy,
                                                      update=False, check_updates=check_updates,
-                                                     build_mode=build_mode)
+                                                     build_mode=build_mode, remote_name=remote_name)
 
         return deps_graph, self._get_project_reference(reference, conanfile)
 
@@ -226,8 +219,6 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
-        remote_proxy = self.get_proxy()
-
         loader = self.get_loader(profile)
         if not install_reference:
             if isinstance(reference, ConanFileReference):  # is a create
@@ -237,7 +228,7 @@ class ConanManager(object):
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)
-        graph_builder = self._get_graph_builder(loader, remote_proxy)
+        graph_builder = self._get_graph_builder(loader, self._proxy)
 
         build_mode = BuildMode(build_modes, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,

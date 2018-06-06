@@ -40,7 +40,7 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.warn("Current package is newer than remote upstream one")
 
-    def _evaluate_node(self, node, build_mode, update, evaluated_references):
+    def _evaluate_node(self, node, build_mode, update, evaluated_references, remote_name):
         assert node.binary is None
 
         conan_ref, conanfile = node.conan_ref, node.conanfile
@@ -50,6 +50,7 @@ class GraphBinariesAnalyzer(object):
         previous_node = evaluated_references.get(package_ref)
         if previous_node:
             node.binary = previous_node.binary
+            node.binary_remote = previous_node.binary_remote
             return
         evaluated_references[package_ref] = node
 
@@ -68,9 +69,13 @@ class GraphBinariesAnalyzer(object):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)
 
+        if remote_name:
+            remote = self._registry.remote(remote_name)
+        else:
+            remote = self._registry.get_ref(conan_ref)
+        node.binary_remote = remote
         if os.path.exists(package_folder):
             if update:
-                remote = node.binary_remote
                 if remote:
                     if self._check_update(package_folder, package_ref, remote, output):
                         node.binary = "UPDATE"
@@ -82,7 +87,6 @@ class GraphBinariesAnalyzer(object):
                 node.binary = "INSTALLED"
                 package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
         else:  # Binary does NOT exist locally
-            remote = node.binary_remote
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
@@ -104,8 +108,7 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.info("Package is up to date")
 
-    def evaluate_graph(self, deps_graph, build_mode, update):
-
+    def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
         for node in deps_graph.nodes:
             conan_ref, conanfile = node.conan_ref, node.conanfile
@@ -113,7 +116,7 @@ class GraphBinariesAnalyzer(object):
                 continue
 
             if [r for r in conanfile.requires.values() if r.private]:
-                self._evaluate_node(node, build_mode, update, evaluated_references)
+                self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
                 if node.binary != "BUILD":
                     closure = deps_graph.closure(node, private=True)
                     for node in closure.values():
@@ -123,4 +126,4 @@ class GraphBinariesAnalyzer(object):
             conan_ref, conanfile = node.conan_ref, node.conanfile
             if not conan_ref or node.binary:
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_references)
+            self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
