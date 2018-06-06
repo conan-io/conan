@@ -28,6 +28,22 @@ class TestConan(ConanFile):
         client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
                    '-s compiler.version="6.3" -s cppstd=17')
 
+    def gcc_8_std_20_test(self):
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile
+
+class TestConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "compiler", "cppstd"
+
+"""
+        client.save({CONANFILE: conanfile})
+        client.run('create . user/testing -s compiler="gcc" '
+                   '-s compiler.libcxx="libstdc++11" '
+                   '-s compiler.version="8" -s cppstd=20')
+
     def set_default_package_id_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
