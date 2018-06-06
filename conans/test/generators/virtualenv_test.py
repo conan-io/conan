@@ -2,7 +2,7 @@ import copy
 import os
 import unittest
 from conans.test.utils.tools import TestClient
-from conans.tools import os_info
+from conans.tools import os_info, get_env
 from conans.util.files import load
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
@@ -105,7 +105,8 @@ virtualenv
             deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
             if posix_empty_vars:
                 self.assertIn('unset OLD_PS1', deactivate)
-                self.assertIn('unset PS1', deactivate)
+                if not get_env("PS1"):
+                    self.assertIn('unset PS1', deactivate)
                 self.assertIn('unset BASE_LIST', deactivate)
                 self.assertIn('unset BASE_VAR', deactivate)
                 self.assertIn('unset CPPFLAGS', deactivate)
