@@ -57,10 +57,10 @@ void hello{name}(){{
 }}
 """
 
-cmake_pkg = """set(CMAKE_CXX_COMPILER_WORKS 1)
+cmake_pkg = """cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -86,10 +86,10 @@ Hello1/0.1@lasote/testing
 cmake_multi
 """
 
-cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+cmake = """cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 
 # Some cross-building toolchains will define this
 set(CMAKE_FIND_ROOT_PATH "/some/path")

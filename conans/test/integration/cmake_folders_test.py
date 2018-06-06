@@ -34,9 +34,9 @@ class Conan(ConanFile):
     def package_info(self):
         self.output.info("HEADER %s" % load(os.path.join(self.package_folder, "include/header.h")))
     """.format(no_copy_source, package_code)
-        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+        cmake = """cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Chat NONE)
-cmake_minimum_required(VERSION 2.8.12)
 file(READ header.h MYCONTENTS)
 message(STATUS "HEADER CMAKE CONTENTS ${MYCONTENTS}")
 install(FILES header.h DESTINATION include)
