@@ -136,6 +136,7 @@ class RestApiClient(object):
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_file_to_url_dict(url)
+        print(urls)
 
         return urls
 
@@ -172,7 +173,7 @@ class RestApiClient(object):
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
                 raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbbiden overwrite")
+                                     "Forbidden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 

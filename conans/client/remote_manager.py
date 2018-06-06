@@ -170,7 +170,9 @@ class RemoteManager(object):
 
         t1 = time.time()
         urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
+        print("AKI")
         urls = filter_function(urls)
+        print("POLLA")
         if not urls:
             return conan_reference
 
