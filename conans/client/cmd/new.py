@@ -162,8 +162,8 @@ class {package_name}TestConan(ConanFile):
             self.run(".%sexample" % os.sep)
 """
 
-test_cmake = """project(PackageTest CXX)
-cmake_minimum_required(VERSION 2.8.12)
+test_cmake = """cmake_minimum_required(VERSION 2.8.12)
+project(PackageTest CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -209,8 +209,8 @@ void hello(){
 }
 """
 
-cmake = """project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8)
+cmake = """cmake_minimum_required(VERSION 2.8)
+project(MyHello CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
