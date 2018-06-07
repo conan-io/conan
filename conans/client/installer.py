@@ -414,12 +414,13 @@ class ConanInstaller(object):
     @staticmethod
     def _propagate_info(node, levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        closure = deps_graph.closure(node)
+        closure = deps_graph.full_closure(node)
         node_order = []
         for level in levels:
-            for n in closure.values():
+            for n in closure:
                 if n in level:
                     node_order.append(n)
+
         conan_file = node.conanfile
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
