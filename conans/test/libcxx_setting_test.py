@@ -26,9 +26,9 @@ class ConanFileToolsTest(ConanFile):
         self.copy("*")
     '''
 
-cmakelists = '''cmake_minimum_required(VERSION 2.8)
-PROJECT(conanzlib)
+cmakelists = '''PROJECT(conanzlib)
 set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+cmake_minimum_required(VERSION 2.8)
 include(conanbuildinfo.cmake)
 CONAN_BASIC_SETUP()
 MESSAGE("CXX FLAGS=> ${CMAKE_CXX_FLAGS}")

@@ -238,9 +238,9 @@ class AConan(ConanFile):
         cmake.configure()
         cmake.install()
 """
-        cmake = """cmake_minimum_required(VERSION 2.8.12)
-set(CMAKE_CXX_COMPILER_WORKS 1)
+        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Chat NONE)
+cmake_minimum_required(VERSION 2.8.12)
 
         install(FILES header.h DESTINATION include)
 """

@@ -36,10 +36,10 @@ conanfile = """[requires]
 Hello/0.1@lasote/testing
 """
 
-cmake = """cmake_minimum_required(VERSION 2.8.12)
-set(CMAKE_CXX_COMPILER_WORKS 1)
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -93,10 +93,10 @@ class App(ConanFile):
         cmake.build()
         self.run(os.sep.join([".", "bin", "myapp"]))
 """
-        cmake_app = """cmake_minimum_required(VERSION 2.8.12)
-set(CMAKE_CXX_COMPILER_WORKS 1)
+        cmake_app = """set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(%s)
@@ -313,10 +313,10 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "mylib.cpp": "auto myfunc(){return 3;}",  # c++14 feature
                      "CMakeLists.txt": """
-cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 add_library(mylib mylib.cpp)
@@ -362,10 +362,10 @@ class MyLib(ConanFile):
         cmake.configure()
 """
         cmakelists = """
-cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_set_std()
 """
@@ -400,10 +400,10 @@ class MyLib(ConanFile):
         cmake.build()
 """
         cmakelists = """
-cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 """
