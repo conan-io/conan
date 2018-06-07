@@ -117,9 +117,8 @@ class CMake(object):
 
         if not self._compiler or not self._compiler_version or not self._arch:
             if self._os_build == "Windows":
-                raise ConanException("You must specify compiler, compiler.version and arch in "
-                                     "your settings to use a CMake generator. You can also declare "
-                                     "the env variable CONAN_CMAKE_GENERATOR.")
+                # Not enough settings to set a generator in Windows
+                return None
             return "Unix Makefiles"
 
         if self._compiler == "Visual Studio":
@@ -243,11 +242,10 @@ class CMake(object):
 
     @property
     def command_line(self):
-        args = [
-            '-G "%s"' % self.generator,
-            self.flags,
-            '-Wno-dev'
-        ]
+        args = ['-G "%s"' % self.generator] if self.generator else []
+        args.append(self.flags)
+        args.append('-Wno-dev')
+
         if self.toolset:
             args.append('-T "%s"' % self.toolset)
         return join_arguments(args)
@@ -422,7 +420,7 @@ class CMake(object):
         if target is not None:
             args = ["--target", target] + args
 
-        if self.parallel:
+        if self.generator and self.parallel:
             if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
