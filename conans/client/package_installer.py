@@ -12,8 +12,8 @@ def get_package(conanfile, package_ref, package_folder, output, recorder, proxy,
     registry = proxy.registry
     if update:
         _remove_if_outdated(package_folder, package_ref, proxy, output)
-    workspace_package = os.path.exists(package_folder)
-    if workspace_package:
+    local_package = os.path.exists(package_folder)
+    if local_package:
         output.success('Already installed!')
         log_package_got_from_local_cache(package_ref)
         recorder.package_fetched_from_cache(package_ref)
