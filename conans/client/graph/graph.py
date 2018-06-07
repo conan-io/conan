@@ -4,6 +4,22 @@ from conans.errors import conanfile_exception_formatter
 from collections import OrderedDict
 
 
+RECIPE_DOWNLOADED = "Downloaded"
+RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
+RECIPE_UPDATED = "Updated"
+RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
+RECIPE_NOT_IN_REMOTE = "Not in remote"
+RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
+RECIPE_NO_REMOTE = "No remote"
+
+BINARY_CACHE = "Cache"
+BINARY_DOWNLOAD = "Download"
+BINARY_UPDATE = "Update"
+BINARY_BUILD = "Build"
+BINARY_MISSING = "Missing"
+BINARY_SKIP = "Skip"
+
+
 class Node(object):
     def __init__(self, conan_ref, conanfile):
         self.conan_ref = conan_ref

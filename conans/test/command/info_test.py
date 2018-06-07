@@ -268,16 +268,16 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: NO REMOTE AVAILABLE
-                Updates: MISSING
+                Recipe: No remote
+                Binary: Missing
                 Required by:
                     Hello1/0.1@lasote/stable
             Hello1/0.1@lasote/stable
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: NO REMOTE AVAILABLE
-                Updates: MISSING
+                Recipe: No remote
+                Binary: Missing
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:

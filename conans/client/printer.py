@@ -8,31 +8,6 @@ from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
 
-"""            if ret == 1:
-                        if not update:
-                            if remote != ref_remote:  # Forced new remote
-                                output.warn("There is a new conanfile in '%s' remote. "
-                                            "Execute 'install -u -r %s' to update it."
-                                            % (remote.name, remote.name))
-                            else:
-                                output.warn("There is a new conanfile in '%s' remote. "
-                                            "Execute 'install -u' to update it."
-                                            % remote.name)
-                            output.warn("Refused to install!")
-                        else:
-                            DiskRemover(self._client_cache).remove(conan_reference)
-                            output.info("Retrieving from remote '%s'..." % remote.name)
-                            self._remote_manager.get_recipe(conan_reference, remote)
-
-                            output.info("Updated!")
-                    elif ret == -1:
-                        if not update:
-                            output.info("Current conanfile is newer than %s's one" % remote.name)
-                        else:
-                            output.error("Current conanfile is newer than %s's one. "
-                                         "Run 'conan remove %s' and run install again "
-                                         "to replace it." % (remote.name, conan_reference))
-"""
 
 class Printer(object):
     """ Print some specific information """
@@ -140,19 +115,10 @@ class Printer(object):
             if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
-            if isinstance(ref, ConanFileReference) and show("update"):  # Excludes PROJECT
-                update = node.binary == "UPDATE"
-                update_messages = {
-                 None: ("Version not checked", Color.WHITE),
-                 0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
-                 1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
-                 -1: ("The local file is newer than remote's one (%s)" % remote_name,
-                      Color.BRIGHT_RED)
-                }
-                #self._out.writeln("    Updates: %s" % update_messages[update][0],
-                #                  update_messages[update][1])
+            if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
-                self._out.writeln("    Updates: %s" % node.binary)
+            if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
+                self._out.writeln("    Binary: %s" % node.binary)
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),

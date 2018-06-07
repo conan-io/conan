@@ -11,7 +11,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
 from conans.client.profile_loader import read_conaninfo_profile
-from conans.client.graph.range_resolver import RangeResolver
 from conans.client.source import config_source_local, complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -24,13 +23,14 @@ from conans.util.log import logger
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.printer import print_graph
+from conans.client.graph.graph import BINARY_BUILD
 
 
 class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, proxy,
+    def __init__(self, client_cache, user_io, runner, remote_manager,
                  settings_preprocessor, recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -38,7 +38,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._proxy = proxy
         self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
@@ -93,7 +92,7 @@ class ConanManager(object):
 
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], scope_options=True)
-        graph_builder = self._get_graph_builder(loader, self._proxy)
+        graph_builder = self._get_graph_builder(loader, self._recorder)
         deps_graph = graph_builder.load_graph(conanfile, check_updates=False, update=False,
                                               build_mode=None)
 
@@ -140,37 +139,37 @@ class ConanManager(object):
         conanfile._user = inject_require.user
         conanfile._channel = inject_require.channel
 
-    def _get_graph_builder(self, loader, remote_proxy):
-        resolver = RangeResolver(self._user_io.out, self._client_cache, remote_proxy)
-        graph_builder = GraphManager(remote_proxy, self._user_io.out, loader, resolver,
-                                     self._client_cache, self._registry, self._remote_manager)
+    def _get_graph_builder(self, loader, action_recorder):
+        graph_builder = GraphManager(self._user_io.out, loader,
+                                     self._client_cache, self._registry, self._remote_manager,
+                                     action_recorder)
         return graph_builder
 
-    def _get_deps_graph(self, reference, profile, remote_proxy, check_updates, update, build_mode,
+    def _get_deps_graph(self, reference, profile, check_updates, update, build_mode,
                         remote_name):
         loader = self.get_loader(profile)
         conanfile = self._load_install_conanfile(loader, reference)
-        graph_builder = self._get_graph_builder(loader, remote_proxy)
+        graph_builder = self._get_graph_builder(loader, self._recorder)
         build_mode = BuildMode(build_mode, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
                                               build_mode=build_mode, remote_name=remote_name)
         return deps_graph, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):
-        deps_graph, _ = self._get_deps_graph(reference, profile, self._proxy, update=False,
+        deps_graph, _ = self._get_deps_graph(reference, profile, update=False,
                                              check_updates=check_updates, build_mode=["missing"],
                                              remote_name=remote_name)
         result = deps_graph.build_order(build_order)
         return result
 
     def info_nodes_to_build(self, reference, profile, build_mode, remote_name, check_updates):
-        deps_graph, conanfile = self._get_deps_graph(reference, profile, self._proxy, update=False,
+        deps_graph, conanfile = self._get_deps_graph(reference, profile, update=False,
                                                      check_updates=check_updates, build_mode=build_mode,
                                                      remote_name=remote_name)
         ret = []
         for level in deps_graph.by_levels():
             for node in level:
-                if node.binary == "BUILD":
+                if node.binary == BINARY_BUILD:
                     if node.conan_ref not in ret:
                         ret.append(node.conan_ref)
         return ret, self._get_project_reference(reference, conanfile)
@@ -188,7 +187,7 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param remote: install only from that remote
         """
-        deps_graph, conanfile = self._get_deps_graph(reference, profile, self._proxy,
+        deps_graph, conanfile = self._get_deps_graph(reference, profile,
                                                      update=False, check_updates=check_updates,
                                                      build_mode=build_mode, remote_name=remote_name)
 
@@ -228,7 +227,7 @@ class ConanManager(object):
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)
-        graph_builder = self._get_graph_builder(loader, self._proxy)
+        graph_builder = self._get_graph_builder(loader, self._recorder)
 
         build_mode = BuildMode(build_modes, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,

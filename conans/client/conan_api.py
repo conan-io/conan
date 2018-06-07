@@ -47,7 +47,6 @@ from conans.client.cmd.export import cmd_export, export_alias
 from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
-from conans.client.proxy import ConanProxy
 
 
 default_manifest_folder = '.conan_manifests'
@@ -221,11 +220,9 @@ class ConanAPIV1(object):
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
-        proxy = ConanProxy(self._client_cache, self._user_io.out, self._remote_manager,
-                           recorder=action_recorder, registry=self._registry)
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager, proxy,
-                            self._settings_preprocessor, action_recorder, self._registry)
+                            self._remote_manager, self._settings_preprocessor,
+                            action_recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,

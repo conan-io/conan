@@ -5,6 +5,9 @@ from conans.model.conan_file import get_env_context_manager
 import fnmatch
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.range_resolver import RangeResolver
+from conans.client.graph.proxy import ConanProxy
+from conans.client.graph.graph import BINARY_BUILD
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -33,11 +36,12 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, proxy, output, loader, resolver, client_cache, registry, remote_manager):
-        self._proxy = proxy
+    def __init__(self, output, loader, client_cache, registry, remote_manager, action_recorder):
+        self._proxy = ConanProxy(client_cache, output, remote_manager,
+                                 recorder=action_recorder, registry=registry)
         self._output = output
         self._loader = loader
-        self._resolver = resolver
+        self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
@@ -55,7 +59,7 @@ class GraphManager(object):
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
                                 profile_build_requires):
         for node in list(graph.nodes):
-            if node.binary != "BUILD" and node.conan_ref:
+            if node.binary != BINARY_BUILD and node.conan_ref:
                 continue
 
             package_build_requires = self._get_recipe_build_requires(node.conanfile)

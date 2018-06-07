@@ -7,6 +7,8 @@ from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.manifest import FileTreeManifest
 from conans.model.info import ConanInfo
 from conans.paths import CONANINFO
+from conans.client.graph.graph import BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,\
+    BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP
 
 
 class GraphBinariesAnalyzer(object):
@@ -57,7 +59,7 @@ class GraphBinariesAnalyzer(object):
         output = ScopedOutput(str(conan_ref), self._out)
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
-            node.binary = "BUILD"
+            node.binary = BINARY_BUILD
             return
 
         package_folder = self._client_cache.package(package_ref,
@@ -73,40 +75,51 @@ class GraphBinariesAnalyzer(object):
             remote = self._registry.remote(remote_name)
         else:
             remote = self._registry.get_ref(conan_ref)
-        node.binary_remote = remote
+        remotes = self._registry.remotes
+
         if os.path.exists(package_folder):
             if update:
                 if remote:
                     if self._check_update(package_folder, package_ref, remote, output):
-                        node.binary = "UPDATE"
+                        node.binary = BINARY_UPDATE
                         if build_mode.outdated:
                             package_hash = self._get_package_info(package_ref, remote).recipe_hash
+                elif remotes:
+                    pass
                 else:
                     output.warn("Can't update, no remote defined")
             if not node.binary:
-                node.binary = "INSTALLED"
+                node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
+            elif remotes:  # Iterate all remotes to get this binary
+                for r in remotes:
+                    remote_info = self._get_package_info(package_ref, r)
+                    if remote_info:
+                        remote = r
+                        break
             if remote_info:
-                node.binary = "DOWNLOAD"
+                node.binary = BINARY_DOWNLOAD
                 package_hash = remote_info.recipe_hash
             else:
                 if build_mode.allowed(conanfile, conan_ref):
-                    node.binary = "BUILD"
+                    node.binary = BINARY_BUILD
                 else:
-                    node.binary = "MISSING"
+                    node.binary = BINARY_MISSING
 
         if build_mode.outdated:
-            if node.binary in ("INSTALLED", "DOWNLOAD", "UPDATE"):
+            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                 local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
-                    node.binary = "BUILD"
+                    node.binary = BINARY_BUILD
                 else:
                     output.info("Package is up to date")
+
+        node.binary_remote = remote
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
@@ -117,10 +130,10 @@ class GraphBinariesAnalyzer(object):
 
             if [r for r in conanfile.requires.values() if r.private]:
                 self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
-                if node.binary != "BUILD":
+                if node.binary != BINARY_BUILD:
                     closure = deps_graph.closure(node, private=True)
                     for node in closure.values():
-                        node.binary = "SKIP"
+                        node.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:
             conan_ref, conanfile = node.conan_ref, node.conanfile
