@@ -43,6 +43,7 @@ class ServerDiskAdapter(ServerStorageAdapter):
         self.updown_auth_manager = updown_auth_manager
         self._store_folder = base_storage_path
 
+    # ONLY USED BY APIV1
     def get_download_urls(self, paths, user=None):
         '''Get the urls for download the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}
@@ -61,6 +62,7 @@ class ServerDiskAdapter(ServerStorageAdapter):
 
         return ret
 
+    # ONLY USED BY APIV1
     def get_upload_urls(self, paths_sizes, user=None):
         '''Get the urls for upload the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}

@@ -1,9 +1,11 @@
-from conans.server.rest.controllers.controller import Controller
-from bottle import request, static_file, FileUpload, cached_property
-from conans.server.service.service import FileUploadDownloadService
 import os
 from unicodedata import normalize
+
 import six
+from bottle import request, static_file, FileUpload, cached_property
+
+from conans.server.rest.controllers.controller import Controller
+from conans.server.service.service import FileUploadDownloadService
 
 
 class FileUploadDownloadController(Controller):
