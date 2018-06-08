@@ -149,6 +149,9 @@ class AutoToolsBuildEnvironment(object):
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
+                #issue #2982: only env. vars included in WSLENV are exported to WSL winBash
+                if self._win_bash and self.subsystem=='wsl':
+                    os.environ["WSLENV"] = ':'.join(vars or self.vars)
                 configure_dir = self._adjust_path(configure_dir)
                 command = '%s/configure %s %s' % (configure_dir,
                                                   args_to_string(args), " ".join(triplet_args))
