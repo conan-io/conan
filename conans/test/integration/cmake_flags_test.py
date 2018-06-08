@@ -254,8 +254,7 @@ class MyLib(ConanFile):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
             client.run("install .")
-            error = client.run("build .", ignore_error=True)
-            self.assertFalse(error)
+            client.run("build .")
 
     def cmake_shared_flag_test(self):
         conanfile = """
