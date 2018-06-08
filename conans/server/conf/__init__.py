@@ -46,7 +46,8 @@ class ConanServerConfigParser(ConfigParser):
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
                            # "user:pass,user2:pass2"
-                           "users": get_env("CONAN_SERVER_USERS", None, environment)}
+                           "users": get_env("CONAN_SERVER_USERS", None, environment),
+                           "revisions": get_env("CONAN_SERVER_REVISIONS", None, environment)}
 
     def _get_file_conf(self, section, varname=None):
         """ Gets the section or variable from config file.
@@ -150,6 +151,17 @@ class ConanServerConfigParser(ConfigParser):
             return self._get_file_conf("write_permissions")
 
     @property
+    def revisions_enabled(self):
+        try:
+            revisions_enabled = self._get_conf_server_string("revisions").lower()
+            ret = revisions_enabled == "true" or revisions_enabled == "1"
+            if ret and self.store_adapter != "disk":
+                raise Exception("Revisions mechanism only work with disk storage")
+            return ret
+        except ConanException:
+            return None
+
+    @property
     def custom_authenticator(self):
         try:
             return self._get_conf_server_string("custom_authenticator")
@@ -181,7 +193,6 @@ class ConanServerConfigParser(ConfigParser):
         except ConanException:
             raise ConanException("'jwt_secret' setting is needed. Please, write a value "
                                  "in server.conf or set CONAN_JWT_SECRET env value.")
-
 
     @property
     def updown_secret(self):

@@ -22,6 +22,10 @@ disk_storage_path: ~/.conan_server/data
 disk_authorize_timeout: 1800
 updown_secret: {updown_secret}
 
+# Enable the revisions mechanism in the server
+revisions: False
+
+
 # Check docs.conan.io to implement a different authenticator plugin for conan_server
 # if custom_authenticator is not specified, [users] section will be used to authenticate
 # the users.

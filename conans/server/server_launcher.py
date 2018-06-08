@@ -12,6 +12,7 @@ from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
 from conans.paths import conan_expand_user, SimplePaths
 from conans import SERVER_CAPABILITIES
+from conans.server.store.server_store import ServerStore
 
 
 class ServerLauncher(object):
@@ -38,10 +39,13 @@ class ServerLauncher(object):
 
         server_capabilities = SERVER_CAPABILITIES
         paths = SimplePaths(server_config.disk_storage_path)
+        revisions_enabled = server_config.revisions_enabled
+        server_store = ServerStore(server_config.disk_storage_path)
+
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, file_manager, paths,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities)
+                              server_capabilities, revisions_enabled, server_store)
 
     def launch(self):
         self.ra.run(host="0.0.0.0")
