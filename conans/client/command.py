@@ -1192,6 +1192,8 @@ class Command(object):
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
+            import traceback
+            print(traceback.format_exc())
         except Exception as exc:
             import traceback
             print(traceback.format_exc())

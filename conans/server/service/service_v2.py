@@ -1,7 +1,7 @@
 import os
 from bottle import static_file, FileUpload
 
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.server.store.server_store import ServerStore
 from conans.util.files import mkdir
 
@@ -16,8 +16,6 @@ class RevisionManager(object):
         if not self._revision_enabled:
             return ""
         revision = header or self._server_store.get_last_revision(reference)
-        if not revision:
-            raise NotFoundException("'%s' not found" % str(reference))
         return revision
 
     def update_revision(self, reference, revision):
@@ -42,7 +40,7 @@ class ConanServiceV2(object):
         snap = self._server_store.get_conanfile_files_list(reference, revision)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "revision": revision}
+        return {"files": snap, "recipe_hash": revision}
 
     def get_conanfile_file(self, reference, filename, revision_header, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
@@ -68,7 +66,7 @@ class ConanServiceV2(object):
         snap = self._server_store.get_package_files_list(p_reference, revision)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "revision": revision}
+        return {"files": snap, "recipe_hash": revision}
 
     def get_package_file(self, p_reference, filename, revision_header, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)

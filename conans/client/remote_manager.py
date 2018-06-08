@@ -39,6 +39,7 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+        recipe_hash = self._client_cache.load_manifest(conan_reference).summary_hash
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
@@ -50,7 +51,7 @@ class RemoteManager(object):
             return None
 
         ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file, no_overwrite)
+                                retry, retry_wait, ignore_deleted_file, no_overwrite, recipe_hash)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
@@ -94,6 +95,7 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
+        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,
@@ -118,7 +120,7 @@ class RemoteManager(object):
             return None
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait, no_overwrite)
+                                retry, retry_wait, no_overwrite, recipe_hash)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)
@@ -161,23 +163,10 @@ class RemoteManager(object):
         dest_folder = self._client_cache.export(conan_reference)
         rmdir(dest_folder)
 
-        def filter_function(urls):
-            if CONANFILE not in list(urls.keys()):
-                raise NotFoundException("Conan '%s' doesn't have a %s!"
-                                        % (conan_reference, CONANFILE))
-            urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
-            return urls
-
         t1 = time.time()
-        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
-        print("AKI")
-        urls = filter_function(urls)
-        print("POLLA")
-        if not urls:
+        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        if not zipped_files:
             return conan_reference
-
-        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
-
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote, zipped_files)
 
@@ -189,20 +178,10 @@ class RemoteManager(object):
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        def filter_function(urls):
-            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
-            if file_url:
-                urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
-            else:
-                return None
-            return urls
-
-        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
-        urls = filter_function(urls)
-        if not urls:
+        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
+                                         export_folder)
+        if not zipped_files:
             return conan_reference
-
-        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, export_folder)
 
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
@@ -224,8 +203,7 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            urls = self._call_remote(remote, "get_package_urls", package_reference)
-            zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
+            zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)

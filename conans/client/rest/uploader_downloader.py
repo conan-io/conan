@@ -211,6 +211,8 @@ class Downloader(object):
 
 
 def progress_units(progress, total):
+    if total == 0:
+        return 0
     return min(50, int(50 * progress / total))
 
 

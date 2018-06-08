@@ -81,7 +81,7 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
-            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = ""
+            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "234234\nconanfile.py: 234234234"
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id

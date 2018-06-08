@@ -126,14 +126,15 @@ class ConanApiAuthManager(object):
 
     @input_credentials_if_unauthorized
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite):
+                      no_overwrite, recipe_hash):
         return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                               ignore_deleted_file, no_overwrite)
+                                               ignore_deleted_file, no_overwrite, recipe_hash)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite,
+                       recipe_hash):
         return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait,
-                                                no_overwrite)
+                                                no_overwrite, recipe_hash)
 
     @input_credentials_if_unauthorized
     def get_conan_manifest(self, conan_reference):
@@ -144,12 +145,16 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_package_manifest(package_reference)
 
     @input_credentials_if_unauthorized
-    def get_recipe_urls(self, conan_reference):
-        return self._rest_client.get_recipe_urls(conan_reference)
+    def get_package(self, package_reference, dest_folder):
+        return self._rest_client.get_package(package_reference, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_package_urls(self, package_reference):
-        return self._rest_client.get_package_urls(package_reference)
+    def get_recipe(self, reference, dest_folder):
+        return self._rest_client.get_recipe(reference, dest_folder)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_sources(self, reference, dest_folder):
+        return self._rest_client.get_recipe_sources(reference, dest_folder)
 
     @input_credentials_if_unauthorized
     def download_files_to_folder(self, urls, dest_folder):

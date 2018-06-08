@@ -1,4 +1,6 @@
 from bottle import request
+
+from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.rest.controllers.controller import Controller
 from conans.server.service.service_v2 import ConanServiceV2
@@ -36,7 +38,10 @@ class ConanControllerV2(Controller):
 
         @app.route('%s/<the_path:path>' % package_route, method=["PUT"])
         def upload_package_file(name, version, username, channel, package_id, the_path, auth_user):
-
+            if not get_revision_header():
+                raise ConanException("Missing recipe hash header")
+            if "X-Checksum-Deploy" in request.headers:
+                raise NotFoundException("Non checksum storage")
             reference = ConanFileReference(name, version, username, channel)
             package_reference = PackageReference(reference, package_id)
             conan_service.upload_package_file(request.body, request.headers, package_reference,
@@ -59,6 +64,10 @@ class ConanControllerV2(Controller):
 
         @app.route('%s/<the_path:path>' % recipe_route, method=["PUT"])
         def upload_recipe_file(name, version, username, channel, the_path, auth_user):
+            if not get_revision_header():
+                raise ConanException("Missing recipe hash header")
+            if "X-Checksum-Deploy" in request.headers:
+                raise NotFoundException("Non checksum storage")
             reference = ConanFileReference(name, version, username, channel)
             conan_service.upload_recipe_file(request.body, request.headers, reference, the_path,
                                              get_revision_header(), auth_user)

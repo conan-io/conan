@@ -35,6 +35,8 @@ class ServerStore(SimplePaths):
                 f.write(revision)
 
     def get_conanfile_path(self, reference, revision):
+        if revision is None:
+            revision = ""
         return os.path.abspath(os.path.join(self.conan(reference), revision, EXPORT_FOLDER))
 
     def get_conanfile_files_list(self, reference, revision):
@@ -50,6 +52,8 @@ class ServerStore(SimplePaths):
         return abspath
 
     def get_package_path(self, p_reference, revision):
+        if revision is None:
+            revision = ""
         return os.path.abspath(os.path.join(self.conan(p_reference.conan), revision,
                                             PACKAGES_FOLDER, p_reference.package_id))
 
@@ -61,5 +65,6 @@ class ServerStore(SimplePaths):
         return {filepath: sha1sum(os.path.join(abspath, filepath)) for filepath in paths}
 
     def get_package_file_path(self, p_reference, filename, revision):
-        abspath = os.path.abspath(os.path.join(self.package(p_reference), revision, filename))
+        abspath = os.path.abspath(os.path.join(self.get_package_path(p_reference, revision),
+                                               filename))
         return abspath

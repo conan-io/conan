@@ -39,6 +39,7 @@ class ConanServer(object):
         self.api_v2.authenticator = authenticator
         self.api_v2.server_store = server_store
         self.api_v2.paths = paths
+        self.api_v2.file_manager = file_manager
         self.api_v2.setup()
 
         self.root_app = bottle.Bottle()

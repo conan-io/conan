@@ -26,10 +26,9 @@ class ApiV2(ApiV1):
         # Capabilities in a ping
         PingController("").attach_to(self)
 
-        # Install conans controller
-        ConanControllerV2("/conans").attach_to(self)
         SearchController("/conans").attach_to(self)
         DeleteController("/conans").attach_to(self)
+        ConanControllerV2("/conans").attach_to(self)
 
         # Install users controller
         UsersController("/users").attach_to(self)

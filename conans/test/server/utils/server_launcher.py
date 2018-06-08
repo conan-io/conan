@@ -5,6 +5,7 @@ from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+from conans.server.store.server_store import ServerStore
 from conans.util.log import logger
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
@@ -52,6 +53,8 @@ class TestServerLauncher(object):
                                                    server_config.authorize_timeout)
         self.file_manager = get_file_manager(server_config, public_url=base_url,
                                              updown_auth_manager=updown_auth_manager)
+        revisions_enabled = server_config.revisions_enabled
+        server_store = ServerStore(server_config.disk_storage_path)
 
         # Prepare some test users
         if not read_permissions:
@@ -78,7 +81,7 @@ class TestServerLauncher(object):
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.file_manager, self.paths,
                               server_version, min_client_compatible_version,
-                              server_capabilities)
+                              server_capabilities, revisions_enabled, server_store)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
 
