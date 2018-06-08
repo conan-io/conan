@@ -820,9 +820,8 @@ build_type: [ Release]
         cmake = instance_with_os_build("Macos")
         self.assertEquals(cmake.generator, "Unix Makefiles")
 
-        with self.assertRaisesRegexp(ConanException, "You must specify compiler, "
-                                                     "compiler.version and arch"):
-            instance_with_os_build("Windows")
+        cmake = instance_with_os_build("Windows")
+        self.assertEquals(cmake.generator, None)
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
             cmake = instance_with_os_build("Windows")
