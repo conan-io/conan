@@ -10,14 +10,12 @@ def users_list(client_cache, registry, remote_name, output):
         raise ConanException("No remotes defined")
 
     localdb = LocalDB(client_cache.localdb)
-    result = []
     for remote in remotes:
         user, token = localdb.get_login(remote.url)
         authenticated = " [Authenticated]" if token else ""
         anonymous = " (anonymous)" if not user else ""
         output.info("Current '%s' remote's user: '%s'%s%s" %
                     (remote.name, str(user), anonymous, authenticated))
-    return result
 
 
 def users_clean(client_cache):

@@ -661,11 +661,7 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        users = users_list(self._client_cache, self._registry, remote, self._user_io.out)
-        # for remote_name, username, token in users:
-        #     authenticated = "[Authenticated]" if token else ""
-        #     self._user_io.out.info("Current '%s' user: '%s' %s" %
-        #                            (remote_name, username, authenticated))
+        users_list(self._client_cache, self._registry, remote, self._user_io.out)
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
