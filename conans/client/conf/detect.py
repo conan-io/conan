@@ -33,7 +33,9 @@ def _gcc_compiler(output, compiler_exe="gcc"):
             if "clang" in out:
                 return None
 
-        _, out = _execute('%s -dumpversion' % compiler_exe)
+        ret, out = _execute('%s -dumpversion' % compiler_exe)
+        if ret != 0:
+            return None
         compiler = "gcc"
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
@@ -52,7 +54,9 @@ def _gcc_compiler(output, compiler_exe="gcc"):
 
 def _clang_compiler(output, compiler_exe="clang"):
     try:
-        _, out = _execute('%s --version' % compiler_exe)
+        ret, out = _execute('%s --version' % compiler_exe)
+        if ret != 0:
+            return None
         if "Apple" in out:
             compiler = "apple-clang"
         elif "clang version" in out:

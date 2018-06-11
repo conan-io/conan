@@ -36,6 +36,8 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST}})
         message(STATUS "Found: ${{CONAN_FOUND_LIBRARY}}")
     else()
         message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
+        list(APPEND {name}_LIBRARIES_TARGETS ${{_LIBRARY_NAME}})
+        list(APPEND {name}_LIBRARIES ${{_LIBRARY_NAME}})
     endif()
 endforeach()
 set({name}_LIBS ${{{name}_LIBRARIES}})
@@ -49,7 +51,7 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
           INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
         endif()
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}})
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.defines})
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.compile_definitions})
     endif()
     {find_dependencies}
 endif()
@@ -89,7 +91,6 @@ class CMakeFindPackageGenerator(Generator):
                 return ["get_target_property(tmp %s %s)" % (dep_t, prop),
                         "if(tmp)",
                         "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
-                        '  message("${tmp}")',
                         'endif()']
 
             lines.append("find_dependency(%s REQUIRED)" % dep)

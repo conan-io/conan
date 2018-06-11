@@ -1,4 +1,3 @@
-import glob
 import json
 import os
 import platform
@@ -361,17 +360,22 @@ def get_cased_path(name):
         return name
     if not os.path.isabs(name):
         name = os.path.abspath(name)
-    dirs = name.split('\\')
-    # disk letter
-    test_name = [dirs[0].upper()]
-    for d in dirs[1:]:
-        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
 
-    res = glob.glob('\\'.join(test_name))
-    if not res:
-        # File not found
-        return None
-    return res[0]
+    result = []
+    current = name
+    while True:
+        parent, child = os.path.split(current)
+        if parent == current:
+            break
+        children = os.listdir(parent)
+        for c in children:
+            if c.upper() == child.upper():
+                result.append(c)
+                break
+        current = parent
+    drive, _ = os.path.splitdrive(current)
+    result.append(drive)
+    return os.sep.join(reversed(result))
 
 
 MSYS2 = 'msys2'

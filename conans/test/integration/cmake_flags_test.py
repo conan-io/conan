@@ -254,13 +254,7 @@ class MyLib(ConanFile):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
             client.run("install .")
-            error = client.run("build .", ignore_error=True)
-            if platform.system() == "Windows":
-                self.assertTrue(error)
-                self.assertIn("You must specify compiler, compiler.version and arch in "
-                              "your settings to use a CMake generator", client.user_io.out,)
-            else:
-                self.assertFalse(error)
+            client.run("build .")
 
     def cmake_shared_flag_test(self):
         conanfile = """
@@ -340,9 +334,46 @@ target_link_libraries(mylib ${CONAN_LIBS})
         client.run("install . --install-folder=build -s cppstd=14")
         client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
+        self.assertNotIn("Conan setting CXX_FLAGS flags", client.out)
         libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
+
+    def standard_20_as_cxx_flag_test(self):
+        # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "arch", "compiler", "cppstd"
+    exports_sources = "CMakeLists.txt"
+    generators = "cmake"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+"""
+        cmakelists = """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_set_std()
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
+                   "-s compiler.libcxx=libstdc++11")
+        self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
+
+        client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
+                   "-s compiler.libcxx=libstdc++11")
+        self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
 
     def fpic_applied_test(self):
         conanfile = """

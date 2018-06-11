@@ -61,63 +61,15 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
       $ git clone https://github.com/conan-io/conan.git
 
-- **Install python requirements**
-
-  - For running the client:
+- **Install in editable mode**
 
     .. code-block:: bash
 
-        $ sudo pip install -r conans/requirements.txt
-
-
-    In OSX you should also install:
-
-    .. code-block:: bash
-
-        $ sudo pip install -r conans/requirements_osx.txt
-
-  - For running the server:
-
-    .. code-block:: bash
-
-        $ sudo apt-get install python-dev
-        $ sudo pip install -r conans/requirements_server.txt
-
-  - Development (for running the tests):
-
-    .. code-block:: bash
-
-        $ sudo pip install -r conans/requirements_dev.txt
+        $ cd conan && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
-
-- **Create a launcher**
-
-  Conan entry point is "conans.conan.main" module. Fill the absolute path
-  of the cloned repository folder:
-
-  .. code-block:: bash
-
-      #!/usr/bin/env python
-      import sys
-      conan_sources_dir = '/home/user/conan'  # EDIT!!
-
-      sys.path.insert(1, conan_sources_dir)
-      # Or append to sys.path to prioritize a binary installation before the source code one
-      # sys.path.append(conan_sources_dir)
-
-      from conans.conan import main
-      main(sys.argv[1:])
-
-  If you are a Windows user, you can name this file *conan.py* and create
-  a file *conan.bat* that calls the python module:
-
-  .. code-block:: bash
-
-      CALL python C:/Users/user/conan.py %*
-
-- **Then add that 'conan' file to your PATH and you are ready:**
+- **You are ready, try to run conan:**
 
   .. code-block::
 
@@ -155,10 +107,27 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 Running the tests
 =================
 
-Make sure that the Python requirements for testing have been installed, as explained above.
+**Install python requirements**
 
-Before you can run the tests, you need to set a few environment
-variables first.
+.. code-block:: bash
+
+    $ pip install -r conans/requirements.txt
+    $ pip install -r conans/requirements_server.txt
+    $ pip install -r conans/requirements_dev.txt
+
+
+Only in OSX:
+
+
+.. code-block:: bash
+
+    $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
+
+
+If you are not Windows and you are not using a python virtual environment, you will need to run these
+commands using `sudo`.
+
+Before you can run the tests, you need to set a few environment variables first.
 
 .. code-block:: bash
 
@@ -177,9 +146,8 @@ version with the following command:
 
     $ cmake --version
 
-The appropriate values of ``CONAN_COMPILER`` and
-``CONAN_COMPILER_VERSION`` depend on your operating system and your
-requirements.
+The appropriate values of ``CONAN_COMPILER`` and ``CONAN_COMPILER_VERSION`` depend on your
+operating system and your requirements.
 
 These should work for the GCC from ``build-essential`` on Ubuntu 14.04:
 

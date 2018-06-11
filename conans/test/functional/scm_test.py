@@ -18,7 +18,6 @@ class ConanLib(ConanFile):
     short_paths = True
     scm = {{
         "type": "git",
-        "directory": {directory},
         "url": "{url}",
         "revision": "{revision}",
     }}
@@ -41,6 +40,31 @@ class SCMTest(unittest.TestCase):
         self.client.runner("git add .", cwd=self.client.current_folder)
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
+    def test_repeat_clone_changing_subfolder(self):
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}",
+        "subfolder": "onesubfolder"
+    }}
+'''
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+        conanfile = tmp.format(url=path, revision=commit)
+        self.client.save({"conanfile.py": conanfile,
+                          "myfile.txt": "My file is copied"})
+        self.client.run("create . user/channel")
+        conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        self.assertIn("othersubfolder", os.listdir(folder))
+
     def test_auto_git(self):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
@@ -48,7 +72,7 @@ class SCMTest(unittest.TestCase):
         self._commit_contents()
         error = self.client.run("export . user/channel", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Repo origin cannot be deduced by 'auto', using source folder",
+        self.assertIn("Repo origin cannot be deduced by 'auto'",
                       self.client.out)
 
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
@@ -64,8 +88,7 @@ class SCMTest(unittest.TestCase):
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir)
-        self.client.save({"conanfile.py": base.format(directory="None",
-                                                      url=curdir, revision=git.get_revision())})
+        self.client.save({"conanfile.py": base.format(url=curdir, revision=git.get_revision())})
         self.client.run("create . user/channel")
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertFalse(os.path.exists(sources_dir))
@@ -77,7 +100,7 @@ class SCMTest(unittest.TestCase):
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         curdir = self.client.current_folder.replace("\\", "/")
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=curdir)
@@ -93,7 +116,7 @@ class SCMTest(unittest.TestCase):
 
     def test_local_source(self):
         curdir = self.client.current_folder
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         conanfile += """
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
@@ -111,8 +134,7 @@ class SCMTest(unittest.TestCase):
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir.replace("\\", "/"))
-        conanfile = base.format(directory="None",
-                                url=curdir.replace("\\", "/"), revision=git.get_revision())
+        conanfile = base.format(url=curdir.replace("\\", "/"), revision=git.get_revision())
         conanfile += """
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
@@ -133,7 +155,7 @@ class SCMTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
         curdir = self.client.current_folder.replace("\\", "/")
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
         cmd = 'git remote add origin "%s"' % curdir

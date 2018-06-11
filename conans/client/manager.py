@@ -25,9 +25,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
-from conans.client.loader_parse import load_conanfile_class
 from conans.client.graph.build_mode import BuildMode
-from conans.client.cmd.download import download_binaries
 from conans.client.graph.printer import print_graph
 
 
@@ -136,47 +134,6 @@ class ConanManager(object):
         else:
             packager.create_package(conanfile, pkg_id, source_folder, build_folder,
                                     dest_package_folder, install_folder, package_output, local=True)
-
-    def download(self, reference, package_ids, remote_name, recipe):
-        """ Download conanfile and specified packages to local repository
-        @param reference: ConanFileReference
-        @param package_ids: Package ids or empty for download all
-        @param remote: install only from that remote
-        @param only_recipe: download only the recipe
-        """
-        assert(isinstance(reference, ConanFileReference))
-        output = ScopedOutput(str(reference), self._user_io.out)
-        remote = self._registry.remote(remote_name) if remote_name else self._registry.default_remote
-        package = self._remote_manager.search_recipes(remote, reference, None)
-        if not package:  # Search the reference first, and raise if it doesn't exist
-            raise ConanException("'%s' not found in remote" % str(reference))
-
-        # First of all download package recipe
-        self._remote_manager.get_recipe(reference, remote)
-        self._registry.set_ref(reference, remote)
-
-        if recipe:
-            return
-
-        # Download the sources too, don't be lazy
-        conan_file_path = self._client_cache.conanfile(reference)
-        conanfile = load_conanfile_class(conan_file_path)
-        complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
-                                conanfile, reference)
-
-        if package_ids:
-            download_binaries(reference, package_ids, self._client_cache, self._remote_manager,
-                              remote, output, self._recorder)
-        else:
-            output.info("Getting the complete package list "
-                        "from '%s'..." % str(reference))
-            packages_props = self._remote_manager.search_packages(remote, reference, None)
-            if not packages_props:
-                output = ScopedOutput(str(reference), self._user_io.out)
-                output.warn("No remote binary packages found in remote")
-            else:
-                download_binaries(reference, list(packages_props.keys()), self._client_cache,
-                                  self._remote_manager, remote, output, self._recorder)
 
     @staticmethod
     def _inject_require(conanfile, inject_require):

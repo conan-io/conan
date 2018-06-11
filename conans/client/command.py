@@ -1305,11 +1305,17 @@ def main(args):
             print('You pressed Ctrl+C!')
             sys.exit(3)
 
+        def sigterm_handler(_, __):
+            print('Received SIGTERM!')
+            sys.exit(5)
+
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
             sys.exit(4)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
         if sys.platform == 'win32':
             signal.signal(signal.SIGBREAK, ctrl_break_handler)
         error = command.run(args)
