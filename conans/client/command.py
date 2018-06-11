@@ -766,36 +766,43 @@ class Command(object):
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force, packages=args.package or args.all)
 
-    def user(self, *parameters):
+    def user(self, *args):
         """Authenticates against a remote with user/pass, caching the auth token. Useful to avoid
         the user and password being requested later. e.g. while you're uploading a package.
         You can have one user for each remote. Changing the user, or introducing the
         password is only necessary to perform changes in remote packages.
         """
+        # FIXME: Difficult and confusing CLI. Better with:
+        # - conan user clean -> clean users
+        # - conan user list ('remote') -> list users (of a remote)
+        # - conan user auth 'remote' ('user') ('password') -> login a remote (w/o user or pass)
+        # - conan user set 'user' 'remote' -> set user for a remote (not login) necessary??
         parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. If no name is provided it will show the'
                             ' current user')
         parser.add_argument('-c', '--clean', default=False, action='store_true',
                             help='Remove user and tokens for all remotes')
-        parser.add_argument("-p", "--password", nargs='?', const="", type=str,
-                            action=OnceArgument,
+        parser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
                             help='User password. Use double quotes if password with spacing, '
                                  'and escape quotes if existing. If empty, the password is '
                                  'requested interactively (not exposed)')
         parser.add_argument("-r", "--remote", help='Use the specified remote server',
                             action=OnceArgument)
-        args = parser.parse_args(*parameters)  # To enable -h
+        args = parser.parse_args(*args)
 
-        if args.clean:
-            return self._conan.users_clean()
-        if args.password is None:
-            if args.name is None:
-                return self._conan.users_list(args.remote)
-            else:
-                return self._conan.user_set(args.name, args.remote)
-        return self._conan.authenticate(name=args.name, remote=args.remote,
-                                        password=args.password)
+        if args.clean and any((args.name, args.remote, args.password)):
+            raise ConanException("'--clean' argument cannot be used together with 'name', "
+                                 "'--password' or '--remote'")
+
+        if args.clean:  # clean users
+            self._conan.users_clean()
+        elif not args.name and args.password is None:  # list users
+            self._conan.users_list(args.remote)
+        elif args.password is None:  # set user for remote (no password indicated)
+            self._conan.user_set(args.name, args.remote)
+        else:  # login a remote
+            self._conan.authenticate(args.name, args.password, args.remote)
 
     def search(self, *args):
         """Searches package recipes and binaries in the local cache or in a remote.

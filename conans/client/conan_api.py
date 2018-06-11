@@ -645,13 +645,10 @@ class ConanAPIV1(object):
 
     @api_method
     def authenticate(self, name, password, remote=None):
-        if not remote:
-            remote = self._registry.default_remote
-        else:
-            remote = self._registry.remote(remote)
-        if password == "":
-            name, password = self._user_io.request_login(remote_name=remote.name,
-                                                         username=name)
+        remote = self._registry.remote(remote) if remote else self._registry.default_remote
+
+        if not password:
+            name, password = self._user_io.request_login(remote_name=remote.name, username=name)
         self._remote_manager.authenticate(remote, name, password)
 
     @api_method
@@ -664,9 +661,11 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        users = users_list(self._client_cache, self._registry, remote)
-        for remote_name, username in users:
-            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
+        users = users_list(self._client_cache, self._registry, remote, self._user_io.out)
+        # for remote_name, username, token in users:
+        #     authenticated = "[Authenticated]" if token else ""
+        #     self._user_io.out.info("Current '%s' user: '%s' %s" %
+        #                            (remote_name, username, authenticated))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
