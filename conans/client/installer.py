@@ -313,6 +313,57 @@ class ConanInstaller(object):
         return [(PackageReference(node.conan_ref, package_id), node.conanfile)
                 for node, package_id, build in nodes if build]
 
+    def _handle_node_cache(self, node, package_id, build_needed, keep_build, profile_build_requires,
+                           inverse_levels, deps_graph, update):
+        conan_ref, conan_file = node.conan_ref, node.conanfile
+        output = ScopedOutput(str(conan_ref), self._out)
+        package_ref = PackageReference(conan_ref, package_id)
+        package_folder = self._client_cache.package(package_ref,
+                                                    conan_file.short_paths)
+
+        with self._client_cache.package_lock(package_ref):
+            set_dirty(package_folder)
+            if build_needed and (conan_ref, package_id) not in self._built_packages:
+                self._build_package(node, package_id, package_ref, output,
+                                    keep_build, profile_build_requires, inverse_levels, deps_graph, update)
+            else:
+                self._get_existing_package(conan_file, package_ref, output, package_folder, update)
+                self._propagate_info(node, inverse_levels, deps_graph)
+
+            # Call the info method
+            self._call_package_info(conan_file, package_folder)
+            clean_dirty(package_folder)
+
+    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
+        conan_ref, conan_file = node.conan_ref, node.conanfile
+        output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
+        include_dirs = workspace_package.includedirs
+        lib_dirs = workspace_package.libdirs
+        self._call_package_info(conan_file, workspace_package.package_folder)
+        if include_dirs:
+            conan_file.cpp_info.includedirs = include_dirs
+        if lib_dirs:
+            conan_file.cpp_info.libdirs = lib_dirs
+            # Make sure the folders exists, otherwise they will be filtered out
+            lib_paths = [os.path.join(conan_file.cpp_info.rootpath, p)
+                         if not os.path.isabs(p) else p for p in lib_dirs]
+            for p in lib_paths:
+                mkdir(p)
+
+        self._propagate_info(node, inverse_levels, deps_graph)
+
+        build_folder = workspace_package.build_folder
+        write_generators(conan_file, build_folder, output)
+        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
+        output.info("Generated %s" % CONANINFO)
+        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
+        output.info("Generated %s" % BUILD_INFO)
+        # Build step might need DLLs, binaries as protoc to generate source files
+        # So execute imports() before build, storing the list of copied_files
+        from conans.client.importer import run_imports
+        copied_files = run_imports(conan_file, build_folder, output)
+        report_copied_files(copied_files, output)
+
     def _build(self, nodes_to_process, deps_graph, skip_nodes, profile_build_requires, keep_build,
                root_node, update):
         """ The build assumes an input of conans ordered by degree, first level
@@ -325,54 +376,12 @@ class ConanInstaller(object):
             level[:] = [n for n in level if n not in skip_nodes]
 
         for node, package_id, build_needed in nodes_to_process:
-            conan_ref, conan_file = node.conan_ref, node.conanfile
-            output = ScopedOutput(str(conan_ref), self._out)
-
-            workspace_package = self._workspace[conan_ref] if self._workspace else None
+            workspace_package = self._workspace[node.conan_ref] if self._workspace else None
             if workspace_package:
-                output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
-                include_dirs = workspace_package.includedirs
-                lib_dirs = workspace_package.libdirs
-                self._call_package_info(conan_file, workspace_package.package_folder)
-                if include_dirs:
-                    conan_file.cpp_info.includedirs = include_dirs
-                if lib_dirs:
-                    conan_file.cpp_info.libdirs = lib_dirs
-                    # Make sure the folders exists, otherwise they will be filtered out
-                    lib_paths = [os.path.join(conan_file.cpp_info.rootpath, p)
-                                 if not os.path.isabs(p) else p for p in lib_dirs]
-                    for p in lib_paths:
-                        mkdir(p)
-
-                self._propagate_info(node, inverse_levels, deps_graph)
-
-                build_folder = workspace_package.build_folder
-                write_generators(conan_file, build_folder, output)
-                save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-                output.info("Generated %s" % CONANINFO)
-                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
-                output.info("Generated %s" % BUILD_INFO)
-                # Build step might need DLLs, binaries as protoc to generate source files
-                # So execute imports() before build, storing the list of copied_files
-                from conans.client.importer import run_imports
-                copied_files = run_imports(conan_file, build_folder, output)
-                report_copied_files(copied_files, output)
+                self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
             else:
-                package_ref = PackageReference(conan_ref, package_id)
-                package_folder = self._client_cache.package(package_ref,
-                                                            conan_file.short_paths)
-                with self._client_cache.package_lock(package_ref):
-                    set_dirty(package_folder)
-                    if build_needed and (conan_ref, package_id) not in self._built_packages:
-                        self._build_package(node, package_id, package_ref, output,
-                                            keep_build, profile_build_requires, inverse_levels, deps_graph, update)
-                    else:
-                        self._get_existing_package(conan_file, package_ref, output, package_folder, update)
-                        self._propagate_info(node, inverse_levels, deps_graph)
-
-                    # Call the info method
-                    self._call_package_info(conan_file, package_folder)
-                    clean_dirty(package_folder)
+                self._handle_node_cache(node, package_id, build_needed, keep_build, profile_build_requires,
+                                        inverse_levels, deps_graph, update)
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph)
@@ -446,12 +455,13 @@ class ConanInstaller(object):
     @staticmethod
     def _propagate_info(node, levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        closure = deps_graph.closure(node)
+        closure = deps_graph.full_closure(node)
         node_order = []
         for level in levels:
-            for n in closure.values():
+            for n in closure:
                 if n in level:
                     node_order.append(n)
+
         conan_file = node.conanfile
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
