@@ -7,6 +7,7 @@ from conans.errors import ConanException, conanfile_exception_formatter, ConanEx
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node
+from conans.model.workspace import WORKSPACE_FILE
 
 
 class DepsGraphBuilder(object):
@@ -17,6 +18,7 @@ class DepsGraphBuilder(object):
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._workspace = None
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -202,13 +204,22 @@ class DepsGraphBuilder(object):
                          check_updates, update, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        result = self._proxy.get_recipe(requirement.conan_reference,
-                                        check_updates, update)
-        conanfile_path, remote = result
+
+        workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
+        if workspace_package:
+            conanfile_path = workspace_package.conanfile_path
+            remote = WORKSPACE_FILE
+        else:
+            result = self._proxy.get_recipe(requirement.conan_reference,
+                                            check_updates, update)
+            conanfile_path, remote = result
+
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
 
+        if workspace_package:
+            workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)

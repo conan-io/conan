@@ -47,6 +47,7 @@ from conans.client.cmd.export import cmd_export, export_alias
 from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
+from conans.model.workspace import Workspace
 
 
 default_manifest_folder = '.conan_manifests'
@@ -444,14 +445,29 @@ class ConanAPIV1(object):
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
-            install_folder = _make_abs_path(install_folder, cwd)
-            conanfile_path = _get_conanfile_path(path, cwd, py=None)
-
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
             profile = profile_from_args(profile_name, settings, options, env, cwd,
                                         self._client_cache)
+
+            wspath = _make_abs_path(path, cwd)
+            if install_folder:
+                if os.path.isabs(install_folder):
+                    wsinstall_folder = install_folder
+                else:
+                    wsinstall_folder = os.path.join(cwd, install_folder)
+            else:
+                wsinstall_folder = None
+            workspace = Workspace.get_workspace(wspath, wsinstall_folder)
+            if workspace:
+                self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
+                manager = self._init_manager(recorder)
+                manager.install_workspace(profile, workspace, remote, build, update)
+                return
+
+            install_folder = _make_abs_path(install_folder, cwd)
+            conanfile_path = _get_conanfile_path(path, cwd, py=None)
             manager = self._init_manager(recorder)
             manager.install(reference=conanfile_path,
                             install_folder=install_folder,
