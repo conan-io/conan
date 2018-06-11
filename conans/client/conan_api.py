@@ -653,11 +653,11 @@ class ConanAPIV1(object):
 
     @api_method
     def user_set(self, user, remote_name=None):
-        return user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
+        user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
 
     @api_method
     def users_clean(self):
-        return users_clean(self._client_cache)
+        users_clean(self._client_cache)
 
     @api_method
     def users_list(self, remote=None):

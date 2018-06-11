@@ -802,7 +802,7 @@ class Command(object):
         elif args.password is None:  # set user for remote (no password indicated)
             self._conan.user_set(args.name, args.remote)
         else:  # login a remote
-            self._conan.authenticate(args.name, args.password, args.remote)
+            self._conan.authenticate(args.name, password=args.password, remote=args.remote)
 
     def search(self, *args):
         """Searches package recipes and binaries in the local cache or in a remote.
