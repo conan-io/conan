@@ -95,7 +95,8 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
-        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
+        recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
+
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,

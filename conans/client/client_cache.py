@@ -8,12 +8,13 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
+from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case,\
-    CONAN_MANIFEST
+    CONAN_MANIFEST, CONANINFO
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 from conans.unicode import get_cwd
@@ -228,6 +229,11 @@ class ClientCache(SimplePaths):
         if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
             return None, None
         return self._digests(package_folder)
+
+    def load_package_info(self, package_reference):
+        package_folder = self.package(package_reference, short_paths=None)
+        info_path = os.path.join(package_folder, CONANINFO)
+        return ConanInfo.load_file(info_path)
 
     @staticmethod
     def _digests(folder, exports_sources_folder=None):

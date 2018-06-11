@@ -6,6 +6,7 @@ from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
+from conans.model import RECIPE_HASH_HEADER, PACKAGE_HASH_HEADER
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
@@ -71,7 +72,8 @@ class RestV2Methods(RestCommonMethods):
         data = self.get_json(url)
         files = data["files"]
         recipe_hash = data["recipe_hash"]
-        self._download_and_save_files(url, dest_folder, files, recipe_hash)
+        package_hash = data["package_hash"]
+        self._download_and_save_files(url, dest_folder, files, recipe_hash, package_hash)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -148,7 +150,7 @@ class RestV2Methods(RestCommonMethods):
                            for filename in new + modified}
 
         if files_to_upload:
-            headers = {"CONAN_RECIPE_HASH": recipe_hash}
+            headers = {RECIPE_HASH_HEADER: recipe_hash}
             self._upload_files(files_to_upload, url, retry, retry_wait, headers)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
@@ -156,7 +158,7 @@ class RestV2Methods(RestCommonMethods):
         return files_to_upload or deleted
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite,
-                       recipe_hash):
+                       recipe_hash, package_hash):
         self.check_credentials()
 
         t1 = time.time()
@@ -183,7 +185,7 @@ class RestV2Methods(RestCommonMethods):
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
-            headers = {"CONAN_RECIPE_HASH": recipe_hash}
+            headers = {RECIPE_HASH_HEADER: recipe_hash, PACKAGE_HASH_HEADER: package_hash}
             self._upload_files(files_to_upload, url, retry, retry_wait, headers)
         if deleted:
             self._remove_package_files(package_reference, deleted)
@@ -222,8 +224,10 @@ class RestV2Methods(RestCommonMethods):
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
 
-    def _download_and_save_files(self, base_url, dest_folder, files, recipe_hash):
-        headers = {"CONAN_RECIPE_HASH": recipe_hash}
+    def _download_and_save_files(self, base_url, dest_folder, files, recipe_hash, package_hash=None):
+        headers = {RECIPE_HASH_HEADER: recipe_hash}
+        if package_hash:
+            headers[PACKAGE_HASH_HEADER] = package_hash
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first

@@ -20,6 +20,9 @@ class ServerStore(SimplePaths):
     def _last_revision_path(self, reference):
         return os.path.join(self.conan(reference), LAST_REVISION_FILE)
 
+    def _last_package_revision_path(self, p_reference):
+        return os.path.join(self.package(p_reference), LAST_REVISION_FILE)
+
     def get_last_revision(self, reference):
         rev_file = self._last_revision_path(reference)
         if os.path.exists(rev_file):
@@ -30,6 +33,20 @@ class ServerStore(SimplePaths):
 
     def update_last_revision(self, reference, revision):
         rev_file = self._last_revision_path(reference)
+        with fasteners.InterProcessLock(rev_file + ".lock", logger=logger):
+            with open(rev_file, "w") as f:
+                f.write(revision)
+
+    def get_last_package_revision(self, p_reference):
+        rev_file = self._last_package_revision_path(p_reference)
+        if os.path.exists(rev_file):
+            with open(rev_file, "r") as file:
+                return file.read()
+        else:
+            return None
+
+    def update_last_package_revision(self, p_reference, revision):
+        rev_file = self._last_package_revision_path(p_reference)
         with fasteners.InterProcessLock(rev_file + ".lock", logger=logger):
             with open(rev_file, "w") as f:
                 f.write(revision)
@@ -51,11 +68,11 @@ class ServerStore(SimplePaths):
                                                filename))
         return abspath
 
-    def get_package_path(self, p_reference, revision):
+    def get_package_path(self, p_reference, revision, p_revision):
         if revision is None:
             revision = ""
         return os.path.abspath(os.path.join(self.conan(p_reference.conan), revision,
-                                            PACKAGES_FOLDER, p_reference.package_id))
+                                            PACKAGES_FOLDER, p_reference.package_id, p_revision))
 
     def get_package_files_list(self, p_reference, revision):
         abspath = self.get_package_path(p_reference, revision)
@@ -64,7 +81,7 @@ class ServerStore(SimplePaths):
         paths = relative_dirs(abspath)
         return {filepath: sha1sum(os.path.join(abspath, filepath)) for filepath in paths}
 
-    def get_package_file_path(self, p_reference, filename, revision):
-        abspath = os.path.abspath(os.path.join(self.get_package_path(p_reference, revision),
-                                               filename))
+    def get_package_file_path(self, p_reference, filename, revision, p_revision):
+        p_path = self.get_package_path(p_reference, revision, p_revision)
+        abspath = os.path.abspath(os.path.join(p_path, filename))
         return abspath

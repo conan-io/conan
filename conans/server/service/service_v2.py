@@ -1,7 +1,7 @@
 import os
 from bottle import static_file, FileUpload
 
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException
 from conans.server.store.server_store import ServerStore
 from conans.util.files import mkdir
 
@@ -22,6 +22,17 @@ class RevisionManager(object):
         if not self._revision_enabled:
             return
         self._server_store.update_last_revision(reference, revision)
+
+    def get_package_revision(self, p_reference, header):
+        if not self._revision_enabled:
+            return ""
+        revision = header or self._server_store.get_last_package_revision(p_reference)
+        return revision
+
+    def update_package_revision(self, p_reference, revision):
+        if not self._revision_enabled:
+            return
+        self._server_store.update_last_package_revision(p_reference, revision)
 
 
 class ConanServiceV2(object):
@@ -60,25 +71,34 @@ class ConanServiceV2(object):
 
     # PACKAGE METHODS
 
-    def get_package_files_list(self, p_reference, revision_header, auth_user):
+    def get_package_files_list(self, p_reference, revision_header, package_revision_header, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
         revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
+        p_revision = self._revision_manager.get_package_revision(p_reference, package_revision_header)
         snap = self._server_store.get_package_files_list(p_reference, revision)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "recipe_hash": revision}
+        return {"files": snap, "recipe_hash": revision, "package_hash": p_revision}
 
-    def get_package_file(self, p_reference, filename, revision_header, auth_user):
+    def get_package_file(self, p_reference, filename, revision_header, package_revision_header,
+                         auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
         revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
-        path = self._server_store.get_package_file_path(p_reference, filename, revision)
+        p_revision = self._revision_manager.get_package_revision(p_reference.conan, package_revision_header)
+        path = self._server_store.get_package_file_path(p_reference, filename, revision, p_revision)
         mimetype = "x-gzip" if path.endswith(".tgz") else "auto"
         return static_file(os.path.basename(path), root=os.path.dirname(path), mimetype=mimetype)
 
-    def upload_package_file(self, body, headers, p_reference, filename, revision_header, auth_user):
+    def upload_package_file(self, body, headers, p_reference, filename, revision_header,
+                            package_revision_header, auth_user):
         self._authorizer.check_write_conan(auth_user, p_reference.conan)
         revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
-        path = self._server_store.get_package_file_path(p_reference, filename, revision)
+        p_revision = self._revision_manager.get_package_revision(p_reference.conan, package_revision_header)
+        # Check if the recipe exists
+        recipe_path = self._server_store.get_conanfile_path(p_reference.conan, revision)
+        if not os.path.exists(recipe_path):
+            raise NotFoundException("Recipe %s with revision %s doesn't exist" % (str(p_reference.conan), str(revision)))
+        path = self._server_store.get_package_file_path(p_reference, filename, revision, p_revision)
         self._upload_to_path(body, headers, path)
 
     # Misc

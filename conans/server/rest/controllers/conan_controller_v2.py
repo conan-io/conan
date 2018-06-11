@@ -1,6 +1,7 @@
 from bottle import request
 
 from conans.errors import NotFoundException, ConanException
+from conans.model import RECIPE_HASH_HEADER
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.rest.controllers.controller import Controller
 from conans.server.service.service_v2 import ConanServiceV2
@@ -16,7 +17,10 @@ class ConanControllerV2(Controller):
         conan_service = ConanServiceV2(app.authorizer, app.server_store, app.revisions_enabled)
 
         def get_revision_header():
-            return request.get_header('CONAN_RECIPE_HASH')
+            return request.get_header(RECIPE_HASH_HEADER)
+
+        def get_package_revision_header():
+            return request.get_header('CONAN_PACKAGE_HASH')
 
         @app.route("%s" % package_route, method=["GET"])
         def get_package_files_list(name, version, username, channel, package_id, auth_user):
@@ -25,6 +29,7 @@ class ConanControllerV2(Controller):
             package_reference = PackageReference(reference, package_id)
             snapshot = conan_service.get_package_files_list(package_reference,
                                                             get_revision_header(),
+                                                            get_package_revision_header(),
                                                             auth_user)
             return snapshot
 
@@ -33,19 +38,26 @@ class ConanControllerV2(Controller):
             reference = ConanFileReference(name, version, username, channel)
             package_reference = PackageReference(reference, package_id)
             file_generator = conan_service.get_package_file(package_reference, the_path,
-                                                            get_revision_header(), auth_user)
+                                                            get_revision_header(),
+                                                            get_package_revision_header(),
+                                                            auth_user)
             return file_generator
 
         @app.route('%s/<the_path:path>' % package_route, method=["PUT"])
         def upload_package_file(name, version, username, channel, package_id, the_path, auth_user):
             if not get_revision_header():
                 raise ConanException("Missing recipe hash header")
+            if not get_package_revision_header():
+                raise ConanException("Missing package hash header")
+
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Non checksum storage")
             reference = ConanFileReference(name, version, username, channel)
             package_reference = PackageReference(reference, package_id)
             conan_service.upload_package_file(request.body, request.headers, package_reference,
-                                              the_path, get_revision_header(), auth_user)
+                                              the_path, get_revision_header(),
+                                              get_package_revision_header(),
+                                              auth_user)
 
         @app.route("%s" % recipe_route, method=["GET"])
         def get_conanfile_files_list(name, version, username, channel, auth_user):
