@@ -201,7 +201,7 @@ def _handle_system_requirements(conan_file, package_reference, client_cache, out
 
     try:
         ret = str(ret or "")
-    except:
+    except Exception:
         out.warn("System requirements didn't return a string")
         ret = ""
     if getattr(conan_file, "global_system_requirements", None):
@@ -376,6 +376,7 @@ class ConanInstaller(object):
             level[:] = [n for n in level if n not in skip_nodes]
 
         for node, package_id, build_needed in nodes_to_process:
+
             workspace_package = self._workspace[node.conan_ref] if self._workspace else None
             if workspace_package:
                 self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
