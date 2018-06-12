@@ -187,7 +187,7 @@ class RestV1Methods(RestCommonMethods):
         return urls
 
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite, recipe_hash):
+                      no_overwrite):
         """
         the_files: dict with relative_path: content
         """
@@ -224,8 +224,7 @@ class RestV1Methods(RestCommonMethods):
 
         return files_to_upload or deleted
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite,
-                       recipe_hash):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload

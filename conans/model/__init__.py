@@ -1,4 +1,1 @@
 from .conan_generator import Generator
-
-RECIPE_HASH_HEADER = "CONAN_RECIPE_HASH"
-PACKAGE_HASH_HEADER = "CONAN_PACKAGE_HASH"

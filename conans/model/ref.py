@@ -46,9 +46,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     opencv/2.4.10@lasote/testing
     """
     whitespace_pattern = re.compile(r"\s+")
-    sep_pattern = re.compile("@|/")
+    sep_pattern = re.compile("@|/|#")
+    revision = None
 
-    def __new__(cls, name, version, user, channel):
+    def __new__(cls, name, version, user, channel, revision=None):
         """Simple name creation.
         @param name:        string containing the desired name
         @param validate:    checks for valid complex name. default True
@@ -57,8 +58,12 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(version, True)
         ConanName.validate_name(user)
         ConanName.validate_name(channel)
+        if revision:
+            ConanName.validate_name(revision)
         version = Version(version)
-        return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
+        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
+        obj.revision = revision
+        return obj
 
     @staticmethod
     def loads(text):
@@ -67,20 +72,35 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         text = ConanFileReference.whitespace_pattern.sub("", text)
         tokens = ConanFileReference.sep_pattern.split(text)
         try:
-            name, version, user, channel = tokens
+            if len(tokens) not in (4, 5):
+                raise ValueError
+            name, version, user, channel = tokens[0:4]
+            revision = tokens[4] if len(tokens) == 5 else None
+
         except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@user/stable" % text)
-        return ConanFileReference(name, version, user, channel)
+        obj = ConanFileReference(name, version, user, channel)
+        obj.revision = revision
+        return obj
 
     def __repr__(self):
-        return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
+        str_rev = "#%s" % self.revision if self.revision else ""
+        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
 
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
     """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
+    revision = None
+
+    def __new__(cls, conan, package_id, revision=None):
+        if revision:
+            ConanName.validate_name(revision)
+        obj = super(cls, PackageReference).__new__(cls, conan, package_id)
+        obj.revision = revision
+        return obj
 
     @staticmethod
     def loads(text):
@@ -89,9 +109,13 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         try:
             conan = ConanFileReference.loads(tmp[0].strip())
             package_id = tmp[1].strip()
+            if "#" in package_id:
+                package_id, revision = package_id.split("#", 1)
+            else:
+                revision = None
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
-        return PackageReference(conan, package_id)
+        return PackageReference(conan, package_id, revision)
 
     def __repr__(self):
         return "%s:%s" % (self.conan, self.package_id)

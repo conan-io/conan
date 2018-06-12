@@ -2,6 +2,7 @@ import os
 from bottle import static_file, FileUpload
 
 from conans.errors import NotFoundException
+from conans.model.ref import PackageReference
 from conans.server.store.server_store import ServerStore
 from conans.util.files import mkdir
 
@@ -12,27 +13,46 @@ class RevisionManager(object):
         self._revision_enabled = revision_enabled
         self._server_store = server_store
 
-    def get_revision(self, reference, header):
+    def patch_ref(self, reference):
         if not self._revision_enabled:
-            return ""
-        revision = header or self._server_store.get_last_revision(reference)
-        return revision
+            return reference
+        if reference.revision:
+            return reference
 
-    def update_revision(self, reference, revision):
+        latest = self._server_store.get_last_revision(reference)
+        if not latest:
+            raise NotFoundException("Recipe not found: '%s'" % str(reference))
+
+        reference.revision = latest
+        return reference
+
+    def patch_package_ref(self, p_reference):
+        if not self._revision_enabled:
+            return p_reference
+        if p_reference.revision:
+            return p_reference
+
+        latest = self._server_store.get_last_package_revision(p_reference)
+        if not latest:
+            raise NotFoundException("Package not found: '%s'" % str(p_reference))
+
+        reference = self.patch_ref(p_reference.conan)
+        ret = PackageReference(reference, p_reference.package_id)
+        ret.revision = latest
+
+        return p_reference
+
+    def update_recipe_revision(self, reference):
         if not self._revision_enabled:
             return
-        self._server_store.update_last_revision(reference, revision)
 
-    def get_package_revision(self, p_reference, header):
-        if not self._revision_enabled:
-            return ""
-        revision = header or self._server_store.get_last_package_revision(p_reference)
-        return revision
+        self._server_store.update_last_revision(reference)
 
-    def update_package_revision(self, p_reference, revision):
+    def update_package_revision(self, p_reference):
         if not self._revision_enabled:
             return
-        self._server_store.update_last_package_revision(p_reference, revision)
+
+        self._server_store.update_last_package_revision(p_reference)
 
 
 class ConanServiceV2(object):
@@ -45,61 +65,65 @@ class ConanServiceV2(object):
 
     # RECIPE METHODS
 
-    def get_conanfile_files_list(self, reference, revision_header, auth_user):
+    def get_conanfile_files_list(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        revision = self._revision_manager.get_revision(reference, revision_header)
-        snap = self._server_store.get_conanfile_files_list(reference, revision)
+        reference = self._revision_manager.patch_ref(reference)
+        snap = self._server_store.get_conanfile_files_list(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "recipe_hash": revision}
+        return {"files": snap, "reference": reference}
 
-    def get_conanfile_file(self, reference, filename, revision_header, auth_user):
+    def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        revision = self._revision_manager.get_revision(reference, revision_header)
+        reference = self._revision_manager.patch_ref(reference)
 
-        path = self._server_store.get_conanfile_file_path(reference, filename, revision)
+        path = self._server_store.get_conanfile_file_path(reference, filename)
         mimetype = "x-gzip" if path.endswith(".tgz") else "auto"
         return static_file(os.path.basename(path), root=os.path.dirname(path), mimetype=mimetype)
 
-    def upload_recipe_file(self, body, headers, reference, filename, revision_header, auth_user):
+    def upload_recipe_file(self, body, headers, reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, reference)
-        revision = self._revision_manager.get_revision(reference, revision_header)
-        path = self._server_store.get_conanfile_file_path(reference, filename, revision)
-        if not os.path.exists(path):
-            self._server_store.update_last_revision(reference, revision)
+        reference = self._revision_manager.patch_ref(reference)
+        path = self._server_store.get_conanfile_file_path(reference, filename)
+
         self._upload_to_path(body, headers, path)
+
+        # If the upload was ok, update the pointer to the latest
+        self._revision_manager.update_recipe_revision(reference)
 
     # PACKAGE METHODS
 
-    def get_package_files_list(self, p_reference, revision_header, package_revision_header, auth_user):
+    def get_package_files_list(self, p_reference, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
-        p_revision = self._revision_manager.get_package_revision(p_reference, package_revision_header)
-        snap = self._server_store.get_package_files_list(p_reference, revision)
+        p_reference = self._revision_manager.patch_package_ref(p_reference)
+        snap = self._server_store.get_package_files_list(p_reference)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "recipe_hash": revision, "package_hash": p_revision}
+        return {"files": snap, "reference": p_reference}
 
-    def get_package_file(self, p_reference, filename, revision_header, package_revision_header,
-                         auth_user):
+    def get_package_file(self, p_reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
-        p_revision = self._revision_manager.get_package_revision(p_reference.conan, package_revision_header)
-        path = self._server_store.get_package_file_path(p_reference, filename, revision, p_revision)
+        p_reference = self._revision_manager.patch_package_ref(p_reference)
+        path = self._server_store.get_package_file_path(p_reference, filename)
         mimetype = "x-gzip" if path.endswith(".tgz") else "auto"
         return static_file(os.path.basename(path), root=os.path.dirname(path), mimetype=mimetype)
 
-    def upload_package_file(self, body, headers, p_reference, filename, revision_header,
-                            package_revision_header, auth_user):
+    def upload_package_file(self, body, headers, p_reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, p_reference.conan)
-        revision = self._revision_manager.get_revision(p_reference.conan, revision_header)
-        p_revision = self._revision_manager.get_package_revision(p_reference.conan, package_revision_header)
+        p_reference = self._revision_manager.patch_package_ref(p_reference)
+
         # Check if the recipe exists
-        recipe_path = self._server_store.get_conanfile_path(p_reference.conan, revision)
+        recipe_path = self._server_store.get_conanfile_path(p_reference.conan)
         if not os.path.exists(recipe_path):
-            raise NotFoundException("Recipe %s with revision %s doesn't exist" % (str(p_reference.conan), str(revision)))
-        path = self._server_store.get_package_file_path(p_reference, filename, revision, p_revision)
+            raise NotFoundException("Recipe %s with revision "
+                                    "%s doesn't exist in "
+                                    "remote" % (str(p_reference.conan),
+                                                str(p_reference.conan.revision)))
+        path = self._server_store.get_package_file_path(p_reference, filename)
         self._upload_to_path(body, headers, path)
+
+        # If the upload was ok, update the pointer to the latest
+        self._revision_manager.update_package_revision(p_reference)
 
     # Misc
     @staticmethod

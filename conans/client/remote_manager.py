@@ -9,6 +9,7 @@ from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
+from conans.model.ref import PackageReference
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
@@ -39,7 +40,6 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
-        recipe_hash = self._client_cache.load_manifest(conan_reference).summary_hash
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
@@ -50,8 +50,9 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
+        conan_reference.revision = self._client_cache.load_manifest(conan_reference).summary_hash
         ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file, no_overwrite, recipe_hash)
+                                retry, retry_wait, ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
@@ -95,7 +96,6 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
-        recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
@@ -120,8 +120,19 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait, no_overwrite, recipe_hash)
+        # Read the hashes (revisions) and build a correct package reference for the server
+        # TODO: What a mess
+        recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
+        _, expected_digest = self._client_cache.package_manifests(package_reference)
+        package_hash = expected_digest.summary_hash
+
+        ref = package_reference.conan
+        ref.recipe_hash = recipe_hash
+        p_ref = PackageReference(ref, package_reference.package_id)
+        p_ref.revision = package_hash
+
+        tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
+                                no_overwrite)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)

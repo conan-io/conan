@@ -27,7 +27,7 @@ class JWTAuthentication(AuthorizationHeader):
             else:
                 # Check if its valid obtaining the password_timestamp
                 username = self.manager.get_user(token=header_value)
-        except Exception:
+        except Exception as exc:
             # Check if
             resp = HTTPResponse("Wrong JWT token!", "401 Unauthorized")
             resp.set_header('Content-Type', 'text/plain')

@@ -1,5 +1,5 @@
 import unittest
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import ConanException
 
 
@@ -42,3 +42,15 @@ class RefTest(unittest.TestCase):
                           "opencv/2.4.10@laso%s/testing" % "A" * 40)
         self.assertRaises(ConanException, ConanFileReference.loads,
                           "opencv/2.4.10@laso/testing%s" % "A" * 40)
+
+    def revisions_test(self):
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        self.assertEqual(ref.channel, "testing")
+        self.assertEqual(ref.revision, "23")
+
+        ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")
+        self.assertEqual(ref.revision, "34")
+
+        p_ref = PackageReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
+        self.assertEqual(p_ref.revision, "989")
+        self.assertEqual(p_ref.conan.revision, "23")

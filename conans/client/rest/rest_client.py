@@ -60,14 +60,13 @@ class RestApiClient(object):
         return self._get_api().get_path(conan_reference, package_id, path)
 
     def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite, recipe_hash):
+                      no_overwrite):
         return self._get_api().upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                             ignore_deleted_file, no_overwrite, recipe_hash)
+                                             ignore_deleted_file, no_overwrite)
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite,
-                       recipe_hash):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         return self._get_api().upload_package(package_reference, the_files, retry, retry_wait,
-                                              no_overwrite, recipe_hash)
+                                              no_overwrite)
 
     def authenticate(self, user, password):
         return self._get_api().authenticate(user, password)

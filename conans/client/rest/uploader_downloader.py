@@ -3,7 +3,8 @@ import time
 import traceback
 
 import conans.tools
-from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.errors import ConanException, ConanConnectionError, NotFoundException, \
+    AuthenticationException
 from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -135,6 +136,8 @@ class Downloader(object):
         if not response.ok:  # Do not retry if not found or whatever controlled error
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
+            elif response.status_code == 401:
+                raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
