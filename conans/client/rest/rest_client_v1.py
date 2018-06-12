@@ -1,15 +1,18 @@
 import os
 import time
 
-from six.moves.urllib.parse import urlparse, urljoin
+from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs, urlencode
 
+from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.rest.differ import diff_snapshots
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
+from conans.search.search import filter_packages
 from conans.util.files import decode_text, md5sum
 from conans.util.log import logger
 
@@ -46,6 +49,18 @@ class RestV1Methods(RestCommonMethods):
             if output:
                 output.writeln("")
             yield os.path.normpath(filename), contents
+
+    def _file_server_capabilities(self, resource_url):
+        auth = None
+        dedup = False
+        urltokens = urlsplit(resource_url)
+        query_string = urltokens[3]
+        parsed_string_dict = parse_qs(query_string)
+        if "signature" not in parsed_string_dict and "Signature" not in parsed_string_dict:
+            # If monolithic server, we can use same auth, and server understand dedup
+            auth = self.auth
+            dedup = True
+        return auth, dedup
 
     def get_conan_manifest(self, conan_reference):
         """Gets a FileTreeManifest from conans"""
@@ -328,3 +343,51 @@ class RestV1Methods(RestCommonMethods):
 
             return decode_text(content)
 
+    @handle_return_deserializer()
+    def remove_conanfile(self, conan_reference):
+        """ Remove a recipe and packages """
+        self.check_credentials()
+        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(conan_reference))
+        response = self.requester.delete(url,
+                                         auth=self.auth,
+                                         headers=self.custom_headers,
+                                         verify=self.verify_ssl)
+        return response
+
+    @handle_return_deserializer()
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        payload = {"package_ids": package_ids}
+        url = "%s/conans/%s/packages/delete" % (self.remote_api_url, '/'.join(conan_reference))
+        return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def _remove_conanfile_files(self, conan_reference, files):
+        """ Remove recipe files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = "%s/conans/%s/remove_files" % (self.remote_api_url, '/'.join(conan_reference))
+        return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def _remove_package_files(self, package_reference, files):
+        """ Remove package files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = "%s/conans/%s/packages/%s/remove_files" % (self.remote_api_url,
+                                                         "/".join(package_reference.conan),
+                                                         package_reference.package_id)
+        return self._post_json(url, payload)
+
+    def _post_json(self, url, payload):
+        response = self.requester.post(url,
+                                       auth=self.auth,
+                                       headers=self.custom_headers,
+                                       verify=self.verify_ssl,
+                                       json=payload)
+        return response
+
+    def search_packages(self, reference, query):
+        url = "%s/conans/%s/search?" % (self.remote_api_url, "/".join(reference))
+        return self._search_packages(url, query)

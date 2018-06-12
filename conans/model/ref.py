@@ -58,8 +58,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(version, True)
         ConanName.validate_name(user)
         ConanName.validate_name(channel)
-        if revision:
-            ConanName.validate_name(revision)
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
         obj.revision = revision
@@ -76,7 +74,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
                 raise ValueError
             name, version, user, channel = tokens[0:4]
             revision = tokens[4] if len(tokens) == 5 else None
-
         except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@user/stable" % text)
@@ -118,4 +115,5 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         return PackageReference(conan, package_id, revision)
 
     def __repr__(self):
-        return "%s:%s" % (self.conan, self.package_id)
+        str_rev = "#%s" % self.revision if self.revision else ""
+        return "%s:%s%s" % (self.conan, self.package_id, str_rev)

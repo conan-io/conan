@@ -40,12 +40,12 @@ class ServerLauncher(object):
         server_capabilities = SERVER_CAPABILITIES
         paths = SimplePaths(server_config.disk_storage_path)
         revisions_enabled = server_config.revisions_enabled
-        server_store = ServerStore(server_config.disk_storage_path)
+        server_store = ServerStore(server_config.disk_storage_path, revisions_enabled)
 
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, file_manager, paths,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities, revisions_enabled, server_store)
+                              server_capabilities, server_store)
 
     def launch(self):
         self.ra.run(host="0.0.0.0")

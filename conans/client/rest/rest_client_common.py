@@ -2,11 +2,11 @@ import json
 import time
 
 from requests.auth import AuthBase, HTTPBasicAuth
-from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from six.moves.urllib.parse import urlencode
 
 from conans import COMPLEX_SEARCH_CAPABILITY
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException, \
-    AuthenticationException
+from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
+                           AuthenticationException)
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_packages
 from conans.util.files import decode_text
@@ -106,79 +106,6 @@ class RestCommonMethods(object):
         log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
 
-    def search(self, pattern=None, ignorecase=True):
-        """
-        the_files: dict with relative_path: content
-        """
-        query = ''
-        if pattern:
-            params = {"q": pattern}
-            if not ignorecase:
-                params["ignorecase"] = "False"
-            query = "?%s" % urlencode(params)
-
-        url = "%s/conans/search%s" % (self.remote_api_url, query)
-        response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(ref) for ref in response]
-
-    def search_packages(self, reference, query):
-
-        url = "%s/conans/%s/search?" % (self.remote_api_url, "/".join(reference))
-        if not query:
-            package_infos = self.get_json(url)
-            return package_infos
-
-        # Read capabilities
-        try:
-            _, _, capabilities = self.server_info()
-        except NotFoundException:
-            capabilities = []
-
-        if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url += urlencode({"q": query})
-            package_infos = self.get_json(url)
-            return package_infos
-        else:
-            package_infos = self.get_json(url)
-            return filter_packages(query, package_infos)
-
-    @handle_return_deserializer()
-    def remove_conanfile(self, conan_reference):
-        """ Remove a recipe and packages """
-        self.check_credentials()
-        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(conan_reference))
-        response = self.requester.delete(url,
-                                         auth=self.auth,
-                                         headers=self.custom_headers,
-                                         verify=self.verify_ssl)
-        return response
-
-    @handle_return_deserializer()
-    def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any packages specified by package_ids"""
-        self.check_credentials()
-        payload = {"package_ids": package_ids}
-        url = "%s/conans/%s/packages/delete" % (self.remote_api_url, '/'.join(conan_reference))
-        return self._post_json(url, payload)
-
-    @handle_return_deserializer()
-    def _remove_conanfile_files(self, conan_reference, files):
-        """ Remove recipe files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/remove_files" % (self.remote_api_url, '/'.join(conan_reference))
-        return self._post_json(url, payload)
-
-    @handle_return_deserializer()
-    def _remove_package_files(self, package_reference, files):
-        """ Remove package files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/packages/%s/remove_files" % (self.remote_api_url,
-                                                         "/".join(package_reference.conan),
-                                                         package_reference.package_id)
-        return self._post_json(url, payload)
-
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
         url = "%s/ping" % self.remote_api_url
@@ -193,14 +120,6 @@ class RestCommonMethods(object):
         server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
 
         return version_check, server_version, server_capabilities
-
-    def _post_json(self, url, payload):
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.verify_ssl,
-                                       json=payload)
-        return response
 
     def get_json(self, url, data=None):
         t1 = time.time()
@@ -230,14 +149,37 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def _file_server_capabilities(self, resource_url):
-        auth = None
-        dedup = False
-        urltokens = urlsplit(resource_url)
-        query_string = urltokens[3]
-        parsed_string_dict = parse_qs(query_string)
-        if "signature" not in parsed_string_dict and "Signature" not in parsed_string_dict:
-            # If monolithic server, we can use same auth, and server understand dedup
-            auth = self.auth
-            dedup = True
-        return auth, dedup
+    def search(self, pattern=None, ignorecase=True):
+        """
+        the_files: dict with relative_path: content
+        """
+        query = ''
+        if pattern:
+            params = {"q": pattern}
+            if not ignorecase:
+                params["ignorecase"] = "False"
+            query = "?%s" % urlencode(params)
+
+        url = "%s/conans/search%s" % (self.remote_api_url, query)
+        response = self.get_json(url)["results"]
+        return [ConanFileReference.loads(ref) for ref in response]
+
+    def _search_packages(self, url, query):
+
+        if not query:
+            package_infos = self.get_json(url)
+            return package_infos
+
+        # Read capabilities
+        try:
+            _, _, capabilities = self.server_info()
+        except NotFoundException:
+            capabilities = []
+
+        if COMPLEX_SEARCH_CAPABILITY in capabilities:
+            url += urlencode({"q": query})
+            package_infos = self.get_json(url)
+            return package_infos
+        else:
+            package_infos = self.get_json(url)
+            return filter_packages(query, package_infos)

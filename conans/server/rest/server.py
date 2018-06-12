@@ -16,7 +16,7 @@ class ConanServer(object):
     def __init__(self, run_port, credentials_manager,
                  updown_auth_manager, authorizer, authenticator,
                  file_manager, paths, server_version, min_client_compatible_version,
-                 server_capabilities, revisions_enabled, server_store):
+                 server_capabilities, server_store):
 
         assert(isinstance(server_version, Version))
         assert(isinstance(min_client_compatible_version, Version))
@@ -34,7 +34,7 @@ class ConanServer(object):
 
         self.api_v2 = ApiV2(credentials_manager,
                             server_version, min_client_compatible_version,
-                            server_capabilities, revisions_enabled)
+                            server_capabilities)
         self.api_v2.authorizer = authorizer
         self.api_v2.authenticator = authenticator
         self.api_v2.server_store = server_store

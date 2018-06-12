@@ -1,5 +1,4 @@
 import os
-
 import time
 
 from conans.client.rest.differ import diff_snapshots
@@ -235,3 +234,7 @@ class RestV2Methods(RestCommonMethods):
             resource_url = "%s/%s" % (base_url, filename)
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
+
+    def search_packages(self, reference, query):
+        url = "%s/search?" % self._recipe_url(reference)
+        return self._search_packages(url, query)

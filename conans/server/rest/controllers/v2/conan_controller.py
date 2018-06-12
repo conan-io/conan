@@ -16,7 +16,7 @@ class ConanControllerV2(Controller):
         package_route_rev = '%s/<name>/<version>/<username>/<channel>#<revision>/packages/' \
                             '<package_id>#<p_revision>' % self.route
 
-        conan_service = ConanServiceV2(app.authorizer, app.server_store, app.revisions_enabled)
+        conan_service = ConanServiceV2(app.authorizer, app.server_store)
 
         @app.route("%s" % package_route, method=["GET"])
         @app.route("%s" % package_route_rev, method=["GET"])

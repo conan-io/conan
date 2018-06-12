@@ -54,7 +54,7 @@ class TestServerLauncher(object):
         self.file_manager = get_file_manager(server_config, public_url=base_url,
                                              updown_auth_manager=updown_auth_manager)
         revisions_enabled = server_config.revisions_enabled
-        server_store = ServerStore(server_config.disk_storage_path)
+        server_store = ServerStore(server_config.disk_storage_path, revisions_enabled)
 
         # Prepare some test users
         if not read_permissions:
@@ -81,7 +81,7 @@ class TestServerLauncher(object):
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.file_manager, self.paths,
                               server_version, min_client_compatible_version,
-                              server_capabilities, revisions_enabled, server_store)
+                              server_capabilities, server_store)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
 
