@@ -153,7 +153,7 @@ name: MyProject
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
-        TIME_DELAY = 0.1
+        TIME_DELAY = 1
         time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon")
