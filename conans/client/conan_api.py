@@ -72,8 +72,6 @@ def api_method(f):
         the_self = args[0]
         try:
             curdir = get_cwd()
-            print("ARGS", args)
-            print("KWARGS", kwargs)
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
