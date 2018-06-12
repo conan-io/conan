@@ -98,7 +98,7 @@ target_link_libraries(hello{name} {dep})
 class WorkspaceTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
-    @unittest.skipUnless(platform.system() in ("Windows", "Linux"), "Test doesn't work on OSX")
+    # @unittest.skipUnless(platform.system() in ("Windows", "Linux"), "Test doesn't work on OSX")
     def cmake_outsource_build_test(self, targets):
         client = TestClient()
 
@@ -153,11 +153,12 @@ name: MyProject
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
+        TIME_DELAY = 0.1
+        time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon")
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
-        TIME_DELAY = 0.1
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Release', cwd=base_folder)
         time.sleep(TIME_DELAY)
