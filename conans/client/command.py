@@ -789,20 +789,47 @@ class Command(object):
                                  'requested interactively (not exposed)')
         parser.add_argument("-r", "--remote", help='Use the specified remote server',
                             action=OnceArgument)
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the user list will be written to')
         args = parser.parse_args(*args)
 
-        if args.clean and any((args.name, args.remote, args.password)):
+        if args.clean and any((args.name, args.remote, args.password, args.json)):
             raise ConanException("'--clean' argument cannot be used together with 'name', "
-                                 "'--password' or '--remote'")
+                                 "'--password', '--remote' or '--json'")
+        elif args.json and any((args.name, args.password)):
+            raise ConanException("'--json' cannot be used together with 'name' or '--password'")
 
-        if args.clean:  # clean users
-            self._conan.users_clean()
-        elif not args.name and args.password is None:  # list users
-            self._conan.users_list(args.remote)
-        elif args.password is None:  # set user for remote (no password indicated)
-            self._conan.user_set(args.name, args.remote)
-        else:  # login a remote
-            self._conan.authenticate(args.name, remote=args.remote, password=args.password)
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            if args.clean:  # clean users
+                self._conan.users_clean()
+            elif not args.name and args.password is None:  # list users
+                info = self._conan.users_list(args.remote)
+                self._outputer.print_user_list(info)
+            elif args.password is None:  # set user for remote (no password indicated)
+                remote, prev_user, user = self._conan.user_set(args.name, args.remote)
+                self._outputer.print_user_set(remote, prev_user, user)
+            else:  # login a remote
+                if args.remote:
+                    remote = RemoteRegistry(self._client_cache.registry, None).remote(args.remote)
+                else:
+                    remote = RemoteRegistry(self._client_cache.registry, None).default_remote
+                name = args.name
+                password = args.password
+                if not password:
+                    name, password = self._user_io.request_login(remote_name=remote.name,
+                                                                 username=name)
+                remote, prev_user, user = self._conan.authenticate(name, remote=remote,
+                                                                   password=password)
+                self._outputer.print_user_set(remote, prev_user, user)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def search(self, *args):
         """Searches package recipes and binaries in the local cache or in a remote.
