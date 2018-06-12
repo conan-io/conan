@@ -72,6 +72,8 @@ def api_method(f):
         the_self = args[0]
         try:
             curdir = get_cwd()
+            print("ARGS", args)
+            print("KWARGS", kwargs)
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
@@ -644,7 +646,7 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, self._registry, force=force)
 
     @api_method
-    def authenticate(self, name, password, remote=None):
+    def authenticate(self, name, remote=None, password=None):
         remote = self._registry.remote(remote) if remote else self._registry.default_remote
 
         if not password:
