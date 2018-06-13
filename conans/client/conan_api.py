@@ -660,7 +660,7 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        remotes = [self.get_remote_by_name(remote)] if remote else self.remote_list
+        remotes = [self.get_remote_by_name(remote)] if remote else self.remote_list()
         return users_list(self._client_cache.localdb, remotes)
 
     @api_method
