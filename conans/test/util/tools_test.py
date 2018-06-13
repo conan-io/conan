@@ -7,7 +7,7 @@ import unittest
 
 from collections import namedtuple
 
-from mock.mock import patch
+from mock.mock import patch, mock_open
 from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
@@ -537,7 +537,7 @@ class HelloConan(ConanFile):
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
             tools.msvc_build_command(settings, "project.sln")
 
-        # succesful definition via settings
+        # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
@@ -552,16 +552,16 @@ class HelloConan(ConanFile):
     "instanceId": "17609d7c",
     "installDate": "2018-06-11T02:15:04Z",
     "installationName": "VisualStudio/15.7.3+27703.2026",
-    "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise",
+    "installationPath": "",
     "installationVersion": "15.7.27703.2026",
     "productId": "Microsoft.VisualStudio.Product.Enterprise",
-    "productPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\IDE\\devenv.exe",
+    "productPath": "",
     "isPrerelease": false,
     "displayName": "Visual Studio Enterprise 2017",
     "description": "ê∂éYê´å¸è„Ç∆ÅAÇ≥Ç‹Ç¥Ç‹Ç»ãKñÕÇÃÉ`Å[ÉÄä‘ÇÃí≤êÆÇÃÇΩÇﬂÇÃ Microsoft DevOps É\ÉäÉÖÅ[ÉVÉáÉì",
     "channelId": "VisualStudio.15.Release",
     "channelUri": "https://aka.ms/vs/15/release/channel",
-    "enginePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\resources\\app\\ServiceHub\\Services\\Microsoft.VisualStudio.Setup.Service",
+    "enginePath": "",
     "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
     "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
     "updateDate": "2018-06-11T02:15:04.7009868Z",
@@ -589,21 +589,20 @@ class HelloConan(ConanFile):
       "canceled": "0",
       "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
       "nickname": "",
-      "setupEngineFilePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vs_installershell.exe"
+      "setupEngineFilePath": ""
     }
   },
   {
     "instanceId": "VisualStudio.12.0",
-    "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\",
+    "installationPath": "",
     "installationVersion": "12.0"
   }
 ]
 
 """
-        from unittest.mock import mock_open
         myrunner = mock_open()
         myrunner.check_output = lambda x: myoutput
-        with patch('conans.client.tools.win.subprocess', myrunnner):
+        with patch('conans.client.tools.win.subprocess', myrunner):
             json = vswhere()
             self.assertNotIn("descripton", json)
 
