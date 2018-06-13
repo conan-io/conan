@@ -11,18 +11,15 @@ from conans.util.files import load, rmdir
 
 base = '''
 from conans import ConanFile, tools
-
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     short_paths = True
     scm = {{
         "type": "git",
-        "directory": {directory},
         "url": "{url}",
         "revision": "{revision}",
     }}
-
     def build(self):
         self.output.warn(tools.load("myfile.txt"))
 '''
@@ -44,12 +41,10 @@ class SCMTest(unittest.TestCase):
     def test_scm_other_type_ignored(self):
         conanfile = '''
 from conans import ConanFile, tools
-
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
-
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
@@ -58,7 +53,6 @@ class ConanLib(ConanFile):
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
 from conans import ConanFile, tools
-
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
@@ -103,8 +97,7 @@ class ConanLib(ConanFile):
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir)
-        self.client.save({"conanfile.py": base.format(directory="None",
-                                                      url=curdir, revision=git.get_revision())})
+        self.client.save({"conanfile.py": base.format(url=curdir, revision=git.get_revision())})
         self.client.run("create . user/channel")
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertFalse(os.path.exists(sources_dir))
@@ -116,7 +109,7 @@ class ConanLib(ConanFile):
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         curdir = self.client.current_folder.replace("\\", "/")
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=curdir)
@@ -132,7 +125,7 @@ class ConanLib(ConanFile):
 
     def test_local_source(self):
         curdir = self.client.current_folder
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         conanfile += """
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
@@ -150,8 +143,7 @@ class ConanLib(ConanFile):
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir.replace("\\", "/"))
-        conanfile = base.format(directory="None",
-                                url=curdir.replace("\\", "/"), revision=git.get_revision())
+        conanfile = base.format(url=curdir.replace("\\", "/"), revision=git.get_revision())
         conanfile += """
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
@@ -172,7 +164,7 @@ class ConanLib(ConanFile):
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
         curdir = self.client.current_folder.replace("\\", "/")
-        conanfile = base.format(directory="None", url="auto", revision="auto")
+        conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
         cmd = 'git remote add origin "%s"' % curdir
@@ -191,7 +183,6 @@ class ConanLib(ConanFile):
         conanfile = '''
 import os
 from conans import ConanFile, tools
-
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
@@ -202,13 +193,11 @@ class ConanLib(ConanFile):
         "revision": "my_release",
         "subfolder": "src"
     }
-
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "myfile")))
         tools.save("cosa.txt", "contents")
-
     def build(self):
         assert(os.path.exists("file.txt"))
         assert(os.path.exists("cosa.txt"))

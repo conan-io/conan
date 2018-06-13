@@ -399,8 +399,8 @@ class ConanAPIV1(object):
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        manager.download(conan_ref, package, remote_name=remote, recipe=recipe)
+        download(conan_ref, package, remote, recipe, self._registry, self._remote_manager,
+                 self._client_cache, self._user_io.out, recorder)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
