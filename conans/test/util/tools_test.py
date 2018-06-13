@@ -6,6 +6,8 @@ import platform
 import unittest
 
 from collections import namedtuple
+
+from mock.mock import patch
 from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
@@ -14,7 +16,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict
+from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
@@ -540,6 +542,70 @@ class HelloConan(ConanFile):
         cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
+
+    def vswhere_description_strip_test(self):
+        if platform.system() != "Windows":
+            return
+        myoutput = """
+[
+  {
+    "instanceId": "17609d7c",
+    "installDate": "2018-06-11T02:15:04Z",
+    "installationName": "VisualStudio/15.7.3+27703.2026",
+    "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise",
+    "installationVersion": "15.7.27703.2026",
+    "productId": "Microsoft.VisualStudio.Product.Enterprise",
+    "productPath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\IDE\\devenv.exe",
+    "isPrerelease": false,
+    "displayName": "Visual Studio Enterprise 2017",
+    "description": "ê∂éYê´å¸è„Ç∆ÅAÇ≥Ç‹Ç¥Ç‹Ç»ãKñÕÇÃÉ`Å[ÉÄä‘ÇÃí≤êÆÇÃÇΩÇﬂÇÃ Microsoft DevOps É\ÉäÉÖÅ[ÉVÉáÉì",
+    "channelId": "VisualStudio.15.Release",
+    "channelUri": "https://aka.ms/vs/15/release/channel",
+    "enginePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\resources\\app\\ServiceHub\\Services\\Microsoft.VisualStudio.Setup.Service",
+    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
+    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
+    "updateDate": "2018-06-11T02:15:04.7009868Z",
+    "catalog": {
+      "buildBranch": "d15.7",
+      "buildVersion": "15.7.27703.2026",
+      "id": "VisualStudio/15.7.3+27703.2026",
+      "localBuild": "build-lab",
+      "manifestName": "VisualStudio",
+      "manifestType": "installer",
+      "productDisplayVersion": "15.7.3",
+      "productLine": "Dev15",
+      "productLineVersion": "2017",
+      "productMilestone": "RTW",
+      "productMilestoneIsPreRelease": "False",
+      "productName": "Visual Studio",
+      "productPatchVersion": "3",
+      "productPreReleaseMilestoneSuffix": "1.0",
+      "productRelease": "RTW",
+      "productSemanticVersion": "15.7.3+27703.2026",
+      "requiredEngineVersion": "1.16.1187.57215"
+    },
+    "properties": {
+      "campaignId": "",
+      "canceled": "0",
+      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
+      "nickname": "",
+      "setupEngineFilePath": "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vs_installershell.exe"
+    }
+  },
+  {
+    "instanceId": "VisualStudio.12.0",
+    "installationPath": "C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\",
+    "installationVersion": "12.0"
+  }
+]
+
+"""
+        from unittest.mock import mock_open
+        myrunner = mock_open()
+        myrunner.check_output = lambda x: myoutput
+        with patch('conans.client.tools.win.subprocess', myrunnner):
+            json = vswhere()
+            self.assertNotIn("descripton", json)
 
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
