@@ -518,9 +518,8 @@ class HelloConan(ConanFile):
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -543,9 +542,8 @@ class HelloConan(ConanFile):
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def vswhere_description_strip_test(self):
-        if platform.system() != "Windows":
-            return
         myoutput = """
 [
   {
