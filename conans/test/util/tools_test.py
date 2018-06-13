@@ -7,6 +7,7 @@ import unittest
 
 from collections import namedtuple
 
+import six
 from mock.mock import patch, mock_open
 from six import StringIO
 
@@ -556,7 +557,7 @@ class HelloConan(ConanFile):
     "productPath": "",
     "isPrerelease": false,
     "displayName": "Visual Studio Enterprise 2017",
-    "description": "ê∂éYê´å¸è„Ç∆ÅAÇ≥Ç‹Ç¥Ç‹Ç»ãKñÕÇÃÉ`Å[ÉÄä‘ÇÃí≤êÆÇÃÇΩÇﬂÇÃ Microsoft DevOps É\ÉäÉÖÅ[ÉVÉáÉì",
+    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
     "channelId": "VisualStudio.15.Release",
     "channelUri": "https://aka.ms/vs/15/release/channel",
     "enginePath": "",
@@ -598,6 +599,9 @@ class HelloConan(ConanFile):
 ]
 
 """
+        if six.PY3:
+            # In python3 the output from subprocess.check_output are bytes, not str
+            myoutput = myoutput.encode()
         myrunner = mock_open()
         myrunner.check_output = lambda x: myoutput
         with patch('conans.client.tools.win.subprocess', myrunner):
