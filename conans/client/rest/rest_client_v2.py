@@ -19,19 +19,6 @@ class RestV2Methods(RestCommonMethods):
     def remote_api_url(self):
         return "%s/v2" % self.remote_url.rstrip("/")
 
-    def _recipe_url(self, conan_reference):
-        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
-        if conan_reference.revision:
-            url += "#%s" % conan_reference.revision
-        return url.replace("#", "%23")
-
-    def _package_url(self, p_reference):
-        url = self._recipe_url(p_reference.conan)
-        url += "/packages/%s" % p_reference.package_id
-        if p_reference.revision:
-            url += "#%s" % p_reference.revision
-        return url.replace("#", "%23")
-
     def _get_remote_file_contents(self, url):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
         contents = downloader.download(url, auth=self.auth)
@@ -234,7 +221,3 @@ class RestV2Methods(RestCommonMethods):
             resource_url = "%s/%s" % (base_url, filename)
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
-
-    def search_packages(self, reference, query):
-        url = "%s/search?" % self._recipe_url(reference)
-        return self._search_packages(url, query)

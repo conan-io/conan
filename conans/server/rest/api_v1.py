@@ -10,7 +10,7 @@ from conans.server.rest.controllers.users_controller import UsersController
 from conans.server.rest.controllers.v1.conan_controller import ConanController
 from conans.server.rest.controllers.v1.delete_controller import DeleteController
 from conans.server.rest.controllers.v1.file_upload_download_controller import FileUploadDownloadController
-from conans.server.rest.controllers.v1.search_controller import SearchController
+from conans.server.rest.search_controller import SearchController
 
 
 class ApiV1(Bottle):

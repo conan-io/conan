@@ -11,7 +11,8 @@ class SearchController(Controller):
     """
     def attach_to(self, app):
 
-        conan_route = '%s/<conanname>/<version>/<username>/<channel>' % self.route
+        conan_route = '%s/<name>/<version>/<username>/<channel>' % self.route
+        recipe_route_rev = '%s/<name>/<version>/<username>/<channel>#<revision>' % self.route
 
         @app.route('%s/search' % self.route, method=["GET"])
         def search(auth_user):
@@ -24,9 +25,10 @@ class SearchController(Controller):
             return {"results": references}
 
         @app.route('%s/search' % conan_route, method=["GET"])
-        def search_packages(conanname, version, username, channel, auth_user):
+        @app.route('%s/search' % recipe_route_rev, method=["GET"])
+        def search_packages(name, version, username, channel, auth_user, revision=None):
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.paths, auth_user)
-            conan_reference = ConanFileReference(conanname, version, username, channel)
+            conan_reference = ConanFileReference(name, version, username, channel, revision)
             info = search_service.search_packages(conan_reference, query)
             return info

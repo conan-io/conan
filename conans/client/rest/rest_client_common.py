@@ -164,7 +164,8 @@ class RestCommonMethods(object):
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(ref) for ref in response]
 
-    def _search_packages(self, url, query):
+    def search_packages(self, reference, query):
+        url = "%s/search?" % self._recipe_url(reference)
 
         if not query:
             package_infos = self.get_json(url)
@@ -183,3 +184,64 @@ class RestCommonMethods(object):
         else:
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
+
+
+    !!! REEMPLAZAR URLS A CLAVO CON LOS HELPERS!! MIRAR SI VA RULANDO, PROBAR V1 tambien a mano
+
+    @handle_return_deserializer()
+    def remove_conanfile(self, conan_reference):
+        """ Remove a recipe and packages """
+        self.check_credentials()
+        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(conan_reference))
+        response = self.requester.delete(url,
+                                         auth=self.auth,
+                                         headers=self.custom_headers,
+                                         verify=self.verify_ssl)
+        return response
+
+    @handle_return_deserializer()
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        payload = {"package_ids": package_ids}
+        url = "%s/conans/%s/packages/delete" % (self.remote_api_url, '/'.join(conan_reference))
+        return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def _remove_conanfile_files(self, conan_reference, files):
+        """ Remove recipe files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = "%s/conans/%s/remove_files" % (self.remote_api_url, '/'.join(conan_reference))
+        return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def _remove_package_files(self, package_reference, files):
+        """ Remove package files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = "%s/conans/%s/packages/%s/remove_files" % (self.remote_api_url,
+                                                         "/".join(package_reference.conan),
+                                                         package_reference.package_id)
+        return self._post_json(url, payload)
+
+    def _post_json(self, url, payload):
+        response = self.requester.post(url,
+                                       auth=self.auth,
+                                       headers=self.custom_headers,
+                                       verify=self.verify_ssl,
+                                       json=payload)
+        return response
+
+    def _recipe_url(self, conan_reference):
+        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+        if conan_reference.revision:
+            url += "#%s" % conan_reference.revision
+        return url.replace("#", "%23")
+
+    def _package_url(self, p_reference):
+        url = self._recipe_url(p_reference.conan)
+        url += "/packages/%s" % p_reference.package_id
+        if p_reference.revision:
+            url += "#%s" % p_reference.revision
+        return url.replace("#", "%23")

@@ -21,9 +21,7 @@ class ServerStore(SimplePaths):
         self._revisions_enabled = revisions_enabled
 
     def _last_revision_path(self, reference):
-        tmp = normpath(os.path.join(self._store_folder, "/".join(reference)))
-        revision = {None: ""}.get(reference.revision, reference.revision)
-        recipe_folder = os.path.abspath(os.path.join(tmp, revision))
+        recipe_folder = normpath(os.path.join(self._store_folder, "/".join(reference)))
         return os.path.join(recipe_folder, LAST_REVISION_FILE)
 
     def _last_package_revision_path(self, p_reference):
