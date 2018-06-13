@@ -187,7 +187,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     try:
         output = subprocess.check_output(arguments)
         output = "\n".join([line for line in output.splitlines()
-                            if not decode_text(line.strip()).startswith('"description"')])
+                            if not decode_text(line).strip().startswith('"description"')])
         vswhere_out = decode_text(output).strip()
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
