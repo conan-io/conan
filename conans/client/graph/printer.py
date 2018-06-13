@@ -1,5 +1,6 @@
 from conans.client.output import Color
 from conans.model.ref import PackageReference
+from conans.model.workspace import WORKSPACE_FILE
 
 
 def print_graph(deps_graph, out):
@@ -15,7 +16,10 @@ def print_graph(deps_graph, out):
 
     def _recipes(nodes):
         for node in nodes:
-            from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
+            if node.remote == WORKSPACE_FILE:
+                from_text = "from '%s'" % WORKSPACE_FILE
+            else:
+                from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
             out.writeln("    %s %s" % (repr(node.conan_ref), from_text), Color.BRIGHT_CYAN)
     _recipes(requires)
     out.writeln("Packages", Color.BRIGHT_YELLOW)

@@ -15,6 +15,9 @@ class Test(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs.append("fake_lib")
+        self.cpp_info.cflags.append("a_flag")
+        self.cpp_info.cppflags.append("a_cxx_flag")
+        self.cpp_info.sharedlinkflags.append("shared_link_flag")
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -42,12 +45,16 @@ message("Libraries to Link: ${Test_LIBS}")
 
 get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
 message("Target libs: ${tmp}")
+
+get_target_property(tmp Test::Test INTERFACE_COMPILE_OPTIONS)
+message("Compile options: ${tmp}")
 """
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("create . user/channel --build missing")
         self.assertIn("Library fake_lib not found in package, might be system one", client.out)
         self.assertIn("Libraries to Link: fake_lib", client.out)
-        self.assertIn("Target libs: fake_lib", client.out)
+        self.assertIn("Target libs: fake_lib;shared_link_flag", client.out)
+        self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
     def cmake_find_package_test(self):
         """First package without custom find_package"""
