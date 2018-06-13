@@ -660,13 +660,13 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
-        remotes = [self.get_remote_by_name(remote)] if remote else self._registry.remotes
+        remotes = [self.get_remote_by_name(remote)] if remote else self.remote_list
         return users_list(self._client_cache.localdb, remotes)
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         recorder = SearchRecorder()
-        search = Search(self._client_cache.localdb, self._remote_manager, self._registry)
+        search = Search(self._client_cache, self._remote_manager, self._registry)
 
         try:
             references = search.search_recipes(pattern, remote, case_sensitive)
