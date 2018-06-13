@@ -649,21 +649,23 @@ class ConanAPIV1(object):
         return remote, prev_user, user
 
     @api_method
-    def user_set(self, user, remote_name=None):
-        return user_set(self._client_cache, self._registry, user, remote_name)
+    def user_set(self, user, remote=None):
+        remote = self.get_default_remote() if not remote else self.get_remote_by_name(remote)
+        return user_set(self._client_cache.localdb, user, remote)
 
     @api_method
     def users_clean(self):
-        users_clean(self._client_cache)
+        users_clean(self._client_cache.localdb)
 
     @api_method
     def users_list(self, remote=None):
-        return users_list(self._client_cache, self._registry, remote)
+        remotes = [self.get_remote_by_name(remote)] if remote else self._registry.remotes
+        return users_list(self._client_cache.localdb, remotes)
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
         recorder = SearchRecorder()
-        search = Search(self._client_cache, self._remote_manager, self._registry)
+        search = Search(self._client_cache.localdb, self._remote_manager, self._registry)
 
         try:
             references = search.search_recipes(pattern, remote, case_sensitive)
@@ -800,7 +802,7 @@ class ConanAPIV1(object):
         if not remote:
             return get_path(self._client_cache, reference, package_id, path), path
         else:
-            remote = self._registry.remote(remote)
+            remote = self.get_remote_by_name(remote)
             return self._remote_manager.get_path(reference, package_id, path, remote), path
 
     @api_method
@@ -808,6 +810,14 @@ class ConanAPIV1(object):
         reference = ConanFileReference.loads(str(reference))
         target_reference = ConanFileReference.loads(str(target_reference))
         return export_alias(reference, target_reference, self._client_cache)
+
+    @api_method
+    def get_default_remote(self):
+        return self._registry.default_remote
+
+    @api_method
+    def get_remote_by_name(self, remote):
+        return self._registry.remote(remote)
 
 
 Conan = ConanAPIV1

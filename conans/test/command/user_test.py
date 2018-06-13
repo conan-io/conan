@@ -210,16 +210,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             }
         ]}, info)
 
@@ -227,16 +227,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": False,
-                "name": "bad_user"
+                "user_name": "bad_user"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             }
         ]}, info)
 
@@ -244,16 +244,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": False,
-                "name": "lasote"
+                "user_name": "lasote"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             }
         ]}, info)
 
@@ -261,16 +261,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": True,
-                "name": "lasote"
+                "user_name": "lasote"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             }
         ]}, info)
 
@@ -278,16 +278,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": True,
-                "name": "danimtb"
+                "user_name": "danimtb"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": None
+                "user_name": None
             }
         ]}, info)
 
@@ -295,16 +295,16 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": True,
-                "name": "danimtb"
+                "user_name": "danimtb"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": "lasote"
+                "user_name": "lasote"
             }
         ]}, info)
 
@@ -312,15 +312,15 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"users": [
+        self.assertEqual({"remotes": [
             {
-                "remote_name": "default",
+                "name": "default",
                 "authenticated": False,
-                "name": "lasote"
+                "user_name": "lasote"
             },
             {
-                "remote_name": "other_server",
+                "name": "other_server",
                 "authenticated": False,
-                "name": "lasote"
+                "user_name": "lasote"
             }
         ]}, info)

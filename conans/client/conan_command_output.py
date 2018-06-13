@@ -130,11 +130,11 @@ class CommandOutputer(object):
         self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
 
     def print_user_list(self, info):
-        for user in info["users"]:
-            authenticated = " [Authenticated]" if user["authenticated"] else ""
-            anonymous = " (anonymous)" if not user["name"] else ""
+        for remote in info["remotes"]:
+            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            anonymous = " (anonymous)" if not remote["user_name"] else ""
             self.user_io.out.info("Current '%s' remote's user: '%s'%s%s" %
-                                  (user["remote_name"], str(user["name"]), anonymous,
+                                  (remote["name"], str(remote["user_name"]), anonymous,
                                    authenticated))
 
     def print_user_set(self, remote, prev_user, user):
