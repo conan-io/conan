@@ -645,6 +645,7 @@ class ConanAPIV1(object):
 
     @api_method
     def authenticate(self, name, password, remote):
+        remote = self.get_remote_by_name(remote)
         _, remote, prev_user, user = self._remote_manager.authenticate(remote, name, password)
         return remote, prev_user, user
 

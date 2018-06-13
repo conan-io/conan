@@ -812,15 +812,11 @@ class Command(object):
                 remote, prev_user, user = self._conan.user_set(args.name, args.remote)
                 self._outputer.print_user_set(remote, prev_user, user)
             else:  # login a remote
-                if args.remote:
-                    remote = self._conan.get_remote_by_name(args.remote)
-                else:
-                    remote = self._conan.get_default_remote()
+                remote = self._conan.get_default_remote().name if not args.remote else args.remote
                 name = args.name
                 password = args.password
                 if not password:
-                    name, password = self._user_io.request_login(remote_name=remote.name,
-                                                                 username=name)
+                    name, password = self._user_io.request_login(remote_name=remote, username=name)
                 remote, prev_user, user = self._conan.authenticate(name, remote=remote,
                                                                    password=password)
                 self._outputer.print_user_set(remote, prev_user, user)
