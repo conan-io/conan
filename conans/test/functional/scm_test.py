@@ -11,6 +11,7 @@ from conans.util.files import load, rmdir
 
 base = '''
 from conans import ConanFile, tools
+
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
@@ -20,6 +21,7 @@ class ConanLib(ConanFile):
         "url": "{url}",
         "revision": "{revision}",
     }}
+
     def build(self):
         self.output.warn(tools.load("myfile.txt"))
 '''
@@ -41,10 +43,12 @@ class SCMTest(unittest.TestCase):
     def test_scm_other_type_ignored(self):
         conanfile = '''
 from conans import ConanFile, tools
+
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
+
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
@@ -53,6 +57,7 @@ class ConanLib(ConanFile):
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
 from conans import ConanFile, tools
+
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
@@ -183,6 +188,7 @@ class ConanLib(ConanFile):
         conanfile = '''
 import os
 from conans import ConanFile, tools
+
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
@@ -193,11 +199,13 @@ class ConanLib(ConanFile):
         "revision": "my_release",
         "subfolder": "src"
     }
+
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "myfile")))
         tools.save("cosa.txt", "contents")
+
     def build(self):
         assert(os.path.exists("file.txt"))
         assert(os.path.exists("cosa.txt"))
