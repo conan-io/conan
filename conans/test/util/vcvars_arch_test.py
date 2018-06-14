@@ -80,7 +80,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
-        settings.compiler.version = '14'
+        settings.compiler.version = '12'
 
         command = tools.vcvars_command(settings, vcvars_ver='14.14')
         self.assertIn('vcvarsall.bat', command)
@@ -100,4 +100,4 @@ class VCVarsArchTest(unittest.TestCase):
 
         command = tools.vcvars_command(settings, winsdk_version='8.1')
         self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('8.1', command)
+        self.assertIn('8.1', command)
