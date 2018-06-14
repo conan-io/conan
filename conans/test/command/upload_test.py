@@ -267,7 +267,7 @@ class MyPkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("ERROR: Local package is different from the remote package", client.out)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading conan_package.tgz", client.out)
 
     def upload_no_overwrite_recipe_test(self):
