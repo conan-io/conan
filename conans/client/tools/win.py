@@ -269,7 +269,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
             raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
         else:
             vcvars_path = ""
-            if int(compiler_version) > 14:
+            if int(compiler_version) > 12:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
                            'call "%s" %s' % (vcvars_path, vcvars_arch))

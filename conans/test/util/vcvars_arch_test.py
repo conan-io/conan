@@ -11,10 +11,10 @@ from conans import tools
 
 
 @attr('visual_studio')
+@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsArchTest(unittest.TestCase):
+
     def test_arch(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
@@ -45,8 +45,6 @@ class VCVarsArchTest(unittest.TestCase):
             tools.vcvars_command(settings)
 
     def test_arch_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
@@ -73,8 +71,6 @@ class VCVarsArchTest(unittest.TestCase):
             tools.vcvars_command(settings, arch='mips')
 
     def test_vcvars_ver_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
@@ -91,8 +87,6 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertNotIn('-vcvars_ver', command)
 
     def test_winsdk_version_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
