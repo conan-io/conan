@@ -271,13 +271,14 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
                            'call "%s" %s' % (vcvars_path, vcvars_arch))
-                if winsdk_version:
-                    command += " %s" % winsdk_version
-                if vcvars_ver:
-                    command += " -vcvars_ver=%s" % vcvars_ver
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
                 command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
+        if int(compiler_version) > 12:
+            if winsdk_version:
+                command += " %s" % winsdk_version
+            if vcvars_ver:
+                command += " -vcvars_ver=%s" % vcvars_ver
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")
