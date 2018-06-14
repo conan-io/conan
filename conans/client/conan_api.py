@@ -660,8 +660,15 @@ class ConanAPIV1(object):
 
     @api_method
     def users_list(self, remote=None):
+        info = {"error": False, "remotes": []}
         remotes = [self.get_remote_by_name(remote)] if remote else self.remote_list()
-        return users_list(self._client_cache.localdb, remotes)
+        try:
+            info["remotes"] = users_list(self._client_cache.localdb, remotes)
+            return info
+        except ConanException as exc:
+            info["error"] = True
+            exc.info = info
+            raise
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):

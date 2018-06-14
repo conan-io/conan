@@ -7,15 +7,15 @@ def users_list(localdb_file, remotes):
         raise ConanException("No remotes defined")
 
     localdb = LocalDB(localdb_file)
-    ret = {"remotes": []}
+    remotes_info = []
     for remote in remotes:
         user_info = {}
         user, token = localdb.get_login(remote.url)
         user_info["name"] = remote.name
         user_info["user_name"] = user
         user_info["authenticated"] = True if token else False
-        ret["remotes"].append(user_info)
-    return ret
+        remotes_info.append(user_info)
+    return remotes_info
 
 
 def users_clean(localdb_file):
