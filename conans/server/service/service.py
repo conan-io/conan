@@ -1,5 +1,4 @@
 from conans.errors import RequestErrorException, NotFoundException, ForbiddenException
-from conans.server.store.file_manager import FileManager
 import os
 import jwt
 from conans.util.files import mkdir
@@ -94,11 +93,10 @@ class SearchService(object):
 class ConanService(object):
     """Handles authorization and expose methods for REST API"""
 
-    def __init__(self, authorizer, file_manager, auth_user):
-        assert(isinstance(file_manager, FileManager))
+    def __init__(self, authorizer, server_store, auth_user):
 
         self._authorizer = authorizer
-        self._file_manager = file_manager
+        self._server_store = server_store
         self._auth_user = auth_user
 
     def get_conanfile_snapshot(self, reference):
@@ -106,7 +104,7 @@ class ConanService(object):
             {filename: md5}
         """
         self._authorizer.check_read_conan(self._auth_user, reference)
-        snap = self._file_manager.get_conanfile_snapshot(reference)
+        snap = self._server_store.get_conanfile_snapshot(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
         return snap
@@ -116,7 +114,7 @@ class ConanService(object):
             {filename: url}
         """
         self._authorizer.check_read_conan(self._auth_user, reference)
-        urls = self._file_manager.get_download_conanfile_urls(reference,
+        urls = self._server_store.get_download_conanfile_urls(reference,
                                                               files_subset,
                                                               self._auth_user)
         if not urls:
@@ -126,14 +124,14 @@ class ConanService(object):
     def get_conanfile_upload_urls(self, reference, filesizes):
         _validate_conan_reg_filenames(list(filesizes.keys()))
         self._authorizer.check_write_conan(self._auth_user, reference)
-        urls = self._file_manager.get_upload_conanfile_urls(reference,
+        urls = self._server_store.get_upload_conanfile_urls(reference,
                                                             filesizes,
                                                             self._auth_user)
         return urls
 
     def remove_conanfile(self, reference):
         self._authorizer.check_delete_conan(self._auth_user, reference)
-        self._file_manager.remove_conanfile(reference)
+        self._server_store.remove_conanfile(reference)
 
     def remove_packages(self, reference, package_ids_filter):
         for package_id in package_ids_filter:
@@ -142,15 +140,15 @@ class ConanService(object):
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, reference)
 
-        self._file_manager.remove_packages(reference, package_ids_filter)
+        self._server_store.remove_packages(reference, package_ids_filter)
 
     def remove_conanfile_files(self, reference, files):
         self._authorizer.check_delete_conan(self._auth_user, reference)
-        self._file_manager.remove_conanfile_files(reference, files)
+        self._server_store.remove_conanfile_files(reference, files)
 
     def remove_package_files(self, package_reference, files):
         self._authorizer.check_delete_package(self._auth_user, package_reference)
-        self._file_manager.remove_package_files(package_reference, files)
+        self._server_store.remove_package_files(package_reference, files)
 
     # Package methods
     def get_package_snapshot(self, package_reference):
@@ -158,7 +156,7 @@ class ConanService(object):
             [filename: {'url': url, 'md5': md5}]
         """
         self._authorizer.check_read_package(self._auth_user, package_reference)
-        snap = self._file_manager.get_package_snapshot(package_reference)
+        snap = self._server_store.get_package_snapshot(package_reference)
         return snap
 
     def get_package_download_urls(self, package_reference, files_subset=None):
@@ -166,7 +164,7 @@ class ConanService(object):
             [filename: {'url': url, 'md5': md5}]
         """
         self._authorizer.check_read_package(self._auth_user, package_reference)
-        urls = self._file_manager.get_download_package_urls(package_reference,
+        urls = self._server_store.get_download_package_urls(package_reference,
                                                             files_subset=files_subset)
         return urls
 
@@ -176,12 +174,12 @@ class ConanService(object):
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         try:
-            self._file_manager.get_conanfile_snapshot(package_reference.conan)
+            self._server_store.get_conanfile_snapshot(package_reference.conan)
         except NotFoundException:
             raise NotFoundException("There are no remote conanfiles like %s"
                                     % str(package_reference.conan))
         self._authorizer.check_write_package(self._auth_user, package_reference)
-        urls = self._file_manager.get_upload_package_urls(package_reference,
+        urls = self._server_store.get_upload_package_urls(package_reference,
                                                           filesizes, self._auth_user)
         return urls
 

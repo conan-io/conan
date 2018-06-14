@@ -1,5 +1,7 @@
 import json
 import unittest
+
+from conans.model.info import ConanInfo
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
@@ -95,8 +97,8 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
-        save(os.path.join(package_folder, CONANINFO), "info")
-        save(os.path.join(package_folder, CONAN_MANIFEST), "manifest")
+        save(os.path.join(package_folder, CONANINFO), """[settings]\n\n[options]\n\n""")
+        FileTreeManifest.create(package_folder).save(package_folder)
 
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |

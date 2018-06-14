@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 import os
-from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
@@ -12,9 +11,9 @@ from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
 import time
 import shutil
-from conans import SERVER_CAPABILITIES
+from conans import SERVER_CAPABILITIES, API_V2
 from conans.paths import SimplePaths
-
+from conans.server.conf import get_server_store
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
 TESTING_REMOTE_PRIVATE_PASS = "private_pass"
@@ -34,7 +33,7 @@ class TestServerLauncher(object):
             base_path = temp_folder()
 
         if server_capabilities is None:
-            server_capabilities = SERVER_CAPABILITIES  # Default enabled
+            server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
 
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
@@ -51,10 +50,8 @@ class TestServerLauncher(object):
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
-        self.file_manager = get_file_manager(server_config, public_url=base_url,
+        self.server_store = get_server_store(server_config, public_url=base_url,
                                              updown_auth_manager=updown_auth_manager)
-        revisions_enabled = server_config.revisions_enabled
-        server_store = ServerStore(server_config.disk_storage_path, revisions_enabled)
 
         # Prepare some test users
         if not read_permissions:
@@ -79,9 +76,9 @@ class TestServerLauncher(object):
         self.port = TestServerLauncher.port
         self.paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.file_manager, self.paths,
+                              authorizer, authenticator, self.server_store,
                               server_version, min_client_compatible_version,
-                              server_capabilities, server_store)
+                              server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
 

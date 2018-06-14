@@ -14,9 +14,9 @@ class ConanServiceV2(object):
         self._server_store = server_store
 
     # RECIPE METHODS
-    def get_conanfile_files_list(self, reference,  auth_user):
+    def get_conanfile_snapshot(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        snap = self._server_store.get_conanfile_files_list(reference)
+        snap = self._server_store.get_conanfile_snapshot(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
         return {"files": snap, "reference": reference}
@@ -37,9 +37,9 @@ class ConanServiceV2(object):
         self._server_store.update_recipe_revision(reference)
 
     # PACKAGE METHODS
-    def get_package_files_list(self, p_reference, auth_user):
+    def get_package_snapshot(self, p_reference, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        snap = self._server_store.get_package_files_list(p_reference)
+        snap = self._server_store.get_package_snapshot(p_reference)
         if not snap:
             raise NotFoundException("conanfile not found")
         return {"files": snap, "reference": p_reference}

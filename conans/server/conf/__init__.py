@@ -4,6 +4,7 @@ Server's configuration variables
 import six
 
 from conans import tools
+from conans.server.store.server_store import ServerStore
 from conans.util.env_reader import get_env
 from datetime import timedelta
 import os
@@ -12,9 +13,8 @@ import string
 from conans.errors import ConanException
 from conans.util.files import save, mkdir
 from six.moves.configparser import ConfigParser, NoSectionError
-from conans.paths import SimplePaths, conan_expand_user
+from conans.paths import conan_expand_user
 from conans.server.store.disk_adapter import ServerDiskAdapter
-from conans.server.store.file_manager import FileManager
 from conans.util.log import logger
 from conans.server.conf.default_server_conf import default_server_conf
 
@@ -228,7 +228,7 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_file_manager(config, public_url=None, updown_auth_manager=None):
+def get_server_store(config, public_url=None, updown_auth_manager=None):
     store_adapter = config.store_adapter
     if store_adapter == "disk":
         public_url = public_url or config.public_url
@@ -236,10 +236,10 @@ def get_file_manager(config, public_url=None, updown_auth_manager=None):
         if not updown_auth_manager:
             raise Exception("Updown auth manager needed for disk controller (not s3)")
         adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
-        paths = SimplePaths(config.disk_storage_path)
     else:
         # Want to develop new adapter? create a subclass of
-        # conans.server.store.file_manager.ServerStorageAdapter and implement the abstract methods
+        # ServerStorageAdapter and implement the abstract methods
         raise Exception("Store adapter not implemented! Change 'store_adapter' "
                         "variable in server.conf file to one of the available options: 'disk' ")
-    return FileManager(paths, adapter)
+    revisions_enabled = config.revisions_enabled
+    return ServerStore(revisions_enabled, adapter)

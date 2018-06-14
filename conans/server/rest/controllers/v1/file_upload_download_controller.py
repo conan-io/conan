@@ -14,7 +14,7 @@ class FileUploadDownloadController(Controller):
     """
     def attach_to(self, app):
 
-        storage_path = app.file_manager.paths.store
+        storage_path = app.server_store.store
         service = FileUploadDownloadService(app.updown_auth_manager, storage_path)
 
         @app.route(self.route + '/<filepath:path>', method=["GET"])

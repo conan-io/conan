@@ -1,11 +1,11 @@
 from bottle import Bottle
 
 from conans.server.rest.api_v1 import ApiV1
+from conans.server.rest.controllers.delete_controller import DeleteController
 from conans.server.rest.controllers.ping_controller import PingController
+from conans.server.rest.controllers.search_controller import SearchController
 from conans.server.rest.controllers.users_controller import UsersController
-from conans.server.rest.controllers.v1.delete_controller import DeleteController
 from conans.server.rest.controllers.v2.conan_controller import ConanControllerV2
-from conans.server.rest.search_controller import SearchController
 
 
 class ApiV2(ApiV1):

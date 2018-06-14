@@ -85,6 +85,11 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
 
+    def copy_with_revision(self, revision):
+        tmp = ConanFileReference.loads(str(self))
+        tmp.revision = revision
+        return tmp
+
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
     """ Full package reference, e.g.:
@@ -117,3 +122,8 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
     def __repr__(self):
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s:%s%s" % (self.conan, self.package_id, str_rev)
+
+    def copy_with_revisions(self, revision, p_revision):
+        ret = PackageReference(self.conan.copy_with_revision(revision), self.package_id)
+        ret.revision = p_revision
+        return ret

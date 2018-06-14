@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import os
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
-from conans.server.conf import get_file_manager
+from conans.server.conf import get_server_store
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
@@ -10,9 +10,8 @@ from conans.server.plugin_loader import load_authentication_plugin
 from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
-from conans.paths import conan_expand_user, SimplePaths
+from conans.paths import conan_expand_user
 from conans import SERVER_CAPABILITIES
-from conans.server.store.server_store import ServerStore
 
 
 class ServerLauncher(object):
@@ -35,17 +34,14 @@ class ServerLauncher(object):
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
 
-        file_manager = get_file_manager(server_config, updown_auth_manager=updown_auth_manager)
+        server_store = get_server_store(server_config, updown_auth_manager=updown_auth_manager)
 
         server_capabilities = SERVER_CAPABILITIES
-        paths = SimplePaths(server_config.disk_storage_path)
-        revisions_enabled = server_config.revisions_enabled
-        server_store = ServerStore(server_config.disk_storage_path, revisions_enabled)
 
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, file_manager, paths,
+                              authorizer, authenticator, server_store,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities, server_store)
+                              server_capabilities)
 
     def launch(self):
         self.ra.run(host="0.0.0.0")

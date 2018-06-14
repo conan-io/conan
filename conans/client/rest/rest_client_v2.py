@@ -9,7 +9,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import decode_text, sha1sum
+from conans.util.files import decode_text, md5sum
 from conans.util.log import logger
 
 
@@ -124,7 +124,7 @@ class RestV2Methods(RestCommonMethods):
             data = {"files": {}}
 
         remote_snapshot = data["files"]
-        local_snapshot = {filename: sha1sum(abs_path) for filename, abs_path in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -160,7 +160,7 @@ class RestV2Methods(RestCommonMethods):
         except NotFoundException:
             data = {"files": {}}
         remote_snapshot = data["files"]
-        local_snapshot = {filename: sha1sum(abs_path) for filename, abs_path in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)

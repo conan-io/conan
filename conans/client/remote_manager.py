@@ -50,9 +50,10 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        conan_reference.revision = self._client_cache.load_manifest(conan_reference).summary_hash
-        ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file, no_overwrite)
+        revision = self._client_cache.load_manifest(conan_reference).summary_hash
+        ref = conan_reference.copy_with_revision(revision)
+        ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
+                                ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
@@ -121,15 +122,11 @@ class RemoteManager(object):
             return None
 
         # Read the hashes (revisions) and build a correct package reference for the server
-        # TODO: What a mess
         recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
-        _, expected_digest = self._client_cache.package_manifests(package_reference)
-        package_hash = expected_digest.summary_hash
+        package_hash = self._client_cache.package_manifests(package_reference)[1].summary_hash
 
-        ref = package_reference.conan
-        ref.recipe_hash = recipe_hash
-        p_ref = PackageReference(ref, package_reference.package_id)
-        p_ref.revision = package_hash
+        # Copy to not modify the original with the revisions
+        p_ref = package_reference.copy_with_revisions(recipe_hash, package_hash)
 
         tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
                                 no_overwrite)

@@ -185,9 +185,6 @@ class RestCommonMethods(object):
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
 
-
-    !!! REEMPLAZAR URLS A CLAVO CON LOS HELPERS!! MIRAR SI VA RULANDO, PROBAR V1 tambien a mano
-
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
         """ Remove a recipe and packages """

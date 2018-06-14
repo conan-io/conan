@@ -15,8 +15,8 @@ class ConanServer(object):
 
     def __init__(self, run_port, credentials_manager,
                  updown_auth_manager, authorizer, authenticator,
-                 file_manager, paths, server_version, min_client_compatible_version,
-                 server_capabilities, server_store):
+                 server_store, server_version, min_client_compatible_version,
+                 server_capabilities):
 
         assert(isinstance(server_version, Version))
         assert(isinstance(min_client_compatible_version, Version))
@@ -26,10 +26,9 @@ class ConanServer(object):
         self.api_v1 = ApiV1(credentials_manager, updown_auth_manager,
                             server_version, min_client_compatible_version,
                             server_capabilities)
-        self.api_v1.paths = paths
         self.api_v1.authorizer = authorizer
         self.api_v1.authenticator = authenticator
-        self.api_v1.file_manager = file_manager
+        self.api_v1.server_store = server_store
         self.api_v1.setup()
 
         self.api_v2 = ApiV2(credentials_manager,
@@ -37,10 +36,7 @@ class ConanServer(object):
                             server_capabilities)
         self.api_v2.authorizer = authorizer
         self.api_v2.authenticator = authenticator
-        # Manage all disk access with single server_store
         self.api_v2.server_store = server_store
-        self.api_v2.paths = server_store
-        self.api_v2.file_manager = server_store
         self.api_v2.setup()
 
         self.root_app = bottle.Bottle()

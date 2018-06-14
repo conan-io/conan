@@ -1,6 +1,8 @@
-'''Adapter for access to S3 filesystem.'''
+import fasteners
 import os
 from abc import ABCMeta, abstractmethod
+
+from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
 from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
 from conans.util.files import path_exists
@@ -28,6 +30,22 @@ class ServerStorageAdapter(object):
 
     @abstractmethod
     def delete_empty_dirs(self, deleted_refs):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def path_exists(self, path):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def read_file(self, path):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def write_file(self, path, contents, lock_file=None):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def base_storage_folder(self):
         raise NotImplementedError()
 
 
@@ -113,3 +131,18 @@ class ServerDiskAdapter(ServerStorageAdapter):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def path_exists(self, path):
+        return os.path.exists(path)
+
+    def read_file(self, path):
+        with open(path) as f:
+            return f.read()
+
+    def write_file(self, path, contents, lock_file):
+        with fasteners.InterProcessLock(lock_file, logger=None) if lock_file else no_op():
+            with open(path, "w") as f:
+                f.write(contents)
+
+    def base_storage_folder(self):
+        return self._store_folder
