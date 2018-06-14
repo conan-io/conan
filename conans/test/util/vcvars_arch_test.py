@@ -80,11 +80,11 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
-        settings.compiler.version = '12'
+        settings.compiler.version = '14'
 
         command = tools.vcvars_command(settings, vcvars_ver='14.14')
         self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('-vcvars_ver', command)
+        self.assertIn('-vcvars_ver=14.14', command)
 
     def test_winsdk_version_override(self):
         settings = Settings.loads(default_settings_yml)
