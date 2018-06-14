@@ -40,6 +40,20 @@ class SCMTest(unittest.TestCase):
         self.client.runner("git add .", cwd=self.client.current_folder)
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
+    def test_scm_other_type_ignored(self):
+        conanfile = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = ["Other stuff"]
+
+'''
+        self.client.save({"conanfile.py": conanfile})
+        # nothing breaks
+        self.client.run("export . user/channel")
+
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
 from conans import ConanFile, tools

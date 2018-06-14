@@ -17,4 +17,3 @@ API_V2 = "api_v2"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, API_V2]
 
 __version__ = '1.5.0-dev'
-

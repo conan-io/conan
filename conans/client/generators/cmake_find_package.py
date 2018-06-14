@@ -50,8 +50,9 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
           set_target_properties({name}::{name} PROPERTIES
           INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
         endif()
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}})
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.compile_definitions})
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "{deps.cppflags_list}" "{deps.cflags_list}")
     endif()
     {find_dependencies}
 endif()
