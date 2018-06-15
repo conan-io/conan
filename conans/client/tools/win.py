@@ -252,7 +252,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
-        command = "echo Conan:vcvars already set"
+        command = ["echo Conan:vcvars already set"]
         existing_version = existing_version.split(".")[0]
         if existing_version != compiler_version:
             message = "Visual environment already set to %s\n " \
