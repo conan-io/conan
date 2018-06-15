@@ -50,9 +50,9 @@ try{
                                 commit = vars["GIT_COMMIT"].substring(0, 4)
                                 branch = vars["GIT_BRANCH"]
                                 def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
-                                workdir = "${base_dir}${commit}/${pyver}"
+                                workdir = "${base_dir}${commit}/${pyver}/${api_conf}"
                                 base_source = "${base_dir}source/${commit}"
-                                sourcedir = "${base_source}/${pyver}"
+                                sourcedir = "${base_source}/${pyver}/${api_conf}"
                                 while(fileExists(sourcedir)){
                                     sourcedir = sourcedir + "_"
                                 }
