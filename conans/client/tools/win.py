@@ -5,7 +5,6 @@ import re
 import deprecation
 
 import subprocess
-import six
 
 from contextlib import contextmanager
 
