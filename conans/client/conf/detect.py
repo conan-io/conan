@@ -61,7 +61,7 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("([0-9]\.[0-9])", out).group()
+        installed_version = re.search("([0-9]{1,}\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
