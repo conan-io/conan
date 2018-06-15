@@ -41,7 +41,7 @@ class Test(ConanFile):
             self.assertNotIn("os: Windows", client.user_io.out)
             self.assertIn("os: Linux", client.user_io.out)
 
-
+fake_recipe_hash = "999999999"
 conaninfo = '''
 [settings]
     arch=x64
@@ -54,7 +54,8 @@ conaninfo = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
-'''
+[recipe_hash]
+''' +  fake_recipe_hash
 
 
 class RemoveTest(unittest.TestCase):
@@ -81,7 +82,7 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
-            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "234234\nconanfile.py: 234234234"
+            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id

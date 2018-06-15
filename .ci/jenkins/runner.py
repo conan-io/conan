@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder,
-              exluded_tags, num_cores=3, verbosity=None):
+              exluded_tags, num_cores=3, verbosity=None, apiv2=False):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     exluded_tags = exluded_tags or ""
@@ -68,6 +68,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     env["CONAN_RECIPE_LINTER"] = "False"
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
+    if apiv2:
+        env["CONAN_TESTING_SERVER_V2_ENABLED"] = "1"
     with chdir(source_folder):
         with environment_append(env):
             run(command)
@@ -95,9 +97,11 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
+    parser.add_argument('--apiv2',  action='store_true', help='Test all with APIv2',
+                        default=False)
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.j: rest_api')
-
     args = parser.parse_args()
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag, num_cores=args.num_cores)
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag,
+              num_cores=args.num_cores, apiv2=args.apiv2)
 

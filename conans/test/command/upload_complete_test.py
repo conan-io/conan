@@ -70,7 +70,6 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        conan_digest = FileTreeManifest('123123123', {})
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = self.client.paths.export(self.conan_ref)
 
@@ -85,8 +84,10 @@ class UploadTest(unittest.TestCase):
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
-        conan_digest.save(reg_folder)
         mkdir(self.client.client_cache.export_sources(self.conan_ref))
+        manifest = FileTreeManifest.create(reg_folder)
+        manifest.time = '123123123'
+        manifest.save(reg_folder)
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
@@ -97,7 +98,7 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
-        save(os.path.join(package_folder, CONANINFO), """[settings]\n\n[options]\n\n""")
+        save(os.path.join(package_folder, CONANINFO), """[recipe_hash]\n%s""" % manifest.summary_hash)
         FileTreeManifest.create(package_folder).save(package_folder)
 
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),

@@ -241,3 +241,5 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
                 out.error(msg)
                 out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)
+        except Exception:
+            pass

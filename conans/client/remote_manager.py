@@ -125,6 +125,9 @@ class RemoteManager(object):
         recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
         package_hash = self._client_cache.package_manifests(package_reference)[1].summary_hash
 
+        if not recipe_hash or not package_hash:
+            raise ConanException("Invalid recipe or package without summary hash!")
+
         # Copy to not modify the original with the revisions
         p_ref = package_reference.copy_with_revisions(recipe_hash, package_hash)
 

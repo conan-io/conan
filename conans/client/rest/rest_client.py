@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from conans import API_V2
+from conans import API_V2, CHECKSUM_DEPLOY
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 
@@ -32,8 +32,9 @@ class RestApiClient(object):
             self._capabilities[self.remote_url] = cap
 
         if API_V2 in self._capabilities[self.remote_url]:
+            checksum_deploy = CHECKSUM_DEPLOY in self._capabilities[self.remote_url]
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers)
+                                 self.requester, self.verify_ssl, self._put_headers, checksum_deploy)
         else:
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers)

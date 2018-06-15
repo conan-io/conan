@@ -83,7 +83,7 @@ class ServerStore(SimplePaths):
 
     def _patch_ref(self, reference):
         if not self._revisions_enabled:
-            return reference
+            return reference.copy_without_revisions()
         if reference.revision:
             return reference
 
@@ -96,7 +96,7 @@ class ServerStore(SimplePaths):
 
     def _patch_package_ref(self, p_reference):
         if not self._revisions_enabled:
-            return p_reference
+            return p_reference.copy_without_revisions()
         if p_reference.revision:
             return p_reference
 

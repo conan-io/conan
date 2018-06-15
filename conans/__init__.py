@@ -14,6 +14,7 @@ from conans.util.files import load
 # complex_search: With ORs and not filtering by not restricted settings
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 API_V2 = "api_v2"
+CHECKSUM_DEPLOY = "checksum_deploy"  # Only when v2
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, API_V2]
 
 __version__ = '1.5.0-dev'

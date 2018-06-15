@@ -34,6 +34,8 @@ class TestServerLauncher(object):
 
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
+            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
+                server_capabilities.add(API_V2)
 
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
@@ -81,6 +83,7 @@ class TestServerLauncher(object):
                               server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
+            self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):
         """from multiprocessing import Process

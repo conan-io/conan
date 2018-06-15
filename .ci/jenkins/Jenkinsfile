@@ -12,6 +12,7 @@ else{
 
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
+def apiv2 = "--apiv2"
 
 
 def win_tmp_base = "D:/J/t/"
@@ -67,14 +68,14 @@ try{
 
                         if(slave == "Linux"){
                             docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
+                                sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${apiv2}")
                             }
                         }
                         else if(slave == "Windows"){
                             try{
 
                               withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
+                                bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} ${apiv2}")
                               }
                             }
                             finally{
@@ -85,7 +86,7 @@ try{
                         else if(slave == "Macos"){
                             try{
                               withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                  sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
+                                  sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${apiv2}")
                               }
                             }
                             finally{

@@ -15,6 +15,13 @@ from conans.util.log import logger
 
 class RestV2Methods(RestCommonMethods):
 
+    def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
+                 put_headers=None, checksum_deploy=False):
+
+        super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
+                                            verify_ssl, put_headers)
+        self._checksum_deploy = checksum_deploy
+
     @property
     def remote_api_url(self):
         return "%s/v2" % self.remote_url.rstrip("/")
@@ -68,7 +75,7 @@ class RestV2Methods(RestCommonMethods):
         data = self.get_json(url)
         files = data["files"]
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        url = self._recipe_url(PackageReference.loads(data["reference"]))
+        url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
@@ -192,7 +199,7 @@ class RestV2Methods(RestCommonMethods):
             resource_url = "%s/%s" % (base_url, filename)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=self.auth,
-                                           dedup=True, retry=retry, retry_wait=retry_wait,
+                                           dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
                                            headers=self._put_headers)
                 self._output.writeln("")
                 if not response.ok:

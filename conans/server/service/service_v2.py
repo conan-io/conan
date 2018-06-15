@@ -19,7 +19,7 @@ class ConanServiceV2(object):
         snap = self._server_store.get_conanfile_snapshot(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "reference": reference}
+        return {"files": snap, "reference": str(reference)}
 
     def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
@@ -42,7 +42,7 @@ class ConanServiceV2(object):
         snap = self._server_store.get_package_snapshot(p_reference)
         if not snap:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "reference": p_reference}
+        return {"files": snap, "reference": str(p_reference)}
 
     def get_package_file(self, p_reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
