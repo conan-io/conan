@@ -40,7 +40,6 @@ class TestConan(ConanFile):
 """
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
         output = subprocess.check_output(env_cmd, shell=True)
         normal_environment = env_output_to_dict(output)
         client.run("install .")
@@ -58,3 +57,28 @@ class TestConan(ConanFile):
         output = subprocess.check_output(get_cmd(deact_build_file), shell=True)
         deactivate_environment = env_output_to_dict(output)
         self.assertEqual(normal_environment, deactivate_environment)
+
+    def environment_path_appended_test(self):
+        env_cmd = "set" if platform.system() == "Windows" else "env"
+        def get_path_from_content(content):
+            starts = "set path=" if platform.system() == "Windows" else "path="
+            vars = [line for line in content.splitlines() if line.lower().startswith(starts)]
+            return vars[0].split("=", 1)[-1]
+        conanfile = """
+from conans import ConanFile
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+    settings = "os", "compiler", "arch", "build_type"
+    generators = "virtualbuildenv"
+"""
+        output = subprocess.check_output("set", shell=True)
+        normal_path = [line for line in output.splitlines() if line.lower().startswith("path=")][0]
+        normal_path = normal_path.split("=", 1)[-1]
+        client = TestClient(path_with_spaces=False)
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        activate_content = load(os.path.join(client.current_folder, "activate_build.bat"))
+        activate_path = get_path_from_content(activate_content)
+        self.assertIn(normal_path, activate_path)
