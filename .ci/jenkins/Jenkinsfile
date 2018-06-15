@@ -31,9 +31,10 @@ try{
             for (z in api_confs){
                 def pyver = y
                 def api_conf = z
-                builders["${slave} - ${pyver}"] = {
+                def name = "${slave} - ${pyver} - API${api_conf}"
+                builders[name] = {
                     node(slave) {
-                        stage("${slave} - ${pyver} - API${api_conf}"){
+                        stage(name){
                             def workdir
                             def sourcedir
                             def base_source
