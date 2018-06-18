@@ -72,3 +72,14 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("create . user/channel")
         self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
                       client.user_io.out)
+
+        # Test also recipe without settings
+        new_conanfile =\
+            conanfile.replace("settings = \"os\", \"compiler\", \"build_type\", \"arch\"", "")
+        self.assertNotIn("settings = \"os\", \"compiler\", \"build_type\", \"arch\"", new_conanfile)
+        client.save({"conanfile.py": new_conanfile})
+
+        client.run("remove * --force")
+        client.run("create . user/channel")
+        self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
+                      client.user_io.out)

@@ -11,6 +11,7 @@ RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
+RECIPE_WORKSPACE = "Workspace"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -18,6 +19,7 @@ BINARY_UPDATE = "Update"
 BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
+BINARY_WORKSPACE = "Workspace"
 
 
 class Node(object):
@@ -170,7 +172,22 @@ class DepsGraph(object):
                     conanfile.package_id()
         return ordered
 
-    def closure(self, node, private=False):
+    def full_closure(self, node):
+        # Needed to propagate correctly the cpp_info even with privates
+        closure = OrderedDict()
+        current = node.neighbors()
+        while current:
+            new_current = []
+            for n in current:
+                closure[n] = n
+            for n in current:
+                for neigh in n.public_neighbors():
+                    if neigh not in new_current and neigh not in closure:
+                        new_current.append(neigh)
+            current = new_current
+        return closure
+
+    def closure(self, node):
         closure = OrderedDict()
         current = node.neighbors()
         while current:
@@ -178,7 +195,7 @@ class DepsGraph(object):
             for n in current:
                 closure[n.conan_ref.name] = n
             for n in current:
-                neighs = n.neighbors() if private else n.public_neighbors()
+                neighs = n.public_neighbors()
                 for neigh in neighs:
                     if neigh not in new_current and neigh.conan_ref.name not in closure:
                         new_current.append(neigh)

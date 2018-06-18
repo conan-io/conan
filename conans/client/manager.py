@@ -142,7 +142,7 @@ class ConanManager(object):
     def _get_graph_builder(self, loader, action_recorder):
         graph_builder = GraphManager(self._user_io.out, loader,
                                      self._client_cache, self._registry, self._remote_manager,
-                                     action_recorder)
+                                     action_recorder, workspace=None)
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, check_updates, update, build_mode,
@@ -193,6 +193,27 @@ class ConanManager(object):
 
         return deps_graph, self._get_project_reference(reference, conanfile)
 
+    def install_workspace(self, profile, workspace, remote_name, build_modes, update):
+        loader = self.get_loader(profile)
+        references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
+        conanfile = loader.load_virtual(references)
+
+        graph_builder = self._get_graph_builder(loader, self._recorder)
+        build_mode = BuildMode(build_modes, self._user_io.out)
+        deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,
+                                              profile.build_requires)
+
+        output = ScopedOutput(str("Workspace"), self._user_io.out)
+        output.highlight("Installing...")
+        print_graph(deps_graph, self._user_io.out)
+
+        installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+                                   self._registry, recorder=self._recorder, workspace=workspace)
+        installer.install(deps_graph, keep_build=False)
+
+        build_mode.report_matches()
+        workspace.generate()
+
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, inject_require=None,
@@ -227,8 +248,8 @@ class ConanManager(object):
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)
-        graph_builder = self._get_graph_builder(loader, self._recorder)
 
+        graph_builder = self._get_graph_builder(loader, self._recorder)
         build_mode = BuildMode(build_modes, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,
                                               profile.build_requires)
@@ -252,7 +273,7 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder)
+                                   self._registry, recorder=self._recorder, workspace=None)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:

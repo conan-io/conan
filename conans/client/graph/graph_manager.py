@@ -36,7 +36,7 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, loader, client_cache, registry, remote_manager, action_recorder):
+    def __init__(self, output, loader, client_cache, registry, remote_manager, action_recorder, workspace):
         self._proxy = ConanProxy(client_cache, output, remote_manager,
                                  recorder=action_recorder, registry=registry)
         self._output = output
@@ -45,6 +45,7 @@ class GraphManager(object):
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
+        self._workspace = workspace
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
@@ -95,12 +96,12 @@ class GraphManager(object):
 
     def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
                    profile_build_requires=None):
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, self._workspace)
         graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, self._registry)
+                                                  self._remote_manager, self._registry, self._workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,

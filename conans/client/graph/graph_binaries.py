@@ -8,15 +8,16 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.info import ConanInfo
 from conans.paths import CONANINFO
 from conans.client.graph.graph import BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,\
-    BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP
+    BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP, BINARY_WORKSPACE
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, registry):
+    def __init__(self, client_cache, output, remote_manager, registry, workspace):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = registry
+        self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
         try:
@@ -66,6 +67,11 @@ class GraphBinariesAnalyzer(object):
                                                     short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
+        local_project = self._workspace[conan_ref] if self._workspace else None
+        if local_project:
+            node.binary = BINARY_WORKSPACE
+            return
+
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
@@ -131,8 +137,8 @@ class GraphBinariesAnalyzer(object):
             if [r for r in conanfile.requires.values() if r.private]:
                 self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
                 if node.binary != BINARY_BUILD:
-                    closure = deps_graph.closure(node, private=True)
-                    for node in closure.values():
+                    closure = deps_graph.full_closure(node)
+                    for node in closure:
                         node.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:

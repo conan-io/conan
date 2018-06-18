@@ -6,17 +6,19 @@ from conans.model.ref import ConanFileReference
 from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
-from conans.client.graph.graph import DepsGraph, Node
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.model.workspace import WORKSPACE_FILE
 
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, proxy, output, loader, resolver):
+    def __init__(self, proxy, output, loader, resolver, workspace):
         self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._workspace = workspace
 
     def load_graph(self, conanfile, check_updates, update, remote_name):
         check_updates = check_updates or update
@@ -196,13 +198,22 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        result = self._proxy.get_recipe(requirement.conan_reference,
-                                        check_updates, update, remote_name)
-        conanfile_path, recipe_status, remote = result
+        workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
+        if workspace_package:
+            conanfile_path = workspace_package.conanfile_path
+            recipe_status = RECIPE_WORKSPACE
+            remote = WORKSPACE_FILE
+        else:
+            result = self._proxy.get_recipe(requirement.conan_reference,
+                                            check_updates, update, remote_name)
+            conanfile_path, recipe_status, remote = result
+
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
 
+        if workspace_package:
+            workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
