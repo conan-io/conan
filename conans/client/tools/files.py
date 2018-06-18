@@ -86,8 +86,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
         if not pattern:
             zip_info = z.infolist()
         else:
-            zip_info = list(filter(lambda zi: fnmatch(zi.filename, pattern),
-                                   z.infolist()))
+            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
             _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
