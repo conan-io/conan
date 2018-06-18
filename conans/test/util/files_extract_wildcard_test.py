@@ -28,20 +28,15 @@ def create_archive(archive, root, relative_file_paths):
 class FilesExtractPatternTest(TestCase):
 
     def test_patterns(self):
-        def cross_platform_path(relative_path_with_slashes):
-            """ Convert string with slashes to platform-specific path. Windows
-            will not interpret correctly the slash. """
-            return os.path.join(*relative_path_with_slashes.split("/"))
-
         # Test setup
         src_dir = temp_folder()
-        files = {cross_platform_path(k): v for (k, v) in {
+        files = {
             "foo/file.cpp": "code",
             "foo/bar/file.txt": "text",
             "foo/bar/file.cpp": "more code",
             "foo/bar/baz/file.txt": "more text"
-        }.items()}
-        matches = {k: list(map(cross_platform_path, v)) for (k, v) in {
+        }
+        matches = {
             "*.cpp": ["foo/file.cpp",
                       "foo/bar/file.cpp"],
             "*.txt": ["foo/bar/file.txt",
@@ -55,7 +50,7 @@ class FilesExtractPatternTest(TestCase):
                   "foo/bar/file.cpp",
                   "foo/bar/baz/file.txt"],
             "nothing": []
-        }.items()}
+        }
         save_files(src_dir, files)
 
         for extension in ["zip", "tar", "tar.gz"]:
@@ -70,8 +65,8 @@ class FilesExtractPatternTest(TestCase):
                 unzip(archive, dst_dir, pattern=pattern)
 
                 # THEN only and all files matching the pattern are extracted
-                expected = set(map(lambda x: os.path.join(dst_dir, x), paths))
                 actual = set()
+                expected = set(map(lambda x: os.path.join(dst_dir, *x.split("/")), paths))
                 for extracted_dir, _, extracted_files in os.walk(dst_dir):
                     actual.update(map(lambda x: os.path.join(extracted_dir, x),
                                       extracted_files))
