@@ -25,9 +25,9 @@ def create_archive(archive, root, relative_file_paths):
     return archive
 
 
-class FilesExtractWildcardTest(TestCase):
+class FilesExtractPatternTest(TestCase):
 
-    def test_wildcards(self):
+    def test_patterns(self):
         # Test setup
         src_dir = temp_folder()
         files = {
@@ -56,12 +56,12 @@ class FilesExtractWildcardTest(TestCase):
             archive = os.path.join(archive_dir, "archive.%s" % extension)
             create_archive(archive, src_dir, files)
 
-            for (wildcard, paths) in matches.items():
-                # WHEN a wildcard is used for file extraction
+            for (pattern, paths) in matches.items():
+                # WHEN a pattern is used for file extraction
                 dst_dir = temp_folder()
-                unzip(archive, dst_dir, wildcard=wildcard)
+                unzip(archive, dst_dir, pattern=pattern)
 
-                # THEN only and all files matching the wildcard are extracted
+                # THEN only and all files matching the pattern are extracted
                 expected = set(map(lambda x: os.path.join(dst_dir, x), paths))
                 actual = set()
                 for extracted_dir, _, extracted_files in os.walk(dst_dir):

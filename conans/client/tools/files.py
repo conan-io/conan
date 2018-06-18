@@ -51,7 +51,7 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False, wildcard=None):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -60,14 +60,14 @@ def unzip(filename, destination=".", keep_permissions=False, wildcard=None):
     dangerous if the zip was not created in a NIX system, the bits could
     produce undefined permission schema. Use this option only if you are sure
     that the zip was created correctly.
-    :param wildcard: Extract only paths matching the wildcard. This should be a
+    :param pattern: Extract only paths matching the pattern. This should be a
     Unix shell-style wildcard, see fnmatch documentation for more details.
     :return:
     """
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, wildcard)
+        return untargz(filename, destination, pattern)
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
 
@@ -83,10 +83,10 @@ def unzip(filename, destination=".", keep_permissions=False, wildcard=None):
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
-        if not wildcard:
+        if not pattern:
             zip_info = z.infolist()
         else:
-            zip_info = list(filter(lambda zi: fnmatch(zi.filename, wildcard),
+            zip_info = list(filter(lambda zi: fnmatch(zi.filename, pattern),
                                    z.infolist()))
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
@@ -119,13 +119,13 @@ def unzip(filename, destination=".", keep_permissions=False, wildcard=None):
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
-def untargz(filename, destination=".", wildcard=None):
+def untargz(filename, destination=".", pattern=None):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        if not wildcard:
+        if not pattern:
             tarredgzippedFile.extractall(destination)
         else:
-            members = list(filter(lambda m: fnmatch(m.name, wildcard),
+            members = list(filter(lambda m: fnmatch(m.name, pattern),
                                   tarredgzippedFile.getmembers()))
             tarredgzippedFile.extractall(destination, members=members)
 
