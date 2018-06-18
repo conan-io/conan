@@ -131,7 +131,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver())
+                                        MockRequireResolver(), None)
 
     def root(self, content):
         root_conan = self.retriever.root(content)
@@ -1505,7 +1505,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver())
+                                        MockRequireResolver(), None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1630,7 +1630,7 @@ class CoreSettingsTest(unittest.TestCase):
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, full_settings, profile)
         retriever = Retriever(loader, self.output)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None)
         root_conan = retriever.root(content)
         deps_graph = builder.load_graph(root_conan, False, False, None)
         return deps_graph
@@ -1915,7 +1915,7 @@ class ChatConan(ConanFile):
                                               "myoption_chat=on")
         loader = ConanFileLoader(None, Settings.loads(""), profile)
         retriever = Retriever(loader, output)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
