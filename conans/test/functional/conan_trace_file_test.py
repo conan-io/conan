@@ -92,7 +92,7 @@ class HelloConan(ConanFile):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        self.assertEquals(len(actions), 19)
+        self.assertEquals(len(actions), 20)
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
@@ -100,13 +100,13 @@ class HelloConan(ConanFile):
         self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
         self.assertEquals(json.loads(actions[0])["name"], "authenticate")
 
-        self.assertEquals(json.loads(actions[2])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[2])["name"], "export")
-
         self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[3])["name"], "install_reference")
+        self.assertEquals(json.loads(actions[3])["name"], "export")
 
-        self.assertEquals(json.loads(actions[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEquals(json.loads(actions[4])["_id"], "Hello0/0.1@lasote/stable")
+        self.assertEquals(json.loads(actions[4])["_action"], "COMMAND")
+        self.assertEquals(json.loads(actions[4])["name"], "install_reference")
+
+        self.assertEquals(json.loads(actions[5])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
+        self.assertEquals(json.loads(actions[5])["_id"], "Hello0/0.1@lasote/stable")
 
         self.assertEquals(json.loads(actions[-1])["_action"], "UPLOADED_PACKAGE")
