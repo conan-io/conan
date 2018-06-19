@@ -10,7 +10,7 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.remote_registry import RemoteRegistry
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
@@ -887,9 +887,11 @@ class Command(object):
                 info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
                                                   case_sensitive=args.case_sensitive)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
-                remote_registry = RemoteRegistry(self._client_cache.registry, None)
-                all_remotes_search = ("all" not in (r.name for r in remote_registry.remotes) and
-                                      args.remote == "all")
+                try:
+                    remote_all = self._conan.get_remote_by_name("all")
+                except NoRemoteAvailable:
+                    remote_all = None
+                all_remotes_search = (remote_all is None and args.remote == "all")
 
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
                                                        args.raw, all_remotes_search)
