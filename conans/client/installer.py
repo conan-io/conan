@@ -267,12 +267,8 @@ class ConanInstaller(object):
                 conan_ref, conan_file = node.conan_ref, node.conanfile
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_id = conan_file.info.package_id()
-                package_ref = PackageReference(conan_ref, package_id)
                 if node.binary == BINARY_MISSING:
                     raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
-
-                package_folder = self._client_cache.package(package_ref,
-                                                            conan_file.short_paths)
 
                 self._propagate_info(node, inverse_levels, deps_graph, output)
                 if node.binary in (BINARY_SKIP):  # Privates not necessary
@@ -283,9 +279,6 @@ class ConanInstaller(object):
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
                 else:
                     self._handle_node_cache(node, package_id, keep_build, processed_package_references)
-
-                # Call the info method
-                self._call_package_info(conan_file, package_folder)
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
@@ -312,6 +305,8 @@ class ConanInstaller(object):
                     log_package_got_from_local_cache(package_ref)
                     self._recorder.package_fetched_from_cache(package_ref)
                 clean_dirty(package_folder)
+            # Call the info method
+            self._call_package_info(conan_file, package_folder)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
         conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -329,7 +324,7 @@ class ConanInstaller(object):
             for p in lib_paths:
                 mkdir(p)
 
-        self._propagate_info(node, inverse_levels, deps_graph)
+        self._propagate_info(node, inverse_levels, deps_graph, output)
 
         build_folder = workspace_package.build_folder
         write_generators(conan_file, build_folder, output)

@@ -198,7 +198,9 @@ class ConanManager(object):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
         conanfile = loader.load_virtual(references)
 
-        graph_builder = self._get_graph_builder(loader, self._recorder)
+        graph_builder = GraphManager(self._user_io.out, loader,
+                                     self._client_cache, self._registry, self._remote_manager,
+                                     self._recorder, workspace=workspace)
         build_mode = BuildMode(build_modes, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, False, update, build_mode, remote_name,
                                               profile.build_requires)
