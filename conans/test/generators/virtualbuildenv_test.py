@@ -3,7 +3,8 @@ import platform
 import subprocess
 import unittest
 
-from conans import load
+from conans import load, tools
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
@@ -58,11 +59,10 @@ class TestConan(ConanFile):
         deactivate_environment = env_output_to_dict(output)
         self.assertEqual(normal_environment, deactivate_environment)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def environment_path_appended_test(self):
-        env_cmd = "set" if platform.system() == "Windows" else "env"
         def get_path_from_content(content):
-            starts = "set path=" if platform.system() == "Windows" else "path="
-            vars = [line for line in content.splitlines() if line.lower().startswith(starts)]
+            vars = [line for line in content.splitlines() if line.lower().startswith("set path=")]
             return vars[0].split("=", 1)[-1]
         conanfile = """
 from conans import ConanFile
@@ -81,4 +81,44 @@ class TestConan(ConanFile):
         client.run("install .")
         activate_content = load(os.path.join(client.current_folder, "activate_build.bat"))
         activate_path = get_path_from_content(activate_content)
-        self.assertIn(normal_path, activate_path)
+        self.assertNotIn(normal_path, activate_path)
+        self.assertIn("PATH", activate_path)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def activate_and_activate_build_test(self):
+        conanfile_dep = """
+import os
+from conans import ConanFile
+
+class TestConan(ConanFile):
+    name = "dep"
+    version = "1.0"
+    settings = "os", "compiler", "arch", "build_type"
+
+    def package_info(self):
+        self.env_info.path.append(os.path.join(self.package_folder, "bin"))
+"""
+        conanfile = """
+from conans import ConanFile
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+    settings = "os", "compiler", "arch", "build_type"
+    requires = "dep/1.0@danimtb/testing"
+    generators = "virtualrunenv", "virtualbuildenv"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_dep,
+                     "fake.exe": "content"})
+        client.run("create . danimtb/testing")
+        print(client.out)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("install .")
+        tools.chdir(client.current_folder)
+        subprocess.check_output(os.path.join(client.current_folder, "activate_run.bat"), shell=True)
+        subprocess.check_output(os.path.join(client.current_folder, "activate_build.bat"),
+                                shell=True)
+        output = subprocess.check_output("set", shell=True)
+        path = os.path.join(client.paths.packages(ConanFileReference("test", "1.0", "danimtb", "testing")), "6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7", "bin")
+        self.assertIn(path, output)
