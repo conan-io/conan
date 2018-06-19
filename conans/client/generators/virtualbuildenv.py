@@ -14,9 +14,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         compiler = conanfile.settings.get_safe("compiler")
         if compiler == "Visual Studio":
             self.env = VisualStudioBuildEnvironment(conanfile).vars_dict
-            vcvars = vcvars_dict(conanfile.settings)
-            vcvars["PATH"] = vcvars["PATH"].replace(os.environ["PATH"], "") + "%PATH%;"
-            self.env.update(vcvars)
+            self.env.update(vcvars_dict(conanfile.settings))
         else:
             self.env = AutoToolsBuildEnvironment(conanfile).vars_dict
 

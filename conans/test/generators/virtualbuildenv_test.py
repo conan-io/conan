@@ -57,6 +57,8 @@ class TestConan(ConanFile):
         self.assertNotEqual(normal_environment, activate_environment)
         output = subprocess.check_output(get_cmd(deact_build_file), shell=True)
         deactivate_environment = env_output_to_dict(output)
+        print(normal_environment, "\n\n")
+        print(deactivate_environment, "\n\n")
         self.assertEqual(normal_environment, deactivate_environment)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
@@ -86,6 +88,11 @@ class TestConan(ConanFile):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def activate_and_activate_build_test(self):
+        """
+        Check %PATH% is being effectively used when loading consecutive virualrunenv &
+        virtualbuildenv scripts.
+        https://github.com/conan-io/conan/issues/3038
+        """
         conanfile_dep = """
 import os
 from conans import ConanFile
@@ -94,9 +101,10 @@ class TestConan(ConanFile):
     name = "dep"
     version = "1.0"
     settings = "os", "compiler", "arch", "build_type"
-
-    def package_info(self):
-        self.env_info.path.append(os.path.join(self.package_folder, "bin"))
+    exports = "*.exe"
+    
+    def package(self):
+        self.copy("*.exe", dst="bin")
 """
         conanfile = """
 from conans import ConanFile
@@ -108,17 +116,16 @@ class TestConan(ConanFile):
     requires = "dep/1.0@danimtb/testing"
     generators = "virtualrunenv", "virtualbuildenv"
 """
-        client = TestClient()
+        client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile_dep,
                      "fake.exe": "content"})
         client.run("create . danimtb/testing")
-        print(client.out)
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("install .")
         tools.chdir(client.current_folder)
-        subprocess.check_output(os.path.join(client.current_folder, "activate_run.bat"), shell=True)
-        subprocess.check_output(os.path.join(client.current_folder, "activate_build.bat"),
-                                shell=True)
-        output = subprocess.check_output("set", shell=True)
-        path = os.path.join(client.paths.packages(ConanFileReference("test", "1.0", "danimtb", "testing")), "6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7", "bin")
+        run_path = os.path.join(client.current_folder, "activate_run.bat")
+        build_path = os.path.join(client.current_folder, "activate_build.bat")
+        output = subprocess.check_output("%s && %s && set" % (run_path, build_path), shell=True)
+        pkg_path = client.paths.packages(ConanFileReference("dep", "1.0", "danimtb", "testing"))
+        path = os.path.join(pkg_path, "6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7", "bin")
         self.assertIn(path, output)
