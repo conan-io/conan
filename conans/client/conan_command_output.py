@@ -133,7 +133,7 @@ class CommandOutputer(object):
         for remote in info["remotes"]:
             authenticated = " [Authenticated]" if remote["authenticated"] else ""
             anonymous = " (anonymous)" if not remote["user_name"] else ""
-            self.user_io.out.info("Current '%s' remote's user: '%s'%s%s" %
+            self.user_io.out.info("Current user of remote '%s' set to: '%s'%s%s" %
                                   (remote["name"], str(remote["user_name"]), anonymous,
                                    authenticated))
 
@@ -144,9 +144,9 @@ class CommandOutputer(object):
         anonymous = " (anonymous)" if not user else ""
 
         if prev_user == user:
-            self.user_io.out.info("'%s' remote's user is already '%s'%s" %
+            self.user_io.out.info("User of remote '%s' is already '%s'%s" %
                                   (remote, previous_username, previous_anonymous))
         else:
-            self.user_io.out.info("Changed '%s' remote's user from '%s'%s to '%s'%s" %
+            self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
                                   (remote, previous_username, previous_anonymous, username,
                                    anonymous))
