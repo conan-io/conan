@@ -3,8 +3,8 @@ import platform
 import subprocess
 import unittest
 
-from conans import load, tools
-from conans.model.ref import PackageReference, ConanFileReference
+from conans import load
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
@@ -57,8 +57,6 @@ class TestConan(ConanFile):
         self.assertNotEqual(normal_environment, activate_environment)
         output = subprocess.check_output(get_cmd(deact_build_file), shell=True)
         deactivate_environment = env_output_to_dict(output)
-        print(normal_environment, "\n\n")
-        print(deactivate_environment, "\n\n")
         self.assertEqual(normal_environment, deactivate_environment)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
@@ -122,7 +120,6 @@ class TestConan(ConanFile):
         client.run("create . danimtb/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("install .")
-        tools.chdir(client.current_folder)
         run_path = os.path.join(client.current_folder, "activate_run.bat")
         build_path = os.path.join(client.current_folder, "activate_build.bat")
         output = subprocess.check_output("%s && %s && set" % (run_path, build_path), shell=True)
