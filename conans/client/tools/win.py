@@ -314,13 +314,14 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             continue
         try:
             name_var, value = line.split("=", 1)
-            if not only_diff:
-                old_value = os.environ.get(name_var)
-                if old_value is not None and old_value != value and old_value in value:
-                    new_value = value.replace(os.environ.get(name_var), "")
-                    new_env[name_var] = new_value + "%{0}%".format(name_var)
-                else:
-                    new_env[name_var] = value
+            old_value = os.environ.get(name_var)
+            if only_diff:
+                if old_value != value:
+                    if old_value is not None and old_value in value:
+                        new_value = value.replace(os.environ.get(name_var), "")
+                        new_env[name_var] = new_value + "%{0}%".format(name_var)
+                    else:
+                        new_env[name_var] = value
             else:
                 new_env[name_var] = value
         except ValueError:
