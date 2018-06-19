@@ -98,7 +98,7 @@ class CommandOutputer(object):
     def print_search_packages(self, search_info, reference, packages_query, table):
         if table:
             from conans.client.graph.grapher import html_binary_graph
-            html_binary_graph(search_info, table)
+            html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
             printer.print_search_packages(search_info, reference, packages_query)
