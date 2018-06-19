@@ -249,7 +249,6 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
-    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
@@ -268,7 +267,6 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         if not vs_path or not os.path.isdir(vs_path):
             raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
         else:
-            vcvars_path = ""
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
@@ -316,14 +314,12 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             continue
         try:
             name_var, value = line.split("=", 1)
-            if only_diff and name_var in os.environ:
-                if os.environ.get(name_var) in value:
+            if not only_diff or os.environ.get(name_var) != value:
+                if os.environ.get(name_var) and os.environ.get(name_var) in value:
                     new_value = value.replace(os.environ.get(name_var), "")
                     new_env[name_var] = new_value + "%{0}%".format(name_var)
                 else:
                     new_env[name_var] = value
-            else:
-                new_env[name_var] = value
         except ValueError:
             pass
 
