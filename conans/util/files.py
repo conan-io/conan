@@ -194,7 +194,8 @@ def _change_permissions(func, path, exc_info):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
-        raise Exception("Cannot change permissions for {}!".format(path))
+        raise Exception("Cannot change permissions for {}! Exception info: {}".format(
+            path, exc_info))
 
 
 def rmdir(path):
