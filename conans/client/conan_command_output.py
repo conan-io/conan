@@ -56,7 +56,8 @@ class CommandOutputer(object):
             return obj.isoformat() if hasattr(obj, 'isoformat') else obj
 
         save(json_output, json.dumps(info, default=date_handler))
-        self.user_io.out.info("json file created at '%s'" % json_output)
+        self.user_io.out.writeln("")
+        self.user_io.out.info("JSON file created at '%s'" % json_output)
 
     def _read_dates(self, deps_graph):
         ret = {}
@@ -127,3 +128,25 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
+
+    def print_user_list(self, info):
+        for remote in info["remotes"]:
+            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            anonymous = " (anonymous)" if not remote["user_name"] else ""
+            self.user_io.out.info("Current '%s' remote's user: '%s'%s%s" %
+                                  (remote["name"], str(remote["user_name"]), anonymous,
+                                   authenticated))
+
+    def print_user_set(self, remote, prev_user, user):
+        previous_username = prev_user or "None"
+        previous_anonymous = " (anonymous)" if not prev_user else ""
+        username = user or "None"
+        anonymous = " (anonymous)" if not user else ""
+
+        if prev_user == user:
+            self.user_io.out.info("'%s' remote's user is already '%s'%s" %
+                                  (remote, previous_username, previous_anonymous))
+        else:
+            self.user_io.out.info("Changed '%s' remote's user from '%s'%s to '%s'%s" %
+                                  (remote, previous_username, previous_anonymous, username,
+                                   anonymous))
