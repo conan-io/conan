@@ -900,6 +900,13 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertTrue(error)
         self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
 
+    def initial_search_without_registry_test(self):
+        client = TestClient()
+        os.remove(client.client_cache.registry)
+        client.run("search my_pkg")
+        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
+        self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
+
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
