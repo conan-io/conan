@@ -39,9 +39,9 @@ class SearchRecorder(object):
     def get_info(self):
         info = {"error": self.error, self.keyword: []}
 
-        for remote, recipe_pacakges in sorted(self._info.items()):
+        for remote, recipe_packages in sorted(self._info.items()):
             remote_info = {"remote": remote, "items": []}
-            for reference, item in recipe_pacakges.items():
+            for reference, item in recipe_packages.items():
                 recipe_info = item["recipe"].to_dict()
                 if item["recipe"].with_packages:
                     packages_info = [package.to_dict() for package in item["packages"]]
