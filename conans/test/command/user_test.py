@@ -37,13 +37,14 @@ class UserTest(unittest.TestCase):
 
         # Test user list for requested remote reported
         client.run("user -r test_remote_1")
-        self.assertIn("Current 'test_remote_1' remote's user: 'None' (anonymous)", client.out)
-        self.assertNotIn("Current 'default' remote's user: 'None' (anonymous)", client.out)
+        self.assertIn("Current user of remote 'test_remote_1' set to: 'None' (anonymous)",
+                      client.out)
+        self.assertNotIn("Current user of 'default' remote set to: 'None' (anonymous)", client.out)
 
         # Test user list for all remotes is reported
         client.run("user")
-        self.assertIn("Current 'test_remote_1' remote's user: 'None' (anonymous)", client.out)
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", client.out)
+        self.assertIn("Current user of remote 'test_remote_1' set to: 'None' (anonymous)", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
     def test_with_no_user(self):
         test_server = TestServer()
@@ -57,22 +58,24 @@ class UserTest(unittest.TestCase):
         test_server = TestServer()
         client = TestClient(servers={"default": test_server})
         client.run('user')
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
         client.run('user john')
-        self.assertIn("Changed 'default' remote's user from 'None' (anonymous) to 'john'", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
+                      client.out)
         self.assertEqual(('john', None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user will')
-        self.assertIn("Changed 'default' remote's user from 'john' to 'will'", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
         self.assertEqual(('will', None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user None')
-        self.assertIn("Changed 'default' remote's user from 'will' to 'None' (anonymous)", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
+                      client.out)
         self.assertEqual((None, None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user')
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
     def test_command_user_with_password(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -86,12 +89,14 @@ class UserTest(unittest.TestCase):
         self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
         conan.run('user lasote -p mypass')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Changed 'default' remote's user from 'None' (anonymous) to 'lasote'", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
         conan.run('user none')
-        self.assertIn("Changed 'default' remote's user from 'lasote' to 'None' (anonymous)", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
+                      conan.out)
         self.assertEqual((None, None), conan.localdb.get_login(test_server.fake_url))
         conan.run('user')
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)
 
     def test_command_user_with_password_spaces(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -102,12 +107,14 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run(r'user lasote -p="my \"password"')
-        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Changed 'default' remote's user from 'None' (anonymous) to 'lasote'", conan.user_io.out)
+        self.assertNotIn("ERROR: Wrong user or password", conan.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
         conan.run('user none')
         conan.run(r'user lasote -p "my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Changed 'default' remote's user from 'None' (anonymous) to 'lasote'", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
 
     def test_clean(self):
         test_server = TestServer()
@@ -125,14 +132,14 @@ class ConanLib(ConanFile):
         client.run("export . lasote/stable")
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote'", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
         client.run("user --clean")
         client.run("user")
-        self.assertNotIn("lasote", client.user_io.out)
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", client.user_io.out)
+        self.assertNotIn("lasote", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote'", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.user_io.out)
 
     def test_command_user_with_interactive_password(self):
         test_server = TestServer()
@@ -141,7 +148,7 @@ class ConanLib(ConanFile):
         conan.run('user -p -r default lasote')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote'", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
 
     def test_command_interactive_only(self):
         test_server = TestServer()
@@ -150,7 +157,7 @@ class ConanLib(ConanFile):
         conan.run('user -p')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote'", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
         """ Interactive password should not work.
@@ -164,7 +171,7 @@ class ConanLib(ConanFile):
         self.assertIn('ERROR: Conan interactive mode disabled', conan.user_io.out)
         self.assertNotIn("Please enter a password for \"lasote\" account:", conan.out)
         conan.run("user")
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)
         error = conan.run("user -p", ignore_error=True)
         self.assertTrue(error)
         self.assertIn('ERROR: Conan interactive mode disabled', conan.out)
@@ -177,7 +184,7 @@ class ConanLib(ConanFile):
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'None' (anonymous)", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         self.assertNotIn("[Authenticated]", client.out)
         client.run('user bad_user')
         client.run("user")
@@ -187,18 +194,21 @@ class ConanLib(ConanFile):
         self.assertNotIn("[Authenticated]", client.out)
         client.run("user lasote -p mypass")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote' [Authenticated]", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote' [Authenticated]",
+                      client.out)
         client.run("user danimtb -p passpass")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'danimtb' [Authenticated]", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'danimtb' [Authenticated]",
+                      client.out)
         client.run("user lasote -r other_server")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'danimtb' [Authenticated]", client.out)
-        self.assertIn("Current 'other_server' remote's user: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'danimtb' [Authenticated]",
+                      client.out)
+        self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
         client.run("user lasote -r default")
         client.run("user")
-        self.assertIn("Current 'default' remote's user: 'lasote'", client.out)
-        self.assertIn("Current 'other_server' remote's user: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
         self.assertNotIn("[Authenticated]", client.out)
 
     def json_test(self):
