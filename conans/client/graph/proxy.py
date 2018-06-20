@@ -69,7 +69,7 @@ class ConanProxy(object):
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
                 if update:
-                    DiskRemover(self._client_cache).remove(reference)
+                    DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.set_ref(reference, update_remote)
