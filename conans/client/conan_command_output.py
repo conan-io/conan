@@ -56,7 +56,8 @@ class CommandOutputer(object):
             return obj.isoformat() if hasattr(obj, 'isoformat') else obj
 
         save(json_output, json.dumps(info, default=date_handler))
-        self.user_io.out.info("json file created at '%s'" % json_output)
+        self.user_io.out.writeln("")
+        self.user_io.out.info("JSON file created at '%s'" % json_output)
 
     def _read_dates(self, deps_graph):
         ret = {}
@@ -98,7 +99,7 @@ class CommandOutputer(object):
     def print_search_packages(self, search_info, reference, packages_query, table):
         if table:
             from conans.client.graph.grapher import html_binary_graph
-            html_binary_graph(search_info, table)
+            html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
             printer.print_search_packages(search_info, reference, packages_query)
@@ -127,3 +128,25 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
+
+    def print_user_list(self, info):
+        for remote in info["remotes"]:
+            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            anonymous = " (anonymous)" if not remote["user_name"] else ""
+            self.user_io.out.info("Current user of remote '%s' set to: '%s'%s%s" %
+                                  (remote["name"], str(remote["user_name"]), anonymous,
+                                   authenticated))
+
+    def print_user_set(self, remote, prev_user, user):
+        previous_username = prev_user or "None"
+        previous_anonymous = " (anonymous)" if not prev_user else ""
+        username = user or "None"
+        anonymous = " (anonymous)" if not user else ""
+
+        if prev_user == user:
+            self.user_io.out.info("User of remote '%s' is already '%s'%s" %
+                                  (remote, previous_username, previous_anonymous))
+        else:
+            self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
+                                  (remote, previous_username, previous_anonymous, username,
+                                   anonymous))
