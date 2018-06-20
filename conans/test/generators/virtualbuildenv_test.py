@@ -6,6 +6,7 @@ import unittest
 from conans import load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
+from conans.util.files import decode_text
 
 
 class VirtualBuildEnvTest(unittest.TestCase):
@@ -73,7 +74,7 @@ class TestConan(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
     generators = "virtualbuildenv"
 """
-        output = subprocess.check_output("set", shell=True)
+        output = decode_text(subprocess.check_output("set", shell=True))
         normal_path = [line for line in output.splitlines() if line.lower().startswith("path=")][0]
         normal_path = normal_path.split("=", 1)[-1]
         client = TestClient(path_with_spaces=False)
@@ -122,7 +123,7 @@ class TestConan(ConanFile):
         client.run("install .")
         run_path = os.path.join(client.current_folder, "activate_run.bat")
         build_path = os.path.join(client.current_folder, "activate_build.bat")
-        output = subprocess.check_output("%s && %s && set" % (run_path, build_path), shell=True)
+        output = decode_text(subprocess.check_output("%s && %s && set" % (run_path, build_path), shell=True))
         pkg_path = client.paths.packages(ConanFileReference("dep", "1.0", "danimtb", "testing"))
         path = os.path.join(pkg_path, "6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7", "bin")
         self.assertIn(path, output)
