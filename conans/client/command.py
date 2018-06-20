@@ -206,7 +206,7 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
                             help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the pacakage will be created')
+                                 ' declared in conanfile.py) where the package will be created')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
