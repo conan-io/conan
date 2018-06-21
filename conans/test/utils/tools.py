@@ -256,7 +256,7 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files, branch=None):
+def create_local_git_repo(files, branch=None, submodules=None):
     tmp = temp_folder()
     save_files(tmp, files)
     git = Git(tmp)
@@ -267,6 +267,12 @@ def create_local_git_repo(files, branch=None):
     git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
     git.run('commit -m "message"')
+
+    if submodules:
+        for submodule in submodules:
+            git.run('submodule add "%s"' % submodule)
+        git.run('commit -m "add submodules"')
+
     return tmp.replace("\\", "/"), git.get_revision()
 
 

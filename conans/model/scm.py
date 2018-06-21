@@ -14,6 +14,7 @@ class SCM(object):
         self.url = data.get("url")
         self.revision = data.get("revision")
         self.verify_ssl = data.get("verify_ssl")
+        self.submodule = data.get("submodule")
         self.subfolder = data.get("subfolder")
         if data.get("subfolder"):
             self.src_folder = os.path.join(src_folder, self.subfolder)
@@ -42,7 +43,7 @@ class SCM(object):
         return self.revision == "auto"
 
     def clone(self):
-        return self.repo.clone(self.url)
+        return self.repo.clone(self.url, self.submodule)
 
     def checkout(self):
         return self.repo.checkout(self.revision)
@@ -56,7 +57,7 @@ class SCM(object):
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
-             "subfolder": self.subfolder}
+             "submodule": self.submodule, "subfolder": self.subfolder}
         d = {k: v for k, v in d.items() if v}
         return json.dumps(d)
 
