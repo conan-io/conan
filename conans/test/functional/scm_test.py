@@ -121,6 +121,7 @@ class ConanLib(ConanFile):
         conanfile = base.replace('"revision": "{revision}"',
                                  '"revision": "{revision}",\n        '
                                  '"subfolder": "mysub"')
+        conanfile = conanfile.replace("short_paths = True", "short_paths = False")
         conanfile = conanfile.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
@@ -150,6 +151,7 @@ class ConanLib(ConanFile):
 
     def test_excluded_repo_fies(self):
         conanfile = base.format(url="auto", revision="auto")
+        conanfile = conanfile.replace("short_paths = True", "short_paths = False")
         path, commit = create_local_git_repo({"myfile": "contents",
                                               "ignored.pyc": "bin",
                                               ".gitignore": "*.pyc\n",

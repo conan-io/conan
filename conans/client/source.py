@@ -50,7 +50,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             dirs[:] = [d for d in dirs if not is_excluded(d)]
             files[:] = [d for d in files if not is_excluded(d)]
 
-        dst_dir = os.path.join(dst, os.path.relpath(src_dir, src))
+        dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir)
         for file_ in files:
@@ -121,7 +121,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                     except ConanException:
                         pass
                     else:
-                        dest_dir = os.path.join(src_folder, scm_data.subfolder)
+                        dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
                         captured = local_sources_path and os.path.exists(local_sources_path)
                         local_sources_path = local_sources_path if captured else None
                         _fetch_scm(scm_data, dest_dir, local_sources_path, output)
