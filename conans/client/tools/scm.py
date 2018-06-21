@@ -44,7 +44,7 @@ class Git(object):
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, submodule=None, branch=None):
+    def clone(self, url, branch=None, submodule=None):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
