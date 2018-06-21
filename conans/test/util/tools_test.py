@@ -961,6 +961,23 @@ class GitToolTest(unittest.TestCase):
         git.clone(url="https://myrepo.git")
         self.assertIn("git config http.sslVerify false", runner.calls[1])
 
+    def test_clone_submodule_git(self):
+        path, _ = create_local_git_repo({"myfile": "contents"})
+        submodule, _ = create_local_git_repo({"submodule": "contents"})
+        subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
+        self._add_submodule(submodule, subsubmodule)
+        self._add_submodule(path, submodule)
+
+        tmp = temp_folder()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+    def _add_submodule(self, path, submodule):
+        git = Git(path)
+        git.run("submodule add " + submodule)
+        git.run('commit -m "add submodule"')
+
     def git_helper_in_recipe_test(self):
         client = TestClient()
         git_repo = temp_folder()

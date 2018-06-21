@@ -44,7 +44,7 @@ class Git(object):
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, submodule=None, branch=None):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -63,6 +63,14 @@ class Git(object):
             branch_cmd = "--branch %s" % branch if branch else ""
             output = self.run('clone "%s" . %s' % (url, branch_cmd))
             output += self._configure_ssl_verify()
+
+        if submodule is "normal":
+            output += self.run("submodule sync")
+            output += self.run("submodule update --init")
+        elif submodule is "recursive":
+            output += self.run("submodule sync --recursive")
+            output += self.run("submodule update --init --recursive")
+
         return output
 
     def checkout(self, element):
