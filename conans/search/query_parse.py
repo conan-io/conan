@@ -76,8 +76,8 @@ def infix_to_postfix(exp):
     except the priority specified by the "("
 
     @param exp: String with an expression with & and | operators,
-        e.j: "os=Windows & (compiler=gcc | compiler.version=3)"
-        e.j: "os=Windows AND (compiler=gcc or compiler.version=3)"
+        e.g.: "os=Windows & (compiler=gcc | compiler.version=3)"
+        e.g.: "os=Windows AND (compiler=gcc or compiler.version=3)"
     @return List with the postfix expression
     """
 

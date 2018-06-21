@@ -407,7 +407,7 @@ class Command(object):
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Only with --build_order option, return the information in a json.'
-                                 ' e.j --json=/path/to/filename.json or --json to output the json')
+                                 ' e.g --json=/path/to/filename.json or --json to output the json')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
                             "also be filtered with options %s. Use '--only None' to show only "
@@ -604,7 +604,7 @@ class Command(object):
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
-                            "execution. e.j: conan imports ./imported_files --undo ")
+                            "execution. e.g.: conan imports ./imported_files --undo ")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
@@ -863,7 +863,7 @@ class Command(object):
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
-                # e.j: conan search lib/*@lasote/stable
+                # e.g.: conan search lib/*@lasote/stable
                 reference = None
         except (TypeError, ConanException):
             reference = None
@@ -1056,12 +1056,12 @@ class Command(object):
                                                    "folder or path to a profile file")
 
         parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='Key of the value to get, e.g: settings.compiler')
+        parser_get.add_argument('item', help='Key of the value to get, e.g.: settings.compiler')
         parser_get.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                 "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key, e.g: settings.compiler')
+        parser_remove.add_argument('item', help='key, e.g.: settings.compiler')
         parser_remove.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                    "folder or path to a profile file")
 
@@ -1124,8 +1124,8 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.alias.__doc__,
                                          prog="conan alias")
-        parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
-        parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')
+        parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
+        parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
 
         self._conan.export_alias(args.reference, args.target)
@@ -1186,7 +1186,7 @@ class Command(object):
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g conan search "
+                                         "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
         return reference
 
