@@ -293,6 +293,7 @@ class MyTest(ConanFile):
                 License: MIT
                 Recipe: No remote
                 Binary: Missing
+                Binary remote: None
                 Required by:
                     Hello1/0.1@lasote/stable
             Hello1/0.1@lasote/stable
@@ -301,6 +302,7 @@ class MyTest(ConanFile):
                 License: MIT
                 Recipe: No remote
                 Binary: Missing
+                Binary remote: None
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:

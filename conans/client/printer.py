@@ -122,7 +122,7 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
-                self._out.writeln("    Binary remote: %s" % node.binary_remote)
+                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name if node.binary_remote else "None"))
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
