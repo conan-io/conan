@@ -1,15 +1,17 @@
 import json
 import os
 import unittest
+from collections import namedtuple
 
 from conans.client.tools.scm import Git
-from conans.model.ref import ConanFileReference
-from conans.model.scm import SCM
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.scm import SCM, SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 from conans.util.files import load, rmdir
 
 base = '''
+import os
 from conans import ConanFile, tools
 
 class ConanLib(ConanFile):
@@ -23,7 +25,9 @@ class ConanLib(ConanFile):
     }}
 
     def build(self):
-        self.output.warn(tools.load("myfile.txt"))
+        sf = self.scm.get("subfolder")
+        path = os.path.join(sf, "myfile.txt") if sf else "myfile.txt"
+        self.output.warn(tools.load(path))
 '''
 
 
@@ -78,6 +82,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
         self.assertIn("othersubfolder", os.listdir(folder))
+        self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
 
     def test_auto_git(self):
         curdir = self.client.current_folder.replace("\\", "/")
@@ -111,6 +116,21 @@ class ConanLib(ConanFile):
         self.assertIn("Getting sources from url: '%s'" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
 
+    def test_auto_subfolder(self):
+        curdir = self.client.current_folder.replace("\\", "/")
+        conanfile = base.replace('"revision": "{revision}"',
+                                 '"revision": "{revision}",\n        '
+                                 '"subfolder": "mysub"')
+        conanfile = conanfile.format(directory="None", url="auto", revision="auto")
+        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
+        self._commit_contents()
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
+        self.client.run("create . user/channel")
+
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
+        self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
+
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         curdir = self.client.current_folder.replace("\\", "/")
@@ -127,6 +147,27 @@ class ConanLib(ConanFile):
         error = self.client.run("install lib/0.1@user/channel --build", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Getting sources from url: '%s'" % path.replace("\\", "/"), self.client.out)
+
+    def test_excluded_repo_fies(self):
+        conanfile = base.format(url="auto", revision="auto")
+        path, commit = create_local_git_repo({"myfile": "contents",
+                                              "ignored.pyc": "bin",
+                                              ".gitignore": "*.pyc\n",
+                                              "myfile.txt": "My file!",
+                                              "conanfile.py": conanfile}, branch="my_release")
+        self.client.current_folder = path
+        self._commit_contents()
+        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
+        self.client.run("create . user/channel")
+        self.assertIn("Excluding files: ignored.pyc, .git", self.client.out)
+        self.assertIn("Copying sources to build folder", self.client.out)
+        pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
+                                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        bf = self.client.client_cache.build(pref)
+        self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
+        self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
+        self.assertFalse(os.path.exists(os.path.join(bf, ".git")))
+        self.assertFalse(os.path.exists(os.path.join(bf, "ignored.pyc")))
 
     def test_local_source(self):
         curdir = self.client.current_folder
@@ -161,6 +202,24 @@ class ConanLib(ConanFile):
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source2", "myfile.txt")))
         self.assertIn("Getting sources from url: '%s'" % curdir.replace("\\", "/"), self.client.out)
+        self.assertIn("SOURCE METHOD CALLED", self.client.out)
+
+    def test_local_source_subfolder(self):
+        curdir = self.client.current_folder
+        conanfile = base.replace('"revision": "{revision}"',
+                                 '"revision": "{revision}",\n        '
+                                 '"subfolder": "mysub"')
+        conanfile = conanfile.format(url="auto", revision="auto")
+        conanfile += """
+    def source(self):
+        self.output.warn("SOURCE METHOD CALLED")
+"""
+        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
+        self._commit_contents()
+
+        self.client.run("source . --source-folder=./source")
+        self.assertFalse(os.path.exists(os.path.join(curdir, "source", "myfile.txt")))
+        self.assertTrue(os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt")))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
     def test_install_checked_out(self):
@@ -220,7 +279,8 @@ class ConanLib(ConanFile):
         data = {"url": "myurl", "revision": "myrevision", "username": "myusername",
                 "password": "mypassword", "type": "git", "verify_ssl": True,
                 "subfolder": "mysubfolder"}
-        scm = SCM(data, temp_folder())
-        the_json = str(scm)
+        conanfile = namedtuple("ConanfileMock", "scm")(data)
+        scm_data = SCMData(conanfile)
+        the_json = str(scm_data)
         data2 = json.loads(the_json)
         self.assertEquals(data, data2)

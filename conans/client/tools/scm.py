@@ -1,5 +1,6 @@
 import os
 import subprocess
+from subprocess import CalledProcessError
 
 from six.moves.urllib.parse import urlparse, quote_plus
 
@@ -50,10 +51,10 @@ class Git(object):
             url = url.replace("\\", "/")  # Windows local directory
         if os.path.exists(self.folder) and os.listdir(self.folder):
             if not branch:
-                raise ConanException("The destination folder is not empty, "
+                raise ConanException("The destination folder '%s' is not empty, "
                                      "specify a branch to checkout (not a tag or commit) "
-                                     "or specify a 'subfolder'"
-                                     "attribute in the 'scm'")
+                                     "or specify a 'subfolder' "
+                                     "attribute in the 'scm'" % self.folder)
             output = self.run("init")
             output += self._configure_ssl_verify()
             output += self.run('remote add origin "%s"' % url)
@@ -68,6 +69,14 @@ class Git(object):
     def checkout(self, element):
         # Element can be a tag, branch or commit
         return self.run('checkout "%s"' % element)
+
+    def excluded_files(self):
+        try:
+            tmp = self.run("check-ignore *").splitlines()
+        except CalledProcessError:
+            tmp = []
+        tmp.append(".git")
+        return tmp
 
     def get_remote_url(self, remote_name=None):
         remote_name = remote_name or "origin"
