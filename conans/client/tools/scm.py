@@ -64,7 +64,7 @@ class Git(object):
             output = self.run('clone "%s" . %s' % (url, branch_cmd))
             output += self._configure_ssl_verify()
 
-        if submodule is "normal":
+        if submodule is "shallow":
             output += self.run("submodule sync")
             output += self.run("submodule update --init")
         elif submodule is "recursive":
