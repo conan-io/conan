@@ -1,7 +1,6 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import TestClient, TestServer,\
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from collections import OrderedDict
 
 
@@ -23,21 +22,15 @@ class Pkg(ConanFile):
         self.output.info("DATA: {}".format(load("data.data")))
 """
 
-        def bump_recipe(inc_time):
-            export_path = client.client_cache.export(ConanFileReference.loads("Pkg/0.1@lasote/testing"))
-            pkg_ref = PackageReference.loads("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-            package_path = client.client_cache.package(pkg_ref)
-            for path in (export_path, package_path):
-                manifest = FileTreeManifest.load(path)
-                manifest.time += inc_time
-                manifest.save(path)
-
         for server in (1, 2, 3):
             server_name = "Server%s!" % server
             client.save({"conanfile.py": conanfile % server_name,
                          "data.data": "MyData%s" % server})
             client.run("create . Pkg/0.1@lasote/testing")
-            bump_recipe((server-1)*20)
+            inc_recipe_manifest_timestamp(client.client_cache, "Pkg/0.1@lasote/testing", (server-1)*20)
+            inc_package_manifest_timestamp(client.client_cache,
+                                           "Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                           (server-1)*20)
             client.run("upload Pkg* -r=server%s --confirm --all" % server)
 
         # The remote defined is the first one that was used for upload

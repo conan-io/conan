@@ -551,15 +551,15 @@ class ConanAPIV1(object):
         return ref_list, project_reference
 
     @api_method
-    def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       profile_name=None, update=False, install_folder=None):
+    def info(self, reference, remote=None, settings=None, options=None, env=None,
+             profile_name=None, update=False, install_folder=None, build=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         ret = manager.info_get_graph(reference, remote_name=remote, profile=profile,
-                                     check_updates=update)
+                                     check_updates=update, build_mode=build)
         deps_graph, project_reference = ret
         return deps_graph, project_reference
 

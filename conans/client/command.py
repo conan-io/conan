@@ -415,6 +415,10 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
+
+        dry_build_help = ("Apply the --build argument to output the information, as it would be done "
+                          "by the install command")
+        parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
 
@@ -457,14 +461,15 @@ class Command(object):
 
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
-            data = self._conan.info_get_graph(args.path_or_reference,
-                                              remote=args.remote,
-                                              settings=args.settings,
-                                              options=args.options,
-                                              env=args.env,
-                                              profile_name=args.profile,
-                                              update=args.update,
-                                              install_folder=args.install_folder)
+            data = self._conan.info(args.path_or_reference,
+                                    remote=args.remote,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    profile_name=args.profile,
+                                    update=args.update,
+                                    install_folder=args.install_folder,
+                                    build=args.dry_build)
             deps_graph, project_reference = data
             only = args.only
             if args.only == ["None"]:

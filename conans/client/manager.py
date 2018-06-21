@@ -152,7 +152,8 @@ class ConanManager(object):
         graph_builder = self._get_graph_builder(loader, self._recorder)
         build_mode = BuildMode(build_mode, self._user_io.out)
         deps_graph = graph_builder.load_graph(conanfile, check_updates, update,
-                                              build_mode=build_mode, remote_name=remote_name)
+                                              build_mode=build_mode, remote_name=remote_name,
+                                              profile_build_requires=profile.build_requires)
         return deps_graph, conanfile
 
     def info_build_order(self, reference, profile, build_order, remote_name, check_updates):

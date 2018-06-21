@@ -200,6 +200,29 @@ class MyTest(ConanFile):
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
 
+    def info_build_requires_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class AConan(ConanFile):
+    pass"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . tool/0.1@user/channel")
+        client.run("export . Pkg/0.1@user/channel")
+        client.run("export . Pkg2/0.1@user/channel")
+        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
+                     "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
+        client.run("info . -pr=myprofile --dry-build=missing")
+        # Check that there is only 1 output for tool, not repeated many times
+        pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
+        self.assertEqual(len(pkgs), 1)
+
+        client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
+        html = load(os.path.join(client.current_folder, "file.html"))
+        self.assertIn("html", html)
+        self.assertIn("label: 'Pkg2/0.1', shape: 'box', color: {background: 'Khaki'}", html)
+        self.assertIn("label: 'Pkg/0.1', shape: 'box', color: {background: 'Khaki'}", html)
+        self.assertIn("label: 'tool/0.1', shape: 'ellipse', color: {background: 'SkyBlue'}", html)
+
     def only_names_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
