@@ -58,7 +58,7 @@ class SCM(object):
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
              "subfolder": self.subfolder}
         d = {k: v for k, v in d.items() if v}
-        return json.dumps(d)
+        return json.dumps(d, sort_keys=True)
 
     def replace_in_file(self, path):
         content = load(path)
