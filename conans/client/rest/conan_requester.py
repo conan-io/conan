@@ -2,7 +2,8 @@ import fnmatch
 import os
 
 from conans.util.files import save
-
+from conans import __version__ as client_version
+from sys import version as python_version
 
 class ConanRequester(object):
 
@@ -55,6 +56,9 @@ class ConanRequester(object):
                 kwargs["proxies"] = self.proxies
         if self._timeout_seconds:
             kwargs["timeout"] = self._timeout_seconds
+        if not kwargs.get("headers"):
+            kwargs["headers"]  = {}
+        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s)" % (client_version,python_version.split()[0])
         return kwargs
 
     def get(self, url, **kwargs):
