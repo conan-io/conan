@@ -145,7 +145,7 @@ class FileCopier(object):
             except OSError:
                 pass
             # link is a string relative to linked_folder
-            # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+            # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             mkdir(os.path.dirname(dst_link))
             os.symlink(link, dst_link)
         # Remove empty links
