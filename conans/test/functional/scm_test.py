@@ -169,19 +169,6 @@ class ConanLib(ConanFile):
         self.assertIn("My file is copied", client2.out)
 
     def test_submodule(self):
-        tmp = '''
-from conans import ConanFile, tools
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    scm = {{
-        "type": "git",
-        "url": "{url}",
-        "revision": "{revision}",
-        "submodule": "{submodule}"
-    }}
-'''
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
         submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release", submodules=[submodule])
@@ -196,7 +183,19 @@ class ConanLib(ConanFile):
             return submodule_path, subsubmodule_path
 
         # Check old (default) behaviour
-        conanfile = tmp.format(url=path, revision=commit, submodule="none")
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}"
+    }}
+'''
+        conanfile = tmp.format(url=path, revision=commit)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
@@ -204,6 +203,28 @@ class ConanLib(ConanFile):
         submodule_path, _ = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
         self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
+
+        # Check invalid value
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}",
+        "submodule": "{submodule}"
+    }}
+'''
+        conanfile = tmp.format(url=path, revision=commit, submodule="invalid")
+        self.client.save({"conanfile.py": conanfile})
+
+        error = self.client.run("create . user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Invalid 'submodule' attribute value in the 'scm'.",
+                      self.client.out)
 
         # Check shallow 
         conanfile = tmp.format(url=path, revision=commit, submodule="shallow")

@@ -983,6 +983,12 @@ class GitToolTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
         self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
 
+        # Check invalid value
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
+            git.clone(path, submodule="invalid")
+
         # Check shallow 
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
