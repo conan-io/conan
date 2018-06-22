@@ -7,7 +7,7 @@ from six.moves.urllib.parse import urlparse, quote_plus
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.util.files import decode_text
+from conans.util.files import decode_text, to_file_bytes
 
 
 class Git(object):
@@ -77,7 +77,8 @@ class Git(object):
                           for folder, _, fs in os.walk(self.folder) for f in fs]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            grep_stdout = decode_text(p.communicate(input='\n'.join(file_paths))[0])
+            paths = to_file_bytes('\n'.join(file_paths))
+            grep_stdout = decode_text(p.communicate(input=paths)[0])
             tmp = grep_stdout.splitlines()
         except CalledProcessError:
             tmp = []
