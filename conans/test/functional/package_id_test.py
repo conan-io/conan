@@ -3,6 +3,23 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 class PackageIdTest(unittest.TestCase):
+
+    def double_package_id_call_test(self):
+        # https://github.com/conan-io/conan/issues/3085
+        conanfile = """from conans import ConanFile
+
+class TestConan(ConanFile):
+    settings = "os", "arch"
+
+    def package_id(self):
+        self.output.info("Calling package_id()")
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@user/testing")
+        out = str(client.out)
+        self.assertEqual(1, out.count("Pkg/0.1@user/testing: Calling package_id()"))
+
     def remove_option_setting_test(self):
         # https://github.com/conan-io/conan/issues/2826
         conanfile = """from conans import ConanFile
