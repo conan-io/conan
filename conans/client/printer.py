@@ -173,40 +173,44 @@ class Printer(object):
                     self._out.writeln(conan_item["recipe"]["id"])
 
     def print_search_packages(self, search_info, reference, packages_query):
-        if not search_info[0]["items"][0]["packages"]:
-            if packages_query:
-                warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
-                            (str(reference), packages_query))
-            elif search_info[0]["items"][0]["recipe"]:
-                warn_msg = "There are no packages for reference '%s', but package recipe found." % \
-                           str(reference)
-            self._out.info(warn_msg)
-            return
-        # Only one repository is used, local cache (None) or a remote, so we use only first element
-        reference = search_info[0]["items"][0]["recipe"]["id"]
-        packages = search_info[0]["items"][0]["packages"]
-
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
-        # Each package
-        for package in packages:
-            package_id = package["id"]
-            self._print_colored_line("Package_ID", package_id, 1)
-            for section in ("options", "settings", "requires"):
-                attr = package[section]
-                if attr:
-                    self._print_colored_line("[%s]" % section, indent=2)
-                    if isinstance(attr, dict):  # options, settings
-                        attr = OrderedDict(sorted(attr.items()))
-                        for key, value in attr.items():
-                            self._print_colored_line(key, value=value, indent=3)
-                    elif isinstance(attr, list):  # full requires
-                        for key in sorted(attr):
-                            self._print_colored_line(key, indent=3)
-            # Always compare outdated with local recipe, simplification,
-            # if a remote check is needed install recipe first
-            if "outdated" in package:
-                self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
-            self._out.writeln("")
+        for remote_info in search_info:
+            if remote_info["remote"] != 'None':
+                self._out.info("Existing recipe in remote '%s':\n" % str(remote_info["remote"]))
+
+            if not remote_info["items"][0]["packages"]:
+                if packages_query:
+                    warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
+                                (str(reference), packages_query))
+                elif remote_info["items"][0]["recipe"]:
+                    warn_msg = "There are no packages for reference '%s', but package recipe found." % \
+                            str(reference)
+                self._out.info(warn_msg)
+                continue
+                
+            reference = remote_info["items"][0]["recipe"]["id"]
+            packages = remote_info["items"][0]["packages"]
+
+            # Each package
+            for package in packages:
+                package_id = package["id"]
+                self._print_colored_line("Package_ID", package_id, 1)
+                for section in ("options", "settings", "requires"):
+                    attr = package[section]
+                    if attr:
+                        self._print_colored_line("[%s]" % section, indent=2)
+                        if isinstance(attr, dict):  # options, settings
+                            attr = OrderedDict(sorted(attr.items()))
+                            for key, value in attr.items():
+                                self._print_colored_line(key, value=value, indent=3)
+                        elif isinstance(attr, list):  # full requires
+                            for key in sorted(attr):
+                                self._print_colored_line(key, indent=3)
+                # Always compare outdated with local recipe, simplification,
+                # if a remote check is needed install recipe first
+                if "outdated" in package:
+                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
+                self._out.writeln("")
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
