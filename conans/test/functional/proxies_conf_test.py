@@ -1,6 +1,7 @@
 import unittest
 import os
 
+from conans import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans.client.conan_api import get_basic_requester
@@ -59,3 +60,42 @@ http=http://conan.url
         self.assertEquals(client.requester.get("**otherexcluded_one***"), "excluded!")
         self.assertEquals(client.requester.get("MyExcludedUrl***"), "excluded!")
         self.assertEquals(client.requester.get("**MyExcludedUrl***"), "not excluded!")
+
+    def test_environ_kept(self):
+        client = TestClient()
+        conf = """
+[proxies]
+        """
+        save(client.client_cache.conan_conf_path, conf)
+        client.client_cache.invalidate()
+        requester = get_basic_requester(client.client_cache)
+
+        def verify_env(url, **kwargs):
+            self.assertTrue("HTTP_PROXY" in os.environ)
+
+        with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
+            requester._requester.get = verify_env
+            requester.get("MyUrl")
+
+    def test_environ_removed(self):
+
+        client = TestClient()
+        conf = """
+[proxies]
+no_proxy_match=MyExcludedUrl*
+"""
+        save(client.client_cache.conan_conf_path, conf)
+        client.client_cache.invalidate()
+        requester = get_basic_requester(client.client_cache)
+
+        def verify_env(url, **kwargs):
+            self.assertFalse("HTTP_PROXY" in os.environ)
+            self.assertFalse("http_proxy" in os.environ)
+
+        with tools.environment_append({"http_proxy": "my_system_proxy"}):
+            requester._requester.get = verify_env
+            requester.get("MyUrl")
+
+        with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
+            requester._requester.get = verify_env
+            requester.get("MyUrl")

@@ -1,6 +1,8 @@
+import copy
 import fnmatch
 import os
 
+from conans import tools
 from conans.util.files import save
 
 
@@ -9,7 +11,7 @@ class ConanRequester(object):
     def __init__(self, requester, client_cache, timeout):
         self.proxies = client_cache.conan_config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
-                                self.proxies.pop("no_proxy_match", "").split(",")]
+                                self.proxies.pop("no_proxy_match", "").split(",") if el]
         self._timeout_seconds = timeout
 
         # Retrocompatibility with deprecated no_proxy
@@ -58,14 +60,36 @@ class ConanRequester(object):
         return kwargs
 
     def get(self, url, **kwargs):
-        return self._requester.get(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("get", url, **kwargs)
 
     def put(self, url, **kwargs):
-        return self._requester.put(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("put", url, **kwargs)
 
     def delete(self, url, **kwargs):
-        return self._requester.delete(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("delete", url, **kwargs)
 
     def post(self, url, **kwargs):
-        return self._requester.post(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("post", url, **kwargs)
 
+    def _call_method(self, method, url, **kwargs):
+        env = self._get_env()
+        with tools.environment_append(env):
+            return getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
+
+    def _get_env(self):
+        if self.proxies or self._no_proxy_match:
+            # Clean the proxies from the environ and use the conan specified proxies
+            env = copy.copy(os.environ)
+
+            env.pop("http_proxy", None)
+            env.pop("HTTP_PROXY", None)
+
+            env.pop("https_proxy", None)
+            env.pop("HTTPS_PROXY", None)
+
+            env.pop("no_proxy", None)
+            env.pop("NO_PROXY", None)
+        else:
+            env = os.environ
+
+        return env
