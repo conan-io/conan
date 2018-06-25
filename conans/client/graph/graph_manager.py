@@ -7,7 +7,7 @@ from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.graph import BINARY_BUILD
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -60,7 +60,7 @@ class GraphManager(object):
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
                                 profile_build_requires):
         for node in list(graph.nodes):
-            if node.binary != BINARY_BUILD and node.conan_ref:
+            if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
                 continue
 
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
