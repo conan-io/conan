@@ -430,7 +430,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     elif subsystem == WSL:
         # https://blogs.msdn.microsoft.com/commandline/2017/12/22/share-environment-vars-between-wsl-and-windows/
         names = []
-        for var_name, value in env.items():
+        for var_name in env:
             if var_name == "PATH":
                 names.append("PATH/l")  # List of paths
             else:

@@ -261,7 +261,7 @@ class ConanFile(object):
         else:
             # FIXME: run in windows bash is not using output
             retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                                msys_mingw=msys_mingw)
+                                                msys_mingw=msys_mingw, env=self.env)
 
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
