@@ -700,7 +700,9 @@ ProgramFiles(x86)=C:\Program Files (x86)
                     def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
                         for key, value in expected_in_env.items():
-                            assert(os.environ.get(key) == value)
+                            expected_values = set(":".split(value))
+                            values = set(":".split(os.environ.get(key)))
+                            assert(expected_values == values)
                 self._runner = MyRun()
 
         conanfile = MockConanfile()
