@@ -63,7 +63,7 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file, reference):
-        if self.missing:
+        if self.missing or self.outdated:
             return True
         if conan_file.build_policy_missing:
             out = ScopedOutput(str(reference), self._out)
