@@ -81,10 +81,8 @@ class ConanRequester(object):
 
             os.environ.pop("no_proxy", None)
             os.environ.pop("NO_PROXY", None)
-
-        tmp = getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
-        os.environ = old_env
-        return tmp
-
-
-
+        try:
+            return getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
