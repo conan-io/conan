@@ -1,7 +1,6 @@
 import re
 import os
 
-
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
@@ -90,10 +89,26 @@ def search_recipes(paths, pattern=None, ignorecase=True):
         for subdir in subdirs:
             conan_ref = ConanFileReference(*subdir.split("/"))
             if pattern:
-                if pattern.match(str(conan_ref)):
+                if _partial_match(pattern, conan_ref):
                     ret.append(conan_ref)
+
         return sorted(ret)
 
+
+def _partial_match(pattern, conan_ref):
+    """
+    Finds if pattern matches any of partial sums of tokens of conan reference
+    """
+    
+    tokens = str(conan_ref).replace('/', ' / ').replace('@', ' @ ').split()
+
+    def partial_sums(iterable):
+        sum = ''
+        for i in iterable:
+            sum += i
+            yield sum
+
+    return any(map(pattern.match, list(partial_sums(tokens))))
 
 def search_packages(paths, reference, query):
     """ Return a dict like this:
