@@ -6,6 +6,9 @@ import platform
 import unittest
 
 from collections import namedtuple
+
+import six
+from mock.mock import patch, mock_open
 from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
@@ -14,7 +17,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict
+from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
@@ -516,9 +519,8 @@ class HelloConan(ConanFile):
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -535,11 +537,76 @@ class HelloConan(ConanFile):
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
             tools.msvc_build_command(settings, "project.sln")
 
-        # succesful definition via settings
+        # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    def vswhere_description_strip_test(self):
+        myoutput = """
+[
+  {
+    "instanceId": "17609d7c",
+    "installDate": "2018-06-11T02:15:04Z",
+    "installationName": "VisualStudio/15.7.3+27703.2026",
+    "installationPath": "",
+    "installationVersion": "15.7.27703.2026",
+    "productId": "Microsoft.VisualStudio.Product.Enterprise",
+    "productPath": "",
+    "isPrerelease": false,
+    "displayName": "Visual Studio Enterprise 2017",
+    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
+    "channelId": "VisualStudio.15.Release",
+    "channelUri": "https://aka.ms/vs/15/release/channel",
+    "enginePath": "",
+    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
+    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
+    "updateDate": "2018-06-11T02:15:04.7009868Z",
+    "catalog": {
+      "buildBranch": "d15.7",
+      "buildVersion": "15.7.27703.2026",
+      "id": "VisualStudio/15.7.3+27703.2026",
+      "localBuild": "build-lab",
+      "manifestName": "VisualStudio",
+      "manifestType": "installer",
+      "productDisplayVersion": "15.7.3",
+      "productLine": "Dev15",
+      "productLineVersion": "2017",
+      "productMilestone": "RTW",
+      "productMilestoneIsPreRelease": "False",
+      "productName": "Visual Studio",
+      "productPatchVersion": "3",
+      "productPreReleaseMilestoneSuffix": "1.0",
+      "productRelease": "RTW",
+      "productSemanticVersion": "15.7.3+27703.2026",
+      "requiredEngineVersion": "1.16.1187.57215"
+    },
+    "properties": {
+      "campaignId": "",
+      "canceled": "0",
+      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
+      "nickname": "",
+      "setupEngineFilePath": ""
+    }
+  },
+  {
+    "instanceId": "VisualStudio.12.0",
+    "installationPath": "",
+    "installationVersion": "12.0"
+  }
+]
+
+"""
+        if six.PY3:
+            # In python3 the output from subprocess.check_output are bytes, not str
+            myoutput = myoutput.encode()
+        myrunner = mock_open()
+        myrunner.check_output = lambda x: myoutput
+        with patch('conans.client.tools.win.subprocess', myrunner):
+            json = vswhere()
+            self.assertNotIn("descripton", json)
 
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
