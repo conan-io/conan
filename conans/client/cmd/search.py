@@ -3,6 +3,7 @@ from conans.search.search import filter_outdated, search_recipes,\
 from collections import OrderedDict, namedtuple
 from conans.errors import NotFoundException
 
+
 class Search(object):
     def __init__(self, client_cache, remote_manager, remote_registry):
         self._client_cache = client_cache
@@ -34,6 +35,7 @@ class Search(object):
         return references
 
     remote_ref = namedtuple('remote_ref', 'ordered_packages recipe_hash')
+
     def search_packages(self, reference=None, remote_name=None, query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
@@ -88,7 +90,7 @@ class Search(object):
                 except NotFoundException:
                     continue
             return references
-        
+
         return self._search_packages_in(self, 'all', reference, query, outdated)
 
     def _search_packages_in(self, remote_name, reference=None, query=None, outdated=False):

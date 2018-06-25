@@ -723,10 +723,10 @@ class ConanAPIV1(object):
                 for package_id, properties in remote_ref.ordered_packages.items():
                     package_recipe_hash = properties.get("recipe_hash", None)
                     recorder.add_package(str(remote), str(reference), package_id,
-                                     properties.get("options", []),
-                                     properties.get("settings", []),
-                                     properties.get("full_requires", []),
-                                     remote_ref.recipe_hash != package_recipe_hash)
+                                         properties.get("options", []),
+                                         properties.get("settings", []),
+                                         properties.get("full_requires", []),
+                                         remote_ref.recipe_hash != package_recipe_hash)
         return recorder.get_info()
 
     @api_method
