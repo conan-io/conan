@@ -722,6 +722,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
+        # Test WSL env translation
+        conanfile = MockConanfile()
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="WSL", env={"PATH": "/other/path",
+                                                                                    "MYVAR": "34"})
+        self.assertIn('ppp', conanfile._runner.command)
+
     def download_retries_test(self):
         out = TestBufferConanOutput()
         set_global_instances(out, requests)

@@ -431,7 +431,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         env_vars = {}
 
     with environment_append(env_vars):
-        hack_env = ""
         if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
             inherited_path = conanfile.env.get("PATH", None)
             if isinstance(inherited_path, list):
@@ -447,10 +446,21 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
             # Put the build_requires and requires path at the first place inside the shell
             hack_env = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
 
-        for var_name, value in env.items():
-            if var_name == "PATH":
-                continue
-            hack_env += ' && %s=%s' % (var_name, value)
+            for var_name, value in env.items():
+                if var_name == "PATH":
+                    continue
+                hack_env += ' && %s=%s' % (var_name, value)
+        else:
+            # https://blogs.msdn.microsoft.com/commandline/2017/12/22/
+            # share-environment-vars-between-wsl-and-windows/
+            names = []
+            for var_name, value in env.items():
+                if var_name == "PATH":
+                    names.append("PATH/l")  # List of paths
+                else:
+                    names.append(var_name)
+
+            hack_env = "WSLENV=%s" % ":".join(names)
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
