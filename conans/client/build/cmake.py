@@ -340,6 +340,9 @@ class CMake(object):
         if "cmake_find_package" in self._conanfile.generators:
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
+        # Disable CMake export registry #3070 (CMake installing modules in user home's)
+        ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
+
         return ret
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
