@@ -185,7 +185,7 @@ class Printer(object):
                             str(reference)
                 self._out.info(warn_msg)
                 continue
-                
+
             reference = remote_info["items"][0]["recipe"]["id"]
             packages = remote_info["items"][0]["packages"]
 

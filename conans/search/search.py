@@ -88,9 +88,8 @@ def search_recipes(paths, pattern=None, ignorecase=True):
         ret = []
         for subdir in subdirs:
             conan_ref = ConanFileReference(*subdir.split("/"))
-            if pattern:
-                if _partial_match(pattern, conan_ref):
-                    ret.append(conan_ref)
+            if _partial_match(pattern, conan_ref):
+                ret.append(conan_ref)
 
         return sorted(ret)
 
@@ -99,16 +98,16 @@ def _partial_match(pattern, conan_ref):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    
     tokens = str(conan_ref).replace('/', ' / ').replace('@', ' @ ').split()
 
     def partial_sums(iterable):
-        sum = ''
+        partial = ''
         for i in iterable:
-            sum += i
-            yield sum
+            partial += i
+            yield partial
 
     return any(map(pattern.match, list(partial_sums(tokens))))
+
 
 def search_packages(paths, reference, query):
     """ Return a dict like this:
