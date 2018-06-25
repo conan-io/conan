@@ -427,10 +427,20 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # This needs to be set so that msys2 bash profile will set up the environment correctly.
         env_vars = {"MSYSTEM": "MINGW32" if conanfile.settings.get_safe("arch") == "x86" else "MINGW64",
                     "MSYS2_PATH_TYPE": "inherit"}
+    elif subsystem == WSL:
+        # https://blogs.msdn.microsoft.com/commandline/2017/12/22/share-environment-vars-between-wsl-and-windows/
+        names = []
+        for var_name, value in env.items():
+            if var_name == "PATH":
+                names.append("PATH/l")  # List of paths
+            else:
+                names.append(var_name)
+        env_vars = {"WSLENV": "$WSLENV:%s" % ":".join(names)} if names else {}
     else:
         env_vars = {}
 
     with environment_append(env_vars):
+        hack_env = ""
         if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
             inherited_path = conanfile.env.get("PATH", None)
             if isinstance(inherited_path, list):
@@ -450,17 +460,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                 if var_name == "PATH":
                     continue
                 hack_env += ' && %s=%s' % (var_name, value)
-        else:
-            # https://blogs.msdn.microsoft.com/commandline/2017/12/22/
-            # share-environment-vars-between-wsl-and-windows/
-            names = []
-            for var_name, value in env.items():
-                if var_name == "PATH":
-                    names.append("PATH/l")  # List of paths
-                else:
-                    names.append(var_name)
-
-            hack_env = "WSLENV=%s" % ":".join(names)
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
