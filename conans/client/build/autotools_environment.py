@@ -10,7 +10,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
-from conans.client.tools.win import unix_path
+from conans.client.tools.win import unix_path, WSL, run_in_windows_bash
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
                           detected_architecture, get_gnu_triplet)
 from conans.errors import ConanException
@@ -153,9 +153,17 @@ class AutoToolsBuildEnvironment(object):
                 command = '%s/configure %s %s' % (configure_dir,
                                                   args_to_string(args), " ".join(triplet_args))
                 self._conanfile.output.info("Calling:\n > %s" % command)
-                self._conanfile.run(command,
-                                    win_bash=self._win_bash,
-                                    subsystem=self.subsystem)
+                if self._win_bash and self.subsystem == WSL:  # Pass all the env
+                    # FIXME: ? probably the lib directories etc should be adjusted as paths
+                    # according to
+                    # https://blogs.msdn.microsoft.com/commandline/2017/12/22/share-environment-vars-between-wsl-and-windows/
+                    the_env = {}
+                    the_env.update(self._conanfile.env)
+                    the_env.update(pkg_env)
+                    the_env.update(self.vars)
+                    run_in_windows_bash(self._conanfile, command, subsystem=self.subsystem, env=the_env)
+                else:
+                    self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 
     def _adjust_path(self, path):
         if self._win_bash:
