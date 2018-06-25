@@ -95,7 +95,9 @@ no_proxy_match=MyExcludedUrl*
         with tools.environment_append({"http_proxy": "my_system_proxy"}):
             requester._requester.get = verify_env
             requester.get("MyUrl")
+            self.assertEqual(os.environ["http_proxy"], "my_system_proxy")
 
         with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
             requester._requester.get = verify_env
             requester.get("MyUrl")
+            self.assertEqual(os.environ["HTTP_PROXY"], "my_system_proxy")

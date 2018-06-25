@@ -72,24 +72,21 @@ class ConanRequester(object):
         return self._call_method("post", url, **kwargs)
 
     def _call_method(self, method, url, **kwargs):
-        env = self._get_env()
-        with tools.environment_append(env):
-            return getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
-
-    def _get_env(self):
+        old_env = dict(os.environ)
         if self.proxies or self._no_proxy_match:
             # Clean the proxies from the environ and use the conan specified proxies
-            env = copy.copy(os.environ)
+            os.environ.pop("http_proxy", None)
+            os.environ.pop("HTTP_PROXY", None)
 
-            env.pop("http_proxy", None)
-            env.pop("HTTP_PROXY", None)
+            os.environ.pop("https_proxy", None)
+            os.environ.pop("HTTPS_PROXY", None)
 
-            env.pop("https_proxy", None)
-            env.pop("HTTPS_PROXY", None)
+            os.environ.pop("no_proxy", None)
+            os.environ.pop("NO_PROXY", None)
 
-            env.pop("no_proxy", None)
-            env.pop("NO_PROXY", None)
-        else:
-            env = os.environ
+        tmp = getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
+        os.environ = old_env
+        return tmp
 
-        return env
+
+
