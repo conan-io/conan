@@ -193,6 +193,59 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                       "Hello/1.4.11@fenix/testing\n"
                       "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
 
+    def search_partial_match_test(self):
+        self.client.run("search Hello")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search hello")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hello --case-sensitive")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hel")
+        self.assertEquals("There are no packages matching the 'Hel' pattern\n", self.client.user_io.out)
+
+        self.client.run("search Hello/")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4")
+        self.assertEquals("There are no packages matching the 'Hello/1.4' pattern\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10@")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10@fenix")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
+  
+        self.client.run("search Hello/1.4.10@fen")
+        self.assertEquals("There are no packages matching the 'Hello/1.4.10@fen' pattern\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10@fenix/")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10@fenix/test")
+        self.assertEquals("There are no packages for reference 'Hello/1.4.10@fenix/test'\n", self.client.user_io.out)
+
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEquals("Hello/1.4.10@fenix/testing\n"
