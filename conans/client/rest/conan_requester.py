@@ -1,8 +1,6 @@
-import copy
 import fnmatch
 import os
 
-from conans import tools
 from conans.util.files import save
 
 
