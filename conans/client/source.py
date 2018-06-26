@@ -36,16 +36,17 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
 
 def merge_directories(src, dst, excluded=None, symlinks=True):
     excluded = excluded or []
+    excluded = [os.path.normpath(entry) for entry in excluded]
 
     for src_dir, dirs, files in os.walk(src, followlinks=True):
 
         def is_excluded(root_folder, element):
-            rel_path = os.path.relpath(os.path.join(root_folder, element), src)
+            rel_path = os.path.normpath(os.path.relpath(os.path.join(root_folder, element), src))
             if rel_path in excluded:
                 return True
             # If dst is a sub-folder of src_dir, discard it as an src file
             abs_path = os.path.join(root_folder, element)
-            return os.path.commonprefix([abs_path, dst]) == dst
+            return os.path.normpath(os.path.commonprefix([abs_path, dst])) == os.path.normpath(dst)
 
         # Overwriting the dirs will prevents walk to get into them
         dirs[:] = [d for d in dirs if not is_excluded(src_dir, d)]
