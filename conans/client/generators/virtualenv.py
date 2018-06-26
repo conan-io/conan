@@ -29,16 +29,14 @@ class VirtualEnvGenerator(Generator):
             return "$env:%s" % name
         return "$%s" % name  # flavor == sh
 
-    def format_values(self, flavor, variables=None, env=None):
+    def format_values(self, flavor, variables):
         """
         Formats the values for the different supported script language flavors.
         :param flavor: flavor of the execution environment
-        :param variables: variables to be formatted (otherwise self.env)
-        :param env: custom environment (otherwise os.environ)
+        :param variables: variables to be formatted
         :return:
         """
         variables = variables or self.env.items()
-        env = env or os.environ
         path_sep, quote_elements, quote_full_value, enable_space_path_sep = ":", True, False, True
         if flavor in ["cmd", "ps1"]:
             path_sep, quote_elements, enable_space_path_sep = ";", False, False
@@ -66,7 +64,7 @@ class VirtualEnvGenerator(Generator):
             activate_value = "\"%s\"" % value if quote_full_value else value
 
             # deactivate values
-            value = env.get(name, "")
+            value = os.environ.get(name, "")
             deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
             ret.append((name, activate_value, deactivate_value))
         return ret
@@ -109,7 +107,7 @@ class VirtualEnvGenerator(Generator):
         activate_lines.append('function global:prompt { write-host "(%s) " -nonewline; & $function:_old_conan_prompt }' % self.venv_name)
         deactivate_lines = ['$function:prompt = $function:_old_conan_prompt']
         deactivate_lines.append('remove-item function:_old_conan_prompt')
-        for name, activate, deactivate in self.format_values("ps1"):
+        for name, activate, deactivate in self.format_values("ps1", self.env.items()):
             activate_lines.append('$env:%s = %s' % (name,activate))
             deactivate_lines.append('$env:%s = %s' % (name,deactivate))
         activate_lines.append('')
