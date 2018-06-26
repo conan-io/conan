@@ -1,6 +1,7 @@
+import os
+import platform
 import unittest
 from conans.test.utils.tools import TestClient
-import os
 from conans.util.files import load
 
 
@@ -26,6 +27,7 @@ qbs
 qmake
 scons
 txt
+virtualenv
 visual_studio
 visual_studio_legacy
 xcode
@@ -35,11 +37,16 @@ ycm
         client = TestClient()
         client.save(files)
         client.run("install . --build")
+
+        virtualenvFiles = ["activate.sh", "deactivate.sh"]
+        if platform.system() == "Windows":
+            virtualenvFiles = ["activate.bat", "deactivate.bat", "activate.ps1", "deactivate.ps1"]
+
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
-                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py']),
+                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py'] + virtualenvFiles),
                          sorted(os.listdir(client.current_folder)))
 
     def test_qmake(self):

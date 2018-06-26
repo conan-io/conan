@@ -10,7 +10,7 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.remote_registry import RemoteRegistry
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
@@ -206,7 +206,7 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
                             help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the pacakage will be created')
+                                 ' declared in conanfile.py) where the package will be created')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
@@ -407,7 +407,7 @@ class Command(object):
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Only with --build_order option, return the information in a json.'
-                                 ' e.j --json=/path/to/filename.json or --json to output the json')
+                                 ' e.g --json=/path/to/filename.json or --json to output the json')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
                             "also be filtered with options %s. Use '--only None' to show only "
@@ -415,6 +415,10 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
+
+        dry_build_help = ("Apply the --build argument to output the information, as it would be done "
+                          "by the install command")
+        parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
 
@@ -457,15 +461,16 @@ class Command(object):
 
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
-            data = self._conan.info_get_graph(args.path_or_reference,
-                                              remote=args.remote,
-                                              settings=args.settings,
-                                              options=args.options,
-                                              env=args.env,
-                                              profile_name=args.profile,
-                                              update=args.update,
-                                              install_folder=args.install_folder)
-            deps_graph, graph_updates_info, project_reference = data
+            data = self._conan.info(args.path_or_reference,
+                                    remote=args.remote,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    profile_name=args.profile,
+                                    update=args.update,
+                                    install_folder=args.install_folder,
+                                    build=args.dry_build)
+            deps_graph, project_reference = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -480,7 +485,7 @@ class Command(object):
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
             else:
-                self._outputer.info(deps_graph, graph_updates_info, only, args.remote,
+                self._outputer.info(deps_graph, only, args.remote,
                                     args.package_filter, args.paths, project_reference)
 
     def source(self, *args):
@@ -603,8 +608,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous"
-                            "execution. e.j: conan imports ./imported_files --undo ")
+                            "containing the conan_imports_manifest.txt file generated in a previous "
+                            "execution. e.g.: conan imports ./imported_files --undo ")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
@@ -863,7 +868,7 @@ class Command(object):
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
-                # e.j: conan search lib/*@lasote/stable
+                # e.g.: conan search lib/*@lasote/stable
                 reference = None
         except (TypeError, ConanException):
             reference = None
@@ -887,9 +892,11 @@ class Command(object):
                 info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
                                                   case_sensitive=args.case_sensitive)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
-                remote_registry = RemoteRegistry(self._client_cache.registry, None)
-                all_remotes_search = ("all" not in (r.name for r in remote_registry.remotes) and
-                                      args.remote == "all")
+                try:
+                    remote_all = self._conan.get_remote_by_name("all")
+                except NoRemoteAvailable:
+                    remote_all = None
+                all_remotes_search = (remote_all is None and args.remote == "all")
 
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
                                                        args.raw, all_remotes_search)
@@ -1054,12 +1061,12 @@ class Command(object):
                                                    "folder or path to a profile file")
 
         parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='Key of the value to get, e.g: settings.compiler')
+        parser_get.add_argument('item', help='Key of the value to get, e.g.: settings.compiler')
         parser_get.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                 "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key, e.g: settings.compiler')
+        parser_remove.add_argument('item', help='key, e.g.: settings.compiler')
         parser_remove.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                    "folder or path to a profile file")
 
@@ -1122,8 +1129,8 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.alias.__doc__,
                                          prog="conan alias")
-        parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
-        parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')
+        parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
+        parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
 
         self._conan.export_alias(args.reference, args.target)
@@ -1184,7 +1191,7 @@ class Command(object):
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g conan search "
+                                         "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
         return reference
 

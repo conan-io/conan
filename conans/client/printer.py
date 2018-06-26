@@ -7,6 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
+from platform import node
 
 
 class Printer(object):
@@ -43,7 +44,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
+    def print_info(self, deps_graph, project_reference, _info, registry,
                    remote=None, node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
@@ -66,9 +67,13 @@ class Printer(object):
             def show(field):
                 return field in _info_lower
 
-        graph_updates_info = graph_updates_info or {}
+        compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            ref, conan = node.conan_ref, node.conanfile
+            compact_nodes.setdefault((node.conan_ref, node.conanfile.info.package_id()), []).append(node)
+
+        for (ref, package_id), list_nodes in compact_nodes.items():
+            node = list_nodes[0]
+            conan = node.conanfile
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference
@@ -82,13 +87,9 @@ class Printer(object):
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
             # Excludes PROJECT fake reference
-            remote_name = remote
-            if reg_remote and not remote:
-                remote_name = reg_remote.name
 
             if show("id"):
-                id_ = conan.info.package_id()
-                self._out.writeln("    ID: %s" % id_, Color.BRIGHT_GREEN)
+                self._out.writeln("    ID: %s" % package_id, Color.BRIGHT_GREEN)
             if show("build_id"):
                 bid = build_id(conan)
                 self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
@@ -116,23 +117,18 @@ class Printer(object):
             if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
-            if isinstance(ref, ConanFileReference) and show("update"):  # Excludes PROJECT
-                update = graph_updates_info.get(ref)
-                update_messages = {
-                 None: ("Version not checked", Color.WHITE),
-                 0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
-                 1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
-                 -1: ("The local file is newer than remote's one (%s)" % remote_name,
-                      Color.BRIGHT_RED)
-                }
-                self._out.writeln("    Updates: %s" % update_messages[update][0],
-                                  update_messages[update][1])
+            if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
+                self._out.writeln("    Recipe: %s" % node.recipe)
+            if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
+                self._out.writeln("    Binary: %s" % node.binary)
+            if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
+                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name if node.binary_remote else "None"))
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
                                   Color.BRIGHT_GREEN)
 
-            dependants = node.inverse_neighbors()
+            dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
@@ -141,9 +137,15 @@ class Printer(object):
 
             if show("requires"):
                 depends = node.neighbors()
-                if depends:
+                requires = [d for d in depends if not d.build_require]
+                build_requires = [d for d in depends if d.build_require]
+                if requires:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
-                    for d in depends:
+                    for d in requires:
+                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                if build_requires:
+                    self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
+                    for d in build_requires:
                         self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
@@ -185,7 +187,7 @@ class Printer(object):
                             str(reference)
                 self._out.info(warn_msg)
                 continue
-                
+
             reference = remote_info["items"][0]["recipe"]["id"]
             packages = remote_info["items"][0]["packages"]
 

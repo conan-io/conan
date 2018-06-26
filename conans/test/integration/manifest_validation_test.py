@@ -26,7 +26,6 @@ class ConanFileTest(ConanFile):
     exports = "*"
 """
         self.files = {CONANFILE: conanfile, "data.txt": "MyData"}
-        # Export and upload the conanfile
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable")

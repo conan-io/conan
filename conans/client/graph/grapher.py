@@ -1,6 +1,8 @@
 from conans.util.files import save
 from conans.client.installer import build_id
 from collections import defaultdict, namedtuple
+from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
+    BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
 
 
 def html_binary_graph(search_info, reference, table_filename):
@@ -153,8 +155,17 @@ class ConanHTMLGrapher(object):
                 fulllabel = "".join(fulllabel)
             else:
                 fulllabel = label = self._project_reference
-            nodes.append("{id: %d, label: '%s', shape: 'box', fulllabel: '%s'}"
-                         % (i, label, fulllabel))
+            if node.build_require:
+                shape = "ellipse"
+            else:
+                shape = "box"
+            color = {BINARY_CACHE: "SkyBlue",
+                     BINARY_DOWNLOAD: "LightGreen",
+                     BINARY_BUILD: "Khaki",
+                     BINARY_MISSING: "OrangeRed",
+                     BINARY_UPDATE: "SeaGreen"}.get(node.binary, "White")
+            nodes.append("{id: %d, label: '%s', shape: '%s', color: {background: '%s'}, fulllabel: '%s'}"
+                         % (i, label, shape, color, fulllabel))
         nodes = ",\n".join(nodes)
 
         edges = []

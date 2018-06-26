@@ -5,6 +5,7 @@ import re
 import deprecation
 
 import subprocess
+
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
@@ -136,8 +137,6 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
 
-    vswhere_path = ""
-
     if program_files:
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                     "vswhere.exe")
@@ -186,11 +185,16 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         output = subprocess.check_output(arguments)
-        vswhere_out = decode_text(output).strip()
+        output = decode_text(output).strip()
+        # Ignore the "description" field, that even decoded contains non valid charsets for json
+        # (ignored ones)
+        output = "\n".join([line for line in output.splitlines()
+                            if not line.strip().startswith('"description"')])
+
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
-    return json.loads(vswhere_out)
+    return json.loads(output)
 
 
 def vs_comntools(compiler_version):
@@ -252,7 +256,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
-        command = "echo Conan:vcvars already set"
+        command = ["echo Conan:vcvars already set"]
         existing_version = existing_version.split(".")[0]
         if existing_version != compiler_version:
             message = "Visual environment already set to %s\n " \
@@ -269,29 +273,30 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         else:
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-                command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                           'call "%s" %s' % (vcvars_path, vcvars_arch))
-                if winsdk_version:
-                    command += " %s" % winsdk_version
-                if vcvars_ver:
-                    command += " -vcvars_ver=%s" % vcvars_ver
+                command = ['set "VSCMD_START_DIR=%%CD%%" && '
+                           'call "%s" %s' % (vcvars_path, vcvars_arch)]
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
-                command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
+                command = ['call "%s" %s' % (vcvars_path, vcvars_arch)]
+        if int(compiler_version) >= 14:
+            if winsdk_version:
+                command.append(winsdk_version)
+            if vcvars_ver:
+                command.append("-vcvars_ver=%s" % vcvars_ver)
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")
         if os_version_setting == '8.1':
-            command += ' store 8.1'
+            command.append('store 8.1')
         elif os_version_setting == '10.0':
             windows_10_sdk = find_windows_10_sdk()
             if not windows_10_sdk:
                 raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
                                      "but Windows 10 SDK wasn't found")
-            command += ' store ' + windows_10_sdk
+            command.append('store %s' % windows_10_sdk)
         else:
             raise ConanException('unsupported Windows Store version %s' % os_version_setting)
-    return command
+    return " ".join(command)
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,

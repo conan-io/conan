@@ -454,7 +454,7 @@ class PackageOptions(object):
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
         :param: package_values: PackageOptionValues({"shared": "True"}
-        :param: pattern_options: Keys from the "package_values" e.j ["shared"] that shouldn't raise
+        :param: pattern_options: Keys from the "package_values" e.g. ["shared"] that shouldn't raise
                                  if they are not existing options for the current object
         """
         if not package_values:
