@@ -996,8 +996,7 @@ class GitToolTest(unittest.TestCase):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
-                                                     "specify a branch to checkout"):
+        with self.assertRaisesRegexp(ConanException, "specify a branch to checkout"):
             git.clone("https://github.com/conan-community/conan-zlib.git")
 
     def test_credentials(self):
@@ -1099,5 +1098,4 @@ class HelloConan(ConanFile):
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
-        self.assertIn("The destination folder is not empty, "
-                      "specify a branch to checkout", client.out)
+        self.assertIn("specify a branch to checkout", client.out)
