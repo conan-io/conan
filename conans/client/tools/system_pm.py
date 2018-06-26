@@ -58,6 +58,10 @@ class SystemPackageTool(object):
         """
             Get the system package tool update command
         """
+        mode = self._get_sysrequire_mode()
+        if mode == "disabled":
+            _global_output.info("Not updating system_requirements. CONAN_SYSREQUIRES_MODE=Disabled")
+            return
         self._is_up_to_date = True
         self._tool.update()
 

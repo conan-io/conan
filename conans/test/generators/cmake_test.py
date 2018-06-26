@@ -47,7 +47,8 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def paths_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_undefined_field: x), None)
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None,
+                                                        lambda x, raise_undefined_field: x), None)
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -60,6 +61,26 @@ class CMakeGeneratorTest(unittest.TestCase):
         release = generator.content["conanbuildinfo_release.cmake"]
         release = release.replace(tmp_folder.replace("\\", "/"), "root_folder")
         cmake_lines = release.splitlines()
+        self.assertIn('set(CONAN_INCLUDE_DIRS_MYPKG_RELEASE "root_folder/include")', cmake_lines)
+        self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
+
+    def paths_cmake_test(self):
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
+        conanfile = ConanFile(None, None, settings_mock(None, None, None,
+                                                        lambda x, raise_undefined_field: x,
+                                                        lambda: {}), None)
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        tmp_folder = temp_folder()
+        save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
+        save(os.path.join(tmp_folder, "include", "myheader.h"), "")
+        cpp_info = CppInfo(tmp_folder)
+        cpp_info.release.libs = ["hello"]
+        cpp_info.debug.libs = ["hello_D"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        content = content.replace(tmp_folder.replace("\\", "/"), "root_folder")
+        cmake_lines = content.splitlines()
         self.assertIn('set(CONAN_INCLUDE_DIRS_MYPKG_RELEASE "root_folder/include")', cmake_lines)
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 

@@ -11,7 +11,6 @@ class VirtualEnvGenerator(Generator):
         self.conanfile = conanfile
         self.env = conanfile.env
         self.venv_name = "conanenv"
-        super(VirtualEnvGenerator, self).__init__(conanfile)
 
     @property
     def filename(self):
@@ -72,7 +71,8 @@ class VirtualEnvGenerator(Generator):
                 if platform.system() == "Windows":
                     ret.append('SET %s=%s' % (name, old_value))
                 else:
-                    ret.append('export %s=%s' % (name, old_value))
+                    line = "export %s=%s" % (name, old_value) if old_value else ("unset %s" % name)
+                    ret.append(line)
 
             if platform.system() == "Windows":
                 ret.append("SET PROMPT=%s" % os.environ.get("PROMPT", ""))

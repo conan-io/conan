@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+
+import mock
 import os
 import platform
 import unittest
 
 from collections import namedtuple
+
+import six
+from mock.mock import patch, mock_open
 from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
@@ -11,18 +17,20 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools.win import vcvars_dict, vswhere
+from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
 
-from conans.test.utils.context_manager import which
+from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load
+from conans.util.files import save, load, md5
 import requests
 
 
@@ -66,6 +74,18 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def load_save_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        save(path, u"äüïöñç")
+        content = load(path)
+        self.assertEqual(content, u"äüïöñç")
+
+    def md5_test(self):
+        result = md5(u"äüïöñç")
+        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
+
     def cpu_count_test(self):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
@@ -499,9 +519,8 @@ class HelloConan(ConanFile):
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -518,11 +537,76 @@ class HelloConan(ConanFile):
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
             tools.msvc_build_command(settings, "project.sln")
 
-        # succesful definition via settings
+        # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    def vswhere_description_strip_test(self):
+        myoutput = """
+[
+  {
+    "instanceId": "17609d7c",
+    "installDate": "2018-06-11T02:15:04Z",
+    "installationName": "VisualStudio/15.7.3+27703.2026",
+    "installationPath": "",
+    "installationVersion": "15.7.27703.2026",
+    "productId": "Microsoft.VisualStudio.Product.Enterprise",
+    "productPath": "",
+    "isPrerelease": false,
+    "displayName": "Visual Studio Enterprise 2017",
+    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
+    "channelId": "VisualStudio.15.Release",
+    "channelUri": "https://aka.ms/vs/15/release/channel",
+    "enginePath": "",
+    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
+    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
+    "updateDate": "2018-06-11T02:15:04.7009868Z",
+    "catalog": {
+      "buildBranch": "d15.7",
+      "buildVersion": "15.7.27703.2026",
+      "id": "VisualStudio/15.7.3+27703.2026",
+      "localBuild": "build-lab",
+      "manifestName": "VisualStudio",
+      "manifestType": "installer",
+      "productDisplayVersion": "15.7.3",
+      "productLine": "Dev15",
+      "productLineVersion": "2017",
+      "productMilestone": "RTW",
+      "productMilestoneIsPreRelease": "False",
+      "productName": "Visual Studio",
+      "productPatchVersion": "3",
+      "productPreReleaseMilestoneSuffix": "1.0",
+      "productRelease": "RTW",
+      "productSemanticVersion": "15.7.3+27703.2026",
+      "requiredEngineVersion": "1.16.1187.57215"
+    },
+    "properties": {
+      "campaignId": "",
+      "canceled": "0",
+      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
+      "nickname": "",
+      "setupEngineFilePath": ""
+    }
+  },
+  {
+    "instanceId": "VisualStudio.12.0",
+    "installationPath": "",
+    "installationVersion": "12.0"
+  }
+]
+
+"""
+        if six.PY3:
+            # In python3 the output from subprocess.check_output are bytes, not str
+            myoutput = myoutput.encode()
+        myrunner = mock_open()
+        myrunner.check_output = lambda x: myoutput
+        with patch('conans.client.tools.win.subprocess', myrunner):
+            json = vswhere()
+            self.assertNotIn("descripton", json)
 
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
@@ -598,7 +682,7 @@ class MyConan(ConanFile):
     settings = "os", "compiler"
 
     def build(self):
-        with tools.vcvars(self.settings):
+        with tools.vcvars(self.settings, only_diff=True):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
@@ -610,6 +694,64 @@ class MyConan(ConanFile):
         else:
             client.run("create . conan/testing")
             self.assertIn("VCINSTALLDIR set to: None", client.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_dict_diff_test(self):
+        text = """
+os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        with tools.environment_append({"MYVAR": "1"}):
+            ret = vcvars_dict(settings, only_diff=False)
+            self.assertIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+            ret = vcvars_dict(settings)
+            self.assertNotIn("MYVAR", ret)
+            self.assertIn("VCINSTALLDIR", ret)
+
+    def vcvars_dict_test(self):
+        # https://github.com/conan-io/conan/issues/2904
+        output_with_newline_and_spaces = """__BEGINS__
+     PROCESSOR_ARCHITECTURE=AMD64
+
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
+
+
+ PROCESSOR_LEVEL=6 
+
+PROCESSOR_REVISION=9e09    
+
+                         
+set nl=^
+env_var=
+without_equals_sign
+
+ProgramFiles(x86)=C:\Program Files (x86)
+       
+""".encode("utf-8")
+
+        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version):  # @UnusedVariable
+            return "unused command"
+
+        def subprocess_check_output_mock(cmd, shell):
+            self.assertIn("unused command", cmd)
+            return output_with_newline_and_spaces
+
+        with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
+            with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
+                vars = tools.vcvars_dict(None, only_diff=False)
+                self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
+                self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
+                self.assertEqual(vars["PROCESSOR_REVISION"], "9e09")
+                self.assertEqual(vars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
@@ -826,3 +968,136 @@ class MyConan(ConanFile):
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
+
+
+class GitToolTest(unittest.TestCase):
+
+    def test_clone_git(self):
+        path, _ = create_local_git_repo({"myfile": "contents"})
+        tmp = temp_folder()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+    def test_clone_existing_folder_git(self):
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
+
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        git.clone(path, branch="my_release")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+
+        # Checkout a commit
+        git.checkout(commit)
+        self.assertEquals(git.get_revision(), commit)
+
+    def test_clone_existing_folder_without_branch(self):
+        tmp = temp_folder()
+        save(os.path.join(tmp, "file"), "dummy contents")
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
+                                                     "specify a branch to checkout"):
+            git.clone("https://github.com/conan-community/conan-zlib.git")
+
+    def test_credentials(self):
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool")
+        url_credentials = git.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+
+    def test_verify_ssl(self):
+        class MyRunner(object):
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, *args, **kwargs):
+                self.calls.append(args[0])
+                return ""
+
+        runner = MyRunner()
+        tmp = temp_folder()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
+                  force_english=True)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify true", runner.calls[1])
+
+        runner = MyRunner()
+        git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
+                  force_english=False)
+        git.clone(url="https://myrepo.git")
+        self.assertIn("git config http.sslVerify false", runner.calls[1])
+
+    def git_helper_in_recipe_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        save(os.path.join(git_repo, "file.h"), "contents")
+        client.runner("git init .", cwd=git_repo)
+        client.runner('git config user.email "you@example.com"', cwd=git_repo)
+        client.runner('git config user.name "Your Name"', cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
+        client.runner("git add .", cwd=git_repo)
+        client.runner('git commit -m "comm"', cwd=git_repo)
+
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s", "dev")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Now clone in a subfolder with later checkout
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        tools.mkdir("src")
+        git = tools.Git("./src")
+        git.clone("%s")
+        git.checkout("dev")
+
+    def build(self):
+        assert(os.path.exists(os.path.join("src", "file.h")))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+        # Base dir, with exports without subfolder and not specifying checkout fails
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        git = tools.Git()
+        git.clone("%s")
+
+    def build(self):
+        assert(os.path.exists("file.h"))
+""" % git_repo.replace("\\", "/")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel", ignore_error=True)
+        self.assertIn("The destination folder is not empty, "
+                      "specify a branch to checkout", client.out)

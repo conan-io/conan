@@ -24,9 +24,9 @@ from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools.scm import Git
 from conans.client.userio import UserIO
 from conans.model.version import Version
-from conans.search.search import DiskSearchManager
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
@@ -256,6 +256,20 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
+def create_local_git_repo(files, branch=None):
+    tmp = temp_folder()
+    save_files(tmp, files)
+    git = Git(tmp)
+    git.run("init .")
+    if branch:
+        git.run("checkout -b %s" % branch)
+    git.run("add .")
+    git.run('config user.email "you@example.com"')
+    git.run('config user.name "Your Name"')
+    git.run('commit -m "message"')
+    return tmp.replace("\\", "/"), git.get_revision()
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -329,8 +343,6 @@ class TestClient(object):
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
-
-        self.search_manager = DiskSearchManager(self.client_cache)
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -425,7 +437,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          self.search_manager, settings_preprocessor, interactive=interactive)
+                          settings_preprocessor, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

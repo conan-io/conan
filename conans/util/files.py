@@ -73,7 +73,7 @@ def md5(content):
     if isinstance(content, bytes):
         tmp = content
     else:
-        tmp = content.encode()
+        tmp = content.encode("utf-8")
     md5alg.update(tmp)
     return md5alg.hexdigest()
 
@@ -153,6 +153,8 @@ def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
             content = bytes(content, "utf-8")
+    elif isinstance(content, unicode):
+        content = content.encode("utf-8")
     return content
 
 
@@ -179,12 +181,21 @@ def relative_dirs(path):
     return ret
 
 
+def get_abs_path(folder, origin):
+    if folder:
+        if os.path.isabs(folder):
+            return folder
+        return os.path.join(origin, folder)
+    return origin
+
+
 def _change_permissions(func, path, exc_info):
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
-        raise
+        raise Exception("Cannot change permissions for {}! Exception info: {}".format(
+            path, exc_info))
 
 
 def rmdir(path):

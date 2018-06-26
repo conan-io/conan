@@ -173,59 +173,61 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
         conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
-        cmake = CMake(conan_file)
-        cmake.configure(source_dir="../subdir", build_dir="build")
-        linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                      '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
-        generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        base_cmd = ' && cmake -G "%s" -DCMAKE_BUILD_TYPE="Release" %s' \
-                   '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
-                   '-DCONAN_COMPILER_VERSION="6.3" ' \
-                   '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
-                   '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % (generator, linux_stuff)
-        build_expected = quote_var("build")
-        source_expected = quote_var("../subdir")
+        with tools.chdir(self.tempdir):
+            cmake = CMake(conan_file)
+            cmake.configure(source_dir="../subdir", build_dir="build")
+            linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
+                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
+            generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
+            base_cmd = ' && cmake -G "%s" -DCMAKE_BUILD_TYPE="Release" %s' \
+                       '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
+                       '-DCONAN_COMPILER_VERSION="6.3" ' \
+                       '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
+                       '-DCONAN_C_FLAGS="-m32" -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" ' \
+                       '-Wno-dev ' % (generator, linux_stuff)
+            build_expected = quote_var("build")
+            source_expected = quote_var("../subdir")
 
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure(build_dir="build")
-        build_expected = quote_var("build")
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure(build_dir="build")
+            build_expected = quote_var("build")
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure()
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure()
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        cmake.configure(source_folder="source", build_folder="build")
-        build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
-        source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            cmake.configure(source_folder="source", build_folder="build")
+            build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
+            source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = True
-        cmake.configure(source_folder="source", build_folder="build",
-                        cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = True
+            cmake.configure(source_folder="source", build_folder="build",
+                            cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = False
-        cmake.configure(source_folder="source", build_folder="build",
-                        cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = False
+            cmake.configure(source_folder="source", build_folder="build",
+                            cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        conan_file.in_local_cache = True
-        cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
+            conan_file.in_local_cache = True
+            cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
+            self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
-        # Raise mixing
-        with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
-            cmake.configure(source_folder="source", build_dir="build")
+            # Raise mixing
+            with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+                cmake.configure(source_folder="source", build_dir="build")
 
     def build_type_ovewrite_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -292,30 +294,37 @@ class CMakeTest(unittest.TestCase):
                 if "Visual Studio" in text:
                     cores = ('-DCONAN_CXX_FLAGS="/MP{0}" '
                              '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count()))
-                    new_text = new_text.replace("-Wno-dev", "%s-Wno-dev" % cores)
+                    new_text = new_text.replace('-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"',
+                                                '%s-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"' % cores)
+
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "")
 
         check('-G "Custom Generator" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '', generator="Custom Generator")
 
         check('-G "Custom Generator" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '', generator="Custom Generator", set_cmake_flags=True)
 
         settings.build_type = "Debug"
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '--config Debug')
 
         settings.arch = "x86_64"
         check('-G "Visual Studio 12 2013 Win64" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '--config Debug')
 
         settings.compiler = "gcc"
@@ -323,21 +332,24 @@ class CMakeTest(unittest.TestCase):
         generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator, "")
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
@@ -345,6 +357,7 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
               '-DCMAKE_CXX_FLAGS="-m64" -DCMAKE_SHARED_LINKER_FLAGS="-m64" -DCMAKE_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
               '-Wno-dev' % generator,
               "", set_cmake_flags=True)
 
@@ -355,14 +368,16 @@ class CMakeTest(unittest.TestCase):
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.os = "SunOS"
@@ -372,14 +387,16 @@ class CMakeTest(unittest.TestCase):
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparc"
@@ -387,14 +404,16 @@ class CMakeTest(unittest.TestCase):
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparcv9"
         check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.compiler = "Visual Studio"
@@ -403,12 +422,14 @@ class CMakeTest(unittest.TestCase):
         settings.os.version = "8.1"
         settings.build_type = "Debug"
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
         settings.os.version = "10.0"
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
     def deleted_os_test(self):
@@ -433,7 +454,8 @@ build_type: [ Release]
         cross = "-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" " if platform.system() != "Linux" else ""
         self.assertEqual('-G "%s Makefiles" %s-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.9" -DCONAN_CXX_FLAGS="-m64" '
-                         '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % (generator, cross),
+                         '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % (generator, cross),
                          cmake.command_line)
 
     def test_sysroot(self):
@@ -517,8 +539,9 @@ build_type: [ Release]
 
         self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" '
                          '{1} -DCONAN_EXPORTED="1"'
-                         ' -DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4" '
-                         '-Wno-dev {0}'.format(dot_dir, cross),
+                         ' -DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4"'
+                         ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
+                         ' -Wno-dev {0}'.format(dot_dir, cross),
                          conan_file.command)
 
         cmake.build()
@@ -551,6 +574,7 @@ build_type: [ Release]
         self.assertEqual('cd %s && cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
                          '%s -DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4" '
+                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
                          '-Wno-dev %s' % (tempdir, cross, escaped_args),
                          conan_file.command)
 
@@ -627,7 +651,7 @@ build_type: [ Release]
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        settings.compiler.version = "12"
+        settings.compiler.version = "14"
         settings.compiler.runtime = "MDd"
         settings.arch = "x86"
         settings.build_type = None
@@ -686,6 +710,38 @@ build_type: [ Release]
         cmake = CMake(conanfile)
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
+
+    def test_pkg_config_path(self):
+        conanfile = ConanFileMock()
+        conanfile.generators = ["pkg_config"]
+        conanfile.install_folder = "/my_install/folder/"
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        cmake.configure()
+        self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"], "/my_install/folder/")
+
+        conanfile.generators = []
+        cmake = CMake(conanfile)
+        cmake.configure()
+        self.assertNotIn("PKG_CONFIG_PATH", conanfile.captured_env)
+
+        cmake = CMake(conanfile)
+        cmake.configure(pkg_config_paths=["reldir1", "/abspath2/to/other"])
+        self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"],
+                          os.path.pathsep.join(["/my_install/folder/reldir1",
+                                                "/abspath2/to/other"]))
+
+        # If there is already a PKG_CONFIG_PATH do not set it
+        conanfile.generators = ["pkg_config"]
+        cmake = CMake(conanfile)
+        with tools.environment_append({"PKG_CONFIG_PATH": "do_not_mess_with_this"}):
+            cmake.configure()
+            self.assertEquals(conanfile.captured_env["PKG_CONFIG_PATH"], "do_not_mess_with_this")
 
     def test_shared(self):
         settings = Settings.loads(default_settings_yml)
@@ -773,6 +829,48 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
 
+    def test_missing_settings(self):
+        def instance_with_os_build(os_build):
+            settings = Settings.loads(default_settings_yml)
+            settings.os_build = os_build
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            return CMake(conan_file)
+
+        cmake = instance_with_os_build("Linux")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        cmake = instance_with_os_build("Macos")
+        self.assertEquals(cmake.generator, "Unix Makefiles")
+
+        cmake = instance_with_os_build("Windows")
+        self.assertEquals(cmake.generator, None)
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
+            cmake = instance_with_os_build("Windows")
+            self.assertEquals(cmake.generator, "MyCoolGenerator")
+
+    def test_cmake_system_version_android(self):
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "SomeSystem",
+                                       "CONAN_CMAKE_GENERATOR": "SomeGenerator"}):
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "WindowsStore"
+            settings.os.version = "8.1"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.1")
+
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "Android"
+            settings.os.api_level = "32"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
@@ -799,7 +897,10 @@ class ConanFileMock(ConanFile):
         self.should_configure = True
         self.should_build = True
         self.should_install = True
+        self.generators = []
+        self.captured_env = {}
 
     def run(self, command):
         self.command = command
         self.path = os.environ["PATH"]
+        self.captured_env = {key: value for key, value in os.environ.items()}

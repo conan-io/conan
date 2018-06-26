@@ -4,11 +4,21 @@ import shutil
 import six
 
 from conans import tools
-from conans.model.conan_file import get_env_context_manager
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
+from conans.model.conan_file import get_env_context_manager
+from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
+
+
+def get_scm(conanfile, src_folder):
+    data = getattr(conanfile, "scm", None)
+    if data is not None and isinstance(data, dict):
+        return SCM(data, src_folder)
+    else:
+        # not an instance of dict or None, skip SCM feature.
+        pass
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
@@ -43,7 +53,16 @@ def merge_directories(src, dst):
             shutil.copy2(src_file, dst_file)
 
 
-def config_source(export_folder, export_source_folder, src_folder,
+def _clean_source_folder(folder):
+    for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
+              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
+        try:
+            os.remove(os.path.join(folder, f))
+        except OSError:
+            pass
+
+
+def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
                   conan_file, output, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
@@ -78,12 +97,7 @@ def config_source(export_folder, export_source_folder, src_folder,
         shutil.copytree(export_folder, src_folder, symlinks=True)
         # Now move the export-sources to the right location
         merge_directories(export_source_folder, src_folder)
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-                  CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
-            try:
-                os.remove(os.path.join(src_folder, f))
-            except OSError:
-                pass
+        _clean_source_folder(src_folder)
         try:
             shutil.rmtree(os.path.join(src_folder, "__pycache__"))
         except OSError:
@@ -97,6 +111,19 @@ def config_source(export_folder, export_source_folder, src_folder,
                 with conanfile_exception_formatter(str(conan_file), "source"):
                     conan_file.build_folder = None
                     conan_file.package_folder = None
+
+                    scm = get_scm(conan_file, src_folder)
+                    if scm:
+                        # scm.capture_origin before exporting
+                        if local_sources_path and os.path.exists(local_sources_path):
+                            output.info("Getting sources from folder: %s" % local_sources_path)
+                            merge_directories(local_sources_path, src_folder)
+                            _clean_source_folder(src_folder)
+                        else:
+                            output.info("Getting sources from url: '%s'" % scm.url)
+                            scm.clone()
+                            scm.checkout()
+
                     conan_file.source()
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
@@ -110,16 +137,26 @@ def config_source(export_folder, export_source_folder, src_folder,
             raise ConanException(e)
 
 
-def config_source_local(dest_dir, conan_file, output):
+def config_source_local(dest_dir, conan_file, conanfile_folder, output):
     output.info('Configuring sources in %s' % dest_dir)
     conan_file.source_folder = dest_dir
-
     with tools.chdir(dest_dir):
         try:
             with conanfile_exception_formatter(str(conan_file), "source"):
                 with get_env_context_manager(conan_file):
                     conan_file.build_folder = None
                     conan_file.package_folder = None
+                    scm = get_scm(conan_file, dest_dir)
+                    if scm:
+                        if scm.capture_origin or scm.capture_revision:
+                            output.info("Getting sources from folder: %s" % conanfile_folder)
+                            merge_directories(conanfile_folder, dest_dir)
+                            _clean_source_folder(dest_dir)
+                        else:
+                            output.info("Getting sources from url: '%s'" % scm.url)
+                            scm.clone()
+                            scm.checkout()
+
                     conan_file.source()
         except ConanExceptionInUserConanfileMethod:
             raise

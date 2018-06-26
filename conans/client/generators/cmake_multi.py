@@ -12,12 +12,14 @@ def extend(cpp_info, config):
     """
     config_info = cpp_info.configs.get(config)
     if config_info:
+        def add_lists(seq1, seq2):
+            return seq1 + [s for s in seq2 if s not in seq1]
         result = CppInfo(config_info.rootpath)
-        result.includedirs = cpp_info.includedirs + config_info.includedirs
-        result.libdirs = cpp_info.libdirs + config_info.libdirs
-        result.bindirs = cpp_info.bindirs + config_info.bindirs
-        result.resdirs = cpp_info.resdirs + config_info.resdirs
-        result.builddirs = cpp_info.builddirs + config_info.builddirs
+        result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
+        result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
+        result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
+        result.resdirs = add_lists(cpp_info.resdirs, config_info.resdirs)
+        result.builddirs = add_lists(cpp_info.builddirs, config_info.builddirs)
         result.libs = cpp_info.libs + config_info.libs
         result.defines = cpp_info.defines + config_info.defines
         result.cflags = cpp_info.cflags + config_info.cflags
