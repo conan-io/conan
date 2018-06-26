@@ -69,12 +69,12 @@ class CommandOutputer(object):
         return ret
 
     def nodes_to_build(self, nodes_to_build):
-        self.user_io.out.info(", ".join(nodes_to_build))
+        self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def info(self, deps_graph, graph_updates_info, only, remote, package_filter, show_paths, project_reference):
+    def info(self, deps_graph, only, remote, package_filter, show_paths, project_reference):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
         Printer(self.user_io.out).print_info(deps_graph, project_reference,
-                                             only, registry, graph_updates_info=graph_updates_info,
+                                             only, registry,
                                              remote=remote, node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache, package_filter=package_filter,
                                              show_paths=show_paths)

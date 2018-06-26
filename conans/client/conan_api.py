@@ -222,8 +222,8 @@ class ConanAPIV1(object):
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager,
-                            self._settings_preprocessor, action_recorder, self._registry)
+                            self._remote_manager, self._settings_preprocessor,
+                            action_recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -551,17 +551,17 @@ class ConanAPIV1(object):
         return ref_list, project_reference
 
     @api_method
-    def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       profile_name=None, update=False, install_folder=None):
+    def info(self, reference, remote=None, settings=None, options=None, env=None,
+             profile_name=None, update=False, install_folder=None, build=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         ret = manager.info_get_graph(reference, remote_name=remote, profile=profile,
-                                     check_updates=update)
-        deps_graph, graph_updates_info, project_reference = ret
-        return deps_graph, graph_updates_info, project_reference
+                                     check_updates=update, build_mode=build)
+        deps_graph, project_reference = ret
+        return deps_graph, project_reference
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,

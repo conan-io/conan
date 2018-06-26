@@ -36,6 +36,24 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+
+
+def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
+    conan_ref = ConanFileReference.loads(str(conan_ref))
+    path = client_cache.export(conan_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
+
+
+def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
+    pkg_ref = PackageReference.loads(str(package_ref))
+    path = client_cache.package(pkg_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
 
 
 class TestingResponse(object):
