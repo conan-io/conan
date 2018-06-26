@@ -200,6 +200,29 @@ class MyTest(ConanFile):
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
 
+    def info_build_requires_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class AConan(ConanFile):
+    pass"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . tool/0.1@user/channel")
+        client.run("export . Pkg/0.1@user/channel")
+        client.run("export . Pkg2/0.1@user/channel")
+        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
+                     "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
+        client.run("info . -pr=myprofile --dry-build=missing")
+        # Check that there is only 1 output for tool, not repeated many times
+        pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
+        self.assertEqual(len(pkgs), 1)
+
+        client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
+        html = load(os.path.join(client.current_folder, "file.html"))
+        self.assertIn("html", html)
+        self.assertIn("label: 'Pkg2/0.1', shape: 'box', color: {background: 'Khaki'}", html)
+        self.assertIn("label: 'Pkg/0.1', shape: 'box', color: {background: 'Khaki'}", html)
+        self.assertIn("label: 'tool/0.1', shape: 'ellipse', color: {background: 'SkyBlue'}", html)
+
     def only_names_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -268,14 +291,18 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Updates: You have the latest version (None)
+                Recipe: No remote
+                Binary: Missing
+                Binary remote: None
                 Required by:
                     Hello1/0.1@lasote/stable
             Hello1/0.1@lasote/stable
                 Remote: None
                 URL: myurl
                 License: MIT
-                Updates: You have the latest version (None)
+                Recipe: No remote
+                Binary: Missing
+                Binary remote: None
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:
@@ -292,7 +319,7 @@ class MyTest(ConanFile):
                               not line.strip().startswith("package_folder")])
 
         # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_output(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.out))
 
         self.client.run("info . -u --only=url")
         expected_output = textwrap.dedent(
@@ -303,6 +330,7 @@ class MyTest(ConanFile):
                 URL: myurl
             Hello1/0.1@lasote/stable
                 URL: myurl""")
+
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
         self.client.run("info . -u --only=url --only=license")
         expected_output = textwrap.dedent(
