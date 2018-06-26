@@ -34,13 +34,17 @@ class MergeDirectoriesTest(unittest.TestCase):
                     ret.append(relpath)
         return ret
 
+    def _assert_equals(self, list1, list2):
+        self.assertEquals(set([el.replace("/", "\\") for el in list1]),
+                          set([el.replace("/", "\\") for el in list2]))
+
     def test_empty_dest_merge(self):
 
         files = ["file.txt", "subdir/file2.txt"]
         self._save(self.source, files)
 
         merge_directories(self.source, self.dest)
-        self.assertEquals(set(self._get_paths(self.dest)), set(files))
+        self._assert_equals(self._get_paths(self.dest), files)
 
     def test_non_empty_dest_merge(self):
         files = ["file.txt", "subdir/file2.txt"]
@@ -50,7 +54,7 @@ class MergeDirectoriesTest(unittest.TestCase):
         self._save(self.dest, files_dest, "fromdest")
 
         merge_directories(self.source, self.dest)
-        self.assertEquals(set(self._get_paths(self.dest)), set(files + files_dest))
+        self._assert_equals(self._get_paths(self.dest), files + files_dest)
         # File from src overrides file from dest
         self.assertEquals(load(join(self.dest, "file.txt")), "fromsrc")
 
@@ -64,9 +68,8 @@ class MergeDirectoriesTest(unittest.TestCase):
         self._save(self.source, files, "fromsrc")
 
         merge_directories(self.source, self.dest)
-        self.assertEquals(set(self._get_paths(self.dest)), set(files +
-                                                               files_dest +
-                                                               ['empty_folder/subempty_folder', ]))
+        self._assert_equals(self._get_paths(self.dest), files + files_dest +
+                           ['empty_folder/subempty_folder', ])
 
     def excluded_dirs_test(self):
         files = ["file.txt", "subdir/file2.txt", "subdir/file3.txt", "other_dir/somefile.txt",
@@ -78,15 +81,15 @@ class MergeDirectoriesTest(unittest.TestCase):
 
         # Excluded one file from other_dir and the whole subdir
         merge_directories(self.source, self.dest, excluded=["other_dir/somefile.txt", "subdir"])
-        self.assertEquals(set(self._get_paths(self.dest)), set(["file.txt",
-                                                                "subdir2/file2.txt",
-                                                                "other_dir/somefile2.txt"]))
+        self._assert_equals(self._get_paths(self.dest), ["file.txt",
+                                                         "subdir2/file2.txt",
+                                                         "other_dir/somefile2.txt"])
 
         # Excluded one from dest (no sense) and one from origin
         merge_directories(self.source, self.dest, excluded=["subdir2/file2.txt",
                                                             "subdir",
                                                             "other_dir/somefile.txt"])
 
-        self.assertEquals(set(self._get_paths(self.dest)), set(["file.txt",
-                                                                "subdir2/file2.txt",
-                                                                "other_dir/somefile2.txt"]))
+        self._assert_equals(self._get_paths(self.dest), ["file.txt",
+                                                         "subdir2/file2.txt",
+                                                         "other_dir/somefile2.txt"])
