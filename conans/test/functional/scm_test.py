@@ -79,6 +79,23 @@ class ConanLib(ConanFile):
         folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
         self.assertIn("othersubfolder", os.listdir(folder))
 
+    def test_auto_filesystem_remote_git(self):
+        # https://github.com/conan-io/conan/issues/3109
+        conanfile = base.format(directory="None", url="auto", revision="auto")
+        repo = temp_folder()
+        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"}, repo)
+        self.client.runner("git init .", cwd=repo)
+        self.client.runner('git config user.email "you@example.com"', cwd=repo)
+        self.client.runner('git config user.name "Your Name"', cwd=repo)
+        self.client.runner("git add .", cwd=repo)
+        self.client.runner('git commit -m  "commiting"', cwd=repo)
+        self.client.runner('git clone "%s" .' % repo, cwd=self.client.current_folder)
+        self.client.run("export . user/channel")
+        self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
+        os.remove(self.client.client_cache.scm_folder(ConanFileReference.loads("lib/0.1@user/channel")))
+        self.client.run("install lib/0.1@user/channel --build")
+        self.assertIn("lib/0.1@user/channel: Getting sources from url:", self.client.out)
+
     def test_auto_git(self):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
