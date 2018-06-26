@@ -36,26 +36,25 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
 
 def merge_directories(src, dst, excluded=None, symlinks=True):
     excluded = excluded or []
-    cmn_prefix = os.path.commonprefix([src, dst])
+
     for src_dir, dirs, files in os.walk(src, followlinks=True):
-        def is_excluded(the_dir):
-            if the_dir in excluded:
+
+        def is_excluded(root_folder, element):
+            rel_path = os.path.relpath(os.path.join(root_folder, element), src)
+            if rel_path in excluded:
                 return True
-            # If dst is a sub-folder of src_dir avoid infinite loop
-            if cmn_prefix == src:  # dst is a subfolder
-                rel_dst = os.path.relpath(dst, src)
-                return rel_dst.split(os.path.sep)[0] == the_dir
+            # If dst is a sub-folder of src_dir, discard it as an src file
+            abs_path = os.path.join(root_folder, element)
+            return os.path.commonprefix([abs_path, dst]) == dst
+
         # Overwriting the dirs will prevents walk to get into them
-        if src_dir == src:  # First step, root folder
-            dirs[:] = [d for d in dirs if not is_excluded(d)]
-            files[:] = [d for d in files if not is_excluded(d)]
+        dirs[:] = [d for d in dirs if not is_excluded(src_dir, d)]
+        files[:] = [d for d in files if not is_excluded(src_dir, d)]
 
         dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir)
         for file_ in files:
-            if os.path.join(src, src_dir, file_) == dst:
-                continue
             src_file = os.path.join(src_dir, file_)
             dst_file = os.path.join(dst_dir, file_)
             if os.path.islink(src_file) and symlinks:
