@@ -59,7 +59,9 @@ class ConanRequester(object):
             kwargs["timeout"] = self._timeout_seconds
         if not kwargs.get("headers"):
             kwargs["headers"]  = {}
-        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,platform.python_version(),requests.utils.default_user_agent())
+        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,
+                                                                       platform.python_version(),
+                                                                       requests.utils.default_user_agent())
         return kwargs
 
     def get(self, url, **kwargs):
