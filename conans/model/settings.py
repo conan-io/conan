@@ -345,6 +345,8 @@ class Settings(object):
             other_field_def = constraint_def[field]
             if other_field_def is None:  # Means leave it as is
                 continue
+            if isinstance(other_field_def, str):
+                other_field_def = [other_field_def]
 
             values_to_remove = []
             for value in config_item.values_range:  # value = "Visual Studio"

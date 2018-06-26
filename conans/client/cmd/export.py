@@ -9,14 +9,15 @@ from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
+from conans.client.source import get_scm
 from conans.errors import ConanException
 from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.search.search import DiskSearchManager
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
+from conans.search.search import search_recipes
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -50,7 +51,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
-    refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
+    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
     if refs and conan_ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
@@ -97,14 +98,47 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
-    destination_folder = paths.export(conan_ref)
-    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
-    previous_digest = _init_export_folder(destination_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
-                    output)
+def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
 
-    digest = FileTreeManifest.create(destination_folder, exports_source_folder)
+    scm_src_file = paths.scm_folder(conan_ref)
+    if os.path.exists(scm_src_file):
+        os.unlink(scm_src_file)
+
+    scm = get_scm(conanfile, src_path)
+
+    if not scm or not (scm.capture_origin or scm.capture_revision):
+        return
+
+    if scm.url == "auto":
+        origin = scm.get_remote_url()
+        if not origin:
+            raise ConanException("Repo origin cannot be deduced by 'auto'")
+        if os.path.exists(origin):
+            output.warn("Repo origin looks like a local path: %s" % origin)
+            origin = origin.replace("\\", "/")
+        output.success("Repo origin deduced by 'auto': %s" % origin)
+        scm.url = origin
+    if scm.revision == "auto":
+        scm.revision = scm.get_revision()
+        output.success("Revision deduced by 'auto': %s" % scm.revision)
+
+    # Generate the scm_folder.txt file pointing to the src_path
+    save(scm_src_file, src_path.replace("\\", "/"))
+    scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+
+
+def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+
+    exports_folder = paths.export(conan_ref)
+    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
+    previous_digest = _init_export_folder(exports_folder, exports_source_folder)
+    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
+
+    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
+                             output, paths, conan_ref)
+
+    digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
     if previous_digest and previous_digest == digest:
         output.info("The stored package has not changed")
@@ -112,9 +146,9 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         digest = previous_digest  # Use the old one, keep old timestamp
     else:
         output.success('A new %s version was exported' % CONANFILE)
-        output.info('Folder: %s' % destination_folder)
+        output.info('Folder: %s' % exports_folder)
         modified_recipe = True
-    digest.save(destination_folder)
+    digest.save(exports_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
@@ -157,8 +191,8 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile_path, conanfile, destination_folder,
-                    destination_source_folder, output):
+def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
+                    output):
 
     origin_folder = os.path.dirname(conanfile_path)
 
@@ -188,6 +222,3 @@ def _execute_export(conanfile_path, conanfile, destination_folder,
         copier(pattern, links=True, excludes=excluded_sources)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
-
-    shutil.copy2(conanfile_path,
-                 os.path.join(destination_folder, CONANFILE))

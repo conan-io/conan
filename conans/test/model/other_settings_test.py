@@ -131,6 +131,19 @@ compiler:
         self.assertIn("build_type", load(client.paths.settings_path))
         self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)
 
+    def settings_constraint_error_type_test(self):
+        # https://github.com/conan-io/conan/issues/3022
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    settings = {"os": "Linux"}
+    def build(self):
+        self.output.info("OS!!: %s" % self.settings.os)
+    """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@user/testing -s os=Linux")
+        self.assertIn("Pkg/0.1@user/testing: OS!!: Linux", client.out)
+
     def settings_constraint_test(self):
         conanfile = """from conans import ConanFile
 class Test(ConanFile):

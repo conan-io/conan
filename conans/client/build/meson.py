@@ -4,7 +4,7 @@ from conans import tools
 from conans.client import join_arguments, defs_to_string
 from conans.errors import ConanException
 from conans.tools import args_to_string
-from conans.util.files import mkdir
+from conans.util.files import mkdir, get_abs_path
 
 
 class Meson(object):
@@ -53,14 +53,6 @@ class Meson(object):
     def build_folder(self, value):
         self.build_dir = value
 
-    @staticmethod
-    def _get_dir(folder, origin):
-        if folder:
-            if os.path.isabs(folder):
-                return folder
-            return os.path.join(origin, folder)
-        return origin
-
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
         if (source_folder or build_folder) and (source_dir or build_dir):
             raise ConanException("Use 'build_folder'/'source_folder'")
@@ -69,11 +61,11 @@ class Meson(object):
             build_ret = build_dir or self.build_dir or self._conanfile.build_folder
             source_ret = source_dir or self._conanfile.source_folder
         else:
-            build_ret = self._get_dir(build_folder, self._conanfile.build_folder)
-            source_ret = self._get_dir(source_folder, self._conanfile.source_folder)
+            build_ret = get_abs_path(build_folder, self._conanfile.build_folder)
+            source_ret = get_abs_path(source_folder, self._conanfile.source_folder)
 
         if self._conanfile.in_local_cache and cache_build_folder:
-            build_ret = self._get_dir(cache_build_folder, self._conanfile.build_folder)
+            build_ret = get_abs_path(cache_build_folder, self._conanfile.build_folder)
 
         return source_ret, build_ret
 
@@ -90,7 +82,7 @@ class Meson(object):
                                                     cache_build_folder)
 
         if pkg_config_paths:
-            pc_paths = os.pathsep.join(self._get_dir(f, self._conanfile.install_folder)
+            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
                                        for f in pkg_config_paths)
         else:
             pc_paths = self._conanfile.install_folder

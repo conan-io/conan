@@ -164,7 +164,7 @@ class OptionsValues(object):
         if isinstance(values, tuple):
             new_values = []
             for v in values:
-                option, value = v.split("=")
+                option, value = v.split("=", 1)
                 new_values.append((option.strip(), value.strip()))
             values = new_values
 
@@ -454,7 +454,7 @@ class PackageOptions(object):
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
         :param: package_values: PackageOptionValues({"shared": "True"}
-        :param: pattern_options: Keys from the "package_values" e.j ["shared"] that shouldn't raise
+        :param: pattern_options: Keys from the "package_values" e.g. ["shared"] that shouldn't raise
                                  if they are not existing options for the current object
         """
         if not package_values:

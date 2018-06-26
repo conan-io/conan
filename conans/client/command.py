@@ -8,8 +8,9 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
+from conans.client.remote_registry import RemoteRegistry
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
@@ -205,7 +206,7 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
                             help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the pacakage will be created')
+                                 ' declared in conanfile.py) where the package will be created')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
@@ -406,7 +407,7 @@ class Command(object):
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Only with --build_order option, return the information in a json.'
-                                 ' e.j --json=/path/to/filename.json or --json to output the json')
+                                 ' e.g --json=/path/to/filename.json or --json to output the json')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
                             "also be filtered with options %s. Use '--only None' to show only "
@@ -602,8 +603,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous"
-                            "execution. e.j: conan imports ./imported_files --undo ")
+                            "containing the conan_imports_manifest.txt file generated in a previous "
+                            "execution. e.g.: conan imports ./imported_files --undo ")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
@@ -765,36 +766,66 @@ class Command(object):
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force, packages=args.package or args.all)
 
-    def user(self, *parameters):
+    def user(self, *args):
         """Authenticates against a remote with user/pass, caching the auth token. Useful to avoid
         the user and password being requested later. e.g. while you're uploading a package.
         You can have one user for each remote. Changing the user, or introducing the
         password is only necessary to perform changes in remote packages.
         """
+        # FIXME: Difficult and confusing CLI. Better with:
+        # - conan user clean -> clean users
+        # - conan user list ('remote') -> list users (of a remote)
+        # - conan user auth 'remote' ('user') ('password') -> login a remote (w/o user or pass)
+        # - conan user set 'user' 'remote' -> set user for a remote (not login) necessary??
         parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. If no name is provided it will show the'
                             ' current user')
         parser.add_argument('-c', '--clean', default=False, action='store_true',
                             help='Remove user and tokens for all remotes')
-        parser.add_argument("-p", "--password", nargs='?', const="", type=str,
-                            action=OnceArgument,
+        parser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
                             help='User password. Use double quotes if password with spacing, '
                                  'and escape quotes if existing. If empty, the password is '
                                  'requested interactively (not exposed)')
         parser.add_argument("-r", "--remote", help='Use the specified remote server',
                             action=OnceArgument)
-        args = parser.parse_args(*parameters)  # To enable -h
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the user list will be written to')
+        args = parser.parse_args(*args)
 
-        if args.clean:
-            return self._conan.users_clean()
-        if args.password is None:
-            if args.name is None:
-                return self._conan.users_list(args.remote)
-            else:
-                return self._conan.user_set(args.name, args.remote)
-        return self._conan.authenticate(name=args.name, remote=args.remote,
-                                        password=args.password)
+        if args.clean and any((args.name, args.remote, args.password, args.json)):
+            raise ConanException("'--clean' argument cannot be used together with 'name', "
+                                 "'--password', '--remote' or '--json'")
+        elif args.json and any((args.name, args.password)):
+            raise ConanException("'--json' cannot be used together with 'name' or '--password'")
+
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            if args.clean:  # clean users
+                self._conan.users_clean()
+            elif not args.name and args.password is None:  # list users
+                info = self._conan.users_list(args.remote)
+                self._outputer.print_user_list(info)
+            elif args.password is None:  # set user for remote (no password indicated)
+                remote, prev_user, user = self._conan.user_set(args.name, args.remote)
+                self._outputer.print_user_set(remote, prev_user, user)
+            else:  # login a remote
+                remote = args.remote or self._conan.get_default_remote().name
+                name = args.name
+                password = args.password
+                if not password:
+                    name, password = self._user_io.request_login(remote_name=remote, username=name)
+                remote, prev_user, user = self._conan.authenticate(name, remote=remote,
+                                                                   password=password)
+                self._outputer.print_user_set(remote, prev_user, user)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def search(self, *args):
         """Searches package recipes and binaries in the local cache or in a remote.
@@ -821,31 +852,55 @@ class Command(object):
         parser.add_argument('--table', action=OnceArgument,
                             help="Outputs html file with a table of binaries. Only valid for a "
                             "reference search")
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the search information will be written to')
         args = parser.parse_args(*args)
+
+        if args.table and args.json:
+            raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
-                # Fixes a version with only a wilcard (valid reference) but not real reference
-                # e.j: conan search lib/*@lasote/stable
+                # Fixes a version with only a wildcard (valid reference) but not real reference
+                # e.g.: conan search lib/*@lasote/stable
                 reference = None
         except (TypeError, ConanException):
             reference = None
 
-        if reference:
-            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
-                                              outdated=args.outdated)
-            ordered_packages, reference, recipe_hash, packages_query = ret
-            self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
-                                                 packages_query, args.table)
-        else:
-            if args.table:
-                raise ConanException("'--table' argument can only be used with a reference")
+        cwd = os.getcwd()
+        info = None
 
-            refs = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
-                                              case_sensitive=args.case_sensitive)
-            self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
-            self._outputer.print_search_references(refs, args.pattern_or_reference, args.raw)
+        try:
+            if reference:
+                info = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                                                   outdated=args.outdated)
+                # search is done for one reference
+                self._outputer.print_search_packages(info["results"], reference, args.query,
+                                                     args.table)
+            else:
+                if args.table:
+                    raise ConanException("'--table' argument can only be used with a reference")
+
+                self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
+
+                info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
+                                                  case_sensitive=args.case_sensitive)
+                # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
+                try:
+                    remote_all = self._conan.get_remote_by_name("all")
+                except NoRemoteAvailable:
+                    remote_all = None
+                all_remotes_search = (remote_all is None and args.remote == "all")
+
+                self._outputer.print_search_references(info["results"], args.pattern_or_reference,
+                                                       args.raw, all_remotes_search)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def upload(self, *args):
         """Uploads a recipe and binary packages to a remote.
@@ -878,7 +933,7 @@ class Command(object):
                             action=OnceArgument, const="all",
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the install information will be written to')
+                            help='json file path where the upload information will be written to')
 
         args = parser.parse_args(*args)
 
@@ -1001,12 +1056,12 @@ class Command(object):
                                                    "folder or path to a profile file")
 
         parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='Key of the value to get, e.g: settings.compiler')
+        parser_get.add_argument('item', help='Key of the value to get, e.g.: settings.compiler')
         parser_get.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                 "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key, e.g: settings.compiler')
+        parser_remove.add_argument('item', help='key, e.g.: settings.compiler')
         parser_remove.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
                                                    "folder or path to a profile file")
 
@@ -1069,8 +1124,8 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.alias.__doc__,
                                          prog="conan alias")
-        parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
-        parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')
+        parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
+        parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
 
         self._conan.export_alias(args.reference, args.target)
@@ -1131,7 +1186,7 @@ class Command(object):
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g conan search "
+                                         "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
         return reference
 
@@ -1282,11 +1337,17 @@ def main(args):
             print('You pressed Ctrl+C!')
             sys.exit(3)
 
+        def sigterm_handler(_, __):
+            print('Received SIGTERM!')
+            sys.exit(5)
+
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
             sys.exit(4)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
         if sys.platform == 'win32':
             signal.signal(signal.SIGBREAK, ctrl_break_handler)
         error = command.run(args)

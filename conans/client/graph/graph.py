@@ -1,29 +1,32 @@
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
+from collections import OrderedDict
 
 
 class Node(object):
     def __init__(self, conan_ref, conanfile):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
-        self.dependencies = set()  # Edges
+        self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
+        self.remote = None
 
     def add_edge(self, edge):
         if edge.src == self:
-            self.dependencies.add(edge)
+            if edge not in self.dependencies:
+                self.dependencies.append(edge)
         else:
             self.dependants.add(edge)
 
     def neighbors(self):
-        return set(edge.dst for edge in self.dependencies)
+        return [edge.dst for edge in self.dependencies]
 
     def public_neighbors(self):
-        return set(edge.dst for edge in self.dependencies if not edge.private)
+        return [edge.dst for edge in self.dependencies if not edge.private]
 
     def inverse_neighbors(self):
-        return set(edge.src for edge in self.dependants)
+        return [edge.src for edge in self.dependants]
 
     def __eq__(self, other):
         return (self.conan_ref == other.conan_ref and
@@ -85,8 +88,11 @@ class Edge(object):
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
+        self.root = None
 
     def add_node(self, node):
+        if not self.nodes:
+            self.root = node
         self.nodes.add(node)
 
     def add_edge(self, src, dst, private=False):
@@ -95,16 +101,7 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def propagate_info(self):
-        """ takes the exports from upper level and updates the imports
-        right now also the imports are propagated, but should be checked
-        E.g. Conan A, depends on B.  A=>B
-        B exports an include directory "my_dir", with root "/...../0123efe"
-        A imports are the exports of B, plus any other conans it depends on
-        A.imports.include_dirs = B.export.include_paths.
-        Note the difference, include_paths used to compute full paths as the user
-        defines export relative to its folder
-        """
+    def compute_package_ids(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
@@ -144,33 +141,32 @@ class DepsGraph(object):
         open_nodes = nodes_by_level[1]
         return open_nodes
 
-    def ordered_closure(self, node, flat):
-        closure = set()
+    def full_closure(self, node):
+        closure = OrderedDict()
         current = node.neighbors()
         while current:
-            new_current = set()
+            new_current = []
             for n in current:
-                closure.add(n)
-                new_neighs = n.public_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
+                closure[n] = n
+            for n in current:
+                for neigh in n.public_neighbors():
+                    if neigh not in new_current and neigh not in closure:
+                        new_current.append(neigh)
             current = new_current
+        return closure
 
-        result = [n for n in flat if n in closure]
-        return result
-
-    def public_closure(self, node):
-        closure = {}
+    def closure(self, node):
+        closure = OrderedDict()
         current = node.neighbors()
         while current:
-            new_current = set()
+            new_current = []
             for n in current:
                 closure[n.conan_ref.name] = n
-                new_neighs = n.public_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
+            for n in current:
+                for neigh in n.public_neighbors():
+                    if neigh not in new_current and neigh.conan_ref.name not in closure:
+                        new_current.append(neigh)
             current = new_current
-
         return closure
 
     def _inverse_closure(self, references):
@@ -233,8 +229,7 @@ class DepsGraph(object):
         together with the list of nodes that privately require it
         """
         closure = set()
-        nodes_by_level = self.by_levels()
-        open_nodes = nodes_by_level[-1]
+        open_nodes = [self.root]
         closure.update(open_nodes)
         while open_nodes:
             new_open_nodes = set()

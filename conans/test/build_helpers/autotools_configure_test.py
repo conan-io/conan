@@ -1,16 +1,18 @@
+import os
 import platform
 import unittest
-
-from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
-from conans import tools
-from conans.client.tools.oss import cpu_count
-from conans.paths import CONANFILE
-from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
-from conans.test.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestClient
-from conans.test.build_helpers.cmake_test import ConanFileMock
-from conans.model.settings import Settings
 from collections import namedtuple
+
+from conans import tools
+from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
+from conans.client.tools.oss import cpu_count
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.paths import CONANFILE
+from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
+from conans.test.utils.tools import TestClient
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -57,7 +59,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("-std=c++1z", expected)
+        self.assertIn("-std=c++17", expected)
 
         # Invalid one for GCC
         settings = MockSettings({"build_type": "Release",
@@ -416,9 +418,12 @@ class HelloConan(ConanFile):
         self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'",
-                                             "pkg_config_paths=['/tmp/hello', '/tmp/foo']")})
+                                             "pkg_config_paths=['/tmp/hello', 'foo']")})
         client.run("create . conan/testing")
-        self.assertIn("PKG_CONFIG_PATH=/tmp/hello:/tmp/foo", client.out)
+        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
+        builds_folder = client.client_cache.builds(ref)
+        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
+        self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo" % bf, client.out)
 
     def cross_build_command_test(self):
         runner = RunnerMock()
@@ -543,3 +548,40 @@ class HelloConan(ConanFile):
             # TEST with custom vars
             mocked_result = be.configure(vars=my_vars)
             self.assertEqual(mocked_result, my_vars)
+
+    def autotools_fpic_test(self):
+        runner = None
+        settings = MockSettings({"os": "Linux"})
+        options = MockOptions({"fPIC": True, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": True, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": False, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertTrue(ab.fpic)
+
+        options = MockOptions({"fPIC": False, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+
+        settings = MockSettings({"os": "Windows"})
+        options = MockOptions({"fPIC": True, "shared": True})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+
+        settings = MockSettings({"os": "Macos", "compiler": "clang"})
+        options = MockOptions({"fPIC": False, "shared": False})
+        conanfile = MockConanfile(settings, options, runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        self.assertFalse(ab.fpic)
+        ab.fpic = True
+        self.assertIn("-fPIC", ab.vars["CXXFLAGS"])

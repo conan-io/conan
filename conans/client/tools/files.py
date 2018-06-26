@@ -4,6 +4,7 @@ import os
 import sys
 
 from contextlib import contextmanager
+from fnmatch import fnmatch
 from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
@@ -50,20 +51,23 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
     :param destination: Destination folder
-    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the zip was not created in a NIX
-    system, the bits could produce undefined permission schema. Use only this option if you are sure that the
-    zip was created correctly.
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be
+    dangerous if the zip was not created in a NIX system, the bits could
+    produce undefined permission schema. Use this option only if you are sure
+    that the zip was created correctly.
+    :param pattern: Extract only paths matching the pattern. This should be a
+    Unix shell-style wildcard, see fnmatch documentation for more details.
     :return:
     """
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination)
+        return untargz(filename, destination, pattern)
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
 
@@ -79,7 +83,11 @@ def unzip(filename, destination=".", keep_permissions=False):
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
-        uncompress_size = sum((file_.file_size for file_ in z.infolist()))
+        if not pattern:
+            zip_info = z.infolist()
+        else:
+            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
+        uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
             _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         else:
@@ -88,7 +96,7 @@ def unzip(filename, destination=".", keep_permissions=False):
 
         print_progress.last_size = -1
         if platform.system() == "Windows":
-            for file_ in z.infolist():
+            for file_ in zip_info:
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
@@ -96,7 +104,7 @@ def unzip(filename, destination=".", keep_permissions=False):
                 except Exception as e:
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
-            for file_ in z.infolist():
+            for file_ in zip_info:
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
@@ -110,10 +118,15 @@ def unzip(filename, destination=".", keep_permissions=False):
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
-def untargz(filename, destination="."):
+def untargz(filename, destination=".", pattern=None):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        tarredgzippedFile.extractall(destination)
+        if not pattern:
+            tarredgzippedFile.extractall(destination)
+        else:
+            members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                  tarredgzippedFile.getmembers()))
+            tarredgzippedFile.extractall(destination, members=members)
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
@@ -253,7 +266,7 @@ def collect_libs(conanfile, folder="lib"):
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
     def verify(filepath):
-        if os.path.exists(filepath) and os.access(filepath, os.X_OK):
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
             return os.path.join(path, filename)
         return None
 
