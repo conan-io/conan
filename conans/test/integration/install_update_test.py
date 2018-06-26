@@ -125,8 +125,8 @@ class Pkg(ConanFile):
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
         self.client.run("install . --update")
-        self.assertIn("ERROR: Current conanfile is newer than myremote's one",
-                      self.client.user_io.out)
+        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer",
+                      self.client.out)
         failed_update_timestamps = timestamps()
         self.assertEqual(rebuild_timestamps, failed_update_timestamps)
 
@@ -182,16 +182,16 @@ class ConanLib(ConanFile):
             client.save({"conanfile.py": base,
                          "header.h": header_content})
             client.run("create . Pkg/0.1@lasote/channel")
-            client.run("upload * --confirm")
+            client.run("upload * --confirm --all")
             return client
 
         client = upload("mycontent1")
         time.sleep(1)
         upload("mycontent2")
 
-        # This is no longer necessary, as binary packages are removed when recipe is updated
-        # client.run("remove Pkg/0.1@lasote/channel -p -f")
-        client.run("install Pkg/0.1@lasote/channel -u --build=missing")
+        client.run("install Pkg/0.1@lasote/channel -u")
+        self.assertIn("Pkg/0.1@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client.out)
+        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package 5ab84d6acfe1f2", client.out)
         conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pkg_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         header = os.path.join(client.client_cache.package(pkg_ref), "header.h")

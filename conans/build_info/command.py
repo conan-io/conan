@@ -10,7 +10,7 @@ def run():
 
     parser = argparse.ArgumentParser(description='Extracts build-info from a specified '
                                                  'conan trace log and return a valid JSON')
-    parser.add_argument('trace_path', help='Path to the conan trace log file e.j: '
+    parser.add_argument('trace_path', help='Path to the conan trace log file e.g.: '
                                            '/tmp/conan_trace.log')
     parser.add_argument("--output", default=False,
                         help='Optional file to output the JSON contents, if not specified the JSON'

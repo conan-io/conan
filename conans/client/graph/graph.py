@@ -4,13 +4,35 @@ from conans.errors import conanfile_exception_formatter
 from collections import OrderedDict
 
 
+RECIPE_DOWNLOADED = "Downloaded"
+RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
+RECIPE_UPDATED = "Updated"
+RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
+RECIPE_NOT_IN_REMOTE = "Not in remote"
+RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
+RECIPE_NO_REMOTE = "No remote"
+RECIPE_WORKSPACE = "Workspace"
+
+BINARY_CACHE = "Cache"
+BINARY_DOWNLOAD = "Download"
+BINARY_UPDATE = "Update"
+BINARY_BUILD = "Build"
+BINARY_MISSING = "Missing"
+BINARY_SKIP = "Skip"
+BINARY_WORKSPACE = "Workspace"
+
+
 class Node(object):
     def __init__(self, conan_ref, conanfile):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
+        self.binary = None
+        self.recipe = None
         self.remote = None
+        self.binary_remote = None
+        self.build_require = False
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -90,6 +112,18 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
 
+    def add_graph(self, node, graph, build_require=False):
+        for n in graph.nodes:
+            if n != graph.root:
+                n.build_require = build_require
+                self.add_node(n)
+
+        for e in graph.root.dependencies:
+            e.src = node
+            e.private = True
+
+        node.dependencies = graph.root.dependencies + node.dependencies
+
     def add_node(self, node):
         if not self.nodes:
             self.root = node
@@ -136,10 +170,20 @@ class DepsGraph(object):
                     conanfile.package_id()
         return ordered
 
-    def direct_requires(self):
-        nodes_by_level = self.inverse_levels()
-        open_nodes = nodes_by_level[1]
-        return open_nodes
+    def full_closure(self, node):
+        # Needed to propagate correctly the cpp_info even with privates
+        closure = OrderedDict()
+        current = node.neighbors()
+        while current:
+            new_current = []
+            for n in current:
+                closure[n] = n
+            for n in current:
+                for neigh in n.public_neighbors():
+                    if neigh not in new_current and neigh not in closure:
+                        new_current.append(neigh)
+            current = new_current
+        return closure
 
     def closure(self, node):
         closure = OrderedDict()
@@ -149,7 +193,8 @@ class DepsGraph(object):
             for n in current:
                 closure[n.conan_ref.name] = n
             for n in current:
-                for neigh in n.public_neighbors():
+                neighs = n.public_neighbors()
+                for neigh in neighs:
                     if neigh not in new_current and neigh.conan_ref.name not in closure:
                         new_current.append(neigh)
             current = new_current
@@ -208,28 +253,4 @@ class DepsGraph(object):
                 current_level = []
                 result.append(current_level)
 
-        return result
-
-    def private_nodes(self, built_private_nodes):
-        """ computes a list of nodes living in the private zone of the deps graph,
-        together with the list of nodes that privately require it
-        """
-        closure = set()
-        open_nodes = [self.root]
-        closure.update(open_nodes)
-        while open_nodes:
-            new_open_nodes = set()
-            for node in open_nodes:
-                if node in built_private_nodes:
-                    neighbors = node.public_neighbors()
-                else:
-                    neighbors = node.neighbors()
-                new_open_nodes.update(set(neighbors).difference(closure))
-                closure.update(neighbors)
-            open_nodes = new_open_nodes
-
-        private_nodes = self.nodes.difference(closure)
-        result = []
-        for node in private_nodes:
-            result.append(node)
         return result

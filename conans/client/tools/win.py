@@ -5,6 +5,7 @@ import re
 import deprecation
 
 import subprocess
+
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
@@ -136,8 +137,6 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
 
-    vswhere_path = ""
-
     if program_files:
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                     "vswhere.exe")
@@ -186,11 +185,16 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         output = subprocess.check_output(arguments)
-        vswhere_out = decode_text(output).strip()
+        output = decode_text(output).strip()
+        # Ignore the "description" field, that even decoded contains non valid charsets for json
+        # (ignored ones)
+        output = "\n".join([line for line in output.splitlines()
+                            if not line.strip().startswith('"description"')])
+
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
-    return json.loads(vswhere_out)
+    return json.loads(output)
 
 
 def vs_comntools(compiler_version):

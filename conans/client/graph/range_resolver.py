@@ -28,7 +28,7 @@ class RangeResolver(object):
         self._client_cache = client_cache
         self._remote_search = remote_search
 
-    def resolve(self, require, base_conanref, update):
+    def resolve(self, require, base_conanref, update, remote_name):
         version_range = require.version_range
         if version_range is None:
             return
@@ -51,14 +51,11 @@ class RangeResolver(object):
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
 
         if update:
-            searches = (self._resolve_remote, self._resolve_local)
+            resolved = (self._resolve_remote(search_ref, version_range, remote_name) or
+                        self._resolve_local(search_ref, version_range))
         else:
-            searches = (self._resolve_local, self._resolve_remote)
-
-        for fcn in searches:
-            resolved = fcn(search_ref, version_range)
-            if resolved:
-                break
+            resolved = (self._resolve_local(search_ref, version_range) or
+                        self._resolve_remote(search_ref, version_range, remote_name))
 
         if resolved:
             self._output.success("Version range '%s' required by '%s' resolved to '%s'"
@@ -75,9 +72,9 @@ class RangeResolver(object):
             if resolved_version:
                 return resolved_version
 
-    def _resolve_remote(self, search_ref, version_range):
+    def _resolve_remote(self, search_ref, version_range, remote_name):
         # We should use ignorecase=False, we want the exact case!
-        remote_found = self._remote_search.search_remotes(search_ref, ignorecase=False)
+        remote_found = self._remote_search.search_remotes(search_ref, remote_name)
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 

@@ -100,18 +100,14 @@ class Pkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": profile})
         client.run("create . Pkg/0.1@user/testing -pr=myprofile --build=missing")
-        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
-                                               "Installing build requirements of: PROJECT"), 1)
-        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
-                                               "Build requires: [build_require/0.1@user/testing]"), 1)
-        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Installing build "
-                                               "requirements of: Pkg/0.1@user/testing"), 1)
-        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Build requires: "
-                                               "[build_require/0.1@user/testing]"), 1)
-        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Installing build "
-                                               "requirements of: MyLib/0.1@user/testing"), 1)
-        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Build requires: "
-                                               "[build_require/0.1@user/testing]"), 1)
+        self.assertEqual(1, str(client.out).count("build_require/0.1@user/testing from local cache"))
+        self.assertIn("build_require/0.1@user/testing: Already installed!", client.out)
+        self.assertIn("Pkg/0.1@user/testing (test package): Applying build-requirement: "
+                      "build_require/0.1@user/testing", client.out)
+        self.assertIn("Pkg/0.1@user/testing: Applying build-requirement: "
+                      "build_require/0.1@user/testing", client.out)
+        self.assertIn("MyLib/0.1@user/testing: Applying build-requirement: "
+                      "build_require/0.1@user/testing", client.out)
 
     def _create(self, client):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
@@ -171,18 +167,12 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
                       client.user_io.out)
         client.run("install . --profile ./profile.txt --build=*Tool")
-        self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
-        self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
-                      client.user_io.out)
         self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
         self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*" -p -f')
         client.run("install . --profile ./profile.txt --build=missing")
-        self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
-        self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
-                      client.user_io.out)
         self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
         self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
@@ -284,14 +274,14 @@ class MyLib(ConanFile):
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install . -o MyLib:coverage=True --build missing")
-        self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
-        self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
+        self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("MyTool/0.1@lasote/stable: Calling build()", client.out)
         client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install . -o coverage=True")
-        self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
-        self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
+        self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("MyTool/0.1@lasote/stable: Already installed!", client.out)
         client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
