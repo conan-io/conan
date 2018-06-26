@@ -260,6 +260,86 @@ class ConanLib(ConanFile):
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
+    def test_submodule(self):
+        subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
+        submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
+        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release", submodules=[submodule])
+
+        def _relative_paths(folder):
+            submodule_path = os.path.join(
+                folder, 
+                os.path.basename(os.path.normpath(submodule)))
+            subsubmodule_path = os.path.join(
+                submodule_path, 
+                os.path.basename(os.path.normpath(subsubmodule)))
+            return submodule_path, subsubmodule_path
+
+        # Check old (default) behaviour
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}"
+    }}
+'''
+        conanfile = tmp.format(url=path, revision=commit)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        submodule_path, _ = _relative_paths(folder)
+        self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
+        self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
+
+        # Check invalid value
+        tmp = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {{
+        "type": "git",
+        "url": "{url}",
+        "revision": "{revision}",
+        "submodule": "{submodule}"
+    }}
+'''
+        conanfile = tmp.format(url=path, revision=commit, submodule="invalid")
+        self.client.save({"conanfile.py": conanfile})
+
+        error = self.client.run("create . user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Invalid 'submodule' attribute value in the 'scm'.",
+                      self.client.out)
+
+        # Check shallow 
+        conanfile = tmp.format(url=path, revision=commit, submodule="shallow")
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        submodule_path, subsubmodule_path = _relative_paths(folder)
+        self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertFalse(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
+        # Check recursive
+        conanfile = tmp.format(url=path, revision=commit, submodule="recursive")
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+
+        folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
+        submodule_path, subsubmodule_path = _relative_paths(folder)
+        self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
     def test_source_method_export_sources_and_scm_mixed(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
 

@@ -1027,6 +1027,50 @@ class GitToolTest(unittest.TestCase):
         git.clone(url="https://myrepo.git")
         self.assertIn("git config http.sslVerify false", runner.calls[1])
 
+    def test_clone_submodule_git(self):
+        subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
+        submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
+        path, _ = create_local_git_repo({"myfile": "contents"}, submodules=[submodule])
+
+        def _create_paths():
+            tmp = temp_folder()
+            submodule_path = os.path.join(
+                tmp, 
+                os.path.basename(os.path.normpath(submodule)))
+            subsubmodule_path = os.path.join(
+                submodule_path, 
+                os.path.basename(os.path.normpath(subsubmodule)))
+            return tmp, submodule_path, subsubmodule_path
+
+        # Check old (default) behaviour
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
+
+        # Check invalid value
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
+            git.clone(path, submodule="invalid")
+
+        # Check shallow 
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path, submodule="shallow")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertFalse(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
+        # Check recursive
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path, submodule="recursive")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
     def git_helper_in_recipe_test(self):
         client = TestClient()
         git_repo = temp_folder()
