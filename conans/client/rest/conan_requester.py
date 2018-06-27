@@ -1,15 +1,17 @@
 import fnmatch
 import os
+import requests
+import platform
 
 from conans.util.files import save
-
+from conans import __version__ as client_version
 
 class ConanRequester(object):
 
     def __init__(self, requester, client_cache, timeout):
         self.proxies = client_cache.conan_config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
-                                self.proxies.pop("no_proxy_match", "").split(",")]
+                                self.proxies.pop("no_proxy_match", "").split(",") if el]
         self._timeout_seconds = timeout
 
         # Retrocompatibility with deprecated no_proxy
@@ -55,17 +57,36 @@ class ConanRequester(object):
                 kwargs["proxies"] = self.proxies
         if self._timeout_seconds:
             kwargs["timeout"] = self._timeout_seconds
+        if not kwargs.get("headers"):
+            kwargs["headers"]  = {}
+        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,
+                                                                       platform.python_version(),
+                                                                       requests.utils.default_user_agent())
         return kwargs
 
     def get(self, url, **kwargs):
-        return self._requester.get(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("get", url, **kwargs)
 
     def put(self, url, **kwargs):
-        return self._requester.put(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("put", url, **kwargs)
 
     def delete(self, url, **kwargs):
-        return self._requester.delete(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("delete", url, **kwargs)
 
     def post(self, url, **kwargs):
-        return self._requester.post(url, **self._add_kwargs(url, kwargs))
+        return self._call_method("post", url, **kwargs)
 
+    def _call_method(self, method, url, **kwargs):
+        popped = False
+        if self.proxies or self._no_proxy_match:
+            old_env = dict(os.environ)
+            # Clean the proxies from the environ and use the conan specified proxies
+            for var_name in ("http_proxy", "https_proxy", "no_proxy"):
+                popped = popped or os.environ.pop(var_name, None)
+                popped = popped or os.environ.pop(var_name.upper(), None)
+        try:
+            return getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
+        finally:
+            if popped:
+                os.environ.clear()
+                os.environ.update(old_env)

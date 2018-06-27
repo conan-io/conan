@@ -36,6 +36,24 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+
+
+def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
+    conan_ref = ConanFileReference.loads(str(conan_ref))
+    path = client_cache.export(conan_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
+
+
+def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
+    pkg_ref = PackageReference.loads(str(package_ref))
+    path = client_cache.package(pkg_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
 
 
 class TestingResponse(object):
@@ -256,7 +274,7 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files, branch=None):
+def create_local_git_repo(files, branch=None, submodules=None):
     tmp = temp_folder()
     save_files(tmp, files)
     git = Git(tmp)
@@ -267,6 +285,12 @@ def create_local_git_repo(files, branch=None):
     git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
     git.run('commit -m "message"')
+
+    if submodules:
+        for submodule in submodules:
+            git.run('submodule add "%s"' % submodule)
+        git.run('commit -m "add submodules"')
+
     return tmp.replace("\\", "/"), git.get_revision()
 
 

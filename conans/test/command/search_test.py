@@ -90,7 +90,7 @@ class SearchTest(unittest.TestCase):
 
         # No conans created
         self.client.run("search")
-        output = self.client.user_io.out
+        output = self.client.out
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
@@ -147,7 +147,6 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         os.rmdir(self.servers["search_able"].paths.store)
         shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
-        self.client.run("search Hello* -r=all")
 
         def check():
             for remote in ("local", "search_able"):
@@ -158,7 +157,9 @@ Hello/1.4.12@fenix/testing
 helloTest/1.4.10@fenix/stable""".format(remote)
                 self.assertIn(expected, self.client.out)
 
+        self.client.run("search Hello* -r=all")
         check()
+
         self.client.run("search Hello* -r=all --raw")
         check()
 
@@ -168,14 +169,14 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                           "Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
                           "Hello/1.4.12@fenix/testing\n"
-                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+                          "helloTest/1.4.10@fenix/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
                           "Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
                           "Hello/1.4.12@fenix/testing\n",
-                          self.client.user_io.out)
+                          self.client.out)
 
         self.client.run("search *fenix* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
@@ -185,19 +186,73 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                           "Hello/1.4.12@fenix/testing\n"
                           "MissFile/1.0.2@fenix/stable\n"
                           "NodeInfo/1.0.2@fenix/stable\n"
-                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+                          "helloTest/1.4.10@fenix/stable\n", self.client.out)
 
         self.client.run("search Hello/*@fenix/testing")
         self.assertIn("Hello/1.4.10@fenix/testing\n"
                       "Hello/1.4.11@fenix/testing\n"
-                      "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+                      "Hello/1.4.12@fenix/testing\n", self.client.out)
+
+    def search_partial_match_test(self):
+        self.client.run("search Hello")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.out)
+
+        self.client.run("search hello")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hello --case-sensitive")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hel")
+        self.assertEquals("There are no packages matching the 'Hel' pattern\n", self.client.out)
+
+        self.client.run("search Hello/")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hello/1.4.10")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hello/1.4")
+        self.assertEquals("There are no packages matching the 'Hello/1.4' pattern\n", self.client.out)
+
+        self.client.run("search Hello/1.4.10@")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hello/1.4.10@fenix")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.out)
+
+        self.client.run("search Hello/1.4.10@fen")
+        self.assertEquals("There are no packages matching the 'Hello/1.4.10@fen' pattern\n", self.client.out)
+
+        self.client.run("search Hello/1.4.10@fenix/")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n", self.client.out)
+
+        error = self.client.run("search Hello/1.4.10@fenix/test", ignore_error=True)
+        self.assertTrue(error)
+        self.assertEquals("ERROR: Recipe not found: Hello/1.4.10@fenix/test\n", self.client.out)
 
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEquals("Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
                           "Hello/1.4.12@fenix/testing\n"
-                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+                          "helloTest/1.4.10@fenix/stable\n", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing --table=table.html")
@@ -206,10 +261,26 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
 
+    def search_html_table_all_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -r=all --table=table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
+
+        self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
+        self.assertIn("<h2>'local':</h2>", html)
+        self.assertIn("<h2>'search_able':</h2>", html)
+
+        self.assertEqual(html.count("<td>Linux gcc 4.5 (libstdc++11)</td>"), 2)
+        self.assertEqual(html.count("<td>Windows Visual Studio 8.1</td>"), 2)
+
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", ignore_error=True)
         self.assertIn("ERROR: '--table' argument can only be used with a reference",
-                      self.client.user_io.out)
+                      self.client.out)
 
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
@@ -217,13 +288,13 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                           "Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
                           "Hello/1.4.12@fenix/testing\n"
-                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+                          "helloTest/1.4.10@fenix/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
                           "Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
-                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+                          "Hello/1.4.12@fenix/testing\n", self.client.out)
 
         self.client.run("search *fenix* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
@@ -233,43 +304,58 @@ helloTest/1.4.10@fenix/stable""".format(remote)
                           "Hello/1.4.12@fenix/testing\n"
                           "MissFile/1.0.2@fenix/stable\n"
                           "NodeInfo/1.0.2@fenix/stable\n"
-                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+                          "helloTest/1.4.10@fenix/stable\n", self.client.out)
 
     def package_search_with_invalid_reference_test(self):
         self.client.run("search Hello -q 'a=1'", ignore_error=True)
-        self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.user_io.out))
+        self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.out))
 
     def package_search_with_empty_query_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing")
-        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
-        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertIn("WindowsPackageSHA", self.client.out)
+        self.assertIn("PlatformIndependantSHA", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
 
     def package_search_nonescaped_characters_test(self):
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11"')
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
-        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++"')
-        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
-        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertNotIn("LinuxPackageSHA", self.client.out)
+        self.assertIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
 
         # Now search with a remote
         os.rmdir(self.servers["local"].paths.store)
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
-        self.client.run("remove Hello* -f")
+
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("Outdated from recipe: False", self.client.user_io.out)
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
-        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertIn("Outdated from recipe: False", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++" -r local')
-        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
-        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertNotIn("LinuxPackageSHA", self.client.out)
+        self.assertIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
+
+        # Now search in all remotes
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
+        self.assertEqual(str(self.client.out).count("Outdated from recipe: False"), 2)
+        self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++" -r all')
+        self.assertNotIn("LinuxPackageSHA", self.client.out)
+        self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
 
     def _assert_pkg_q(self, query, packages_found, remote):
 
@@ -279,7 +365,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.client.run(command)
 
         for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
-            self.assertEquals(pack_name in self.client.user_io.out,
+            self.assertEquals(pack_name in self.client.out,
                               pack_name in packages_found, "%s fail" % pack_name)
 
     def package_search_complex_queries_test(self):
@@ -343,54 +429,71 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         # test in remote with search capabilities
         test_cases(remote="search_able")
 
+    def package_search_all_remotes_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -r=all")
+        self.assertIn("Existing recipe in remote 'local':", self.client.out)
+        self.assertIn("Existing recipe in remote 'search_able':", self.client.out)
+
+        self.assertEqual(str(self.client.out).count("WindowsPackageSHA"), 2)
+        self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
+        self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
+
     def package_search_with_invalid_query_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing -q 'invalid'", ignore_error=True)
-        self.assertIn("Invalid package query: invalid", self.client.user_io.out)
+        self.assertIn("Invalid package query: invalid", self.client.out)
 
         self.client.run("search Hello/1.4.10/fenix/testing -q 'os= 3'", ignore_error=True)
-        self.assertIn("Invalid package query: os= 3", self.client.user_io.out)
+        self.assertIn("Invalid package query: os= 3", self.client.out)
 
         self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 FAKE '", ignore_error=True)
-        self.assertIn("Invalid package query: os=3 FAKE ", self.client.user_io.out)
+        self.assertIn("Invalid package query: os=3 FAKE ", self.client.out)
 
         self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 os.compiler=4'", ignore_error=True)
-        self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.user_io.out)
+        self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.out)
 
         self.client.run("search Hello/1.4.10/fenix/testing -q 'not os=3 AND os.compiler=4'", ignore_error=True)
-        self.assertIn("Invalid package query: not os=3 AND os.compiler=4. 'not' operator is not allowed", self.client.user_io.out)
+        self.assertIn("Invalid package query: not os=3 AND os.compiler=4. 'not' operator is not allowed",
+                      self.client.out)
 
         self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 AND !os.compiler=4'", ignore_error=True)
-        self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed", self.client.user_io.out)
+        self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed", self.client.out)
 
     def package_search_properties_filter_test(self):
 
         # All packages without filter
         self.client.run("search Hello/1.4.10/fenix/testing -q ''")
 
-        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
-        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertIn("WindowsPackageSHA", self.client.out)
+        self.assertIn("PlatformIndependantSHA", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q os=Windows')
-        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
-        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertIn("WindowsPackageSHA", self.client.out)
+        self.assertIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows AND compiler.version=4.5"')
-        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' matching the query 'os=Windows AND compiler.version=4.5'", self.client.user_io.out)
+        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' "
+                      "matching the query 'os=Windows AND compiler.version=4.5'", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "os=Linux AND compiler.version=4.5"')
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
-        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "compiler.version=1.0"')
-        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' matching the query 'compiler.version=1.0'", self.client.user_io.out)
+        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' "
+                      "matching the query 'compiler.version=1.0'", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "compiler=gcc AND compiler.version=4.5"')
-        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
-        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
-        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "arch=x86"')
         # One package will be outdated from recipe and another don't
@@ -421,21 +524,21 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             compiler.version: 4.3
         Outdated from recipe: True
 
-""", self.client.user_io.out)
+""", self.client.out)
 
         self.client.run('search helloTest/1.4.10@fenix/stable -q use_OpenGL=False')
         self.assertIn("There are no packages for reference 'helloTest/1.4.10@fenix/stable' "
-                      "matching the query 'use_OpenGL=False'", self.client.user_io.out)
+                      "matching the query 'use_OpenGL=False'", self.client.out)
 
         self.client.run('search helloTest/1.4.10@fenix/stable -q use_OpenGL=True')
-        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.user_io.out)
+        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.out)
 
         self.client.run('search helloTest/1.4.10@fenix/stable -q "use_OpenGL=True AND arch=x64"')
-        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.user_io.out)
+        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.out)
 
         self.client.run('search helloTest/1.4.10@fenix/stable -q "use_OpenGL=True AND arch=x86"')
         self.assertIn("There are no packages for reference 'helloTest/1.4.10@fenix/stable' "
-                      "matching the query 'use_OpenGL=True AND arch=x86'", self.client.user_io.out)
+                      "matching the query 'use_OpenGL=True AND arch=x86'", self.client.out)
 
     def search_with_no_local_test(self):
         client = TestClient()
@@ -729,10 +832,138 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
+        # Test search packages remote ALL
+        self.client.run("search Hello/1.4.10@fenix/testing -r all --json search.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        expected_output = {
+            'error': False,
+            'results': [
+                {
+                    'remote': 'local',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    'remote': 'search_able',
+                    'items': [
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.4.10@fenix/testing'},
+                            'packages': [
+                                {
+                                    'id': 'LinuxPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'False'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++11',
+                                        'compiler.version': '4.5',
+                                        'os': 'Linux'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': False
+                                },
+                                {
+                                    'id': 'PlatformIndependantSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x86',
+                                        'compiler': 'gcc',
+                                        'compiler.libcxx': 'libstdc++',
+                                        'compiler.version': '4.3'},
+                                    'requires': [],
+                                    'outdated': True
+                                },
+                                {
+                                    'id': 'WindowsPackageSHA',
+                                    'options': {
+                                        'use_Qt': 'True'},
+                                    'settings': {
+                                        'arch': 'x64',
+                                        'compiler': 'Visual Studio',
+                                        'compiler.version': '8.1',
+                                        'os': 'Windows'},
+                                    'requires': [
+                                        'Hello2/0.1@lasote/stable:11111',
+                                        'HelloInfo1/0.45@fenix/testing:33333',
+                                        'OpenSSL/2.10@lasote/testing:2222'],
+                                    'outdated': True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        self.assertEqual(expected_output, output)
+
     def search_packages_with_reference_not_exported_test(self):
         error = self.client.run("search my_pkg/1.0@conan/stable", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
+
+    def initial_search_without_registry_test(self):
+        client = TestClient()
+        os.remove(client.client_cache.registry)
+        client.run("search my_pkg")
+        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
+        self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
+
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):

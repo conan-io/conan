@@ -32,18 +32,21 @@ class DiskRemover(object):
             raise ConanException("Unable to remove %s %s\n\t%s"
                                  % (repr(conan_ref), msg, error_msg))
 
-    def remove(self, conan_ref):
+    def remove_recipe(self, conan_ref):
         self.remove_src(conan_ref)
-        self.remove_builds(conan_ref)
-        self.remove_packages(conan_ref)
         self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
         self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
-        self._remove(self._paths.conan(conan_ref), conan_ref)
         for f in self._paths.conanfile_lock_files(conan_ref):
             try:
                 os.remove(f)
             except OSError:
                 pass
+
+    def remove(self, conan_ref):
+        self.remove_recipe(conan_ref)
+        self.remove_builds(conan_ref)
+        self.remove_packages(conan_ref)
+        self._remove(self._paths.conan(conan_ref), conan_ref)
 
     def remove_src(self, conan_ref):
         self._remove(self._paths.source(conan_ref), conan_ref, "src folder")

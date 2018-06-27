@@ -41,6 +41,38 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
+    def remove_remote_test(self):
+        self.client.run("remote list")
+        self.assertIn("remote0: http://", self.client.out)
+        self.assertIn("remote1: http://", self.client.out)
+        self.assertIn("remote2: http://", self.client.out)
+        self.client.run("remote add_ref Hello/0.1@user/testing remote2")
+        self.client.run("remote add_ref Hello2/0.1@user/testing remote1")
+
+        self.client.run("remote remove remote1")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertIn("remote0", self.client.out)
+        self.assertIn("remote2", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
+        self.assertIn("Hello/0.1@user/testing", self.client.out)
+        registry = load(self.client.client_cache.registry)
+        self.assertNotIn("Hello2/0.1@user/testing", registry)
+        self.assertIn("Hello/0.1@user/testing", registry)
+
+        self.client.run("remote remove remote2")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertIn("remote0", self.client.out)
+        self.assertNotIn("remote2", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
+        self.assertNotIn("Hello/0.1@user/testing", self.client.out)
+        registry = load(self.client.client_cache.registry)
+        self.assertNotIn("Hello2/0.1@user/testing", registry)
+        self.assertNotIn("Hello/0.1@user/testing", registry)
+
     def add_force_test(self):
         client = TestClient()
         client.run("remote add r1 https://r1")

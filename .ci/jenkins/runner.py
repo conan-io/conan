@@ -92,14 +92,15 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Launch tests in a venv')
-    parser.add_argument('module', help='e.j: conans.test')
-    parser.add_argument('pyver', help='e.j: py27')
+    parser.add_argument('module', help='e.g.: conans.test')
+    parser.add_argument('pyver', help='e.g.: py27')
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
     parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
-                        help='Tags to exclude from testing, e.j: rest_api')
+                        help='Tags to exclude from testing, e.g.: rest_api')
+
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag,

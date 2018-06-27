@@ -222,8 +222,8 @@ class ConanAPIV1(object):
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager,
-                            self._settings_preprocessor, action_recorder, self._registry)
+                            self._remote_manager, self._settings_preprocessor,
+                            action_recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -551,17 +551,17 @@ class ConanAPIV1(object):
         return ref_list, project_reference
 
     @api_method
-    def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       profile_name=None, update=False, install_folder=None):
+    def info(self, reference, remote=None, settings=None, options=None, env=None,
+             profile_name=None, update=False, install_folder=None, build=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         ret = manager.info_get_graph(reference, remote_name=remote, profile=profile,
-                                     check_updates=update)
-        deps_graph, graph_updates_info, project_reference = ret
-        return deps_graph, graph_updates_info, project_reference
+                                     check_updates=update, build_mode=build)
+        deps_graph, project_reference = ret
+        return deps_graph, project_reference
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
@@ -660,29 +660,31 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, self._registry, force=force)
 
     @api_method
-    def authenticate(self, name, password, remote=None):
-        if not remote:
-            remote = self._registry.default_remote
-        else:
-            remote = self._registry.remote(remote)
-        if password == "":
-            name, password = self._user_io.request_login(remote_name=remote.name,
-                                                         username=name)
-        self._remote_manager.authenticate(remote, name, password)
+    def authenticate(self, name, password, remote):
+        remote = self.get_remote_by_name(remote)
+        _, remote, prev_user, user = self._remote_manager.authenticate(remote, name, password)
+        return remote, prev_user, user
 
     @api_method
-    def user_set(self, user, remote_name=None):
-        return user_set(self._client_cache, self._user_io.out, self._registry, user, remote_name)
+    def user_set(self, user, remote=None):
+        remote = self.get_default_remote() if not remote else self.get_remote_by_name(remote)
+        return user_set(self._client_cache.localdb, user, remote)
 
     @api_method
     def users_clean(self):
-        return users_clean(self._client_cache)
+        users_clean(self._client_cache.localdb)
 
     @api_method
     def users_list(self, remote=None):
-        users = users_list(self._client_cache, self._registry, remote)
-        for remote_name, username in users:
-            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
+        info = {"error": False, "remotes": []}
+        remotes = [self.get_remote_by_name(remote)] if remote else self.remote_list()
+        try:
+            info["remotes"] = users_list(self._client_cache.localdb, remotes)
+            return info
+        except ConanException as exc:
+            info["error"] = True
+            exc.info = info
+            raise
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
@@ -707,23 +709,24 @@ class ConanAPIV1(object):
         search = Search(self._client_cache, self._remote_manager, self._registry)
 
         try:
-            ordered_packages, ref, recipe_hash = search.search_packages(reference, remote,
-                                                                        query=query,
-                                                                        outdated=outdated)
+            references = search.search_packages(reference, remote,
+                                                query=query,
+                                                outdated=outdated)
         except ConanException as exc:
             recorder.error = True
             exc.info = recorder.get_info()
             raise
 
-        recorder.add_recipe(str(remote), str(ref))
-        if ordered_packages:
-            for package_id, properties in ordered_packages.items():
-                package_recipe_hash = properties.get("recipe_hash", None)
-                recorder.add_package(str(remote), str(reference), package_id,
-                                     properties.get("options", []),
-                                     properties.get("settings", []),
-                                     properties.get("full_requires", []),
-                                     recipe_hash != package_recipe_hash)
+        for remote, remote_ref in references.items():
+            recorder.add_recipe(str(remote), str(reference))
+            if remote_ref.ordered_packages:
+                for package_id, properties in remote_ref.ordered_packages.items():
+                    package_recipe_hash = properties.get("recipe_hash", None)
+                    recorder.add_package(str(remote), str(reference), package_id,
+                                         properties.get("options", []),
+                                         properties.get("settings", []),
+                                         properties.get("full_requires", []),
+                                         remote_ref.recipe_hash != package_recipe_hash)
         return recorder.get_info()
 
     @api_method
@@ -824,7 +827,7 @@ class ConanAPIV1(object):
         if not remote:
             return get_path(self._client_cache, reference, package_id, path), path
         else:
-            remote = self._registry.remote(remote)
+            remote = self.get_remote_by_name(remote)
             return self._remote_manager.get_path(reference, package_id, path, remote), path
 
     @api_method
@@ -832,6 +835,14 @@ class ConanAPIV1(object):
         reference = ConanFileReference.loads(str(reference))
         target_reference = ConanFileReference.loads(str(target_reference))
         return export_alias(reference, target_reference, self._client_cache)
+
+    @api_method
+    def get_default_remote(self):
+        return self._registry.default_remote
+
+    @api_method
+    def get_remote_by_name(self, remote):
+        return self._registry.remote(remote)
 
 
 Conan = ConanAPIV1
