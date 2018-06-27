@@ -212,6 +212,10 @@ class ConanLib(ConanFile):
         self.assertNotIn("[Authenticated]", client.out)
 
     def json_test(self):
+
+        def _compare_dicts(first_dict, second_dict):
+            self.assertTrue(set(first_dict), set(second_dict))
+
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         servers = {"default": test_server, "other_server": None}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
@@ -220,124 +224,124 @@ class ConanLib(ConanFile):
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": False,
-                                  "user_name": None
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": None
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": None
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
 
         client.run('user bad_user')
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": False,
-                                  "user_name": "bad_user"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": None
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "bad_user"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
 
         client.run("user lasote")
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": False,
-                                  "user_name": "lasote"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": None
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
 
         client.run("user lasote -p mypass")
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": True,
-                                  "user_name": "lasote"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": None
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
 
         client.run("user danimtb -p passpass")
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": True,
-                                  "user_name": "danimtb"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": None
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "danimtb"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
 
         client.run("user lasote -r other_server")
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": True,
-                                  "user_name": "danimtb"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": "lasote"
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "danimtb"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            }
+                        ]}, info)
 
         client.run("user lasote -r default")
         client.run("user --json user.json")
         content = load(os.path.join(client.current_folder, "user.json"))
         info = json.loads(content)
-        self.assertEqual({"error": False,
-                          "remotes": [
-                              {
-                                  "name": "default",
-                                  "authenticated": False,
-                                  "user_name": "lasote"
-                              },
-                              {
-                                  "name": "other_server",
-                                  "authenticated": False,
-                                  "user_name": "lasote"
-                              }
-                          ]}, info)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            }
+                        ]}, info)
