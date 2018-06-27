@@ -179,7 +179,7 @@ class ConanLib(ConanFile):
 
     def authenticated_test(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
-        servers = {"default": test_server, "other_server": None}
+        servers = {"default": test_server, "other_server": TestServer()}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
