@@ -30,6 +30,12 @@ class SCMData(object):
     def capture_revision(self):
         return self.revision == "auto"
 
+    @property
+    def recipe_revision(self):
+        if self.type == "git":
+            return self.revision
+        raise ConanException("Not implemented recipe revision for %s" % self.type)
+
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,

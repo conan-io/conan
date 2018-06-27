@@ -130,6 +130,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     # Generate the scm_folder.txt file pointing to the src_path
     save(scm_src_file, src_path.replace("\\", "/"))
     scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    return scm_data
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
@@ -140,8 +141,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                             output, paths, conan_ref)
+    scm = _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
+                                   output, paths, conan_ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 

@@ -7,9 +7,10 @@ import stat
 
 from requests.exceptions import ConnectionError
 
+from conans.client.loader_parse import load_conanfile_class
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import PackageReference
+from conans.model.scm import SCMData
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
@@ -34,6 +35,18 @@ class RemoteManager(object):
         self._output = output
         self._auth_manager = auth_manager
 
+    def get_recipe_revision(self, conan_reference):
+        conanfile_path = self._client_cache.conan(conan_reference)
+        conanfile = load_conanfile_class(conanfile_path)
+        try:
+            scm_data = SCMData(conanfile)
+        except ConanException:
+            revision = self._client_cache.load_manifest(conan_reference).summary_hash
+        else:
+            revision = scm_data.recipe_revision
+
+        return revision
+
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
                       skip_upload=False, no_overwrite=None):
         """Will upload the conans to the first remote"""
@@ -50,7 +63,7 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        revision = self._client_cache.load_manifest(conan_reference).summary_hash
+        revision = self.get_recipe_revision(conan_reference)
         ref = conan_reference.copy_with_revision(revision)
         ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
                                 ignore_deleted_file, no_overwrite)
@@ -122,14 +135,14 @@ class RemoteManager(object):
             return None
 
         # Read the hashes (revisions) and build a correct package reference for the server
-        recipe_hash = self._client_cache.load_package_info(package_reference).recipe_hash
+        revision = self.get_recipe_revision(package_reference.conan)
         package_hash = self._client_cache.package_manifests(package_reference)[1].summary_hash
 
-        if not recipe_hash or not package_hash:
+        if not revision or not package_hash:
             raise ConanException("Invalid recipe or package without summary hash!")
 
         # Copy to not modify the original with the revisions
-        p_ref = package_reference.copy_with_revisions(recipe_hash, package_hash)
+        p_ref = package_reference.copy_with_revisions(revision, package_hash)
 
         tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
                                 no_overwrite)
