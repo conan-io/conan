@@ -381,11 +381,20 @@ class TestClient(object):
         self.servers = servers or {}
         save(self.client_cache.registry, "")
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-        for name, server in self.servers.items():
+
+        def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
                 registry.add(name, server.fake_url)
             else:
                 registry.add(name, server)
+
+        for name, server in self.servers.items():
+            if name == "default":
+                add_server_to_registry(name, server)
+
+        for name, server in self.servers.items():
+            if name != "default":
+                add_server_to_registry(name, server)
 
     @property
     def paths(self):
