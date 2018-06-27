@@ -37,9 +37,9 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariable
+    def get_recipe(self, conan_ref, check_updates, update, remote_name):  # @UnusedVariable
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None
+        return conan_path, None, None
 
 
 say_content = """
@@ -120,7 +120,7 @@ def _get_edges(graph):
 
 
 class MockRequireResolver(object):
-    def resolve(self, rquire, conanref, update):  # @UnusedVariable
+    def resolve(self, rquire, conanref, update, remote_name):  # @UnusedVariable
         return
 
 
@@ -131,11 +131,11 @@ class ConanRequirementsTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver())
+                                        MockRequireResolver(), None)
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_basic(self):
@@ -1505,7 +1505,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver())
+                                        MockRequireResolver(), None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1517,7 +1517,7 @@ class ConsumerConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1630,9 +1630,9 @@ class CoreSettingsTest(unittest.TestCase):
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, full_settings, profile)
         retriever = Retriever(loader, self.output)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None)
         root_conan = retriever.root(content)
-        deps_graph = builder.load_graph(root_conan, False, False)
+        deps_graph = builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_basic(self):
@@ -1915,12 +1915,12 @@ class ChatConan(ConanFile):
                                               "myoption_chat=on")
         loader = ConanFileLoader(None, Settings.loads(""), profile)
         retriever = Retriever(loader, output)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
         root_conan = retriever.root(chat_content)
-        deps_graph = builder.load_graph(root_conan, False, False)
+        deps_graph = builder.load_graph(root_conan, False, False, None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
