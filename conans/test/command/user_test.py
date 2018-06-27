@@ -216,8 +216,9 @@ class ConanLib(ConanFile):
         def _compare_dicts(first_dict, second_dict):
             self.assertTrue(set(first_dict), set(second_dict))
 
-        test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
-        servers = {"default": test_server, "other_server": None}
+        default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        other_server = TestServer()
+        servers = {"default": default_server, "other_server": other_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
