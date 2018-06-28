@@ -97,8 +97,56 @@ target_link_libraries(hello{name} {dep})
 
 class WorkspaceTest(unittest.TestCase):
 
+    def build_requires_test(self):
+        # https://github.com/conan-io/conan/issues/3075
+        client = TestClient()
+        tool = """from conans import ConanFile
+class Tool(ConanFile):
+    def package_info(self):
+        self.cpp_info.libs = ["MyToolLib"]
+"""
+        client.save({"conanfile.py": tool})
+        client.run("create . Tool/0.1@user/testing")
+
+        conanfile = """from conans import ConanFile
+import os
+class Pkg(ConanFile):
+    requires = {deps}
+    build_requires = "Tool/0.1@user/testing"
+    generators = "cmake"
+"""
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = """HelloB:
+    folder: B
+HelloC:
+    folder: C
+HelloA:
+    folder: A
+
+root: HelloA
+"""
+        client.save({WORKSPACE_FILE: project})
+        client.run("install . -if=build")
+        self.assertIn("Workspace HelloC: Applying build-requirement: Tool/0.1@user/testing",
+                      client.out)
+        self.assertIn("Workspace HelloB: Applying build-requirement: Tool/0.1@user/testing",
+                      client.out)
+        self.assertIn("Workspace HelloA: Applying build-requirement: Tool/0.1@user/testing",
+                      client.out)
+        for sub in ("A", "B", "C"):
+            conanbuildinfo = load(os.path.join(client.current_folder, "build", sub, "conanbuildinfo.cmake"))
+            self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
+
     @parameterized.expand([(True, ), (False, )])
-    @unittest.skipUnless(platform.system() in ("Windows", "Linux"), "Test doesn't work on OSX")
+    # @unittest.skipUnless(platform.system() in ("Windows", "Linux"), "Test doesn't work on OSX")
     def cmake_outsource_build_test(self, targets):
         client = TestClient()
 
@@ -153,11 +201,12 @@ name: MyProject
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
+        TIME_DELAY = 1
+        time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon")
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon")
-        TIME_DELAY = 0.1
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Release', cwd=base_folder)
         time.sleep(TIME_DELAY)

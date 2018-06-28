@@ -1,47 +1,11 @@
 from conans.util.files import save
 from conans.client.installer import build_id
 from collections import defaultdict, namedtuple
+from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
+    BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
 
 
-def html_binary_graph(search_info, table_filename):
-    reference = search_info[0]["items"][0]["recipe"]["id"]
-    ordered_packages = search_info[0]["items"][0]["packages"]
-    binary = namedtuple("Binary", "ID outdated")
-    columns = set()
-    table = defaultdict(dict)
-    for package in ordered_packages:
-        package_id = package["id"]
-        settings = package["settings"]
-        if settings:
-            row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
-                                     settings.get("compiler.version", "None"))
-            column_name = []
-            for setting, value in settings.items():
-                if setting.startswith("compiler."):
-                    if not setting.startswith("compiler.version"):
-                        row_name += " (%s)" % value
-                elif setting not in ("os", "compiler"):
-                    column_name.append(value)
-            column_name = " ".join(column_name)
-        else:
-            row_name = "NO settings"
-            column_name = ""
-
-        options = package["options"]
-        if options:
-            for k, v in options.items():
-                column_name += "<br>%s=%s" % (k, v)
-
-        column_name = column_name or "NO options"
-        columns.add(column_name)
-        # Always compare outdated with local recipe, simplification,
-        # if a remote check is needed install recipe first
-        if "outdated" in package:
-            outdated = package["outdated"]
-        else:
-            outdated = None
-        table[row_name][column_name] = binary(package_id, outdated)
-
+def html_binary_graph(search_info, reference, table_filename):
     result = ["""<style>
     table, th, td {
     border: 1px solid black;
@@ -64,25 +28,67 @@ def html_binary_graph(search_info, table_filename):
 </script>
 <h1>%s</h1>
     """ % str(reference)]
-    headers = sorted(columns)
-    result.append("<table>")
-    result.append("<tr>")
-    result.append("<th></th>")
-    for header in headers:
-        result.append("<th>%s</th>" % header)
-    result.append("</tr>")
-    for row, columns in sorted(table.items()):
-        result.append("<tr>")
-        result.append("<td>%s</td>" % row)
-        for header in headers:
-            col = columns.get(header, "")
-            if col:
-                color = "#ffff00" if col.outdated else "#00ff00"
-                result.append('<td bgcolor=%s id="%s" onclick=handleEvent("%s")></td>' % (color, col.ID, col.ID))
+
+    for remote_info in search_info:
+        if remote_info["remote"] != 'None':
+            result.append("<h2>'%s':</h2>" % str(remote_info["remote"]))
+
+        ordered_packages = remote_info["items"][0]["packages"]
+        binary = namedtuple("Binary", "ID outdated")
+        columns = set()
+        table = defaultdict(dict)
+        for package in ordered_packages:
+            package_id = package["id"]
+            settings = package["settings"]
+            if settings:
+                row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
+                                        settings.get("compiler.version", "None"))
+                column_name = []
+                for setting, value in settings.items():
+                    if setting.startswith("compiler."):
+                        if not setting.startswith("compiler.version"):
+                            row_name += " (%s)" % value
+                    elif setting not in ("os", "compiler"):
+                        column_name.append(value)
+                column_name = " ".join(column_name)
             else:
-                result.append("<td></td>")
+                row_name = "NO settings"
+                column_name = ""
+
+            options = package["options"]
+            if options:
+                for k, v in options.items():
+                    column_name += "<br>%s=%s" % (k, v)
+
+            column_name = column_name or "NO options"
+            columns.add(column_name)
+            # Always compare outdated with local recipe, simplification,
+            # if a remote check is needed install recipe first
+            if "outdated" in package:
+                outdated = package["outdated"]
+            else:
+                outdated = None
+            table[row_name][column_name] = binary(package_id, outdated)
+
+        headers = sorted(columns)
+        result.append("<table>")
+        result.append("<tr>")
+        result.append("<th></th>")
+        for header in headers:
+            result.append("<th>%s</th>" % header)
         result.append("</tr>")
-    result.append("</table>")
+        for row, columns in sorted(table.items()):
+            result.append("<tr>")
+            result.append("<td>%s</td>" % row)
+            for header in headers:
+                col = columns.get(header, "")
+                if col:
+                    color = "#ffff00" if col.outdated else "#00ff00"
+                    result.append('<td bgcolor=%s id="%s" onclick=handleEvent("%s")></td>' % (color, col.ID, col.ID))
+                else:
+                    result.append("<td></td>")
+            result.append("</tr>")
+        result.append("</table>")
 
     result.append('<br>Selected: <div id="SelectedPackage"></div>')
 
@@ -149,8 +155,17 @@ class ConanHTMLGrapher(object):
                 fulllabel = "".join(fulllabel)
             else:
                 fulllabel = label = self._project_reference
-            nodes.append("{id: %d, label: '%s', shape: 'box', fulllabel: '%s'}"
-                         % (i, label, fulllabel))
+            if node.build_require:
+                shape = "ellipse"
+            else:
+                shape = "box"
+            color = {BINARY_CACHE: "SkyBlue",
+                     BINARY_DOWNLOAD: "LightGreen",
+                     BINARY_BUILD: "Khaki",
+                     BINARY_MISSING: "OrangeRed",
+                     BINARY_UPDATE: "SeaGreen"}.get(node.binary, "White")
+            nodes.append("{id: %d, label: '%s', shape: '%s', color: {background: '%s'}, fulllabel: '%s'}"
+                         % (i, label, shape, color, fulllabel))
         nodes = ",\n".join(nodes)
 
         edges = []

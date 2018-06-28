@@ -6,6 +6,9 @@ import platform
 import unittest
 
 from collections import namedtuple
+
+import six
+from mock.mock import patch, mock_open
 from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
@@ -14,7 +17,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict
+from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
@@ -516,9 +519,8 @@ class HelloConan(ConanFile):
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -535,11 +537,76 @@ class HelloConan(ConanFile):
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
             tools.msvc_build_command(settings, "project.sln")
 
-        # succesful definition via settings
+        # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    def vswhere_description_strip_test(self):
+        myoutput = """
+[
+  {
+    "instanceId": "17609d7c",
+    "installDate": "2018-06-11T02:15:04Z",
+    "installationName": "VisualStudio/15.7.3+27703.2026",
+    "installationPath": "",
+    "installationVersion": "15.7.27703.2026",
+    "productId": "Microsoft.VisualStudio.Product.Enterprise",
+    "productPath": "",
+    "isPrerelease": false,
+    "displayName": "Visual Studio Enterprise 2017",
+    "description": "生産性向上と、さまざまな規模のチーム間の調整のための Microsoft DevOps ソリューション",
+    "channelId": "VisualStudio.15.Release",
+    "channelUri": "https://aka.ms/vs/15/release/channel",
+    "enginePath": "",
+    "releaseNotes": "https://go.microsoft.com/fwlink/?LinkId=660692#15.7.3",
+    "thirdPartyNotices": "https://go.microsoft.com/fwlink/?LinkId=660708",
+    "updateDate": "2018-06-11T02:15:04.7009868Z",
+    "catalog": {
+      "buildBranch": "d15.7",
+      "buildVersion": "15.7.27703.2026",
+      "id": "VisualStudio/15.7.3+27703.2026",
+      "localBuild": "build-lab",
+      "manifestName": "VisualStudio",
+      "manifestType": "installer",
+      "productDisplayVersion": "15.7.3",
+      "productLine": "Dev15",
+      "productLineVersion": "2017",
+      "productMilestone": "RTW",
+      "productMilestoneIsPreRelease": "False",
+      "productName": "Visual Studio",
+      "productPatchVersion": "3",
+      "productPreReleaseMilestoneSuffix": "1.0",
+      "productRelease": "RTW",
+      "productSemanticVersion": "15.7.3+27703.2026",
+      "requiredEngineVersion": "1.16.1187.57215"
+    },
+    "properties": {
+      "campaignId": "",
+      "canceled": "0",
+      "channelManifestId": "VisualStudio.15.Release/15.7.3+27703.2026",
+      "nickname": "",
+      "setupEngineFilePath": ""
+    }
+  },
+  {
+    "instanceId": "VisualStudio.12.0",
+    "installationPath": "",
+    "installationVersion": "12.0"
+  }
+]
+
+"""
+        if six.PY3:
+            # In python3 the output from subprocess.check_output are bytes, not str
+            myoutput = myoutput.encode()
+        myrunner = mock_open()
+        myrunner.check_output = lambda x: myoutput
+        with patch('conans.client.tools.win.subprocess', myrunner):
+            json = vswhere()
+            self.assertNotIn("descripton", json)
 
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
@@ -929,8 +996,7 @@ class GitToolTest(unittest.TestCase):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        with self.assertRaisesRegexp(ConanException, "The destination folder is not empty, "
-                                                     "specify a branch to checkout"):
+        with self.assertRaisesRegexp(ConanException, "specify a branch to checkout"):
             git.clone("https://github.com/conan-community/conan-zlib.git")
 
     def test_credentials(self):
@@ -960,6 +1026,50 @@ class GitToolTest(unittest.TestCase):
                   force_english=False)
         git.clone(url="https://myrepo.git")
         self.assertIn("git config http.sslVerify false", runner.calls[1])
+
+    def test_clone_submodule_git(self):
+        subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
+        submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
+        path, _ = create_local_git_repo({"myfile": "contents"}, submodules=[submodule])
+
+        def _create_paths():
+            tmp = temp_folder()
+            submodule_path = os.path.join(
+                tmp, 
+                os.path.basename(os.path.normpath(submodule)))
+            subsubmodule_path = os.path.join(
+                submodule_path, 
+                os.path.basename(os.path.normpath(subsubmodule)))
+            return tmp, submodule_path, subsubmodule_path
+
+        # Check old (default) behaviour
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path)
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
+
+        # Check invalid value
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
+            git.clone(path, submodule="invalid")
+
+        # Check shallow 
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path, submodule="shallow")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertFalse(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
+        # Check recursive
+        tmp, submodule_path, subsubmodule_path = _create_paths()
+        git = Git(tmp)
+        git.clone(path, submodule="recursive")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
+        self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
 
     def git_helper_in_recipe_test(self):
         client = TestClient()
@@ -1032,5 +1142,4 @@ class HelloConan(ConanFile):
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
-        self.assertIn("The destination folder is not empty, "
-                      "specify a branch to checkout", client.out)
+        self.assertIn("specify a branch to checkout", client.out)

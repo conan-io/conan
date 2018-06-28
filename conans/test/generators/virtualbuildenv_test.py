@@ -19,7 +19,8 @@ class VirtualBuildEnvTest(unittest.TestCase):
             env = {}
             for line in env_output.splitlines():
                 tmp = line.decode().split("=")
-                if tmp[0] not in ["SHLVL", "_", "PS1"]:
+                # OLDPWD is cleared when a child script is started
+                if tmp[0] not in ["SHLVL", "_", "PS1", "OLDPWD"]:
                     env[tmp[0]] = tmp[1].replace("\\", "/")
             return env
 
