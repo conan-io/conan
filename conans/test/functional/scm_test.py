@@ -178,7 +178,6 @@ class ConanLib(ConanFile):
         self._commit_contents()
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
         self.client.run("create . user/channel")
-        self.assertIn("Excluding files: ignored.pyc, .git", self.client.out)
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")

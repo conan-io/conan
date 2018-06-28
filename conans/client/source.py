@@ -179,7 +179,6 @@ def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     if local_sources_path:
         excluded = SCM(scm_data, local_sources_path).excluded_files
         output.info("Getting sources from folder: %s" % local_sources_path)
-        output.info("Excluding files: %s" % ", ".join(excluded))
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
