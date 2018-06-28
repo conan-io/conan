@@ -106,9 +106,9 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref, check_updates, update):  # @UnusedVariables
+    def get_recipe(self, conan_ref, check_updates, update, remote_name):  # @UnusedVariables
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None
+        return conan_path, None, None
 
 
 hello_content = """
@@ -155,7 +155,7 @@ class VersionRangesTest(unittest.TestCase):
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
         self.resolver = RangeResolver(self.output, paths, self.remote_search)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver, None)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
@@ -170,7 +170,7 @@ class SayConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None)
         return deps_graph
 
     def test_local_basic(self):

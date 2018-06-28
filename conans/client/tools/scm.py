@@ -1,11 +1,13 @@
 import os
 import subprocess
+from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import urlparse, quote_plus
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
+from conans.util.files import decode_text, to_file_bytes
 
 
 class Git(object):
@@ -44,16 +46,16 @@ class Git(object):
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, branch=None, submodule=None):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         if os.path.exists(self.folder) and os.listdir(self.folder):
             if not branch:
-                raise ConanException("The destination folder is not empty, "
+                raise ConanException("The destination folder '%s' is not empty, "
                                      "specify a branch to checkout (not a tag or commit) "
-                                     "or specify a 'subfolder'"
-                                     "attribute in the 'scm'")
+                                     "or specify a 'subfolder' "
+                                     "attribute in the 'scm'" % self.folder)
             output = self.run("init")
             output += self._configure_ssl_verify()
             output += self.run('remote add origin "%s"' % url)
@@ -63,11 +65,37 @@ class Git(object):
             branch_cmd = "--branch %s" % branch if branch else ""
             output = self.run('clone "%s" . %s' % (url, branch_cmd))
             output += self._configure_ssl_verify()
+
+        if submodule:
+            if submodule == "shallow":
+                output += self.run("submodule sync")
+                output += self.run("submodule update --init")
+            elif submodule == "recursive":
+                output += self.run("submodule sync --recursive")
+                output += self.run("submodule update --init --recursive")
+            else:
+                raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
+                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
+
         return output
 
     def checkout(self, element):
         # Element can be a tag, branch or commit
         return self.run('checkout "%s"' % element)
+
+    def excluded_files(self):
+        try:
+            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), f))
+                          for folder, _, fs in os.walk(self.folder) for f in fs]
+            p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
+                                 stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
+            paths = to_file_bytes('\n'.join(file_paths))
+            grep_stdout = decode_text(p.communicate(input=paths)[0])
+            tmp = grep_stdout.splitlines()
+        except CalledProcessError:
+            tmp = []
+        tmp.append(".git")
+        return tmp
 
     def get_remote_url(self, remote_name=None):
         remote_name = remote_name or "origin"
