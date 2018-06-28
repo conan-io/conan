@@ -58,9 +58,10 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
-                                profile_build_requires):
+                                profile_build_requires, recursing):
+        # FIXME: This "recursing" is a hack: to be replaced for something in the model. Consider rem "load_virtual"
         for node in list(graph.nodes):
-            if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
+            if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and (node.conan_ref or recursing):
                 continue
 
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
@@ -82,7 +83,7 @@ class GraphManager(object):
                 virtual = self._loader.load_virtual(package_build_requires.values(), scope_options=False,
                                                     build_requires_options=node.conanfile.build_requires_options)
                 build_requires_package_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                               remote_name, profile_build_requires)
+                                                               remote_name, profile_build_requires, True)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:
@@ -91,11 +92,11 @@ class GraphManager(object):
                                                     build_requires_options=node.conanfile.build_requires_options)
 
                 build_requires_profile_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                               remote_name, new_profile_build_requires)
+                                                               remote_name, new_profile_build_requires, True)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
-                   profile_build_requires=None):
+                   profile_build_requires=None, recursing=False):
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, self._workspace)
         graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
@@ -105,5 +106,5 @@ class GraphManager(object):
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires)
+                                     profile_build_requires, recursing)
         return graph

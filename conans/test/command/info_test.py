@@ -204,9 +204,13 @@ class MyTest(ConanFile):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class AConan(ConanFile):
-    pass"""
+    pass
+    """
         client.save({"conanfile.py": conanfile})
         client.run("create . tool/0.1@user/channel")
+        client.run("create . dep/0.1@user/channel")
+        conanfile = conanfile + 'requires = "dep/0.1@user/channel"'
+        client.save({"conanfile.py": conanfile})
         client.run("export . Pkg/0.1@user/channel")
         client.run("export . Pkg2/0.1@user/channel")
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
@@ -217,8 +221,11 @@ class AConan(ConanFile):
         self.assertEqual(len(pkgs), 1)
 
         client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
-        html = load(os.path.join(client.current_folder, "file.html"))
+        html_path = os.path.join(client.current_folder, "file.html")
+        html = load(html_path)
         self.assertIn("html", html)
+        # To check that this node is not duplicated
+        self.assertEqual(1, html.count("label: 'dep/0.1'"))
         self.assertIn("label: 'Pkg2/0.1', shape: 'box', color: {background: 'Khaki'}", html)
         self.assertIn("label: 'Pkg/0.1', shape: 'box', color: {background: 'Khaki'}", html)
         self.assertIn("label: 'tool/0.1', shape: 'ellipse', color: {background: 'SkyBlue'}", html)
