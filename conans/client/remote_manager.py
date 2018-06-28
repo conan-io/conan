@@ -36,7 +36,7 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
 
     def get_recipe_revision(self, conan_reference):
-        conanfile_path = self._client_cache.conan(conan_reference)
+        conanfile_path = os.path.join(self._client_cache.export(conan_reference), CONANFILE)
         conanfile = load_conanfile_class(conanfile_path)
         try:
             scm_data = SCMData(conanfile)

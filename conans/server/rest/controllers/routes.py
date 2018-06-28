@@ -33,6 +33,9 @@ class Router(object):
     def package(self):
         return '%s/<package_id>' % self.packages
 
+
+!! RUTA PARA REVISION RECETA Y LATEST PACKAGE
+
     @property
     def package_revision(self):
         return '%s/<package_id>#<p_revision>' % self.packages_revision
