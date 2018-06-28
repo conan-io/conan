@@ -287,6 +287,8 @@ class ConanLib(ConanFile):
         self.client.save({"myfile": "Contents 2"})
         self.client.run("create . lib/1.0@user/channel")
         self.assertIn("Contents: Contents 2", self.client.out)
+        self.assertIn("Detected 'scm' auto in conanfile, trying to remove source folder",
+                      self.client.out)
 
     def test_submodule(self):
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
