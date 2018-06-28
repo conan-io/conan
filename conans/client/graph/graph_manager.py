@@ -1,6 +1,6 @@
 from conans.model.ref import ConanFileReference
 from collections import OrderedDict
-from conans.errors import conanfile_exception_formatter
+from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
 import fnmatch
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -8,6 +8,15 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
+from conans.client import settings_preprocessor
+from conans.client.loader import ConanFileLoader
+from conans.client.output import ScopedOutput
+from conans.client.graph.build_mode import BuildMode
+from conans.client.profile_loader import read_conaninfo_profile
+from conans.paths import BUILD_INFO
+from conans.util.files import load
+from conans.client.generators.text import TXTGenerator
+import os
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -36,16 +45,77 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, loader, client_cache, registry, remote_manager, action_recorder, workspace):
+    def __init__(self, output, client_cache, registry, remote_manager, action_recorder, workspace,
+                 runner):
         self._proxy = ConanProxy(client_cache, output, remote_manager,
                                  recorder=action_recorder, registry=registry)
         self._output = output
-        self._loader = loader
         self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
         self._workspace = workspace
+        self._runner = runner
+
+    def load_consumer_conanfile(self, conanfile_path, info_folder, output,
+                                deps_info_required=False):
+        """loads a conanfile for local flow: source, imports, package, build
+        """
+        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        # We are recovering state from captured profile from conaninfo, remove not defined
+        cache_settings.remove_undefined()
+        loader = ConanFileLoader(self._runner, cache_settings, profile, None)
+        if conanfile_path.endswith(".py"):
+            conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=True)
+        else:
+            conanfile = loader.load_conan_txt(conanfile_path, output)
+
+        load_deps_info(info_folder, conanfile, required=deps_info_required)
+
+        return conanfile
+
+    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name):
+
+        def _inject_require(conanfile, reference):
+            """ test_package functionality requires injecting the tested package as requirement
+            before running the install
+            """
+            require = conanfile.requires.get(reference.name)
+            if require:
+                require.conan_reference = require.range_reference = reference
+            else:
+                conanfile.requires(str(reference))
+            conanfile._user = reference.user
+            conanfile._channel = reference.channel
+
+        # Computing the full dependency graph
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        settings_preprocessor.preprocess(cache_settings)
+        loader = ConanFileLoader(self._runner, cache_settings, profile, create_reference)
+        if isinstance(reference, list):  # Install workspace with multiple root nodes
+            conanfile = loader.load_virtual(reference)
+        elif isinstance(reference, ConanFileReference):
+            # create without test_package and install <ref>
+            conanfile = loader.load_virtual([reference])
+        else:
+            output = ScopedOutput("PROJECT", self._output)
+            if reference.endswith(".py"):
+                conanfile = loader.load_conan(reference, output, consumer=True)
+                if create_reference:  # create with test_package
+                    _inject_require(conanfile, create_reference)
+            else:
+                conanfile = loader.load_conan_txt(reference, output)
+
+        build_mode = BuildMode(build_mode, self._output)
+        deps_graph = self._load_graph(conanfile, check_updates, update,
+                                      build_mode=build_mode, remote_name=remote_name,
+                                      profile_build_requires=profile.build_requires,
+                                      loader=loader)
+        build_mode.report_matches()
+        return deps_graph, conanfile, cache_settings
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
@@ -58,7 +128,7 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
-                                profile_build_requires):
+                                profile_build_requires, loader):
         for node in list(graph.nodes):
             if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
                 continue
@@ -79,24 +149,25 @@ class GraphManager(object):
 
             if package_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = self._loader.load_virtual(package_build_requires.values(), scope_options=False,
-                                                    build_requires_options=node.conanfile.build_requires_options)
-                build_requires_package_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                               remote_name, profile_build_requires)
+                virtual = loader.load_virtual(package_build_requires.values(), scope_options=False,
+                                              build_requires_options=node.conanfile.build_requires_options)
+                build_requires_package_graph = self._load_graph(virtual, check_updates, update, build_mode,
+                                                                remote_name, profile_build_requires, loader)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = self._loader.load_virtual(new_profile_build_requires.values(), scope_options=False,
-                                                    build_requires_options=node.conanfile.build_requires_options)
+                virtual = loader.load_virtual(new_profile_build_requires.values(), scope_options=False,
+                                              build_requires_options=node.conanfile.build_requires_options)
 
-                build_requires_profile_graph = self.load_graph(virtual, check_updates, update, build_mode,
-                                                               remote_name, new_profile_build_requires)
+                build_requires_profile_graph = self._load_graph(virtual, check_updates, update, build_mode,
+                                                                remote_name, new_profile_build_requires,
+                                                                loader)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
-    def load_graph(self, conanfile, check_updates, update, build_mode, remote_name=None,
-                   profile_build_requires=None):
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, self._workspace)
+    def _load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
+                    profile_build_requires, loader):
+        builder = DepsGraphBuilder(self._proxy, self._output, loader, self._resolver, self._workspace)
         graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
             return graph
@@ -105,5 +176,35 @@ class GraphManager(object):
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires)
+                                     profile_build_requires, loader)
         return graph
+
+
+def load_deps_info(current_path, conanfile, required):
+
+    def get_forbidden_access_object(field_name):
+        class InfoObjectNotDefined(object):
+            def __getitem__(self, item):
+                raise ConanException("self.%s not defined. If you need it for a "
+                                     "local command run 'conan install'" % field_name)
+            __getattr__ = __getitem__
+
+        return InfoObjectNotDefined()
+
+    if not current_path:
+        return
+    info_file_path = os.path.join(current_path, BUILD_INFO)
+    try:
+        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
+        conanfile.deps_cpp_info = deps_cpp_info
+        conanfile.deps_user_info = deps_user_info
+        conanfile.deps_env_info = deps_env_info
+    except IOError:
+        if required:
+            raise ConanException("%s file not found in %s\nIt is required for this command\n"
+                                 "You can generate it using 'conan install'"
+                                 % (BUILD_INFO, current_path))
+        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
+        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
+    except ConanException:
+        raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))

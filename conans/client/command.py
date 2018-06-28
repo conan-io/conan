@@ -8,8 +8,6 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-from conans.client.remote_registry import RemoteRegistry
-
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
@@ -449,7 +447,7 @@ class Command(object):
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
-                                                       build_modes=args.build,
+                                                       build=args.build,
                                                        settings=args.settings,
                                                        options=args.options,
                                                        env=args.env,
@@ -467,7 +465,7 @@ class Command(object):
                                     options=args.options,
                                     env=args.env,
                                     profile_name=args.profile,
-                                    update=args.update,
+                                    check_updates=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
             deps_graph, project_reference = data
