@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.scm import SCM, SCMData
+from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 from conans.util.files import load, rmdir
@@ -258,6 +258,35 @@ class ConanLib(ConanFile):
         client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
+
+    def test_source_removed_in_local_cache(self):
+
+        conanfile = '''
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    scm = {
+        "type": "git",
+        "url": "auto",
+        "revision": "auto",
+    }
+    
+    def build(self):
+        contents = tools.load("myfile")
+        self.output.warn("Contents: %s" % contents)
+        
+'''
+        path, commit = create_local_git_repo({"myfile": "contents", "conanfile.py": conanfile},
+                                             branch="my_release")
+        self.client.current_folder = path
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
+        self._commit_contents()
+
+        self.client.run("create . lib/1.0@user/channel")
+        self.assertIn("Contents: contents", self.client.out)
+        self.client.save({"myfile": "Contents 2"})
+        self.client.run("create . lib/1.0@user/channel")
+        self.assertIn("Contents: Contents 2", self.client.out)
 
     def test_submodule(self):
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
