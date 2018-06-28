@@ -101,8 +101,6 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    scm_data = get_scm_data(conanfile)
-
     if force:
         output.warn("Forced removal of source folder")
         remove_source()
@@ -128,6 +126,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                     conanfile.build_folder = None
                     conanfile.package_folder = None
 
+                    scm_data = get_scm_data(conanfile)
                     if scm_data:
                         dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
                         captured = local_sources_path and os.path.exists(local_sources_path)
