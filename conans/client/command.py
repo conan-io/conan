@@ -468,7 +468,7 @@ class Command(object):
                                     check_updates=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
-            deps_graph, project_reference = data
+            deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -481,10 +481,10 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
-                self._outputer.info(deps_graph, only, args.remote,
-                                    args.package_filter, args.paths, project_reference)
+                self._outputer.info(deps_graph, only,
+                                    args.package_filter, args.paths)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method. e.g., Downloads and unzip the package

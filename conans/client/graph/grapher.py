@@ -123,9 +123,8 @@ class ConanGrapher(object):
 
 
 class ConanHTMLGrapher(object):
-    def __init__(self, project_reference, deps_graph):
+    def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-        self._project_reference = project_reference
 
     def graph_file(self, filename):
         save(filename, self.graph())
