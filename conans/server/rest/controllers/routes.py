@@ -33,8 +33,10 @@ class Router(object):
     def package(self):
         return '%s/<package_id>' % self.packages
 
-
-!! RUTA PARA REVISION RECETA Y LATEST PACKAGE
+    @property
+    def package_recipe_revision(self):
+        """Route for a package specifying the recipe revision but not the package revision"""
+        return '%s/<package_id>' % self.packages_revision
 
     @property
     def package_revision(self):
@@ -47,3 +49,7 @@ class Router(object):
     @property
     def package_revision_file(self):
         return '%s/<the_path:path>' % self.package_revision
+
+    @property
+    def package_recipe_revision_file(self):
+        return '%s/<the_path:path>' % self.package_recipe_revision

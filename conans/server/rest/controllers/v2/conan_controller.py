@@ -15,6 +15,7 @@ class ConanControllerV2(Controller):
         r = Router(self.route)
 
         @app.route(r.package, method=["GET"])
+        @app.route(r.package_recipe_revision, method=["GET"])
         @app.route(r.package_revision, method=["GET"])
         def get_package_snapshot(name, version, username, channel, package_id, auth_user,
                                  revision=None, p_revision=None):
@@ -25,6 +26,7 @@ class ConanControllerV2(Controller):
             return snapshot
 
         @app.route(r.package_file, method=["GET"])
+        @app.route(r.package_recipe_revision_file, method=["GET"])
         @app.route(r.package_revision_file, method=["GET"])
         def get_package_file(name, version, username, channel, package_id, the_path, auth_user,
                              revision=None, p_revision=None):
