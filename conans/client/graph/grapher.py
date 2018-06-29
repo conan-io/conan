@@ -101,15 +101,14 @@ def html_binary_graph(search_info, reference, table_filename):
 
 
 class ConanGrapher(object):
-    def __init__(self, project_reference, deps_graph):
+    def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-        self._project_reference = project_reference
 
     def graph(self):
         graph_lines = ['digraph {\n']
 
         for node in self._deps_graph.nodes:
-            ref = node.conan_ref or self._project_reference
+            ref = node.conan_ref or str(node.conanfile)
             depends = node.neighbors()
             if depends:
                 depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
@@ -153,7 +152,7 @@ class ConanHTMLGrapher(object):
                 fulllabel.append("<ul>")
                 fulllabel = "".join(fulllabel)
             else:
-                fulllabel = label = self._project_reference
+                fulllabel = label = node.conan_ref or str(node.conanfile)
             if node.build_require:
                 shape = "ellipse"
             else:

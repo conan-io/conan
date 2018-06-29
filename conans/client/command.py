@@ -447,7 +447,7 @@ class Command(object):
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
-                                                       build=args.build,
+                                                       build_modes=args.build,
                                                        settings=args.settings,
                                                        options=args.options,
                                                        env=args.env,
@@ -465,7 +465,7 @@ class Command(object):
                                     options=args.options,
                                     env=args.env,
                                     profile_name=args.profile,
-                                    check_updates=args.update,
+                                    update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
             deps_graph, _ = data

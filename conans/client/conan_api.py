@@ -537,7 +537,7 @@ class ConanAPIV1(object):
         return deps_graph.build_order(build_order)
 
     @api_method
-    def info_nodes_to_build(self, reference, build, settings=None, options=None, env=None,
+    def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote=None, check_updates=None, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
@@ -545,7 +545,7 @@ class ConanAPIV1(object):
         graph_manager = GraphManager(self._user_io.out,
                                      self._client_cache, self._registry, self._remote_manager,
                                      recorder, workspace=None, runner=self._runner)
-        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build, check_updates,
+        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
                                                             False, remote)
         ret = []
         for level in deps_graph.by_levels():
@@ -558,14 +558,14 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote=None, settings=None, options=None, env=None,
-             profile_name=None, check_updates=False, install_folder=None, build=None):
+             profile_name=None, update=False, install_folder=None, build=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
         recorder = ActionRecorder()
         graph_manager = GraphManager(self._user_io.out,
                                      self._client_cache, self._registry, self._remote_manager,
                                      recorder, workspace=None, runner=self._runner)
-        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build, check_updates,
+        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build, update,
                                                             False, remote)
         return deps_graph, conanfile
 

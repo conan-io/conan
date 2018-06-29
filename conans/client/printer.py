@@ -67,7 +67,6 @@ class Printer(object):
             def show(field):
                 return field in _info_lower
 
-        print "PRINTING GRAPH WITH NODES ", deps_graph.nodes
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.conan_ref, node.conanfile.info.package_id()), []).append(node)
