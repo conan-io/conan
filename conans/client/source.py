@@ -74,6 +74,13 @@ def _clean_source_folder(folder):
             pass
 
 
+def get_scm_data(conanfile):
+    try:
+        return SCMData(conanfile)
+    except ConanException:
+        return None
+
+
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
                   conanfile, output, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
@@ -103,6 +110,9 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
+    elif local_sources_path and os.path.exists(local_sources_path):
+        output.warn("Detected 'scm' auto in conanfile, trying to remove source folder")
+        remove_source()
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
@@ -116,11 +126,8 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                     conanfile.build_folder = None
                     conanfile.package_folder = None
 
-                    try:
-                        scm_data = SCMData(conanfile)
-                    except ConanException:
-                        pass
-                    else:
+                    scm_data = get_scm_data(conanfile)
+                    if scm_data:
                         dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
                         captured = local_sources_path and os.path.exists(local_sources_path)
                         local_sources_path = local_sources_path if captured else None
@@ -158,11 +165,8 @@ def config_source_local(dest_dir, conanfile, conanfile_folder, output):
                 with get_env_context_manager(conanfile):
                     conanfile.build_folder = None
                     conanfile.package_folder = None
-                    try:
-                        scm_data = SCMData(conanfile)
-                    except ConanException:
-                        pass
-                    else:
+                    scm_data = get_scm_data(conanfile)
+                    if scm_data:
                         dest_dir = os.path.join(dest_dir, scm_data.subfolder)
                         capture = scm_data.capture_origin or scm_data.capture_revision
                         local_sources_path = conanfile_folder if capture else None
