@@ -1071,6 +1071,30 @@ class GitToolTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
 
+    def git_to_capture_branch_test(self):
+        conanfile = """
+from conans import ConanFile, tools
+
+def get_version():
+    git = tools.Git()
+    try:
+        return "%s_%s" % (git.get_branch(), git.get_revision())
+    except:
+        return None
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = get_version()
+
+    def build(self):
+        assert("release_" in self.version)
+        assert(len(self.version) == 48)
+"""
+        path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="release")
+        client = TestClient()
+        client.current_folder = path
+        client.run("create . user/channel")
+
     def git_helper_in_recipe_test(self):
         client = TestClient()
         git_repo = temp_folder()

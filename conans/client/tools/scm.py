@@ -113,10 +113,20 @@ class Git(object):
             pass
         return None
 
-    def get_revision(self):
+    def get_commit(self):
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
+
+    get_revision = get_commit
+
+    def get_branch(self):
+        try:
+            status = self.run("status -bs --porcelain")
+            branch = status.splitlines()[0].strip("#").strip()
+            return branch
+        except Exception as e:
+            raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
