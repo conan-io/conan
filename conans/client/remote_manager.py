@@ -35,18 +35,6 @@ class RemoteManager(object):
         self._output = output
         self._auth_manager = auth_manager
 
-    def get_recipe_revision(self, conan_reference):
-        conanfile_path = os.path.join(self._client_cache.export(conan_reference), CONANFILE)
-        conanfile = load_conanfile_class(conanfile_path)
-        try:
-            scm_data = SCMData(conanfile)
-        except ConanException:
-            revision = self._client_cache.load_manifest(conan_reference).summary_hash
-        else:
-            revision = scm_data.recipe_revision
-
-        return revision
-
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
                       skip_upload=False, no_overwrite=None):
         """Will upload the conans to the first remote"""
@@ -63,7 +51,7 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        revision = self.get_recipe_revision(conan_reference)
+        revision = self._client_cache.recipe_revision(conan_reference)
         ref = conan_reference.copy_with_revision(revision)
         ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
                                 ignore_deleted_file, no_overwrite)
@@ -135,7 +123,7 @@ class RemoteManager(object):
             return None
 
         # Read the hashes (revisions) and build a correct package reference for the server
-        revision = self.get_recipe_revision(package_reference.conan)
+        revision = self._client_cache.recipe_revision(package_reference.conan)
         package_hash = self._client_cache.package_manifests(package_reference)[1].summary_hash
 
         if not revision or not package_hash:
@@ -189,7 +177,8 @@ class RemoteManager(object):
         rmdir(dest_folder)
 
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        zipped_files, conan_reference = self._call_remote(remote, "get_recipe",
+                                                          conan_reference, dest_folder)
         if not zipped_files:
             return conan_reference
         duration = time.time() - t1
@@ -199,21 +188,19 @@ class RemoteManager(object):
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
         touch_folder(dest_folder)
+        return conan_reference
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
-                                         export_folder)
+        zipped_files, _ = self._call_remote(remote, "get_recipe_sources", conan_reference,
+                                                    export_folder)
         if not zipped_files:
+            mkdir(export_sources_folder)  # create the folder even if no source files
             return conan_reference
 
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
-
-        if not zipped_files:
-            mkdir(export_sources_folder)  # create the folder even if no source files
-            return
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
         c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
@@ -221,6 +208,7 @@ class RemoteManager(object):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
+        return conan_reference
 
     def get_package(self, package_reference, dest_folder, remote, output, recorder):
         package_id = package_reference.package_id

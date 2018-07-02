@@ -16,14 +16,14 @@ class ServerStore(SimplePaths):
 
     # Methods to override some basics from paths to allow revisions paths (reading latest)
     def conan(self, reference):
-        reference = self._patch_ref(reference)
+        reference = self.ref_with_rev(reference)
         tmp = normpath(join(self.store, "/".join(reference)))
         if reference.revision:
             return join(tmp, reference.revision)
         return tmp
 
     def packages(self, reference):
-        reference = self._patch_ref(reference)
+        reference = self.ref_with_rev(reference)
         return join(self.conan(reference), PACKAGES_FOLDER)
 
     def package(self, p_reference, short_paths=None):
@@ -71,7 +71,7 @@ class ServerStore(SimplePaths):
         return join(p_folder, LAST_REVISION_FILE)
 
     def get_conanfile_file_path(self, reference, filename):
-        reference = self._patch_ref(reference)
+        reference = self.ref_with_rev(reference)
         abspath = join(self.export(reference), filename)
         return abspath
 
@@ -81,7 +81,7 @@ class ServerStore(SimplePaths):
         abspath = join(p_path, filename)
         return abspath
 
-    def _patch_ref(self, reference):
+    def ref_with_rev(self, reference):
         if not self._revisions_enabled:
             return reference.copy_without_revisions()
         if reference.revision:
@@ -104,7 +104,7 @@ class ServerStore(SimplePaths):
         if not latest:
             raise NotFoundException("Package not found: '%s'" % str(p_reference))
 
-        reference = self._patch_ref(p_reference.conan)
+        reference = self.ref_with_rev(p_reference.conan)
         ret = PackageReference(reference, p_reference.package_id)
         ret.revision = latest
         return ret

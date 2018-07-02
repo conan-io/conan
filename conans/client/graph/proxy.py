@@ -39,6 +39,15 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, ref_remote
 
+        # In disk but not with the same revision
+        if reference.revision:
+            revision = self._client_cache.recipe_revision(reference)
+            if revision != reference.revision:
+                output.info("Requested different revision of %s..." % str(reference))
+                ref_remote = self._download_recipe(reference, output, remote_name)
+                status = RECIPE_DOWNLOADED
+                return conanfile_path, status, ref_remote
+
         ref_remote = self._registry.get_ref(reference)
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
@@ -62,7 +71,7 @@ class ConanProxy(object):
             status = RECIPE_NOT_IN_REMOTE
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            return conanfile_path, status, update_remote
+            return conanfile_path, status, update_remote, reference # !!!! no vale
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -71,7 +80,7 @@ class ConanProxy(object):
                 if update:
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
-                    self._remote_manager.get_recipe(reference, update_remote)
+                    new_ref = self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.set_ref(reference, update_remote)
                     status = RECIPE_UPDATED
                 else:
@@ -83,7 +92,7 @@ class ConanProxy(object):
 
         log_recipe_got_from_local_cache(reference)
         self._recorder.recipe_fetched_from_cache(reference)
-        return conanfile_path, status, update_remote
+        return conanfile_path, status, update_remote, new_ref
 
     def _download_recipe(self, conan_reference, output, remote_name):
         def _retrieve_from_remote(the_remote):

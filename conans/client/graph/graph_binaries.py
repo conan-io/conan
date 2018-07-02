@@ -77,6 +77,21 @@ class GraphBinariesAnalyzer(object):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)
 
+        # !!!!! remove the package if it doesn't match with the recipe revision?
+        # how to control when the revisions mechanism is not enabled :S
+        # The server will return the reference with revision when they are enabled
+        # We have to retrieve it and store in the node, from the rest_api to the graph_builder
+        # The previous idea is not valid, you can have a recipe in the local cache and not the binary
+        # and then call install, the recipe will be retrieved from the local cache (was downloaded with revisions)
+        # but you don't know if the associated package has to match with the recipe to be valid
+        # What about mixing remotes with and without revisions?
+        #    - The recipe is retrieved from a server with revisions. That fact is stored somehow.
+        #    - Now we install packages from a different remote (without revisions), should it
+        #      find it if binaries exist (but without revisions)?
+        # And the opposite:
+        #    - The recipe is installed from a remote without revisions
+        #    - Now we search 
+
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:

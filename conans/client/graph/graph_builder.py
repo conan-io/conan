@@ -206,7 +206,9 @@ class DepsGraphBuilder(object):
         else:
             result = self._proxy.get_recipe(requirement.conan_reference,
                                             check_updates, update, remote_name)
-            conanfile_path, recipe_status, remote = result
+            conanfile_path, recipe_status, remote, new_ref = result
+            # new_ref could contain the resolved revision if enabled in the server
+            requirement.conan_reference = new_ref
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
