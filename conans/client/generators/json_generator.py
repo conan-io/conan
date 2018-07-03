@@ -30,6 +30,8 @@ class JsonGenerator(Generator):
         info["deps_env_info"] = self.deps_env_info.vars
         info["deps_user_info"] = self.get_deps_user_info()
         info["dependencies"] = self.get_dependencies_info()
+        info["settings"] = self.get_settings()
+        info["options"] = self.get_options()        
         return json.dumps(info, indent=2)
 
     def get_deps_user_info(self):
@@ -45,3 +47,17 @@ class JsonGenerator(Generator):
             serialized_info["name"] = depname
             res.append(serialized_info)
         return res
+
+    def get_settings(self):
+        settings = {}
+        for key, value in self.settings.items():
+            settings[key] = value
+        return settings
+
+    def get_options(self):
+        options = {}
+        for req in self.conanfile.requires:
+            options[req] = {}
+            for key, value in self.conanfile.options[req].items():
+                options[req][key] = value
+        return options
