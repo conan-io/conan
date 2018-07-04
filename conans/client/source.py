@@ -39,23 +39,25 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
     excluded = excluded or []
     excluded = [os.path.normpath(entry) for entry in excluded]
 
+    def is_excluded(origin_path):
+        if origin_path == dst:
+            return True
+
+        rel_path = os.path.normpath(os.path.relpath(origin_path, src))
+        if rel_path in excluded:
+            return True
+
+        # dst contains folder to copy (exports_sources/.c_src to exports_sources)
+        if origin_path.startswith(dst):
+            print "ORIGIN PATH ", origin_path
+            print "DST ", dst
+            print "NORM ", os.path.normpath(os.path.commonprefix([origin_path, dst]))
+            #return False
+
+        # check if dst is a subdir of src to exclude it (avoid recursion)
+        return os.path.normpath(os.path.commonprefix([origin_path, dst])) == dst
+
     for src_dir, dirs, files in os.walk(src, followlinks=True):
-
-        def is_excluded(origin_path):
-            if origin_path == dst:
-                return True
-
-            rel_path = os.path.normpath(os.path.relpath(origin_path, src))
-            if rel_path in excluded:
-                return True
-
-            # dst contains folder to copy (exports_sources/.c_src to exports_sources)
-            if origin_path.startswith(dst):
-                return False
-
-            # check if dst is a subdir of src to exclude it (avoid recursion)
-            return os.path.normpath(os.path.commonprefix([origin_path, dst])) == dst
-
         if is_excluded(src_dir):
             dirs[:] = []
             continue
