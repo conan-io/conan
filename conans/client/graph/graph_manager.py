@@ -1,8 +1,10 @@
-from conans.model.ref import ConanFileReference
+import os
+import fnmatch
 from collections import OrderedDict
+
+from conans.model.ref import ConanFileReference
 from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
-import fnmatch
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
@@ -16,7 +18,6 @@ from conans.client.profile_loader import read_conaninfo_profile
 from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
-import os
 
 
 class _RecipeBuildRequires(OrderedDict):

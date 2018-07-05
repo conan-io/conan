@@ -1,13 +1,12 @@
+import fnmatch
+
 from collections import OrderedDict
 
 from conans.paths import SimplePaths
-
 from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
-import fnmatch
-from platform import node
 
 
 class Printer(object):
