@@ -1,12 +1,127 @@
+import os
 import unittest
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference
-import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANINFO, BUILD_INFO_CMAKE
 from conans.util.files import load
 from conans.model.info import ConanInfo
 from nose.plugins.attrib import attr
+
+
+class PrivateBinariesTest(unittest.TestCase):
+
+    def test_private_skip(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def package_info(self):
+        self.cpp_info.libs = ["zlib"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . zlib/1.2.11@conan/stable")
+        client.save({"conanfile.py": conanfile.replace("zlib", "bzip2")})
+        client.run("create . bzip2/1.0.6@conan/stable")
+        conanfile = """from conans import ConanFile
+class MyPackage(ConanFile):
+    requires = ('zlib/1.2.11@conan/stable', ('bzip2/1.0.6@conan/stable', 'private'),)
+    def package_info(self):
+        self.cpp_info.libs = ["mypackage"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . MyPackage/1.0@testing/testing")
+        client.run("remove bzip2/1.0.6@conan/stable -p -f")
+        conanfile = """from conans import ConanFile
+class V3D(ConanFile):
+    requires = "zlib/1.2.11@conan/stable", "MyPackage/1.0@testing/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -g=cmake")
+        self.assertIn("bzip2/1.0.6@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      client.out)
+        self.assertIn("zlib/1.2.11@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      client.out)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        # The order is dictated by public MyPackage -> zlib dependency
+        self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
+        self.assertNotIn("bzip2", conanbuildinfo)
+
+    def test_multiple_private_skip(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def package_info(self):
+        self.cpp_info.libs = ["zlib"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . zlib/1.2.11@conan/stable")
+        client.save({"conanfile.py": conanfile.replace("zlib", "bzip2")})
+        client.run("create . bzip2/1.0.6@conan/stable")
+        conanfile = """from conans import ConanFile
+class MyPackage(ConanFile):
+    requires = ('zlib/1.2.11@conan/stable', 'private'), ('bzip2/1.0.6@conan/stable', 'private')
+    def package_info(self):
+        self.cpp_info.libs = ["mypackage"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . MyPackage/1.0@testing/testing")
+        client.run("remove bzip2/1.0.6@conan/stable -p -f")
+        client.run("remove zlib* -p -f")
+        conanfile = """from conans import ConanFile
+class V3D(ConanFile):
+    requires = "zlib/1.2.11@conan/stable", "MyPackage/1.0@testing/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        error = client.run("install . -g=cmake", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Missing prebuilt package for 'zlib/1.2.11@conan/stable'",
+                      client.out)
+        client.run("install zlib/1.2.11@conan/stable --build=missing")
+        client.run("install . -g=cmake")
+        self.assertIn("bzip2/1.0.6@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      client.out)
+        self.assertIn("zlib/1.2.11@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      client.out)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        # The order is dictated by V3D declaration order, as other are privates
+        self.assertIn("set(CONAN_LIBS zlib mypackage ${CONAN_LIBS})", conanbuildinfo)
+        self.assertNotIn("bzip2", conanbuildinfo)
+
+    def test_own_private_skip(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def package_info(self):
+        self.cpp_info.libs = ["zlib"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . zlib/1.2.11@conan/stable")
+        client.save({"conanfile.py": conanfile.replace("zlib", "bzip2")})
+        client.run("create . bzip2/1.0.6@conan/stable")
+        conanfile = """from conans import ConanFile
+class MyPackage(ConanFile):
+    requires = 'zlib/1.2.11@conan/stable', ('bzip2/1.0.6@conan/stable', 'private')
+    def package_info(self):
+        self.cpp_info.libs = ["mypackage"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . MyPackage/1.0@testing/testing")
+        client.run("remove bzip2/1.0.6@conan/stable -p -f")
+        conanfile = """from conans import ConanFile
+class V3D(ConanFile):
+    requires = ("zlib/1.2.11@conan/stable", "private"), "MyPackage/1.0@testing/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -g=cmake")
+        self.assertIn("bzip2/1.0.6@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      client.out)
+        self.assertIn("zlib/1.2.11@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      client.out)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        # The order is dictated by public mypackage -> zlib
+        self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
+        self.assertNotIn("bzip2", conanbuildinfo)
 
 
 @attr("slow")
