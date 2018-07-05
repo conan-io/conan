@@ -18,6 +18,7 @@ from conans.client.profile_loader import read_conaninfo_profile
 from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
+from conans.client.graph.python_requires import conan_python_require
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -50,6 +51,7 @@ class GraphManager(object):
                  runner):
         self._proxy = ConanProxy(client_cache, output, remote_manager,
                                  recorder=action_recorder, registry=registry)
+        conan_python_require._proxy = self._proxy
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache
