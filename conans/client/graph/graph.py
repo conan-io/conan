@@ -47,6 +47,9 @@ class Node(object):
     def public_neighbors(self):
         return [edge.dst for edge in self.dependencies if not edge.private]
 
+    def private_neighbors(self):
+        return [edge.dst for edge in self.dependencies if edge.private]
+
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
 
