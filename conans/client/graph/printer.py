@@ -1,21 +1,27 @@
 from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.workspace import WORKSPACE_FILE
+from collections import OrderedDict
+from conans.client.graph.graph import BINARY_SKIP
 
 
 def print_graph(deps_graph, out):
-    all_nodes = []
-    ids = set()
-    for node in sorted(n for n in deps_graph.nodes if n.conan_ref):
+    requires = OrderedDict()
+    build_requires = OrderedDict()
+    for node in sorted(deps_graph.nodes):
+        if not node.conan_ref:
+            continue
         package_id = PackageReference(node.conan_ref, node.conanfile.info.package_id())
-        if package_id not in ids:
-            all_nodes.append(node)
-            ids.add(package_id)
-    requires = [n for n in all_nodes if not n.build_require]
+        if node.build_require:
+            build_requires.setdefault(package_id, []).append(node)
+        else:
+            requires.setdefault(package_id, []).append(node)
+
     out.writeln("Requirements", Color.BRIGHT_YELLOW)
 
     def _recipes(nodes):
-        for node in nodes:
+        for package_id, list_nodes in nodes.items():
+            node = list_nodes[0]  # For printing recipes, we can use the first one
             if node.remote == WORKSPACE_FILE:
                 from_text = "from '%s'" % WORKSPACE_FILE
             else:
@@ -26,13 +32,17 @@ def print_graph(deps_graph, out):
     out.writeln("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):
-        for node in nodes:
-            ref, conanfile = node.conan_ref, node.conanfile
-            ref = PackageReference(ref, conanfile.info.package_id())
-            out.writeln("    %s - %s" % (repr(ref), node.binary), Color.BRIGHT_CYAN)
+        for package_id, list_nodes in nodes.items():
+            # The only way to have more than 1 states is to have 2
+            # and one is BINARY_SKIP (privates)
+            binary = set(n.binary for n in list_nodes)
+            if len(binary) > 1:
+                binary.remove(BINARY_SKIP)
+            assert len(binary) == 1
+            binary = binary.pop()
+            out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
     _packages(requires)
 
-    build_requires = [n for n in all_nodes if n.build_require]
     if build_requires:
         out.writeln("Build requirements", Color.BRIGHT_YELLOW)
         _recipes(build_requires)
