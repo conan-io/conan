@@ -34,224 +34,25 @@ from conans.util.files import save, load, md5
 import requests
 
 
-class RunnerMock(object):
-    def __init__(self, return_ok=True):
-        self.command_called = None
-        self.return_ok = return_ok
-
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
-        self.command_called = command
-        self.win_bash = win_bash
-        self.subsystem = subsystem
-        return 0 if self.return_ok else 1
-
-
-class ReplaceInFileTest(unittest.TestCase):
+class SystemPackageToolTest(unittest.TestCase):
     def setUp(self):
-        text = u'J\xe2nis\xa7'
-        self.tmp_folder = temp_folder()
+        out = TestBufferConanOutput()
+        set_global_instances(out, requests)
 
-        self.win_file = os.path.join(self.tmp_folder, "win_encoding.txt")
-        text = text.encode("Windows-1252", "ignore")
-        with open(self.win_file, "wb") as handler:
-            handler.write(text)
+    def verify_update_test(self):
 
-        self.bytes_file = os.path.join(self.tmp_folder, "bytes_encoding.txt")
-        with open(self.bytes_file, "wb") as handler:
-            handler.write(text)
-
-    def test_replace_in_file(self):
-        replace_in_file(self.win_file, "nis", "nus")
-        replace_in_file(self.bytes_file, "nis", "nus")
-
-        content = tools.load(self.win_file)
-        self.assertNotIn("nis", content)
-        self.assertIn("nus", content)
-
-        content = tools.load(self.bytes_file)
-        self.assertNotIn("nis", content)
-        self.assertIn("nus", content)
-
-
-class ToolsTest(unittest.TestCase):
-
-    def load_save_test(self):
-        folder = temp_folder()
-        path = os.path.join(folder, "file")
-        save(path, u"äüïöñç")
-        content = load(path)
-        self.assertEqual(content, u"äüïöñç")
-
-    def md5_test(self):
-        result = md5(u"äüïöñç")
-        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
-
-    def cpu_count_test(self):
-        cpus = tools.cpu_count()
-        self.assertIsInstance(cpus, int)
-        self.assertGreaterEqual(cpus, 1)
-        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
-            self.assertEquals(tools.cpu_count(), 34)
-
-    def get_env_unit_test(self):
-        """
-        Unit tests tools.get_env
-        """
-        # Test default
-        self.assertIsNone(
-            tools.get_env("NOT_DEFINED", environment={}),
-            None
-        )
-        # Test defined default
-        self.assertEqual(
-            tools.get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
-            "random_default"
-        )
-        # Test return defined string
-        self.assertEqual(
-            tools.get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
-            "test_string_value"
-        )
-        # Test boolean conversion
-        self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
-            True
-        )
-        self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
-            False
-        )
-        self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
-            True
-        )
-        self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
-            False
-        )
-        # Test int conversion
-        self.assertEqual(
-            tools.get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
-            1
-        )
-        # Test float conversion
-        self.assertEqual(
-            tools.get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
-            1.0
-        ),
-        # Test list conversion
-        self.assertEqual(
-            tools.get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
-            ["1", "2", "3"]
-        )
-        self.assertEqual(
-            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
-            ["1", "2", "3"]
-        )
-
-    def test_get_env_in_conanfile(self):
-        """
-        Test get_env is available and working in conanfile
-        """
-        client = TestClient()
-
-        conanfile = """from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
-        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
-        assert(run_tests == True)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
-            client.run("install .")
-            client.run("build .")
-
-    def test_global_tools_overrided(self):
-        client = TestClient()
-
-        conanfile = """
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        assert(tools.net._global_requester != None)
-        assert(tools.files._global_output != None)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        client.run("install .")
-        client.run("build .")
-
-        # Not test the real commmand get_command if it's setting the module global vars
-        tmp = temp_folder()
-        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        os.mkdir(os.path.join(tmp, ".conan"))
-        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api, _, _ = ConanAPIV1.factory()
-        conan_api.remote_list()
-        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(tools.files._global_output.warn)
-
-    def test_environment_nested(self):
-        with tools.environment_append({"A": "1", "Z": "40"}):
-            with tools.environment_append({"A": "1", "B": "2"}):
-                with tools.environment_append({"A": "2", "B": "2"}):
-                    self.assertEquals(os.getenv("A"), "2")
-                    self.assertEquals(os.getenv("B"), "2")
-                    self.assertEquals(os.getenv("Z"), "40")
-                self.assertEquals(os.getenv("A", None), "1")
-                self.assertEquals(os.getenv("B", None), "2")
-            self.assertEquals(os.getenv("A", None), "1")
-            self.assertEquals(os.getenv("Z", None), "40")
-
-        self.assertEquals(os.getenv("A", None), None)
-        self.assertEquals(os.getenv("B", None), None)
-        self.assertEquals(os.getenv("Z", None), None)
-
-    def system_package_tool_fail_when_not_0_returned_test(self):
-        def get_linux_error_message():
-            """
-            Get error message for Linux platform if distro is supported, None otherwise
-            """
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
+                                       "CONAN_SYSREQUIRES_MODE": "Verify"}):
+            runner = RunnerMock()
+            # fake os info to linux debian, default sudo
             os_info = OSInfo()
-            update_command = None
-            if os_info.with_apt:
-                update_command = "sudo apt-get update"
-            elif os_info.with_yum:
-                update_command = "sudo yum check-update"
-            elif os_info.with_zypper:
-                update_command = "sudo zypper --non-interactive ref"
-            elif os_info.with_pacman:
-                update_command = "sudo pacman -Syyu --noconfirm"
-
-            return "Command '{0}' failed".format(update_command) if update_command is not None else None
-
-        platform_update_error_msg = {
-            "Linux": get_linux_error_message(),
-            "Darwin": "Command 'brew update' failed",
-            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
-        }
-
-        runner = RunnerMock(return_ok=False)
-        pkg_tool = ChocolateyTool() if which("choco.exe") else None
-        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
-
-        msg = platform_update_error_msg.get(platform.system(), None)
-        if msg is not None:
-            with self.assertRaisesRegexp(ConanException, msg):
-                spt.update()
-        else:
-            spt.update()  # Won't raise anything because won't do anything
+            os_info.is_macos = False
+            os_info.is_linux = True
+            os_info.is_windows = False
+            os_info.linux_distro = "debian"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, None)
 
     def system_package_tool_test(self):
 
@@ -475,6 +276,7 @@ class HelloConan(ConanFile):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            print str(tools.system_pm._global_output)
             self.assertIn('\n'.join(packages), tools.system_pm._global_output)
             self.assertEquals(3, runner.calls)
 
@@ -518,6 +320,226 @@ class HelloConan(ConanFile):
         self.assertTrue(spt._tool.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+
+    def system_package_tool_fail_when_not_0_returned_test(self):
+        def get_linux_error_message():
+            """
+            Get error message for Linux platform if distro is supported, None otherwise
+            """
+            os_info = OSInfo()
+            update_command = None
+            if os_info.with_apt:
+                update_command = "sudo apt-get update"
+            elif os_info.with_yum:
+                update_command = "sudo yum check-update"
+            elif os_info.with_zypper:
+                update_command = "sudo zypper --non-interactive ref"
+            elif os_info.with_pacman:
+                update_command = "sudo pacman -Syyu --noconfirm"
+
+            return "Command '{0}' failed".format(update_command) if update_command is not None else None
+
+        platform_update_error_msg = {
+            "Linux": get_linux_error_message(),
+            "Darwin": "Command 'brew update' failed",
+            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
+        }
+
+        runner = RunnerMock(return_ok=False)
+        pkg_tool = ChocolateyTool() if which("choco.exe") else None
+        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
+
+        msg = platform_update_error_msg.get(platform.system(), None)
+        if msg is not None:
+            with self.assertRaisesRegexp(ConanException, msg):
+                spt.update()
+        else:
+            spt.update()  # Won't raise anything because won't do anything
+
+
+class RunnerMock(object):
+    def __init__(self, return_ok=True):
+        self.command_called = None
+        self.return_ok = return_ok
+
+    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+        self.command_called = command
+        self.win_bash = win_bash
+        self.subsystem = subsystem
+        return 0 if self.return_ok else 1
+
+
+class ReplaceInFileTest(unittest.TestCase):
+    def setUp(self):
+        text = u'J\xe2nis\xa7'
+        self.tmp_folder = temp_folder()
+
+        self.win_file = os.path.join(self.tmp_folder, "win_encoding.txt")
+        text = text.encode("Windows-1252", "ignore")
+        with open(self.win_file, "wb") as handler:
+            handler.write(text)
+
+        self.bytes_file = os.path.join(self.tmp_folder, "bytes_encoding.txt")
+        with open(self.bytes_file, "wb") as handler:
+            handler.write(text)
+
+    def test_replace_in_file(self):
+        replace_in_file(self.win_file, "nis", "nus")
+        replace_in_file(self.bytes_file, "nis", "nus")
+
+        content = tools.load(self.win_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
+
+        content = tools.load(self.bytes_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
+
+
+class ToolsTest(unittest.TestCase):
+
+    def load_save_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        save(path, u"äüïöñç")
+        content = load(path)
+        self.assertEqual(content, u"äüïöñç")
+
+    def md5_test(self):
+        result = md5(u"äüïöñç")
+        self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
+
+    def cpu_count_test(self):
+        cpus = tools.cpu_count()
+        self.assertIsInstance(cpus, int)
+        self.assertGreaterEqual(cpus, 1)
+        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
+            self.assertEquals(tools.cpu_count(), 34)
+
+    def get_env_unit_test(self):
+        """
+        Unit tests tools.get_env
+        """
+        # Test default
+        self.assertIsNone(
+            tools.get_env("NOT_DEFINED", environment={}),
+            None
+        )
+        # Test defined default
+        self.assertEqual(
+            tools.get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
+            "random_default"
+        )
+        # Test return defined string
+        self.assertEqual(
+            tools.get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
+            "test_string_value"
+        )
+        # Test boolean conversion
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
+            False
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
+            False
+        )
+        # Test int conversion
+        self.assertEqual(
+            tools.get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
+            1
+        )
+        # Test float conversion
+        self.assertEqual(
+            tools.get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
+            1.0
+        ),
+        # Test list conversion
+        self.assertEqual(
+            tools.get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
+            ["1", "2", "3"]
+        )
+        self.assertEqual(
+            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
+            ["1", "2", "3"]
+        )
+
+    def test_get_env_in_conanfile(self):
+        """
+        Test get_env is available and working in conanfile
+        """
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
+        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
+        assert(run_tests == True)
+        """
+        client.save({"conanfile.py": conanfile})
+
+        with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
+            client.run("install .")
+            client.run("build .")
+
+    def test_global_tools_overrided(self):
+        client = TestClient()
+
+        conanfile = """
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        assert(tools.net._global_requester != None)
+        assert(tools.files._global_output != None)
+        """
+        client.save({"conanfile.py": conanfile})
+
+        client.run("install .")
+        client.run("build .")
+
+        # Not test the real commmand get_command if it's setting the module global vars
+        tmp = temp_folder()
+        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
+        os.mkdir(os.path.join(tmp, ".conan"))
+        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
+        with tools.environment_append({"CONAN_USER_HOME": tmp}):
+            conan_api, _, _ = ConanAPIV1.factory()
+        conan_api.remote_list()
+        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(tools.files._global_output.warn)
+
+    def test_environment_nested(self):
+        with tools.environment_append({"A": "1", "Z": "40"}):
+            with tools.environment_append({"A": "1", "B": "2"}):
+                with tools.environment_append({"A": "2", "B": "2"}):
+                    self.assertEquals(os.getenv("A"), "2")
+                    self.assertEquals(os.getenv("B"), "2")
+                    self.assertEquals(os.getenv("Z"), "40")
+                self.assertEquals(os.getenv("A", None), "1")
+                self.assertEquals(os.getenv("B", None), "2")
+            self.assertEquals(os.getenv("A", None), "1")
+            self.assertEquals(os.getenv("Z", None), "40")
+
+        self.assertEquals(os.getenv("A", None), None)
+        self.assertEquals(os.getenv("B", None), None)
+        self.assertEquals(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
@@ -746,12 +768,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vars = tools.vcvars_dict(None, only_diff=False)
-                self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
-                self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
-                self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
-                self.assertEqual(vars["PROCESSOR_REVISION"], "9e09")
-                self.assertEqual(vars["ProgramFiles(x86)"], "C:\Program Files (x86)")
+                vcvars = tools.vcvars_dict(None, only_diff=False)
+                self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
+                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
+                self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
+                self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
@@ -764,7 +786,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self.env = {"PATH": "/path/to/somewhere"}
 
                 class MyRun(object):
-                    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):  # @UnusedVariable
+                    def __call__(self, command, output, log_filepath=None,
+                                 cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
                 self._runner = MyRun()
 
