@@ -130,9 +130,12 @@ class GraphManager(object):
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
                                 profile_build_requires, loader):
         for node in list(graph.nodes):
+            # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
+            # FIXME: To be improved and build a explicit model for this
+            if node.conanfile.output is None:
+                continue
             if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
                 continue
-
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.conan_ref or "")
             new_profile_build_requires = OrderedDict()

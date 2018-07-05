@@ -8,6 +8,7 @@ from conans import load
 from conans.client.source import merge_directories
 from conans.util.files import save, mkdir
 from conans.test.utils.test_files import temp_folder
+import shutil
 
 
 class MergeDirectoriesTest(unittest.TestCase):
@@ -39,10 +40,8 @@ class MergeDirectoriesTest(unittest.TestCase):
                           set([el.replace("/", "\\") for el in list2]))
 
     def test_empty_dest_merge(self):
-
         files = ["file.txt", "subdir/file2.txt"]
         self._save(self.source, files)
-
         merge_directories(self.source, self.dest)
         self._assert_equals(self._get_paths(self.dest), files)
 
@@ -69,7 +68,29 @@ class MergeDirectoriesTest(unittest.TestCase):
 
         merge_directories(self.source, self.dest)
         self._assert_equals(self._get_paths(self.dest), files + files_dest +
-                           ['empty_folder/subempty_folder', ])
+                            ['empty_folder/subempty_folder', ])
+        self.assertEquals(load(join(self.dest, "file.txt")), "fromsrc")
+        self.assertEquals(load(join(self.dest, "subdir2/file2.txt")), "fromdest")
+        self.assertEquals(load(join(self.dest, "subdir/file2.txt")), "fromsrc")
+
+    def same_directory_test(self):
+        files = ["file.txt", "subdir/file2.txt"]
+        self._save(self.source, files, "fromsrc")
+        merge_directories(self.source, self.source)
+        self._assert_equals(self._get_paths(self.source), files)
+
+    def parent_directory_test(self):
+        files_dest = ["file.txt", "subdir2/file2.txt"]
+        self._save(self.dest, files_dest, "fromdest")
+        self.source = join(self.dest, "source_folder")
+        files = ["file.txt", "subdir/file2.txt"]
+        self._save(self.source, files, "fromsrc")
+        merge_directories(self.source, self.dest)
+        shutil.rmtree(self.source)
+        self._assert_equals(self._get_paths(self.dest), files + files_dest)
+        self.assertEquals(load(join(self.dest, "file.txt")), "fromsrc")
+        self.assertEquals(load(join(self.dest, "subdir2/file2.txt")), "fromdest")
+        self.assertEquals(load(join(self.dest, "subdir/file2.txt")), "fromsrc")
 
     def excluded_dirs_test(self):
         files = ["file.txt", "subdir/file2.txt", "subdir/file3.txt", "other_dir/somefile.txt",

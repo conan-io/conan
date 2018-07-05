@@ -130,19 +130,20 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
         for node in deps_graph.nodes:
-            conan_ref, conanfile = node.conan_ref, node.conanfile
-            if not conan_ref:
+            if not node.conan_ref:
                 continue
 
-            if [r for r in conanfile.requires.values() if r.private]:
+            private_neighbours = node.private_neighbors()
+            if private_neighbours:
                 self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
                 if node.binary != BINARY_BUILD:
-                    closure = deps_graph.full_closure(node)
-                    for node in closure:
-                        node.binary = BINARY_SKIP
+                    for neigh in private_neighbours:
+                        neigh.binary = BINARY_SKIP
+                        closure = deps_graph.full_closure(neigh)
+                        for n in closure:
+                            n.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:
-            conan_ref, conanfile = node.conan_ref, node.conanfile
-            if not conan_ref or node.binary:
+            if not node.conan_ref or node.binary:
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
