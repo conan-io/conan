@@ -17,7 +17,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir
 from conans.util.log import logger
-from conans.client.graph.graph_manager import GraphManager, load_deps_info
+from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
 
 
@@ -26,7 +26,7 @@ class ConanManager(object):
     business logic
     """
     def __init__(self, client_cache, user_io, runner, remote_manager,
-                 recorder, registry):
+                 recorder, registry, graph_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -35,6 +35,7 @@ class ConanManager(object):
         self._remote_manager = remote_manager
         self._recorder = recorder
         self._registry = registry
+        self._graph_manager = graph_manager
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
 
@@ -42,12 +43,9 @@ class ConanManager(object):
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=None, runner=self._runner)
-        deps_graph, _, _ = graph_builder.load_graph(reference, None, profile,
-                                                    build_mode=None, check_updates=False, update=False,
-                                                    remote_name=None)
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile,
+                                                          build_mode=None, check_updates=False, update=False,
+                                                          remote_name=None)
 
         # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
         # which is the exported pkg
@@ -81,11 +79,8 @@ class ConanManager(object):
 
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=workspace, runner=self._runner)
-        deps_graph, _, _ = graph_builder.load_graph(references, None, profile, build_modes,
-                                                    False, update, remote_name)
+        deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
+                                                          False, update, remote_name)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
@@ -121,12 +116,9 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=None, runner=self._runner)
-        deps_graph, conanfile, cache_settings = graph_builder.load_graph(reference, create_reference,
-                                                                         profile, build_modes, False, update,
-                                                                         remote_name)
+        result = self._graph_manager.load_graph(reference, create_reference, profile,
+                                                build_modes, False, update, remote_name)
+        deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput(("%s (test package)" % str(create_reference)) if create_reference else "PROJECT",
@@ -196,10 +188,7 @@ class ConanManager(object):
         """
         output = ScopedOutput("PROJECT", self._user_io.out)
         # only infos if exist
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=None, runner=self._runner)
-        conanfile = graph_builder.load_consumer_conanfile(conanfile_path, info_folder, output)
+        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder, output)
         conanfile_folder = os.path.dirname(conanfile_path)
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
@@ -215,11 +204,8 @@ class ConanManager(object):
         """
 
         output = ScopedOutput("PROJECT", self._user_io.out)
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=None, runner=self._runner)
-        conanfile = graph_builder.load_consumer_conanfile(conan_file_path, info_folder, output,
-                                                          deps_info_required=True)
+        conanfile = self._graph_manager.load_consumer_conanfile(conan_file_path, info_folder, output,
+                                                                deps_info_required=True)
         run_imports(conanfile, dest_folder, output)
 
     def local_package(self, package_folder, conanfile_path, build_folder, source_folder,
@@ -228,11 +214,8 @@ class ConanManager(object):
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
-        graph_builder = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     self._recorder, workspace=None, runner=self._runner)
-        conanfile = graph_builder.load_consumer_conanfile(conanfile_path, install_folder, output,
-                                                          deps_info_required=True)
+        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder, output,
+                                                                deps_info_required=True)
         packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
 
@@ -248,11 +231,8 @@ class ConanManager(object):
             # Append env_vars to execution environment and clear when block code ends
             output = ScopedOutput(("%s (test package)" % test) if test else "Project",
                                   self._user_io.out)
-            graph_builder = GraphManager(self._user_io.out,
-                                         self._client_cache, self._registry, self._remote_manager,
-                                         self._recorder, workspace=None, runner=self._runner)
-            conan_file = graph_builder.load_consumer_conanfile(conanfile_path, install_folder, output,
-                                                               deps_info_required=True)
+            conan_file = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
+                                                                     output, deps_info_required=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
