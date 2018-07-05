@@ -272,7 +272,7 @@ class ConanInstaller(object):
                     raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
 
                 self._propagate_info(node, inverse_levels, deps_graph, output)
-                if node.binary in (BINARY_SKIP):  # Privates not necessary
+                if node.binary == BINARY_SKIP:  # Privates not necessary
                     continue
 
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
