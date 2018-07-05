@@ -14,7 +14,6 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
@@ -381,11 +380,20 @@ class TestClient(object):
         self.servers = servers or {}
         save(self.client_cache.registry, "")
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-        for name, server in self.servers.items():
+
+        def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
                 registry.add(name, server.fake_url)
             else:
                 registry.add(name, server)
+
+        for name, server in self.servers.items():
+            if name == "default":
+                add_server_to_registry(name, server)
+
+        for name, server in self.servers.items():
+            if name != "default":
+                add_server_to_registry(name, server)
 
     @property
     def paths(self):
@@ -461,7 +469,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          settings_preprocessor, interactive=interactive)
+                          interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

@@ -12,7 +12,7 @@ from conans.util.files import load
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, profile):
+    def __init__(self, runner, settings, profile, create_reference=None):
         """
         @param settings: Settings object, to assign to ConanFile at load time
         """
@@ -25,7 +25,7 @@ class ConanFileLoader(object):
 
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
-        self.dev_reference = None
+        self._dev_reference = create_reference
 
     def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
@@ -60,7 +60,7 @@ class ConanFileLoader(object):
             else:
                 result.in_local_cache = True
 
-            if consumer or (self.dev_reference and self.dev_reference == reference):
+            if consumer or (self._dev_reference and self._dev_reference == reference):
                 result.develop = True
 
             return result

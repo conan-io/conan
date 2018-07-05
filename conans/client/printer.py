@@ -1,13 +1,12 @@
+import fnmatch
+
 from collections import OrderedDict
 
 from conans.paths import SimplePaths
-
 from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
-import fnmatch
-from platform import node
 
 
 class Printer(object):
@@ -44,8 +43,8 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, project_reference, _info, registry,
-                   remote=None, node_times=None, path_resolver=None, package_filter=None,
+    def print_info(self, deps_graph, _info, registry,
+                   node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
 
@@ -75,12 +74,10 @@ class Printer(object):
             node = list_nodes[0]
             conan = node.conanfile
             if not ref:
-                # ref is only None iff info is being printed for a project directory, and
-                # not a passed in reference
-                if project_reference is None:
+                if conan.output is None:  # Identification of "virtual" node
                     continue
-                else:
-                    ref = project_reference
+                ref = str(conan)
+
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 
@@ -132,7 +129,7 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
-                    ref = d.conan_ref if d.conan_ref else project_reference
+                    ref = d.conan_ref if d.conan_ref else str(d.conanfile)
                     self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):

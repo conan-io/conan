@@ -35,22 +35,25 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
 
 
 def merge_directories(src, dst, excluded=None, symlinks=True):
+    dst = os.path.normpath(dst)
     excluded = excluded or []
     excluded = [os.path.normpath(entry) for entry in excluded]
 
-    for src_dir, dirs, files in os.walk(src, followlinks=True):
+    def is_excluded(origin_path):
+        if origin_path == dst:
+            return True
+        rel_path = os.path.normpath(os.path.relpath(origin_path, src))
+        if rel_path in excluded:
+            return True
+        return False
 
-        def is_excluded(root_folder, element):
-            rel_path = os.path.normpath(os.path.relpath(os.path.join(root_folder, element), src))
-            if rel_path in excluded:
-                return True
-            # If dst is a sub-folder of src_dir, discard it as an src file
-            abs_path = os.path.join(root_folder, element)
-            return os.path.normpath(os.path.commonprefix([abs_path, dst])) == os.path.normpath(dst)
+    for src_dir, dirs, files in os.walk(src, followlinks=True):
+        if is_excluded(src_dir):
+            dirs[:] = []
+            continue
 
         # Overwriting the dirs will prevents walk to get into them
-        dirs[:] = [d for d in dirs if not is_excluded(src_dir, d)]
-        files[:] = [d for d in files if not is_excluded(src_dir, d)]
+        files[:] = [d for d in files if not is_excluded(os.path.join(src_dir, d))]
 
         dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
         if not os.path.exists(dst_dir):
@@ -72,6 +75,13 @@ def _clean_source_folder(folder):
             os.remove(os.path.join(folder, f))
         except OSError:
             pass
+
+
+def get_scm_data(conanfile):
+    try:
+        return SCMData(conanfile)
+    except ConanException:
+        return None
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
@@ -103,6 +113,9 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
+    elif local_sources_path and os.path.exists(local_sources_path):
+        output.warn("Detected 'scm' auto in conanfile, trying to remove source folder")
+        remove_source()
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
@@ -116,11 +129,8 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                     conanfile.build_folder = None
                     conanfile.package_folder = None
 
-                    try:
-                        scm_data = SCMData(conanfile)
-                    except ConanException:
-                        pass
-                    else:
+                    scm_data = get_scm_data(conanfile)
+                    if scm_data:
                         dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
                         captured = local_sources_path and os.path.exists(local_sources_path)
                         local_sources_path = local_sources_path if captured else None
@@ -158,11 +168,8 @@ def config_source_local(dest_dir, conanfile, conanfile_folder, output):
                 with get_env_context_manager(conanfile):
                     conanfile.build_folder = None
                     conanfile.package_folder = None
-                    try:
-                        scm_data = SCMData(conanfile)
-                    except ConanException:
-                        pass
-                    else:
+                    scm_data = get_scm_data(conanfile)
+                    if scm_data:
                         dest_dir = os.path.join(dest_dir, scm_data.subfolder)
                         capture = scm_data.capture_origin or scm_data.capture_revision
                         local_sources_path = conanfile_folder if capture else None
@@ -179,7 +186,6 @@ def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     if local_sources_path:
         excluded = SCM(scm_data, local_sources_path).excluded_files
         output.info("Getting sources from folder: %s" % local_sources_path)
-        output.info("Excluding files: %s" % ", ".join(excluded))
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
