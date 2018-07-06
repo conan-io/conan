@@ -63,6 +63,18 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         obj.revision = revision
         return obj
 
+    def __eq__(self, value):
+        if not value:
+            return False
+        return super(ConanFileReference, self).__eq__(value) and self.revision == value.revision
+
+    def __ne__(self, other):
+        """Overrides the default implementation (unnecessary in Python 3)"""
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.name, self.version, self.user, self.channel, self.revision))
+
     @staticmethod
     def loads(text):
         """ Parses a text string to generate a ConanFileReference object

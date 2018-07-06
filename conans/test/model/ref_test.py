@@ -54,3 +54,29 @@ class RefTest(unittest.TestCase):
         p_ref = PackageReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
         self.assertEqual(p_ref.revision, "989")
         self.assertEqual(p_ref.conan.revision, "23")
+
+    def equal_test(self):
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#232")
+        self.assertFalse(ref == ref2)
+        self.assertTrue(ref != ref2)
+
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#232")
+
+        self.assertFalse(ref == ref2)
+        self.assertTrue(ref != ref2)
+        self.assertTrue(ref2 != ref)
+
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+
+        self.assertTrue(ref == ref2)
+        self.assertFalse(ref != ref2)
+
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        self.assertTrue(ref == ref2)
+        self.assertFalse(ref != ref2)
+
+

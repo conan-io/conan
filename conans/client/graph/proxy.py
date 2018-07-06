@@ -56,7 +56,7 @@ class ConanProxy(object):
             status = RECIPE_INCACHE
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            new_ref = self._registry.get_ref_with_revision(reference)
+            new_ref = self._registry.get_ref_with_revision(reference) or reference
             return conanfile_path, status, remote, new_ref
 
         named_remote = self._registry.remote(remote_name) if remote_name else None
@@ -65,19 +65,17 @@ class ConanProxy(object):
             status = RECIPE_NO_REMOTE
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            new_ref = self._registry.get_ref_with_revision(reference)
+            new_ref = self._registry.get_ref_with_revision(reference) or reference
             return conanfile_path, status, None, new_ref
 
         try:  # get_conan_manifest can fail, not in server
-            upstream_manifest, new_ref = self._remote_manager.get_conan_manifest(reference, update_remote)
-            # !!!!! tendria que devolver new_Ref y aqui actualizar registry mas abajo si es que es mas moderna
-            # MISSING TEST: UPDATE
+            upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
             new_ref = self._registry.get_ref_with_revision(reference)
-            return conanfile_path, status, update_remote, remote, new_ref
+            return conanfile_path, status, update_remote, remote, new_ref or reference
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -86,6 +84,7 @@ class ConanProxy(object):
                 if update:
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
+                    new_ref = self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.set_ref(new_ref, update_remote)
                     status = RECIPE_UPDATED
                 else:
@@ -94,8 +93,8 @@ class ConanProxy(object):
                 status = RECIPE_NEWER
         else:
             status = RECIPE_INCACHE
-            new_ref = self._registry.get_ref_with_revision(reference)
 
+        new_ref = self._registry.get_ref_with_revision(reference) or reference
         log_recipe_got_from_local_cache(new_ref)
         self._recorder.recipe_fetched_from_cache(new_ref)
         return conanfile_path, status, update_remote, new_ref

@@ -165,7 +165,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_recipe_urls(conan_reference)
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files
+        return zipped_files, conan_reference
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)

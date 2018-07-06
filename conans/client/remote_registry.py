@@ -130,7 +130,8 @@ class RemoteRegistry(object):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
             try:
-                del refs[conan_reference]
+                full_ref = self._find_ref_in(str(conan_reference), refs)
+                del refs[str(full_ref)]
                 self._save(remotes, refs)
             except:
                 if not quiet:
@@ -160,8 +161,13 @@ class RemoteRegistry(object):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            if self._find_ref_in(conan_reference, refs):
-                raise ConanException("%s already exists. Use update" % conan_reference)
+
+            new_ref = ConanFileReference.loads(conan_reference).copy_without_revisions()
+            for ref in refs:
+                ref = ConanFileReference.loads(ref).copy_without_revisions()
+                if new_ref == ref:
+                    raise ConanException("%s already exists. Use update" % conan_reference)
+
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
             refs[conan_reference] = remote
@@ -171,11 +177,12 @@ class RemoteRegistry(object):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            if self._find_ref_in(conan_reference, refs):
+            full_ref = self._find_ref_in(conan_reference, refs)
+            if not full_ref:
                 raise ConanException("%s does not exist. Use add" % conan_reference)
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
-            refs[conan_reference] = remote
+            refs[str(full_ref)] = remote
             self._save(remotes, refs)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):

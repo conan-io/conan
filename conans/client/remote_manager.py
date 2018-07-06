@@ -1,19 +1,19 @@
 import os
 import shutil
+import stat
 import tarfile
 import time
 import traceback
-import stat
 
 from requests.exceptions import ConnectionError
 
-from conans.client.loader_parse import load_conanfile_class
+from conans.client.source import merge_directories
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.model.scm import SCMData
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
-from conans.util.files import gzopen_without_timestamps, is_dirty,\
+from conans.util.env_reader import get_env
+from conans.util.files import gzopen_without_timestamps, is_dirty, \
     make_read_only
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch_folder
@@ -23,8 +23,6 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_recipe_sources_download,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
-from conans.client.source import merge_directories
-from conans.util.env_reader import get_env
 
 
 class RemoteManager(object):
@@ -194,8 +192,8 @@ class RemoteManager(object):
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        zipped_files, _ = self._call_remote(remote, "get_recipe_sources", conan_reference,
-                                                    export_folder)
+        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
+                                         export_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return conan_reference

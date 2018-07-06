@@ -86,17 +86,6 @@ class GraphBinariesAnalyzer(object):
                                 "revision: %s" % package_folder)
                     rmdir(package_folder)
 
-        # !!! MOVE TO REVISIONS DOC PROPOSITION
-        # Mixing remotes with and without revisions?
-        #    - The recipe is retrieved from a server with revisions. That fact is stored somehow.
-        #    - Now we try to install packages from a different remote (without revisions), should it
-        #      find it if binaries exist (but without revisions)? ONE MORE CALL TO THE SERVER TO CHECK
-        #      THE EXACT RECIPE REVISION?
-        # And the opposite:
-        #    - The recipe is installed from a remote without revisions
-        #    - Now we search in a remote with revisions, it will find it only if it matches
-        #      the recipe.
-
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:
