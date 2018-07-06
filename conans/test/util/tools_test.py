@@ -40,7 +40,7 @@ class SystemPackageToolTest(unittest.TestCase):
         set_global_instances(out, requests)
 
     def verify_update_test(self):
-
+        # https://github.com/conan-io/conan/issues/3142
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
                                        "CONAN_SYSREQUIRES_MODE": "Verify"}):
             runner = RunnerMock()
@@ -53,6 +53,8 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
             self.assertEquals(runner.command_called, None)
+            self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
+                          tools.system_pm._global_output)
 
     def system_package_tool_test(self):
 
