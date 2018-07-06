@@ -96,7 +96,7 @@ class RegistryTest(unittest.TestCase):
         ref = "lib/1.0@user/channel"
         # Test already exists
         registry.add_ref(ref, "conan.io")
-        with self.assertRaiseRegex(ConanException, "already exists"):
+        with self.assertRaisesRegexp(ConanException, "already exists"):
             registry.add_ref(ref + "#revision", "conan.io")
 
     def revisions_delete_test(self):
