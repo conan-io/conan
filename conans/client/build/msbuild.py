@@ -25,12 +25,14 @@ class MSBuild(object):
             self.build_env = None
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
-              parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True):
+              parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
+              vcvars_ver=None, winsdk_version=None):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents()
             with tmp_file(props_file_contents) as props_file_path:
-                vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars)
+                vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+                                        vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
                 command = self.get_command(project_file, props_file_path,
                                            targets=targets, upgrade_project=upgrade_project,
                                            build_type=build_type, arch=arch, parallel=parallel,

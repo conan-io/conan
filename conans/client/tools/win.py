@@ -231,7 +231,8 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None, winsdk_version=None):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
+                   winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
