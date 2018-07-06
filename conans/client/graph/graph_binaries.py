@@ -7,8 +7,9 @@ from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.manifest import FileTreeManifest
 from conans.model.info import ConanInfo
 from conans.paths import CONANINFO
-from conans.client.graph.graph import BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,\
-    BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP, BINARY_WORKSPACE
+from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
+                                       BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
+                                       BINARY_WORKSPACE)
 
 
 class GraphBinariesAnalyzer(object):
@@ -72,30 +73,34 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_WORKSPACE
             return
 
+        conan_info_path = os.path.join(package_folder, CONANINFO)
+
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)
+            elif os.path.exists(package_folder) and node.conan_ref.revision:
+                recipe_revision_of_package = ConanInfo.load_file(conan_info_path).recipe_revision
+                if recipe_revision_of_package != conan_ref.revision:
+                    output.warn("The current package revision doesn't match the recipe "
+                                "revision: %s" % package_folder)
+                    rmdir(package_folder)
 
-        # !!!!! remove the package if it doesn't match with the recipe revision?
-        # how to control when the revisions mechanism is not enabled :S
-        # The server will return the reference with revision when they are enabled
-        # We have to retrieve it and store in the node, from the rest_api to the graph_builder
-        # The previous idea is not valid, you can have a recipe in the local cache and not the binary
-        # and then call install, the recipe will be retrieved from the local cache (was downloaded with revisions)
-        # but you don't know if the associated package has to match with the recipe to be valid
-        # What about mixing remotes with and without revisions?
+        # !!! MOVE TO REVISIONS DOC PROPOSITION
+        # Mixing remotes with and without revisions?
         #    - The recipe is retrieved from a server with revisions. That fact is stored somehow.
-        #    - Now we install packages from a different remote (without revisions), should it
-        #      find it if binaries exist (but without revisions)?
+        #    - Now we try to install packages from a different remote (without revisions), should it
+        #      find it if binaries exist (but without revisions)? ONE MORE CALL TO THE SERVER TO CHECK
+        #      THE EXACT RECIPE REVISION?
         # And the opposite:
         #    - The recipe is installed from a remote without revisions
-        #    - Now we search 
+        #    - Now we search in a remote with revisions, it will find it only if it matches
+        #      the recipe.
 
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:
-            remote = self._registry.get_ref(conan_ref)
+            remote = self._registry.get_remote(conan_ref)
         remotes = self._registry.remotes
 
         if os.path.exists(package_folder):
@@ -111,7 +116,7 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
-                package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
+                package_hash = ConanInfo.load_file(conan_info_path).recipe_hash
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:

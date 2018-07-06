@@ -59,11 +59,11 @@ class RegistryTest(unittest.TestCase):
 
         remotes = registry.remotes
         registry.set_ref(ref, remotes[0])
-        remote = registry.get_ref(ref)
+        remote = registry.get_remote(ref)
         self.assertEqual(remote, remotes[0])
 
         registry.set_ref(ref, remotes[0])
-        remote = registry.get_ref(ref)
+        remote = registry.get_remote(ref)
         self.assertEqual(remote, remotes[0])
 
     def insert_test(self):

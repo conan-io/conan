@@ -1,18 +1,15 @@
 import os
 import time
 
-from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs, urlencode
+from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
-from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.rest.differ import diff_snapshots
-from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
+from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
-from conans.search.search import filter_packages
 from conans.util.files import decode_text, md5sum
 from conans.util.log import logger
 

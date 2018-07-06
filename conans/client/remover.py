@@ -93,7 +93,7 @@ class ConanRemover(object):
     def _remote_remove(self, reference, package_ids, remote):
         if package_ids is None:
             result = self._remote_manager.remove(reference, remote)
-            current_remote = self._registry.get_ref(reference)
+            current_remote = self._registry.get_remote(reference)
             if current_remote == remote:
                 self._registry.remove_ref(reference)
             return result

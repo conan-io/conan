@@ -177,8 +177,9 @@ class RemoteManager(object):
         rmdir(dest_folder)
 
         t1 = time.time()
-        zipped_files, conan_reference = self._call_remote(remote, "get_recipe",
-                                                          conan_reference, dest_folder)
+        zipped_files, conan_reference = self._call_remote(remote, "get_recipe", conan_reference,
+                                                          dest_folder)
+
         if not zipped_files:
             return conan_reference
         duration = time.time() - t1

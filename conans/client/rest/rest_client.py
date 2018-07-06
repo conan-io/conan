@@ -25,6 +25,8 @@ class RestApiClient(object):
         self._capabilities = defaultdict(list)
 
     def _get_api(self):
+       # !!!!!!!! a lo mejor podriamos pasar un flag de si requiere revisiones y si es v1 mandar
+       # a tomar por culo
         if self.remote_url not in self._capabilities:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                 self.requester, self.verify_ssl, self._put_headers)

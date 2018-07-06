@@ -4,6 +4,7 @@ import fasteners
 from collections import OrderedDict, namedtuple
 
 from conans.errors import ConanException, NoRemoteAvailable
+from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
@@ -107,10 +108,18 @@ class RemoteRegistry(object):
             _, refs = self._load()
             return refs
 
-    def get_ref(self, conan_reference):
+    def get_ref_with_revision(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            remote_name = refs.get(str(conan_reference))
+            return self._find_ref_in(str(conan_reference), refs)
+
+    def get_remote(self, conan_reference):
+        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
+            remotes, refs = self._load()
+            full_ref = self._find_ref_in(str(conan_reference), refs)
+            if not full_ref:
+                return None
+            remote_name = refs[str(full_ref)]
             try:
                 return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
             except:
@@ -135,11 +144,23 @@ class RemoteRegistry(object):
             refs[conan_reference] = remote.name
             self._save(remotes, refs)
 
+    @staticmethod
+    def _find_ref_in(conan_reference, refs):
+        # Finds a "conan_reference" (even without revision) in the refs (that can contain revisions)
+        conan_reference = ConanFileReference.loads(conan_reference)
+        for ref in refs:
+            ref = ConanFileReference.loads(ref)
+            if conan_reference == ref:
+                return ref
+            if not conan_reference.revision and ref.copy_without_revisions() == conan_reference:
+                return ref
+        return None
+
     def add_ref(self, conan_reference, remote):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            if conan_reference in refs:
+            if self._find_ref_in(conan_reference, refs):
                 raise ConanException("%s already exists. Use update" % conan_reference)
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
@@ -150,7 +171,7 @@ class RemoteRegistry(object):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            if conan_reference not in refs:
+            if self._find_ref_in(conan_reference, refs):
                 raise ConanException("%s does not exist. Use add" % conan_reference)
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)

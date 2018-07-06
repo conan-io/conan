@@ -7,7 +7,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
-from platform import node
 
 
 class Printer(object):
@@ -85,8 +84,11 @@ class Printer(object):
                 continue
 
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
-            reg_remote = registry.get_ref(ref)
-            # Excludes PROJECT fake reference
+            try:
+                reg_remote = registry.get_remote(ref)
+            except:
+                # Excludes PROJECT fake reference
+                reg_remote = None
 
             if show("id"):
                 self._out.writeln("    ID: %s" % package_id, Color.BRIGHT_GREEN)
@@ -119,6 +121,8 @@ class Printer(object):
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
+            if isinstance(ref, ConanFileReference) and show("revision") and node.conan_ref.revision:  # Excludes PROJECT
+                self._out.writeln("    Revision: %s" % node.conan_ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
