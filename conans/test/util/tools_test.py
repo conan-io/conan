@@ -278,7 +278,6 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
-            print str(tools.system_pm._global_output)
             self.assertIn('\n'.join(packages), tools.system_pm._global_output)
             self.assertEquals(3, runner.calls)
 
