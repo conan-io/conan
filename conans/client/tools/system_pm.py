@@ -28,7 +28,7 @@ class SystemPackageTool(object):
 
     @staticmethod
     def _get_sysrequire_mode():
-        allowed_modes= ("enabled", "verify", "disabled")
+        allowed_modes = ("enabled", "verify", "disabled")
         mode = get_env("CONAN_SYSREQUIRES_MODE", "enabled")
         mode_lower = mode.lower()
         if mode_lower not in allowed_modes:
@@ -59,8 +59,8 @@ class SystemPackageTool(object):
             Get the system package tool update command
         """
         mode = self._get_sysrequire_mode()
-        if mode == "disabled":
-            _global_output.info("Not updating system_requirements. CONAN_SYSREQUIRES_MODE=Disabled")
+        if mode in ("disabled", "verify"):
+            _global_output.info("Not updating system_requirements. CONAN_SYSREQUIRES_MODE=%s" % mode)
             return
         self._is_up_to_date = True
         self._tool.update()
@@ -195,7 +195,8 @@ class ChocolateyTool(object):
         _run(self._runner, "choco install --yes %s" % package_name)
 
     def installed(self, package_name):
-        exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
+        exit_code = self._runner('choco search --local-only --exact %s | '
+                                 'findstr /c:"1 packages installed."' % package_name, None)
         return exit_code == 0
 
 
@@ -221,6 +222,7 @@ class ZypperTool(object):
     def installed(self, package_name):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
+
 
 def _run(runner, command, accepted_returns=None):
     accepted_returns = accepted_returns or [0, ]
