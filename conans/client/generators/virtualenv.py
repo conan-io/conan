@@ -45,27 +45,31 @@ class VirtualEnvGenerator(Generator):
 
         ret = []
         for name, value in variables:
+            # deactivate values
+            old_value = os.environ.get(name, "")
+            deactivate_value = "\"%s\"" % old_value if quote_full_value or quote_elements else old_value
+
             # activate values
+            placeholder = self._variable_placeholder(flavor, name)
             if isinstance(value, list):
-                placeholder = self._variable_placeholder(flavor, name)
                 if enable_space_path_sep and name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
-                    value = " ".join(value+[placeholder])
+                    value = " ".join(value + [placeholder])
                     value = "\"%s\"" % value if value else ""
                 else:
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    value = path_sep.join(value+[placeholder])
-            else:
-                # single value
+                    value = path_sep.join(value + [placeholder])
+            else:  # single value
+                if old_value != value and old_value is not "" and old_value in value:
+                    # Add placeholder instead of old value
+                    new_value = value.replace(old_value, "")
+                    value = new_value + placeholder
                 value = "\"%s\"" % value if quote_elements else value
             activate_value = "\"%s\"" % value if quote_full_value else value
 
-            # deactivate values
-            value = os.environ.get(name, "")
-            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
             ret.append((name, activate_value, deactivate_value))
         return ret
 
@@ -108,8 +112,8 @@ class VirtualEnvGenerator(Generator):
         deactivate_lines = ['$function:prompt = $function:_old_conan_prompt']
         deactivate_lines.append('remove-item function:_old_conan_prompt')
         for name, activate, deactivate in self.format_values("ps1", self.env.items()):
-            activate_lines.append('$env:%s = %s' % (name,activate))
-            deactivate_lines.append('$env:%s = %s' % (name,deactivate))
+            activate_lines.append('$env:%s = %s' % (name, activate))
+            deactivate_lines.append('$env:%s = %s' % (name, deactivate))
         activate_lines.append('')
         return activate_lines, deactivate_lines
 

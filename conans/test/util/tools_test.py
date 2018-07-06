@@ -747,11 +747,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
                 vars = tools.vcvars_dict(None, only_diff=False)
-                self.assertEqual(vars["PROCESSOR_ARCHITECTURE"], "AMD64")
-                self.assertEqual(vars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
-                self.assertEqual(vars["PROCESSOR_LEVEL"], "6")
-                self.assertEqual(vars["PROCESSOR_REVISION"], "9e09")
-                self.assertEqual(vars["ProgramFiles(x86)"], "C:\Program Files (x86)")
+                self.assertEqual("AMD64", vars["PROCESSOR_ARCHITECTURE"])
+                self.assertEqual("Intel64 Family 6 Model 158 Stepping 9, GenuineIntel",
+                                 vars["PROCESSOR_IDENTIFIER"])
+                self.assertEqual("6", vars["PROCESSOR_LEVEL"])
+                self.assertEqual("9e09", vars["PROCESSOR_REVISION"])
+                self.assertEqual("C:\Program Files (x86)", vars["ProgramFiles(x86)"])
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":

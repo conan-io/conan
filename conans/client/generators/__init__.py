@@ -85,7 +85,8 @@ def write_generators(conanfile, path, output):
             generator = generator_class(conanfile)
         except TypeError:
             # To allow old-style generator packages to work (e.g. premake)
-            output.warn("Generator %s failed with new __init__(), trying old one")
+            output.warn("Generator '%s' failed with new __init__(), trying old one" %
+                        generator_name)
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
         try:
