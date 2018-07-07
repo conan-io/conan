@@ -224,9 +224,13 @@ class RemoteManager(object):
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(dest_folder)
             recorder.package_downloaded(package_reference, remote.url)
-            output.success('Package installed %s' % package_id)
+            if package_reference.revision:
+                output.success('Package installed %s#%s' % (package_id, package_reference.revision))
+            else:
+                output.success('Package installed %s' % package_id)
         except NotFoundException:
-            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference, remote.name))
+            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference,
+                                                                               remote.name))
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(package_reference.package_id))
             output.error("Exception: %s %s" % (type(e), str(e)))

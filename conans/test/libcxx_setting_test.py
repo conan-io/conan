@@ -23,7 +23,7 @@ class ConanFileToolsTest(ConanFile):
         self.run("cmake --build . %s" %  cmake.build_config)
 
     def package(self):
-        self.copy("*")
+        º
     '''
 
 cmakelists = '''PROJECT(conanzlib)

@@ -74,21 +74,33 @@ def evaluate(prop_name, prop_value, conan_vars_info):
 
 
 def search_recipes(paths, pattern=None, ignorecase=True):
+
+    def get_folders_levels(_pattern):
+        """If a reference with revisions is detected compare with 5 levels of subdirs"""
+        if not isinstance(_pattern, ConanFileReference):
+            try:
+                ref = ConanFileReference.loads(_pattern)
+            except ConanException:
+                ref = None
+        else:
+            ref = _pattern
+
+        return 5 if ref and ref.revision else 4
+
     # Conan references in main storage
     if pattern:
-        if isinstance(pattern, ConanFileReference):
-            pattern = str(pattern)
-        pattern = translate(pattern)
-        pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
+        pattern = str(pattern)
+        b_pattern = translate(pattern)
+        b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
 
-    subdirs = list_folder_subdirs(basedir=paths.store, level=4)
+    subdirs = list_folder_subdirs(basedir=paths.store, level=get_folders_levels(pattern))
     if not pattern:
         return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
     else:
         ret = []
         for subdir in subdirs:
             conan_ref = ConanFileReference(*subdir.split("/"))
-            if _partial_match(pattern, conan_ref):
+            if _partial_match(b_pattern, conan_ref):
                 ret.append(conan_ref)
 
         return sorted(ret)

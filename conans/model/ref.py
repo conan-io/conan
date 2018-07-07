@@ -117,6 +117,8 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
     def __new__(cls, conan, package_id, revision=None):
         if revision:
             ConanName.validate_name(revision)
+        if "#" in package_id:
+            package_id, revision = package_id.split("#", 1)
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
         return obj

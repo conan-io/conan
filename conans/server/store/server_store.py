@@ -38,6 +38,7 @@ class ServerStore(SimplePaths):
 
     # Methods to manage revisions
     def get_last_revision(self, reference):
+        assert(isinstance(reference, ConanFileReference))
         rev_file = self._last_revision_path(reference)
         if self._storage_adapter.path_exists(rev_file):
             return self._storage_adapter.read_file(rev_file)
@@ -45,10 +46,12 @@ class ServerStore(SimplePaths):
             return None
 
     def update_last_revision(self, reference):
+        assert(isinstance(reference, ConanFileReference))
         rev_file = self._last_revision_path(reference)
         self._storage_adapter.write_file(rev_file, reference.revision, lock_file=rev_file + ".lock")
 
     def get_last_package_revision(self, p_reference):
+        assert(isinstance(p_reference, PackageReference))
         rev_file = self._last_package_revision_path(p_reference)
         if self._storage_adapter.path_exists(rev_file):
             return self._storage_adapter.read_file(rev_file)
@@ -56,6 +59,7 @@ class ServerStore(SimplePaths):
             return None
 
     def update_last_package_revision(self, p_reference):
+        assert(isinstance(p_reference, PackageReference))
         rev_file = self._last_package_revision_path(p_reference)
         self._storage_adapter.write_file(rev_file, p_reference.revision,
                                          lock_file=rev_file + ".lock")
