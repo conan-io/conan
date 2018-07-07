@@ -80,7 +80,7 @@ def search_recipes(paths, pattern=None, ignorecase=True):
         if not isinstance(_pattern, ConanFileReference):
             try:
                 ref = ConanFileReference.loads(_pattern)
-            except ConanException:
+            except (ConanException, TypeError):
                 ref = None
         else:
             ref = _pattern

@@ -215,7 +215,7 @@ class RestV1Methods(RestCommonMethods):
             deleted.remove(ignore_deleted_file)
 
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False
+            return False, conan_reference
 
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
@@ -234,7 +234,7 @@ class RestV1Methods(RestCommonMethods):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return files_to_upload or deleted
+        return (files_to_upload or deleted), str(conan_reference)  # Compat with v2
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """

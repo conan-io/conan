@@ -10,6 +10,7 @@ from requests.exceptions import ConnectionError
 from conans.client.source import merge_directories
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
+from conans.model.ref import ConanFileReference
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.env_reader import get_env
@@ -51,18 +52,20 @@ class RemoteManager(object):
 
         revision = self._client_cache.recipe_revision(conan_reference)
         ref = conan_reference.copy_with_revision(revision)
-        ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
-                                ignore_deleted_file, no_overwrite)
+        ret, new_ref = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
+                                         ignore_deleted_file, no_overwrite)
+        new_ref = ConanFileReference.loads(new_ref)
+
         duration = time.time() - t1
-        log_recipe_upload(conan_reference, duration, the_files, remote)
+        log_recipe_upload(new_ref, duration, the_files, remote)
         if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(new_ref), remote.name)
             url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
             msg += ": %s" % url
         else:
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
-        return ret
+        return new_ref
 
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it

@@ -102,9 +102,31 @@ class HelloConan(ConanFile):
         contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "1")
 
+    def test_with_scm(self):
+        #
+        pass
+
     def test_revision_delete_latest(self):
         # Pending to better index
         pass
 
     def test_info(self):
+        pass
+
+    def test_update(self):
+        # with recipe overriding and new revisions too
+        pass
+
+    def test_mix_rev_server_with_norev_server(self):
+        pass
+
+    def test_upload_outdated_packages(self):
+        # if the package doesn't belong to the recipe, what should we do?
+        # If we know the recipe is versioned (registry) skip the packages Warns
+        # If we know the recipe is not versioned (registry) ???
+        pass
+
+    def test_upload_change_local_registry_with_revision(self):
+        # An old recipe doesn't have revision in the registry, then we upload it to a server with
+        # revisions, it should update the local registry with the revision
         pass

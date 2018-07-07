@@ -129,9 +129,10 @@ class RestV2Methods(RestCommonMethods):
         try:
             data = self.get_json(url)
         except NotFoundException:
-            data = {"files": {}}
+            data = {"files": {}, "reference": str(conan_reference)}
 
         remote_snapshot = data["files"]
+        new_ref = data["reference"]
         local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
@@ -140,7 +141,7 @@ class RestV2Methods(RestCommonMethods):
             deleted.remove(ignore_deleted_file)
 
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False
+            return False, new_ref
 
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
@@ -154,7 +155,7 @@ class RestV2Methods(RestCommonMethods):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return files_to_upload or deleted
+        return (files_to_upload or deleted), new_ref
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         self.check_credentials()

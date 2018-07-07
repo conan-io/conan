@@ -83,9 +83,9 @@ class CmdUpload(object):
         if not force:
             self._check_recipe_date(conan_ref, upload_remote)
 
-        self._user_io.out.info("Uploading %s to remote '%s'"
-                               % (str(conan_ref), upload_remote.name))
-        self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, upload_remote)
+        self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
+        conan_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
+                                        upload_remote)
 
         recorder.add_recipe(str(conan_ref), upload_remote.name, upload_remote.url)
 
@@ -116,11 +116,11 @@ class CmdUpload(object):
             ignore_deleted_file = None
         else:
             ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
-        result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                    ignore_deleted_file=ignore_deleted_file,
-                                                    skip_upload=skip_upload,
-                                                    no_overwrite=no_overwrite)
-        return result
+        new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
+                                                     ignore_deleted_file=ignore_deleted_file,
+                                                     skip_upload=skip_upload,
+                                                     no_overwrite=no_overwrite)
+        return new_ref
 
     def _upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
                         skip_upload=False, integrity_check=False, no_overwrite=None, remote=None):
