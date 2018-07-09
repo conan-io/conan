@@ -1,10 +1,14 @@
-from conans.errors import RequestErrorException, NotFoundException, ForbiddenException
+import re
+from fnmatch import translate
+
+from conans.errors import RequestErrorException, NotFoundException, ForbiddenException, \
+    ConanException
 import os
 import jwt
-from conans.util.files import mkdir
-from conans.model.ref import PackageReference
+from conans.util.files import mkdir, list_folder_subdirs
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_packages, search_recipes, _partial_match
 
 
 class FileUploadDownloadService(object):
@@ -73,12 +77,44 @@ class SearchService(object):
         info = search_packages(self._paths, reference, query)
         return info
 
+    def search_recipes(self, pattern=None, ignorecase=True):
+
+        def get_folders_levels(_pattern):
+            """If a reference with revisions is detected compare with 5 levels of subdirs"""
+            if not isinstance(_pattern, ConanFileReference):
+                try:
+                    ref = ConanFileReference.loads(_pattern)
+                except (ConanException, TypeError):
+                    ref = None
+            else:
+                ref = _pattern
+
+            return 5 if ref and ref.revision else 4
+
+        # Conan references in main storage
+        if pattern:
+            pattern = str(pattern)
+            b_pattern = translate(pattern)
+            b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
+
+        subdirs = list_folder_subdirs(basedir=self._paths.store, level=get_folders_levels(pattern))
+        if not pattern:
+            return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
+        else:
+            ret = []
+            for subdir in subdirs:
+                conan_ref = ConanFileReference(*subdir.split("/"))
+                if _partial_match(b_pattern, conan_ref):
+                    ret.append(conan_ref)
+
+            return sorted(ret)
+
     def search(self, pattern=None, ignorecase=True):
         """ Get all the info about any package
             Attributes:
                 pattern = wildcards like opencv/*
         """
-        references = search_recipes(self._paths, pattern, ignorecase)
+        references = self.search_recipes(pattern, ignorecase)
         filtered = []
         # Filter out restricted items
         for conan_ref in references:
