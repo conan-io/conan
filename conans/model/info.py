@@ -323,9 +323,10 @@ class ConanInfo(object):
         else:
             return ConanInfo.loads(config_text)
 
-    def load_from_package(self, package_folder):
+    @staticmethod
+    def load_from_package(package_folder):
         info_path = os.path.join(package_folder, CONANINFO)
-        return self.load_file(info_path)
+        return ConanInfo.load_file(info_path)
 
     def package_id(self):
         """ The package_id of a conans is the sha1 of its specific requirements,
