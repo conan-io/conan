@@ -228,14 +228,14 @@ class MyPkg(ConanFile):
 
         # First time upload
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
         self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # CASE: Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # CASE: Without changes
         client.run("create . frodo/stable")
@@ -243,7 +243,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.all_output)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # CASE: When recipe and package changes
         new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
@@ -254,7 +254,7 @@ class MyPkg(ConanFile):
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
         # CASE: When package changes
@@ -267,7 +267,7 @@ class MyPkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("ERROR: Local package is different from the remote package", client.out)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading conan_package.tgz", client.out)
 
     def upload_no_overwrite_recipe_test(self):
@@ -294,21 +294,21 @@ class MyPkg(ConanFile):
 
         # First time upload
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
         self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create without changes
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create with recipe and package changes
         new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
@@ -319,7 +319,7 @@ class MyPkg(ConanFile):
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
         # Create with package changes
@@ -330,7 +330,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
