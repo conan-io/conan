@@ -37,7 +37,7 @@ class ServerStorageAdapter(object):
         raise NotImplementedError()
 
     @abstractmethod
-    def read_file(self, path):
+    def read_file(self, path, lock_file=None):
         raise NotImplementedError()
 
     @abstractmethod
@@ -135,12 +135,13 @@ class ServerDiskAdapter(ServerStorageAdapter):
     def path_exists(self, path):
         return os.path.exists(path)
 
-    def read_file(self, path):
-        with open(path) as f:
-            return f.read()
+    def read_file(self, path, lock_file):
+        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
+            with open(path) as f:
+                return f.read()
 
     def write_file(self, path, contents, lock_file):
-        with fasteners.InterProcessLock(lock_file, logger=None) if lock_file else no_op():
+        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
             with open(path, "w") as f:
                 f.write(contents)
 

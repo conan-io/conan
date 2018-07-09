@@ -234,7 +234,7 @@ class RestV1Methods(RestCommonMethods):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return (files_to_upload or deleted), str(conan_reference)  # Compat with v2
+        return (files_to_upload or deleted), conan_reference  # Compat with v2
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """

@@ -132,7 +132,7 @@ class RestV2Methods(RestCommonMethods):
             data = {"files": {}, "reference": str(conan_reference)}
 
         remote_snapshot = data["files"]
-        new_ref = data["reference"]
+        new_ref = ConanFileReference.loads(data["reference"])
         local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff

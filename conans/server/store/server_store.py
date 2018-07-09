@@ -41,7 +41,7 @@ class ServerStore(SimplePaths):
         assert(isinstance(reference, ConanFileReference))
         rev_file = self._last_revision_path(reference)
         if self._storage_adapter.path_exists(rev_file):
-            return self._storage_adapter.read_file(rev_file)
+            return self._storage_adapter.read_file(rev_file, lock_file=rev_file + ".lock")
         else:
             return None
 
@@ -54,7 +54,7 @@ class ServerStore(SimplePaths):
         assert(isinstance(p_reference, PackageReference))
         rev_file = self._last_package_revision_path(p_reference)
         if self._storage_adapter.path_exists(rev_file):
-            return self._storage_adapter.read_file(rev_file)
+            return self._storage_adapter.read_file(rev_file, lock_file=rev_file + ".lock")
         else:
             return None
 

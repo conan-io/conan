@@ -113,7 +113,7 @@ class RemoteRegistry(object):
             remotes, refs = self._load()
             return self._find_ref_in(str(conan_reference), refs)
 
-    def get_remote(self, conan_reference):
+    def get_recipe_remote(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             full_ref = self._find_ref_in(str(conan_reference), refs)

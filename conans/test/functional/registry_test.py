@@ -59,11 +59,11 @@ class RegistryTest(unittest.TestCase):
 
         remotes = registry.remotes
         registry.set_ref(ref, remotes[0])
-        remote = registry.get_remote(ref)
+        remote = registry.get_recipe_remote(ref)
         self.assertEqual(remote, remotes[0])
 
         registry.set_ref(ref, remotes[0])
-        remote = registry.get_remote(ref)
+        remote = registry.get_recipe_remote(ref)
         self.assertEqual(remote, remotes[0])
 
     def insert_test(self):
@@ -126,9 +126,9 @@ class RegistryTest(unittest.TestCase):
         registry = self._get_registry()
         registry.add_ref(ref + "#revision", "conan.io")
         registry.update_ref(ref, "conan.io2")
-        self.assertEquals(registry.get_remote(ref).name, "conan.io2")
-        self.assertEquals(registry.get_remote(ref + "#revision").name, "conan.io2")
+        self.assertEquals(registry.get_recipe_remote(ref).name, "conan.io2")
+        self.assertEquals(registry.get_recipe_remote(ref + "#revision").name, "conan.io2")
 
         registry.update_ref(ref + "#revision", "conan.io")
-        self.assertEquals(registry.get_remote(ref).name, "conan.io")
-        self.assertEquals(registry.get_remote(ref + "#revision").name, "conan.io")
+        self.assertEquals(registry.get_recipe_remote(ref).name, "conan.io")
+        self.assertEquals(registry.get_recipe_remote(ref + "#revision").name, "conan.io")

@@ -73,14 +73,12 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_WORKSPACE
             return
 
-        conan_info_path = os.path.join(package_folder, CONANINFO)
-
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)
             elif os.path.exists(package_folder) and node.conan_ref.revision:
-                recipe_revision_of_package = ConanInfo.load_file(conan_info_path).recipe_revision
+                recipe_revision_of_package = ConanInfo.load_from_package(package_folder).recipe_revision
                 if recipe_revision_of_package != conan_ref.revision:
                     output.warn("The current package revision doesn't match the recipe "
                                 "revision: %s" % package_folder)
@@ -89,7 +87,7 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:
-            remote = self._registry.get_remote(conan_ref)
+            remote = self._registry.get_recipe_remote(conan_ref)
         remotes = self._registry.remotes
 
         if os.path.exists(package_folder):
@@ -105,7 +103,7 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
-                package_hash = ConanInfo.load_file(conan_info_path).recipe_hash
+                package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:

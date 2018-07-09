@@ -45,10 +45,10 @@ class ConanProxy(object):
             if full_ref.revision != reference.revision:
                 output.info("Requested different revision of %s..." % str(reference))
                 remote, new_ref = self._download_recipe(reference, output, remote_name)
-                status = RECIPE_DOWNLOADED
+                status = RECIPE_UPDATED
                 return conanfile_path, status, remote, new_ref
 
-        remote = self._registry.get_remote(reference)
+        remote = self._registry.get_recipe_remote(reference)
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
@@ -74,8 +74,8 @@ class ConanProxy(object):
             status = RECIPE_NOT_IN_REMOTE
             log_recipe_got_from_local_cache(reference)
             self._recorder.recipe_fetched_from_cache(reference)
-            new_ref = self._registry.get_ref_with_revision(reference)
-            return conanfile_path, status, update_remote, remote, new_ref or reference
+            new_ref = self._registry.get_ref_with_revision(reference) or reference
+            return conanfile_path, status, update_remote, remote, new_ref
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -111,7 +111,7 @@ class ConanProxy(object):
             output.info("Not found, retrieving from server '%s' " % remote_name)
             remote = self._registry.remote(remote_name)
         else:
-            remote = self._registry.get_remote(conan_reference)
+            remote = self._registry.get_recipe_remote(conan_reference)
             if remote:
                 output.info("Retrieving from predefined remote '%s'" % remote.name)
 

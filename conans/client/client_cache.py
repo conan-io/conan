@@ -232,11 +232,6 @@ class ClientCache(SimplePaths):
             return None, None
         return self._digests(package_folder)
 
-    def load_package_info(self, package_reference):
-        package_folder = self.package(package_reference, short_paths=None)
-        info_path = os.path.join(package_folder, CONANINFO)
-        return ConanInfo.load_file(info_path)
-
     @staticmethod
     def _digests(folder, exports_sources_folder=None):
         readed_digest = FileTreeManifest.load(folder)
@@ -283,6 +278,9 @@ class ClientCache(SimplePaths):
             revision = scm_data.recipe_revision
 
         return revision
+
+    def package_revision(self, package_ref):
+        return self.package_manifests(package_ref)[1].summary_hash
 
 
 def _mix_settings_with_env(settings):

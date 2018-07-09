@@ -1,9 +1,12 @@
+import os
+
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
 from conans.model.values import Values
+from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
@@ -319,6 +322,10 @@ class ConanInfo(object):
             raise ConanException("Does not exist %s" % conan_info_path)
         else:
             return ConanInfo.loads(config_text)
+
+    def load_from_package(self, package_folder):
+        info_path = os.path.join(package_folder, CONANINFO)
+        return self.load_file(info_path)
 
     def package_id(self):
         """ The package_id of a conans is the sha1 of its specific requirements,
