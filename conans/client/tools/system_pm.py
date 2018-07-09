@@ -141,7 +141,7 @@ class AptTool(object):
 
 class YumTool(object):
     def update(self):
-        _run(self._runner, "%syum check-update" % self._sudo_str, accepted_returns=[0, 100])
+        _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
