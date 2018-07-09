@@ -136,8 +136,6 @@ class Downloader(object):
         if not response.ok:  # Do not retry if not found or whatever controlled error
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
-            elif response.status_code == 401:
-                raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
