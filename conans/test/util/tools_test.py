@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import threading
-
 import bottle
 import mock
 import os
@@ -28,7 +26,8 @@ from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
+    StoppableThreadBottle
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -1180,7 +1179,6 @@ class RealRequestTest(unittest.TestCase):
     Open a real server to test tools that download stuff.
     """
 
-    server = None
     thread = None
     file = None
 
@@ -1196,27 +1194,14 @@ class RealRequestTest(unittest.TestCase):
                 self.file = os.path.abspath("sample.tar.gz")
                 assert(os.path.exists(self.file))
 
-            # Instance server and run it in a stoppable thread
-            self.server = bottle.Bottle()
+            # Instance stoppable thread server and add endpoint
+            self.thread = StoppableThreadBottle(port=8266)
 
-            @self.server.get("/this_is_not_the_file_name")
+            @self.thread.server.get("/this_is_not_the_file_name")
             def get_file():
                 return bottle.static_file(self.file, root=os.path.dirname(self.file),
                                           download=self.file)
 
-            class StoppableThread(threading.Thread):
-                """Thread class with a stop() method."""
-
-                def __init__(self, *args, **kwargs):
-                    super(StoppableThread, self).__init__(*args, **kwargs)
-                    self._stop = threading.Event()
-
-                def stop(self):
-                    self._stop.set()
-
-            self.thread = StoppableThread(target=self.server.run,
-                                          kwargs={"host": "0.0.0.0", "port": 8266})
-            self.thread.daemon = True
             self.thread.start()
             time.sleep(1)
 
