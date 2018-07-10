@@ -997,6 +997,36 @@ ProgramFiles(x86)=C:\Program Files (x86)
         else:
             self.assertEqual(str, type(result))
 
+    @attr('slow')
+    def get_filename_download_test(self):
+        # Create a tar file to be downloaded from server
+        with tools.chdir(tools.mkdir_tmp()):
+            import tarfile
+            tar_file = tarfile.open("sample.tar.gz", "w:gz")
+            tools.mkdir("test_folder")
+            tar_file.add(os.path.abspath("test_folder"), "test_folder")
+            tar_file.close()
+            file = os.path.abspath("sample.tar.gz")
+            assert (os.path.exists(file))
+
+        # Instance stoppable thread server and add endpoint
+        thread = StoppableThreadBottle(port=8266)
+
+        @thread.server.get("/this_is_not_the_file_name")
+        def get_file():
+            return bottle.static_file(file, root=os.path.dirname(file), download=file)
+
+        thread.start()
+        time.sleep(1)
+
+        # Test: If filename cannot be deduced from url, filename parameter should be provided
+        from zipfile import BadZipfile
+        with tools.chdir(tools.mkdir_tmp()):
+            with self.assertRaises(BadZipfile):
+                tools.get("http://localhost:8266/this_is_not_the_file_name")
+            tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
+        thread.stop()
+
 
 class GitToolTest(unittest.TestCase):
 
@@ -1063,10 +1093,10 @@ class GitToolTest(unittest.TestCase):
         def _create_paths():
             tmp = temp_folder()
             submodule_path = os.path.join(
-                tmp, 
+                tmp,
                 os.path.basename(os.path.normpath(submodule)))
             subsubmodule_path = os.path.join(
-                submodule_path, 
+                submodule_path,
                 os.path.basename(os.path.normpath(subsubmodule)))
             return tmp, submodule_path, subsubmodule_path
 
@@ -1083,7 +1113,7 @@ class GitToolTest(unittest.TestCase):
         with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
             git.clone(path, submodule="invalid")
 
-        # Check shallow 
+        # Check shallow
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
         git.clone(path, submodule="shallow")
@@ -1171,47 +1201,3 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
-
-
-@attr('slow')
-class RealRequestTest(unittest.TestCase):
-    """
-    Open a real server to test tools that download stuff.
-    """
-
-    thread = None
-    file = None
-
-    def setUp(self):
-        if not self.thread:
-            # Create a tar file to be downloaded from server
-            with tools.chdir(tools.mkdir_tmp()):
-                import tarfile
-                tar_file = tarfile.open("sample.tar.gz", "w:gz")
-                tools.mkdir("test_folder")
-                tar_file.add(os.path.abspath("test_folder"), "test_folder")
-                tar_file.close()
-                self.file = os.path.abspath("sample.tar.gz")
-                assert(os.path.exists(self.file))
-
-            # Instance stoppable thread server and add endpoint
-            self.thread = StoppableThreadBottle(port=8266)
-
-            @self.thread.server.get("/this_is_not_the_file_name")
-            def get_file():
-                return bottle.static_file(self.file, root=os.path.dirname(self.file),
-                                          download=self.file)
-
-            self.thread.start()
-            time.sleep(1)
-
-    def tearDown(self):
-        self.thread.stop()
-
-    def get_filename_download_test(self):
-        """If filename cannot be deduced from url, filename parameter should be provided"""
-        from zipfile import BadZipFile
-        with tools.chdir(tools.mkdir_tmp()):
-            with self.assertRaises(BadZipFile):
-                tools.get("http://localhost:8266/this_is_not_the_file_name")
-            tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
