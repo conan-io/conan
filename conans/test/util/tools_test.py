@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import threading
 
+import bottle
 import mock
 import os
 import platform
@@ -8,6 +10,7 @@ import unittest
 from collections import namedtuple
 
 import six
+import time
 from mock.mock import patch, mock_open
 from six import StringIO
 
@@ -32,6 +35,8 @@ from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, Ch
     set_global_instances
 from conans.util.files import save, load, md5
 import requests
+
+from nose.plugins.attrib import attr
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -1167,3 +1172,61 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
+
+
+@attr('slow')
+class RealRequestTest(unittest.TestCase):
+    """
+    Open a real server to test tools that download stuff.
+    """
+
+    server = None
+    thread = None
+    file = None
+
+    def setUp(self):
+        if not self.thread:
+            # Create a tar file to be downloaded from server
+            with tools.chdir(tools.mkdir_tmp()):
+                import tarfile
+                tar_file = tarfile.open("sample.tar.gz", "w:gz")
+                tools.mkdir("test_folder")
+                tar_file.add(os.path.abspath("test_folder"), "test_folder")
+                tar_file.close()
+                self.file = os.path.abspath("sample.tar.gz")
+                assert(os.path.exists(self.file))
+
+            # Instance server and run it in a stoppable thread
+            self.server = bottle.Bottle()
+
+            @self.server.get("/this_is_not_the_file_name")
+            def get_file():
+                return bottle.static_file(self.file, root=os.path.dirname(self.file),
+                                          download=self.file)
+
+            class StoppableThread(threading.Thread):
+                """Thread class with a stop() method."""
+
+                def __init__(self, *args, **kwargs):
+                    super(StoppableThread, self).__init__(*args, **kwargs)
+                    self._stop = threading.Event()
+
+                def stop(self):
+                    self._stop.set()
+
+            self.thread = StoppableThread(target=self.server.run,
+                                          kwargs={"host": "0.0.0.0", "port": 8266})
+            self.thread.daemon = True
+            self.thread.start()
+            time.sleep(1)
+
+    def tearDown(self):
+        self.thread.stop()
+
+    def get_filename_download_test(self):
+        """If filename cannot be deduced from url, filename parameter should be provided"""
+        from zipfile import BadZipFile
+        with tools.chdir(tools.mkdir_tmp()):
+            with self.assertRaises(BadZipFile):
+                tools.get("http://localhost:8266/this_is_not_the_file_name")
+            tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")

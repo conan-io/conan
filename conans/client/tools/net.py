@@ -9,21 +9,21 @@ from conans.errors import ConanException
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256='', destination="."):
+def get(url, md5='', sha1='', sha256='', destination=".", filename=""):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    filename = os.path.basename(url)
-    download(url, filename)
+    file_name = filename or os.path.basename(url)
+    download(url, file_name)
 
     if md5:
-        check_md5(filename, md5)
+        check_md5(file_name, md5)
     if sha1:
-        check_sha1(filename, sha1)
+        check_sha1(file_name, sha1)
     if sha256:
-        check_sha256(filename, sha256)
+        check_sha256(file_name, sha256)
 
-    unzip(filename, destination=destination)
-    os.unlink(filename)
+    unzip(file_name, destination=destination)
+    os.unlink(file_name)
 
 
 def ftp_download(ip, filename, login='', password=''):
