@@ -965,7 +965,9 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         # create the parser for the "a" command
-        subparsers.add_parser('list', help='List current remotes')
+        parser_list = subparsers.add_parser('list', help='List current remotes')
+        parser_list.add_argument("-raw", "--raw", action='store_true', default=False,
+                                 help='Raw format. Valid for "remotes.txt" file for "conan config install"')
         parser_add = subparsers.add_parser('add', help='Add a remote')
         parser_add.add_argument('remote', help='Name of the remote')
         parser_add.add_argument('url', help='URL of the remote')
@@ -1014,7 +1016,7 @@ class Command(object):
 
         if args.subcommand == "list":
             remotes = self._conan.remote_list()
-            self._outputer.remote_list(remotes)
+            self._outputer.remote_list(remotes, args.raw)
         elif args.subcommand == "add":
             return self._conan.remote_add(remote, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
