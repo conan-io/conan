@@ -10,7 +10,8 @@ from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
 
 
-class Git(object):
+class SCMBase(object):
+    cmd_command = None
 
     def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
                  runner=None):
@@ -24,7 +25,7 @@ class Git(object):
         self._runner = runner
 
     def run(self, command):
-        command = "git %s" % command
+        command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
@@ -42,6 +43,10 @@ class Git(object):
         pwd_enc = quote_plus(self._password)
         url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
         return url
+
+
+class Git(SCMBase):
+    cmd_command = "git"
 
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
@@ -120,3 +125,79 @@ class Git(object):
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
+
+
+class SVN(SCMBase):
+    cmd_command = "svn"
+
+    def __init__(self, runner=None, *args, **kwargs):
+        def runner_no_strip(command):
+            return subprocess.check_output(command, shell=True).decode()
+        runner = runner or runner_no_strip
+        super(SVN, self).__init__(runner=runner, *args, **kwargs)
+
+    def clone(self, url, branch=None, submodule=None):
+        assert branch is None, "This concept has no meaning for SVN"
+        assert submodule is None, "Here we can implement something about svn:externals"
+        assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
+
+        params = "--no-auth-cache --non-interactive"
+        params += " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
+
+        if not os.listdir(self.folder):
+            url = self.get_url_with_credentials(url)
+            command = "co {url} . {params}".format(url=url, params=params)
+            output = self.run(command)
+        else:
+            output = self.run("revert . --recursive {params}".format(params=params))
+            output += self.run("cleanup . --remove-unversioned --remove-ignored {params}".format(params=params))
+
+        return output
+
+    def checkout(self, element):
+        # Element can only be a revision number
+        return self.run("update -r {rev}".format(rev=element))
+
+    def excluded_files(self):
+        excluded_list = []
+        output = self.run("status --no-ignore")
+        for it in output.splitlines():
+            if it[0] == 'I':
+                file = it[9:].strip()
+                excluded_list.append(os.path.normpath(os.path.join(self.folder, file)))
+        excluded_list.append(os.path.normpath(os.path.join(self.folder, ".svn")))
+        return excluded_list
+
+    def get_remote_url(self, remote_name=None):
+        assert remote_name is None, "This concept has no meaning for SVN"
+        return self.run("info --show-item url").strip()
+
+    def get_revision(self):
+        wc_revision = self.run("info --show-item revision").strip()
+
+        # Check if working copy is consistent
+        # TODO: how are we going to deal with it?
+        output = self.run("status -u -r {}".format(wc_revision))
+        offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
+        it = iter(output.splitlines())
+        while True:
+            try:
+                item = next(it)
+            except StopIteration:
+                break
+            else:
+                if item.startswith("Status against revision"):
+                    continue
+                if item[0] == '?':
+                    continue
+
+                if any(item[i] != ' ' for i in offending_columns):
+                    # TODO: self.output("Your working copy is not in a clean state.")
+                    if item[6] == 'C':
+                        next(it)  # Skip line as it contains information about the conflict.
+                    pass
+                if item[8] == '*':
+                    # TODO: self.output("A different revision exists on the server.")
+                    pass
+
+        return wc_revision

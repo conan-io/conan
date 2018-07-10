@@ -1,6 +1,6 @@
 import json
 
-from conans.client.tools.scm import Git
+from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
 from conans.util.files import load, save
 import re
@@ -53,12 +53,12 @@ class SCM(object):
         self.repo = self._get_repo()
 
     def _get_repo(self):
-        repo = {"git": Git(self.repo_folder, verify_ssl=self._data.verify_ssl,
-                           username=self._data.username,
-                           password=self._data.password)}.get(self._data.type)
-        if not repo:
+        repo_class = {"git": Git, "svn": SVN}.get(self._data.type)
+        if not repo_class:
             raise ConanException("SCM not supported: %s" % self._data.type)
-        return repo
+
+        return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
+                          username=self._data.username, password=self._data.password)
 
     @property
     def excluded_files(self):
