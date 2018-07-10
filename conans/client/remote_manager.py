@@ -23,6 +23,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_package_download)
 from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
+from conans.search.search import filter_packages
 
 
 class RemoteManager(object):
@@ -254,7 +255,9 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, reference, query):
-        return self._call_remote(remote, "search_packages", reference, query)
+        packages = self._call_remote(remote, "search_packages", reference, query)
+        packages = filter_packages(query, packages)
+        return packages
 
     def remove(self, conan_ref, remote):
         """

@@ -61,7 +61,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     """
 
     def compatible_prop(setting_value, prop_value):
-        return setting_value is None or prop_value == setting_value
+        return (prop_value == setting_value) or (prop_value == "None" and setting_value is None)
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
