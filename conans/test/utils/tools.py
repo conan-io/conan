@@ -512,8 +512,9 @@ class TestClient(object):
 
 
 class StoppableThreadBottle(threading.Thread):
-
-    # Instance server and run it in a stoppable thread
+    """
+    Real server to test download endpoints
+    """
     server = None
 
     def __init__(self, host="0.0.0.0", port=8080):
