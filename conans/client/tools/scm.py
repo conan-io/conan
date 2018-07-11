@@ -136,9 +136,7 @@ class SVN(SCMBase):
         runner = runner or runner_no_strip
         super(SVN, self).__init__(runner=runner, *args, **kwargs)
 
-    def clone(self, url, branch=None, submodule=None):
-        assert branch is None, "This concept has no meaning for SVN"
-        assert submodule is None, "Here we can implement something about svn:externals"
+    def clone(self, url):
         assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
 
         params = "--no-auth-cache --non-interactive"
