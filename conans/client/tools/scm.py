@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from subprocess import CalledProcessError, PIPE, STDOUT
 
@@ -8,13 +9,14 @@ from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
+from conans.client.output import ConanOutput
 
 
 class SCMBase(object):
     cmd_command = None
 
     def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+                 runner=None, output=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.mkdir(self.folder)
@@ -23,6 +25,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
+        self.output = output or ConanOutput(sys.stdout, True)
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -174,28 +177,21 @@ class SVN(SCMBase):
         wc_revision = self.run("info --show-item revision").strip()
 
         # Check if working copy is consistent
-        # TODO: how are we going to deal with it?
         output = self.run("status -u -r {}".format(wc_revision))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
         it = iter(output.splitlines())
         while True:
             try:
                 item = next(it)
-            except StopIteration:
-                break
-            else:
+
                 if item.startswith("Status against revision"):
                     continue
-                if item[0] == '?':
+                if item[0] == '?':  # Untracked file
                     continue
-
                 if any(item[i] != ' ' for i in offending_columns):
-                    # TODO: self.output("Your working copy is not in a clean state.")
-                    if item[6] == 'C':
-                        next(it)  # Skip line as it contains information about the conflict.
-                    pass
-                if item[8] == '*':
-                    # TODO: self.output("A different revision exists on the server.")
-                    pass
+                    self.output.warn("Your working copy has modified files, conflicts or different revisions.")
+                    break
+            except StopIteration:
+                break
 
         return wc_revision

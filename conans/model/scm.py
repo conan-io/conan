@@ -1,9 +1,11 @@
 import json
+import sys
+import re
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
 from conans.util.files import load, save
-import re
+from conans.client.output import ConanOutput
 
 
 class SCMData(object):
@@ -46,11 +48,12 @@ class SCMData(object):
 
 
 class SCM(object):
-    def __init__(self, data, repo_folder):
+    def __init__(self, data, repo_folder, output=None):
         self._data = data
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
+        self.output = output or ConanOutput(sys.stdout, True)
 
     def _get_repo(self):
         repo_class = {"git": Git, "svn": SVN}.get(self._data.type)
