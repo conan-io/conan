@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import bottle
+from bottle import static_file
 import mock
 import os
 import platform
@@ -1018,7 +1018,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         @thread.server.get("/this_is_not_the_file_name")
         def get_file():
-            return bottle.static_file(file, root=os.path.dirname(file))
+            return static_file(os.path.basename(file), root=os.path.dirname(file))
 
         thread.run_server()
 
