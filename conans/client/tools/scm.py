@@ -163,8 +163,8 @@ class SVN(SCMBase):
         output = self.run("status --no-ignore")
         for it in output.splitlines():
             if it[0] == 'I':
-                file = it[9:].strip()
-                excluded_list.append(os.path.normpath(os.path.join(self.folder, file)))
+                filepath = it[9:].strip()
+                excluded_list.append(os.path.normpath(os.path.join(self.folder, filepath)))
         excluded_list.append(os.path.normpath(os.path.join(self.folder, ".svn")))
         return excluded_list
 
