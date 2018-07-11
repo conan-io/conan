@@ -12,6 +12,8 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
+from conans.client.run_environment import RunEnvironment
+from conans.client.tools.oss import OSInfo
 
 
 def create_options(conanfile):
@@ -255,15 +257,26 @@ class ConanFile(object):
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True):
-        if not win_bash:
-            retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
-        else:
+    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
+            ignore_errors=False, run_environment=False):
+        def _run():
+            if not win_bash:
+                return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
-            retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                                msys_mingw=msys_mingw)
+            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+                                             msys_mingw=msys_mingw)
+        if run_environment:
+            with tools.environment_append(RunEnvironment(self).vars):
+                os_info = OSInfo()
+                if os_info.is_macos:
+                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), command)
+                elif not os_info.is_windows:  # Assume other Windows and Mac use LD_LIBRARY_PATH
+                    command = 'LD_LIBRARY_PATH="%s" %s' % (os.environ.get('LD_LIBRARY_PATH', ''), command)
+                retcode = _run()
+        else:
+            retcode = _run()
 
-        if retcode != 0:
+        if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
         return retcode

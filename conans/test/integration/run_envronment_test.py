@@ -86,21 +86,13 @@ class Pkg(ConanFile):
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h})
         client.run("create . Pkg/0.1@user/testing")
-  
-        reuse = '''from conans import ConanFile, RunEnvironment, tools
-import platform, os
+
+        reuse = '''from conans import ConanFile
 class HelloConan(ConanFile):
     requires = "Pkg/0.1@user/testing"
 
     def build(self):
-        run_env = RunEnvironment(self)
-        with tools.environment_append(run_env.vars):
-            if platform.system() == "Windows":
-                self.run("say_hello")
-            elif platform.system() == "Darwin":
-                self.run('DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), "say_hello"))
-            else:
-                self.run('LD_LIBRARY_PATH="%s" %s' % (os.environ.get('LD_LIBRARY_PATH', ''), "say_hello"))
+        self.run("say_hello", run_environment=True)
 '''
 
         client.save({"conanfile.py": reuse}, clean_first=True)
