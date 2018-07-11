@@ -12,7 +12,7 @@ from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
-    make_read_only
+    make_read_only, set_dirty, clean_dirty
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch_folder
 from conans.util.log import logger
@@ -40,6 +40,14 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
+            tgz_path = os.path.join(export_folder, f)
+            if is_dirty(tgz_path):
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(conan_reference), f))
+                os.remove(tgz_path)
+                clean_dirty(tgz_path)
+
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
@@ -100,6 +108,11 @@ class RemoteManager(object):
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,
                                                                              package_reference.conan,
                                                                              package_reference.package_id))
+        tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
+        if is_dirty(tgz_path):
+            self._output.warn("%s: Removing %s, marked as dirty" % (str(package_reference), PACKAGE_TGZ_NAME))
+            os.remove(tgz_path)
+            clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
 
@@ -332,6 +345,7 @@ def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    set_dirty(tgz_path)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -357,6 +371,7 @@ def compress_files(files, symlinks, name, dest_dir):
 
         tgz.close()
 
+    clean_dirty(tgz_path)
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
 
