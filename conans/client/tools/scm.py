@@ -169,8 +169,7 @@ class SVN(SCMBase):
         excluded_list.append(os.path.normpath(os.path.join(self.folder, ".svn")))
         return excluded_list
 
-    def get_remote_url(self, remote_name=None):
-        assert remote_name is None, "This concept has no meaning for SVN"
+    def get_remote_url(self):
         return self.run("info --show-item url").strip()
 
     def get_revision(self):
@@ -189,7 +188,7 @@ class SVN(SCMBase):
                 if item[0] == '?':  # Untracked file
                     continue
                 if any(item[i] != ' ' for i in offending_columns):
-                    self.output.warn("Your working copy has modified files, conflicts or different revisions.")
+                    self.output.warn("Working copy has modified files, conflicts or different revisions.")
                     break
             except StopIteration:
                 break
