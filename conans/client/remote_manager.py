@@ -1,16 +1,15 @@
 import os
-import shutil
 import stat
 import tarfile
-import time
 import traceback
 
+import shutil
+import time
 from requests.exceptions import ConnectionError
 
 from conans.client.source import merge_directories
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.env_reader import get_env
@@ -27,7 +26,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
 
 
 class RemoteManager(object):
-    """ Will handle the remotes to get conans, packages etc """
+    """ Will handle the remotes to get recipes, packages etc """
 
     def __init__(self, client_cache, auth_manager, output):
         self._client_cache = client_cache
@@ -381,7 +380,7 @@ def uncompress_file(src_path, dest_folder):
             if os.path.exists(dest_folder):
                 shutil.rmtree(dest_folder)
                 error_msg += "Folder removed"
-        except Exception as e:
+        except Exception:
             error_msg += "Folder not removed, files/package might be damaged, remove manually"
         raise ConanException(error_msg)
 

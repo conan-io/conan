@@ -89,10 +89,6 @@ class HelloConan(ConanFile):
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "7200b02593a12d8cf214c92ddf805ea9" % str(ref))
 
-        self.assertIn("lib/1.0@lasote/testing#%s: Package installed "
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#%s" % (rev, pkg_rev),
-                      self.client.out)
-
         contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "2")
 

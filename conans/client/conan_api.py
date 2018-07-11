@@ -718,11 +718,11 @@ class ConanAPIV1(object):
             raise
 
         for remote, remote_ref in references.items():
-            recorder.add_recipe(str(remote), str(reference))
+            recorder.add_recipe(str(remote), reference.full_repr())
             if remote_ref.ordered_packages:
                 for package_id, properties in remote_ref.ordered_packages.items():
                     package_recipe_hash = properties.get("recipe_hash", None)
-                    recorder.add_package(str(remote), str(reference), package_id,
+                    recorder.add_package(str(remote), reference.full_repr(), package_id,
                                          properties.get("options", []),
                                          properties.get("settings", []),
                                          properties.get("full_requires", []),
@@ -820,7 +820,7 @@ class ConanAPIV1(object):
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote=None):
         from conans.client.local_file_getter import get_path
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(reference)
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
@@ -832,8 +832,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_alias(self, reference, target_reference):
-        reference = ConanFileReference.loads(str(reference))
-        target_reference = ConanFileReference.loads(str(target_reference))
+        reference = ConanFileReference.loads(reference)
+        target_reference = ConanFileReference.loads(target_reference)
         return export_alias(reference, target_reference, self._client_cache)
 
     @api_method

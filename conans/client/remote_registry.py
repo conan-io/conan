@@ -111,15 +111,15 @@ class RemoteRegistry(object):
     def get_ref_with_revision(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            return self._find_ref_in(str(conan_reference), refs)
+            return self._find_ref_in(conan_reference.full_repr(), refs)
 
     def get_recipe_remote(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            full_ref = self._find_ref_in(str(conan_reference), refs)
+            full_ref = self._find_ref_in(conan_reference.full_repr(), refs)
             if not full_ref:
                 return None
-            remote_name = refs[str(full_ref)]
+            remote_name = refs[full_ref.full_repr()]
             try:
                 return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
             except:
@@ -127,11 +127,10 @@ class RemoteRegistry(object):
 
     def remove_ref(self, conan_reference, quiet=False):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
             try:
-                full_ref = self._find_ref_in(str(conan_reference), refs)
-                del refs[str(full_ref)]
+                full_ref = self._find_ref_in(conan_reference, refs)
+                del refs[full_ref.full_repr()]
                 self._save(remotes, refs)
             except:
                 if not quiet:
@@ -140,7 +139,7 @@ class RemoteRegistry(object):
 
     def set_ref(self, conan_reference, remote):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
+            conan_reference = conan_reference.full_repr()
             remotes, refs = self._load()
             refs[conan_reference] = remote.name
             self._save(remotes, refs)
@@ -159,7 +158,6 @@ class RemoteRegistry(object):
 
     def add_ref(self, conan_reference, remote):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
 
             new_ref = ConanFileReference.loads(conan_reference).copy_without_revisions()
@@ -175,14 +173,13 @@ class RemoteRegistry(object):
 
     def update_ref(self, conan_reference, remote):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
             full_ref = self._find_ref_in(conan_reference, refs)
             if not full_ref:
                 raise ConanException("%s does not exist. Use add" % conan_reference)
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
-            refs[str(full_ref)] = remote
+            refs[full_ref.full_repr()] = remote
             self._save(remotes, refs)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):

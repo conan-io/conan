@@ -93,7 +93,7 @@ class ServerStore(SimplePaths):
 
         latest = self.get_last_revision(reference)
         if not latest:
-            raise NotFoundException("Recipe not found: '%s'" % str(reference))
+            raise NotFoundException("Recipe not found: '%s'" % reference.full_repr())
 
         reference.revision = latest
         return reference

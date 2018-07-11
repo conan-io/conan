@@ -1,22 +1,22 @@
 import json
-import unittest
-
-from conans.model.info import ConanInfo
-from conans.test.utils.tools import TestClient, TestServer, TestRequester
-from conans.test.utils.test_files import hello_source_files, temp_folder,\
-    hello_conan_files
-from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 import platform
 import stat
-from conans.util.files import load, mkdir, save
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.test.utils.test_files import uncompress_packaged_files
-from conans.tools import untargz
+import unittest
+
 from requests.packages.urllib3.exceptions import ConnectionError
+
+from conans.client.manager import CONANFILE
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.test_files import hello_source_files, temp_folder, \
+    hello_conan_files
+from conans.test.utils.test_files import uncompress_packaged_files
+from conans.test.utils.tools import TestClient, TestServer, TestRequester
+from conans.tools import untargz
+from conans.util.files import load, mkdir, save
 
 myconan1 = """
 from conans import ConanFile

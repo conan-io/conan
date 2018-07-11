@@ -53,7 +53,7 @@ class RestV2Methods(RestCommonMethods):
         reference = ConanFileReference.loads(data["reference"])
         files.pop(EXPORT_SOURCES_TGZ_NAME, None)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        url = self._recipe_url(ConanFileReference.loads(data["reference"]))
+        url = self._recipe_url(reference)
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret, reference

@@ -159,7 +159,7 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % str(reference))
+                                           % reference.full_repr())
                     continue
 
             if self._ask_permission(reference, src, build_ids, package_ids, force):
