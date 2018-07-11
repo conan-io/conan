@@ -11,6 +11,7 @@ from io import StringIO
 import bottle
 import requests
 import six
+import time
 from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
@@ -517,7 +518,7 @@ class StoppableThreadBottle(threading.Thread):
     """
     server = None
 
-    def __init__(self, host="0.0.0.0", port=8080):
+    def __init__(self, host="127.0.0.1", port=8266):
         self.server = bottle.Bottle()
         super(StoppableThreadBottle, self).__init__(target=self.server.run, kwargs={"host": host,
                                                                                     "port": port})
@@ -526,3 +527,7 @@ class StoppableThreadBottle(threading.Thread):
 
     def stop(self):
         self._stop.set()
+
+    def run_server(self):
+        self.start()
+        time.sleep(1)

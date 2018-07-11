@@ -8,7 +8,6 @@ import unittest
 from collections import namedtuple
 
 import six
-import time
 from mock.mock import patch, mock_open
 from six import StringIO
 
@@ -997,6 +996,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
         else:
             self.assertEqual(str, type(result))
 
+    def get_filename_exception_test(self):
+        with self.assertRaisesRegexp(ConanException,
+                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+            tools.get("fakeurl.com/?file=1")
+
     @attr('slow')
     def get_filename_download_test(self):
         # Create a tar file to be downloaded from server
@@ -1007,21 +1011,20 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tar_file.add(os.path.abspath("test_folder"), "test_folder")
             tar_file.close()
             file = os.path.abspath("sample.tar.gz")
-            assert (os.path.exists(file))
+            assert(os.path.exists(file))
 
         # Instance stoppable thread server and add endpoint
-        thread = StoppableThreadBottle(port=8266)
+        thread = StoppableThreadBottle()
 
         @thread.server.get("/this_is_not_the_file_name")
         def get_file():
-            return bottle.static_file(file, root=os.path.dirname(file), download=file)
+            return bottle.static_file(file, root=os.path.dirname(file))
 
-        thread.start()
-        time.sleep(1)
+        thread.run_server()
 
         # Test: If filename cannot be deduced from url, filename parameter should be provided
-        from zipfile import BadZipfile
         with tools.chdir(tools.mkdir_tmp()):
+            from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:8266/this_is_not_the_file_name")
             tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
