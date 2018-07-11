@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from bottle import static_file
+from bottle import static_file, request
 import mock
 import os
 import platform
@@ -996,11 +996,6 @@ ProgramFiles(x86)=C:\Program Files (x86)
         else:
             self.assertEqual(str, type(result))
 
-    def get_filename_exception_test(self):
-        with self.assertRaisesRegexp(ConanException,
-                                     "Cannot deduce file name form url. Use 'filename' parameter."):
-            tools.get("fakeurl.com/?file=1")
-
     @attr('slow')
     def get_filename_download_test(self):
         # Create a tar file to be downloaded from server
@@ -1013,21 +1008,37 @@ ProgramFiles(x86)=C:\Program Files (x86)
             file = os.path.abspath("sample.tar.gz")
             assert(os.path.exists(file))
 
-        # Instance stoppable thread server and add endpoint
+        # Instance stoppable thread server and add endpoints
         thread = StoppableThreadBottle()
 
         @thread.server.get("/this_is_not_the_file_name")
         def get_file():
             return static_file(os.path.basename(file), root=os.path.dirname(file))
 
+        @thread.server.get("/")
+        def get_file2():
+            self.assertEquals(request.query["file"], "1")
+            return static_file(os.path.basename(file), root=os.path.dirname(file))
+
         thread.run_server()
 
-        # Test: If filename cannot be deduced from url, filename parameter should be provided
+        # Test: File name cannot be deduced from '?file=1'
+        with self.assertRaisesRegexp(ConanException,
+                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+            tools.get("http://localhost:8266/?file=1")
+
+        # Test: Works with filename parameter instead of '?file=1'
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:8266/?file=1", filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
+
+        # Test: Use a different endpoint but still not the filename one
         with tools.chdir(tools.mkdir_tmp()):
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:8266/this_is_not_the_file_name")
             tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
 
