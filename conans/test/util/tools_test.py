@@ -817,6 +817,31 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
+        http_server = StoppableThreadBottle(port=8267)
+
+        with tools.chdir(tools.mkdir_tmp()):
+            with open("manual.html", "w") as fmanual:
+                fmanual.write("this is some content")
+                manual_file = os.path.abspath("manual.html")
+
+        from bottle import static_file, auth_basic
+        @http_server.server.get("/manual.html")
+        def get_manual():
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
+
+        def check_auth(user, password):
+            # Check user/password here
+            return user == "user" and password == "passwd"
+
+        @http_server.server.get('/basic-auth/<user>/<password>')
+        @auth_basic(check_auth)
+        def get_manual_auth(user, password):
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
+
+        http_server.run_server()
+
         out = TestBufferConanOutput()
         set_global_instances(out, requests)
         # Connection error
@@ -834,39 +859,34 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
-        tools.download("http://www.zlib.net/manual.html",
-                       dest, out=out,
-                       retry=3, retry_wait=0)
-
+        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
-            tools.download("http://www.zlib.net/manual.html",
-                           dest, out=out,
-                           retry=3, retry_wait=0, overwrite=False)
+            tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3,
+                           retry_wait=0, overwrite=False)
 
         # overwrite = True
-        tools.download("http://www.zlib.net/manual.html",
-                       dest, out=out,
-                       retry=3, retry_wait=0, overwrite=True)
-
+        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0,
+                       overwrite=True)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
 
         # Not authorized
         with self.assertRaises(ConanException):
-            tools.download("https://httpbin.org/basic-auth/user/passwd", dest, overwrite=True)
+            tools.download("http://localhost:8267/basic-auth/user/passwd", dest, overwrite=True)
 
         # Authorized
-        tools.download("https://httpbin.org/basic-auth/user/passwd", dest, auth=("user", "passwd"),
-                       overwrite=True)
+        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
+                       auth=("user", "passwd"), overwrite=True)
 
         # Authorized using headers
-        tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+        http_server.stop()
 
     def get_gnu_triplet_test(self):
         def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
