@@ -817,7 +817,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
-        http_server = StoppableThreadBottle()
+        http_server = StoppableThreadBottle(port=8267)
 
         with tools.chdir(tools.mkdir_tmp()):
             with open("manual.html", "w") as fmanual:
@@ -859,17 +859,17 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
-        tools.download("http://localhost:8266/manual.html", dest, out=out, retry=3, retry_wait=0)
+        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
-            tools.download("http://localhost:8266/manual.html", dest, out=out, retry=3,
+            tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3,
                            retry_wait=0, overwrite=False)
 
         # overwrite = True
-        tools.download("http://localhost:8266/manual.html", dest, out=out, retry=3, retry_wait=0,
+        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0,
                        overwrite=True)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
@@ -877,14 +877,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # Not authorized
         with self.assertRaises(ConanException):
-            tools.download("http://localhost:8266/basic-auth/user/passwd", dest, overwrite=True)
+            tools.download("http://localhost:8267/basic-auth/user/passwd", dest, overwrite=True)
 
         # Authorized
-        tools.download("http://localhost:8266/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
                        auth=("user", "passwd"), overwrite=True)
 
         # Authorized using headers
-        tools.download("http://localhost:8266/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
         http_server.stop()
 
