@@ -34,3 +34,68 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("install . --build missing")
         client.run("build .")
+        self.assertIn("Hello Hello0", client.out)
+
+    def test_shared_run_environment(self):
+        client = TestClient()
+        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+
+add_library(hello SHARED hello.cpp)
+add_executable(say_hello main.cpp)
+target_link_libraries(say_hello hello)"""
+        hello_h = """#ifdef WIN32
+  #define HELLO_EXPORT __declspec(dllexport)
+#else
+  #define HELLO_EXPORT
+#endif
+
+HELLO_EXPORT void hello();
+"""
+        hello_cpp = r"""#include "hello.h"
+#include <iostream>
+void hello(){
+    std::cout<<"Hello Tool!\n";
+}
+"""
+        main = """#include "hello.h"
+        int main(){
+            hello();
+        }
+        """
+        conanfile = """from conans import ConanFile, CMake
+class Pkg(ConanFile):
+    exports_sources = "*"
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+
+    def package(self):
+        self.copy("*say_hello.exe", dst="bin", keep_path=False)
+        self.copy("*say_hello", dst="bin", keep_path=False)
+        self.copy(pattern="*.dll", dst="bin", keep_path=False)
+        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
+        self.copy(pattern="*.so", dst="lib", keep_path=False)
+"""
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmake,
+                     "main.cpp": main,
+                     "hello.cpp": hello_cpp,
+                     "hello.h": hello_h})
+        client.run("create . Pkg/0.1@user/testing")
+
+        reuse = '''from conans import ConanFile
+class HelloConan(ConanFile):
+    requires = "Pkg/0.1@user/testing"
+
+    def build(self):
+        self.run("say_hello", run_environment=True)
+'''
+
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("Hello Tool!", client.out)

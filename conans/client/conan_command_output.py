@@ -24,9 +24,12 @@ class CommandOutputer(object):
         for p in sorted(profiles):
             self.user_io.out.info(p)
 
-    def remote_list(self, remotes):
+    def remote_list(self, remotes, raw):
         for r in remotes:
-            self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+            if raw:
+                self.user_io.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+            else:
+                self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
         for ref, remote in refs.items():

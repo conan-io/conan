@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+from contextlib import contextmanager
 from subprocess import Popen, PIPE, STDOUT
 from conans.util.files import decode_text
 from conans.errors import ConanException
@@ -37,18 +38,19 @@ class ConanRunner(object):
         if self._print_commands_to_output and stream_output and self._log_run_to_output:
             stream_output.write(call_message)
 
-        # No output has to be redirected to logs or buffer or omitted
-        if output is True and not log_filepath and self._log_run_to_output and not subprocess:
-            return self._simple_os_call(command, cwd)
-        elif log_filepath:
-            if stream_output:
-                stream_output.write("Logging command output to file '%s'\n" % log_filepath)
-            with open(log_filepath, "a+") as log_handler:
-                if self._print_commands_to_output:
-                    log_handler.write(call_message)
-                return self._pipe_os_call(command, stream_output, log_handler, cwd)
-        else:
-            return self._pipe_os_call(command, stream_output, None, cwd)
+        with pyinstaller_bundle_env_cleaned():
+            # No output has to be redirected to logs or buffer or omitted
+            if output is True and not log_filepath and self._log_run_to_output and not subprocess:
+                return self._simple_os_call(command, cwd)
+            elif log_filepath:
+                if stream_output:
+                    stream_output.write("Logging command output to file '%s'\n" % log_filepath)
+                with open(log_filepath, "a+") as log_handler:
+                    if self._print_commands_to_output:
+                        log_handler.write(call_message)
+                    return self._pipe_os_call(command, stream_output, log_handler, cwd)
+            else:
+                return self._pipe_os_call(command, stream_output, None, cwd)
 
     def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
@@ -69,7 +71,7 @@ class ConanRunner(object):
                 if stream_output and self._log_run_to_output:
                     try:
                         stream_output.write(decoded_line)
-                    except UnicodeEncodeError:  # be agressive on text encoding
+                    except UnicodeEncodeError:  # be aggressive on text encoding
                         decoded_line = decoded_line.encode("latin-1", "ignore").decode("latin-1",
                                                                                        "ignore")
                         stream_output.write(decoded_line)
@@ -100,3 +102,27 @@ class ConanRunner(object):
             finally:
                 os.chdir(old_dir)
             return result
+
+
+if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
+
+    # http://pyinstaller.readthedocs.io/en/stable/runtime-information.html#ld-library-path-libpath-considerations
+    pyinstaller_bundle_dir = os.environ['LD_LIBRARY_PATH'].replace(
+        os.environ.get('LD_LIBRARY_PATH_ORIG', ''), ''
+    ).strip(';:')
+
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        """Removes the pyinstaller bundle directory from LD_LIBRARY_PATH
+
+        :return: None
+        """
+        ld_library_path = os.environ['LD_LIBRARY_PATH']
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '')
+        yield
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path
+
+else:
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        yield
