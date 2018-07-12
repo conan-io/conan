@@ -2,7 +2,6 @@ import os
 import six
 import unittest
 
-from io import StringIO
 from conans.client.runner import ConanRunner
 from conans.test.utils.tools import TestClient
 
@@ -18,6 +17,18 @@ class RunnerTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         return client
+
+    def ignore_error_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def source(self):
+        ret = self.run("not_a_command", ignore_errors=True)
+        self.output.info("RETCODE %s" % (ret!=0))
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertIn("RETCODE True", client.out)
 
     def basic_test(self):
         conanfile = '''
