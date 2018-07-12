@@ -118,7 +118,7 @@ if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
         :return: None
         """
         ld_library_path = os.environ['LD_LIBRARY_PATH']
-        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '')
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '').strip(';:')
         yield
         os.environ['LD_LIBRARY_PATH'] = ld_library_path
 
