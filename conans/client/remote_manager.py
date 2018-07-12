@@ -202,6 +202,7 @@ class RemoteManager(object):
         t1 = time.time()
 
         def filter_function(urls):
+            check_compressed_files(EXPORT_SOURCES_TGZ_NAME, urls)
             file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
             if file_url:
                 urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
@@ -340,8 +341,6 @@ def compress_package_files(files, symlinks, dest_folder, output):
 
 
 def compress_files(files, symlinks, name, dest_dir):
-    """Compress the package and returns the new dict (name => content) of files,
-    only with the conanXX files and the compressed file"""
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
@@ -378,16 +377,20 @@ def compress_files(files, symlinks, name, dest_dir):
     return tgz_path
 
 
-def unzip_and_get_files(files, destination_dir, tgz_name):
-    """Moves all files from package_files, {relative_name: tmp_abs_path}
-    to destination_dir, unzipping the "tgz_name" if found"""
-
-    tgz_file = files.pop(tgz_name, None)
+def check_compressed_files(tgz_name, files):
     bare_name = os.path.splitext(tgz_name)[0]
     for f in files:
         if bare_name == os.path.splitext(f)[0]:
             raise ConanException("This Conan version is not prepared to handle '%s' file format. "
                                  "Please upgrade conan client." % f)
+
+
+def unzip_and_get_files(files, destination_dir, tgz_name):
+    """Moves all files from package_files, {relative_name: tmp_abs_path}
+    to destination_dir, unzipping the "tgz_name" if found"""
+
+    tgz_file = files.pop(tgz_name, None)
+    check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
         os.remove(tgz_file)
