@@ -2,13 +2,16 @@ import os
 import shlex
 import shutil
 import sys
+import threading
 import uuid
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
 
+import bottle
 import requests
 import six
+import time
 from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
@@ -507,3 +510,24 @@ class TestClient(object):
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+
+class StoppableThreadBottle(threading.Thread):
+    """
+    Real server to test download endpoints
+    """
+    server = None
+
+    def __init__(self, host="127.0.0.1", port=8266):
+        self.server = bottle.Bottle()
+        super(StoppableThreadBottle, self).__init__(target=self.server.run, kwargs={"host": host,
+                                                                                    "port": port})
+        self.daemon = True
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def run_server(self):
+        self.start()
+        time.sleep(1)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from bottle import static_file, request
 import mock
 import os
 import platform
@@ -25,13 +25,16 @@ from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
+    StoppableThreadBottle
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
 from conans.util.files import save, load, md5
 import requests
+
+from nose.plugins.attrib import attr
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -993,6 +996,51 @@ ProgramFiles(x86)=C:\Program Files (x86)
         else:
             self.assertEqual(str, type(result))
 
+    @attr('slow')
+    def get_filename_download_test(self):
+        # Create a tar file to be downloaded from server
+        with tools.chdir(tools.mkdir_tmp()):
+            import tarfile
+            tar_file = tarfile.open("sample.tar.gz", "w:gz")
+            tools.mkdir("test_folder")
+            tar_file.add(os.path.abspath("test_folder"), "test_folder")
+            tar_file.close()
+            file_path = os.path.abspath("sample.tar.gz")
+            assert(os.path.exists(file_path))
+
+        # Instance stoppable thread server and add endpoints
+        thread = StoppableThreadBottle()
+
+        @thread.server.get("/this_is_not_the_file_name")
+        def get_file():
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
+
+        @thread.server.get("/")
+        def get_file2():
+            self.assertEquals(request.query["file"], "1")
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
+
+        thread.run_server()
+
+        # Test: File name cannot be deduced from '?file=1'
+        with self.assertRaisesRegexp(ConanException,
+                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+            tools.get("http://localhost:8266/?file=1")
+
+        # Test: Works with filename parameter instead of '?file=1'
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:8266/?file=1", filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
+
+        # Test: Use a different endpoint but still not the filename one
+        with tools.chdir(tools.mkdir_tmp()):
+            from zipfile import BadZipfile
+            with self.assertRaises(BadZipfile):
+                tools.get("http://localhost:8266/this_is_not_the_file_name")
+            tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
+        thread.stop()
+
 
 class GitToolTest(unittest.TestCase):
 
@@ -1059,10 +1107,10 @@ class GitToolTest(unittest.TestCase):
         def _create_paths():
             tmp = temp_folder()
             submodule_path = os.path.join(
-                tmp, 
+                tmp,
                 os.path.basename(os.path.normpath(submodule)))
             subsubmodule_path = os.path.join(
-                submodule_path, 
+                submodule_path,
                 os.path.basename(os.path.normpath(subsubmodule)))
             return tmp, submodule_path, subsubmodule_path
 
@@ -1079,7 +1127,7 @@ class GitToolTest(unittest.TestCase):
         with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
             git.clone(path, submodule="invalid")
 
-        # Check shallow 
+        # Check shallow
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
         git.clone(path, submodule="shallow")
