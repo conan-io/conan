@@ -202,8 +202,8 @@ class RemoteManager(object):
         t1 = time.time()
 
         def filter_function(urls):
+            file_url = urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
             check_compressed_files(EXPORT_SOURCES_TGZ_NAME, urls)
-            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
             if file_url:
                 urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
             else:
