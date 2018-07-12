@@ -1025,20 +1025,20 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tools.mkdir("test_folder")
             tar_file.add(os.path.abspath("test_folder"), "test_folder")
             tar_file.close()
-            file = os.path.abspath("sample.tar.gz")
-            assert(os.path.exists(file))
+            file_path = os.path.abspath("sample.tar.gz")
+            assert(os.path.exists(file_path))
 
         # Instance stoppable thread server and add endpoints
         thread = StoppableThreadBottle()
 
         @thread.server.get("/this_is_not_the_file_name")
         def get_file():
-            return static_file(os.path.basename(file), root=os.path.dirname(file))
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
 
         @thread.server.get("/")
         def get_file2():
             self.assertEquals(request.query["file"], "1")
-            return static_file(os.path.basename(file), root=os.path.dirname(file))
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
 
         thread.run_server()
 
