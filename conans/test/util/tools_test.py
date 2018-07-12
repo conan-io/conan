@@ -822,13 +822,13 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with tools.chdir(tools.mkdir_tmp()):
             with open("manual.html", "w") as fmanual:
                 fmanual.write("this is some content")
-                self.manual_file = os.path.abspath("manual.html")
+                manual_file = os.path.abspath("manual.html")
 
-        from bottle import static_file, request, route, auth_basic
+        from bottle import static_file, auth_basic
         @http_server.server.get("/manual.html")
         def get_manual():
-            return static_file(os.path.basename(self.manual_file),
-                               os.path.dirname(self.manual_file))
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
 
         def check_auth(user, password):
             # Check user/password here
@@ -837,8 +837,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
         @http_server.server.get('/basic-auth/<user>/<password>')
         @auth_basic(check_auth)
         def get_manual_auth(user, password):
-            return static_file(os.path.basename(self.manual_file),
-                               os.path.dirname(self.manual_file))
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
 
         http_server.run_server()
 
