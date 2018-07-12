@@ -12,7 +12,7 @@ _global_requester = None
 def get(url, md5='', sha1='', sha256='', destination=".", filename=""):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    if not filename and any(char in url for char in ["?", "="]):
+    if not filename and ("?" in url or "=" in url):
         raise ConanException("Cannot deduce file name form url. Use 'filename' parameter.")
 
     filename = filename or os.path.basename(url)
