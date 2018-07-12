@@ -878,7 +878,7 @@ class Command(object):
 
         try:
             if reference:
-                info = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                info = self._conan.search_packages(str(reference), query=args.query, remote=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], reference, args.query,

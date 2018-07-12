@@ -177,6 +177,7 @@ class Printer(object):
                     self._out.writeln(conan_item["recipe"]["id"])
 
     def print_search_packages(self, search_info, reference, packages_query):
+        assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
             if remote_info["remote"] != 'None':

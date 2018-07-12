@@ -25,9 +25,9 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST}})
     find_library(CONAN_FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{{name}_LIB_DIRS}}
                  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
     if(CONAN_FOUND_LIBRARY)
-        if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-            list(APPEND {name}_LIBRARIES ${{CONAN_FOUND_LIBRARY}})
-        else() # Create a micro-target for each lib/a found
+        list(APPEND {name}_LIBRARIES ${{CONAN_FOUND_LIBRARY}})
+        if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
+            # Create a micro-target for each lib/a found
             set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}})
             add_library(${{_LIB_NAME}} UNKNOWN IMPORTED)
             set_target_properties(${{_LIB_NAME}} PROPERTIES IMPORTED_LOCATION ${{CONAN_FOUND_LIBRARY}})

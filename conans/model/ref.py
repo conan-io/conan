@@ -105,7 +105,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         tmp.revision = revision
         return tmp
 
-    def copy_without_revisions(self):
+    def copy_without_revision(self):
         ret = ConanFileReference.loads(str(self))
         ret.revision = None
         return ret
@@ -153,7 +153,7 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         ret.revision = p_revision
         return ret
 
-    def copy_without_revisions(self):
+    def copy_without_revision(self):
         ret = PackageReference.loads(str(self))
         ret.revision = None
         ret.conan.revision = None

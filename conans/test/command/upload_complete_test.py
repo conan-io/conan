@@ -389,7 +389,7 @@ class TestConan(ConanFile):
                            "uploaded": [
                                {
                                    "recipe": {
-                                       "id": "test/0.1@danimtb/testing",
+                                       "id": "test/0.1@danimtb/testing#97667d20e2e23f1c45fb8dad3c5be893",
                                        "remote_url": "unknown",
                                        "remote_name": "default",
                                        "time": "unknown"

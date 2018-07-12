@@ -656,6 +656,7 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
+        reference = ConanFileReference.loads(reference)
         cmd_copy(reference, user_channel, packages, self._client_cache,
                  self._user_io, self._remote_manager, self._registry, force=force)
 
@@ -709,6 +710,7 @@ class ConanAPIV1(object):
         search = Search(self._client_cache, self._remote_manager, self._registry)
 
         try:
+            reference = ConanFileReference.loads(reference)
             references = search.search_packages(reference, remote,
                                                 query=query,
                                                 outdated=outdated)
@@ -781,14 +783,17 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_ref(self, reference, remote):
+        reference = ConanFileReference.loads(reference)
         return self._registry.add_ref(reference, remote)
 
     @api_method
     def remote_remove_ref(self, reference):
+        reference = ConanFileReference.loads(reference)
         return self._registry.remove_ref(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote):
+        reference = ConanFileReference.loads(reference)
         return self._registry.update_ref(reference, remote)
 
     @api_method

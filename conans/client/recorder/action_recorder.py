@@ -41,11 +41,13 @@ class ActionRecorder(object):
         self._inst_recipes_develop.add(reference)
 
     def _add_recipe_action(self, reference, action):
+        assert(isinstance(reference, ConanFileReference))
         if reference not in self._inst_recipes_actions:
             self._inst_recipes_actions[reference] = []
         self._inst_recipes_actions[reference].append(action)
 
     def _add_package_action(self, reference, action):
+        assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
         self._inst_packages_actions[reference].append(action)
@@ -72,6 +74,7 @@ class ActionRecorder(object):
         self._add_package_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote}))
 
     def package_install_error(self, reference, error_type, description, remote=None):
+        assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
         doc = {"type": error_type, "description": description, "remote": remote}
@@ -87,11 +90,12 @@ class ActionRecorder(object):
         return False
 
     def _get_installed_packages(self, reference):
+        assert(isinstance(reference, ConanFileReference))
         ret = []
         for _package_ref, _package_actions in self._inst_packages_actions.items():
             # Could be a download and then an access to cache, we want the first one
             _package_action = _package_actions[0]
-            if _package_ref.conan == reference:
+            if _package_ref.conan.copy_without_revision() == reference.copy_without_revision():
                 ret.append((_package_ref, _package_action))
         return ret
 
