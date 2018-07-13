@@ -555,7 +555,7 @@ class Command(object):
 
         if args.build or args.configure or args.install or args.test:
             build, config, install, test = (bool(args.build), bool(args.configure),
-                                            bool(args.install), bool(args.install))
+                                            bool(args.install), bool(args.test))
         else:
             build = config = install = test = True
         return self._conan.build(conanfile_path=args.path,
