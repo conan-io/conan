@@ -69,6 +69,8 @@ class CMakeTest(unittest.TestCase):
         self.assertIsNone(conan_file.command)
         conan_file.name = None
         cmake.patch_config_paths()
+        cmake.test()
+        self.assertIsNone(conan_file.command)
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
