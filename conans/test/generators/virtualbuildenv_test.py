@@ -9,6 +9,19 @@ from conans.test.utils.tools import TestClient
 
 class VirtualBuildEnvTest(unittest.TestCase):
 
+    def test_delimiter_error(self):
+        # https://github.com/conan-io/conan/issues/3080
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    settings = "os", "compiler", "arch", "build_type"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
+                   ' -s compiler.runtime=MD -s compiler.version=15')
+        bat = load(os.path.join(client.current_folder, "activate_build.bat"))
+        self.assertIn('SET CL="-MD -DNDEBUG -O2 -Ob2 %CL%"', bat)
+
     def environment_deactivate_test(self):
 
         in_windows = platform.system() == "Windows"
