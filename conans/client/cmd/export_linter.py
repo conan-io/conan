@@ -51,7 +51,7 @@ def _runner(args):
 
 def _normal_linter(conanfile_path, hook):
     args = ["--py3k", "--enable=all", "--reports=no", "--disable=no-absolute-import", "--persistent=no", 
-            "--load-plugins=conans.client.conanfile_plugin",
+            "--load-plugins=conans.pylint_plugin",
             hook, '"%s"' % conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
