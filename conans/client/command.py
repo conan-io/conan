@@ -553,10 +553,11 @@ class Command(object):
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
 
-        if args.build or args.configure or args.install:
-            build, config, install = bool(args.build), bool(args.configure), bool(args.install)
+        if args.build or args.configure or args.install or args.test:
+            build, config, install, test = (bool(args.build), bool(args.configure),
+                                            bool(args.install), bool(args.install))
         else:
-            build = config = install = True
+            build = config = install = test = True
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
