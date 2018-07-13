@@ -451,6 +451,8 @@ class Pkg(ConanFile):
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(error)
+        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
+                      client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 
