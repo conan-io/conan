@@ -528,16 +528,21 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-b", "--build", default=None, action="store_true",
                             help="Execute the build step (variable should_build=True). When "
-                            "specified, configure/install won't run unless --configure/--install "
-                            "specified")
+                            "specified, configure/install/test won't run unless "
+                            "--configure/--install/--test specified")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-c", "--configure", default=None, action="store_true",
-                            help="Execute the configuration step (variable should_configure=True)."
-                            " When specified, build/install won't run unless --build/--install specified")
+                            help="Execute the configuration step (variable should_configure=True). "
+                            "When specified, build/install/test won't run unless "
+                            "--build/--install/--test specified")
         parser.add_argument("-i", "--install", default=None, action="store_true",
                             help="Execute the install step (variable should_install=True). When "
-                            "specified, configure/build won't run unless --configure/--build "
-                            "specified")
+                            "specified, configure/build/test won't run unless "
+                            "--configure/--build/--test specified")
+        parser.add_argument("-t", "--test", default=None, action="store_true",
+                            help="Execute the test step (variable should_test=True). When "
+                            "specified, configure/build/install won't run unless "
+                            "--configure/--build/--install specified")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
@@ -559,7 +564,8 @@ class Command(object):
                                  install_folder=args.install_folder,
                                  should_configure=config,
                                  should_build=build,
-                                 should_install=install)
+                                 should_install=install,
+                                 should_test=test)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method. This command works in the user space
