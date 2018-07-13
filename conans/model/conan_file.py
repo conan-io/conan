@@ -167,6 +167,7 @@ class ConanFile(object):
         self.should_configure = True
         self.should_build = True
         self.should_install = True
+        self.should_test = True
 
     @property
     def env(self):
