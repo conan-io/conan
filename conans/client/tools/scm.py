@@ -147,7 +147,7 @@ class SVN(SCMBase):
 
         if not os.listdir(self.folder):
             url = self.get_url_with_credentials(url)
-            command = "co {url} . {params}".format(url=url, params=params)
+            command = 'co "{url}" . {params}'.format(url=url, params=params)
             output = self.run(command)
         else:
             output = self.run("revert . --recursive {params}".format(params=params))
@@ -172,11 +172,9 @@ class SVN(SCMBase):
     def get_remote_url(self):
         return self.run("info --show-item url").strip()
 
-    def get_revision(self):
-        wc_revision = self.run("info --show-item revision").strip()
-
-        # Check if working copy is consistent
-        output = self.run("status -u -r {}".format(wc_revision))
+    def is_pristine(self, revision):
+        # Check if working copy is pristine/consistent
+        output = self.run("status -u -r {}".format(revision))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
 
         for item in output.splitlines():
@@ -185,7 +183,14 @@ class SVN(SCMBase):
             if item[0] == '?':  # Untracked file
                 continue
             if any(item[i] != ' ' for i in offending_columns):
-                self.output.warn("Working copy has modified files, conflicts or different revisions.")
-                break
+                return False
+
+        return True
+
+    def get_revision(self):
+        wc_revision = self.run("info --show-item revision").strip()
+
+        if not self.is_pristine(revision=wc_revision):
+            self.output.warn("Working copy has modified files, conflicts or different revisions.")
 
         return wc_revision
