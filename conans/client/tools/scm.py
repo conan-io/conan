@@ -136,11 +136,11 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
 
-    def __init__(self, runner=None, *args, **kwargs):
+    def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
             return subprocess.check_output(command, shell=True).decode()
         runner = runner or runner_no_strip
-        super(SVN, self).__init__(runner=runner, *args, **kwargs)
+        super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
     def run(self, command, *args, **kwargs):
         # Ensure we always pass some params
@@ -150,13 +150,13 @@ class SVN(SCMBase):
         assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
         params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
 
-        if not os.listdir(self.folder):
+        output = ""
+        if not os.path.exists(os.path.join(self.folder, '.svn')):
             url = self.get_url_with_credentials(url)
             command = 'co "{url}" . {params}'.format(url=url, params=params)
-            output = self.run(command)
-        else:
-            output = self.run("revert . --recursive {params}".format(params=params))
-            output += self.run("cleanup . --remove-unversioned --remove-ignored {params}".format(params=params))
+            output += self.run(command)
+        output += self.run("revert . --recursive {params}".format(params=params))
+        # output += self.run("cleanup . --remove-unversioned --remove-ignored {params}".format(params=params))
 
         return output
 
