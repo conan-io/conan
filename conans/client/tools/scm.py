@@ -142,11 +142,12 @@ class SVN(SCMBase):
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
-    def run(self, command, *args, **kwargs):
+    def run(self, command):
         # Ensure we always pass some params
-        return super(SVN, self).run(command="{} --no-auth-cache --non-interactive".format(command), *args, **kwargs)
+        return super(SVN, self).run(command="{} --no-auth-cache --non-interactive".format(command))
 
-    def clone(self, url):
+    def clone(self, url, submodule=None):
+        assert submodule is None, "Argument not handled"
         assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
         params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
 
