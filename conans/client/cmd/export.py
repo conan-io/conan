@@ -122,6 +122,8 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm_data.url = origin
     if scm_data.revision == "auto":
+        if not scm.is_pristine():
+            output.warn("Repo status is not pristine: there might be modified files")
         scm_data.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
