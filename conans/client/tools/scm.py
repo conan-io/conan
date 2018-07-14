@@ -129,6 +129,9 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
 
+    def is_pristine(self):
+        return True  # TODO: To be implemented
+
 
 class SVN(SCMBase):
     cmd_command = "svn"
@@ -139,11 +142,13 @@ class SVN(SCMBase):
         runner = runner or runner_no_strip
         super(SVN, self).__init__(runner=runner, *args, **kwargs)
 
+    def run(self, command, *args, **kwargs):
+        # Ensure we always pass some params
+        return super(SVN, self).run(command="{} --no-auth-cache --non-interactive".format(command), *args, **kwargs)
+
     def clone(self, url):
         assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
-
-        params = "--no-auth-cache --non-interactive"
-        params += " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
+        params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
 
         if not os.listdir(self.folder):
             url = self.get_url_with_credentials(url)
@@ -163,8 +168,8 @@ class SVN(SCMBase):
         excluded_list = []
         output = self.run("status --no-ignore")
         for it in output.splitlines():
-            if it[0] == 'I':
-                filepath = it[9:].strip()
+            if it[0] == 'I' or it[0] == '?':  # Ignored or untracked files
+                filepath = it[8:].strip()
                 excluded_list.append(os.path.normpath(os.path.join(self.folder, filepath)))
         excluded_list.append(os.path.normpath(os.path.join(self.folder, ".svn")))
         return excluded_list
@@ -172,9 +177,9 @@ class SVN(SCMBase):
     def get_remote_url(self):
         return self.run("info --show-item url").strip()
 
-    def is_pristine(self, revision):
+    def is_pristine(self):
         # Check if working copy is pristine/consistent
-        output = self.run("status -u -r {}".format(revision))
+        output = self.run("status -u -r {}".format(self.get_revision()))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
 
         for item in output.splitlines():
@@ -188,9 +193,4 @@ class SVN(SCMBase):
         return True
 
     def get_revision(self):
-        wc_revision = self.run("info --show-item revision").strip()
-
-        if not self.is_pristine(revision=wc_revision):
-            self.output.warn("Working copy has modified files, conflicts or different revisions.")
-
-        return wc_revision
+        return self.run("info --show-item revision").strip()

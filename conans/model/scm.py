@@ -78,3 +78,6 @@ class SCM(object):
 
     def get_revision(self):
         return self.repo.get_revision()
+
+    def is_pristine(self):
+        return self.is_pristine()
