@@ -178,19 +178,14 @@ class SVN(SCMBase):
         # Check if working copy is consistent
         output = self.run("status -u -r {}".format(wc_revision))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
-        it = iter(output.splitlines())
-        while True:
-            try:
-                item = next(it)
 
-                if item.startswith("Status against revision"):
-                    continue
-                if item[0] == '?':  # Untracked file
-                    continue
-                if any(item[i] != ' ' for i in offending_columns):
-                    self.output.warn("Working copy has modified files, conflicts or different revisions.")
-                    break
-            except StopIteration:
+        for item in output.splitlines():
+            if item.startswith("Status against revision"):
+                continue
+            if item[0] == '?':  # Untracked file
+                continue
+            if any(item[i] != ' ' for i in offending_columns):
+                self.output.warn("Working copy has modified files, conflicts or different revisions.")
                 break
 
         return wc_revision
