@@ -3,9 +3,14 @@ import shlex
 import shutil
 import sys
 import uuid
+import errno
+import stat
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
+import subprocess
+import unittest
+import tempfile
 
 import requests
 import six
@@ -26,6 +31,7 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools.scm import Git
 from conans.client.userio import UserIO
+from conans.client.tools.files import chdir
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
@@ -38,6 +44,7 @@ from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
+
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -294,6 +301,61 @@ def create_local_git_repo(files, branch=None, submodules=None):
     return tmp.replace("\\", "/"), git.get_revision()
 
 
+
+def handleRemoveReadonly(func, path, exc):  # TODO: May promote to conan tools?
+    # Credit: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+    excvalue = exc[1]
+    if func in (os.rmdir, os.remove, os.unlink) and excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        func(path)
+    else:
+        raise
+
+
+class SVNLocalRepoTestCase(unittest.TestCase):
+    path_with_spaces = True
+
+    def _create_local_svn_repo(self):
+        repo_url = os.path.join(self._tmp_folder, 'repo_server')
+        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        return 'file:///' + repo_url.replace("\\", "/")
+
+    def gimme_tmp(self, create=True):
+        tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
+        if create:
+            os.makedirs(tmp)
+        return tmp
+
+    def create_project(self, files, rel_project_path=None, commit_msg='default commit message', delete_checkout=True):
+        tmp_dir = self.gimme_tmp()
+        try:
+            rel_project_path = rel_project_path or str(uuid.uuid4())
+            # Do not use SVN class as it is what we will be testing
+            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url, path=tmp_dir), shell=True)
+            tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
+            os.makedirs(tmp_project_dir)
+            save_files(tmp_project_dir, files)
+            with chdir(tmp_project_dir):
+                subprocess.check_output("svn add .", shell=True)
+                subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
+                rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+            project_url = self.repo_url + "/" + rel_project_path.replace("\\", "/")  # If os.path.join, then change '\\' with '/'
+            return project_url, rev
+        finally:
+            if delete_checkout:
+                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=handleRemoveReadonly)
+
+    def run(self, *args, **kwargs):
+        tmp_folder = tempfile.mkdtemp(suffix='_conans')
+        try:
+            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces' if self.path_with_spaces else 'pathwithoutspaces')
+            os.makedirs(self._tmp_folder)
+            self.repo_url = self._create_local_svn_repo()
+            super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=handleRemoveReadonly)
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -491,7 +553,6 @@ class TestClient(object):
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
-            print(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
 
         self.all_output += str(self.user_io.out)
