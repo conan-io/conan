@@ -1251,13 +1251,11 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
             f.write("content")
         svn.run("propset svn:ignore {} .".format(file_to_ignore))
         svn.run('commit -m "add ignored file"')
-        file_to_ignore = os.path.join(tmp_folder, file_to_ignore)
 
         excluded_files = svn.excluded_files()
-        self.assertIn(new_file, excluded_files)
         self.assertIn(file_to_ignore, excluded_files)
-        self.assertIn(os.path.join(tmp_folder, '.svn'), excluded_files)
-        self.assertEqual(len(excluded_files), 3)
+        self.assertIn('.svn', excluded_files)
+        self.assertEqual(len(excluded_files), 2)
 
     def test_credentials(self):
         svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
