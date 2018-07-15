@@ -11,6 +11,7 @@ from io import StringIO
 import subprocess
 import unittest
 import tempfile
+import platform
 
 import requests
 import six
@@ -318,7 +319,8 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     def _create_local_svn_repo(self):
         repo_url = os.path.join(self._tmp_folder, 'repo_server')
         subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
-        return 'file:///' + repo_url.replace("\\", "/")
+        protocol = 'file:///' if platform.system() == "Windows" else 'file://'
+        return protocol + repo_url.replace("\\", "/")
 
     def gimme_tmp(self, create=True):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
