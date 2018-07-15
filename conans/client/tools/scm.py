@@ -32,7 +32,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return subprocess.check_output(command, shell=True).decode().strip()
+                    return subprocess.check_output(command, shell=True).decode(errors='ignore').strip()
                 else:
                     return self._runner(command)
 
@@ -138,7 +138,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return subprocess.check_output(command, shell=True).decode()
+            return subprocess.check_output(command, shell=True).decode(errors='ignore')
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
@@ -183,9 +183,7 @@ class SVN(SCMBase):
         output = self.run("status -u -r {}".format(self.get_revision()))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
 
-        for item in output.splitlines():
-            if item.startswith("Status against revision"):
-                continue
+        for item in output.splitlines()[:-1]:
             if item[0] == '?':  # Untracked file
                 continue
             if any(item[i] != ' ' for i in offending_columns):
