@@ -859,32 +859,34 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
-        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0)
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+                       retry_wait=0)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
-            tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3,
-                           retry_wait=0, overwrite=False)
+            tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
+                           retry=3, retry_wait=0, overwrite=False)
 
         # overwrite = True
-        tools.download("http://localhost:8267/manual.html", dest, out=out, retry=3, retry_wait=0,
-                       overwrite=True)
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+                       retry_wait=0, overwrite=True)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
 
         # Not authorized
         with self.assertRaises(ConanException):
-            tools.download("http://localhost:8267/basic-auth/user/passwd", dest, overwrite=True)
+            tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
+                           overwrite=True)
 
         # Authorized
-        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        auth=("user", "passwd"), overwrite=True)
 
         # Authorized using headers
-        tools.download("http://localhost:8267/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
         http_server.stop()
 
@@ -1045,19 +1047,20 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Test: File name cannot be deduced from '?file=1'
         with self.assertRaisesRegexp(ConanException,
                                      "Cannot deduce file name form url. Use 'filename' parameter."):
-            tools.get("http://localhost:8266/?file=1")
+            tools.get("http://localhost:%s/?file=1" % thread.port)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
-            tools.get("http://localhost:8266/?file=1", filename="sample.tar.gz")
+            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz")
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
         with tools.chdir(tools.mkdir_tmp()):
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
-                tools.get("http://localhost:8266/this_is_not_the_file_name")
-            tools.get("http://localhost:8266/this_is_not_the_file_name", filename="sample.tar.gz")
+                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port)
+            tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
+                      filename="sample.tar.gz")
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
