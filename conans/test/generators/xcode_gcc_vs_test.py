@@ -75,10 +75,10 @@ xcode
 
         package_id = os.listdir(client.paths.packages(conan_ref))[0]
         package_ref = PackageReference(conan_ref, package_id)
-        package_paths = client.paths.package(package_ref).replace("\\", "/")
+        package_path = client.paths.package(package_ref).replace("\\", "/")
 
-        expected_lib_dirs = os.path.join(package_paths, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(package_paths, "include").replace("\\", "/")
+        expected_lib_dirs = os.path.join(package_path, "lib").replace("\\", "/")
+        expected_include_dirs = os.path.join(package_path, "include").replace("\\", "/")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEquals("hello.lib;%(AdditionalDependencies)", libs)
@@ -96,3 +96,4 @@ xcode
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s/"' % package_path, xcode)
