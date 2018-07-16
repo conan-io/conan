@@ -27,7 +27,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {build_paths}
         self.c_compiler_flags = " ".join(deps_cpp_info.cflags)
         self.cpp_compiler_flags = " ".join(deps_cpp_info.cppflags)
         self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
-        self.build_paths = " ".join('"%s"' % d for d in deps_cpp_info.build_paths)
+        self.build_paths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.build_paths)
 
     @property
     def filename(self):
