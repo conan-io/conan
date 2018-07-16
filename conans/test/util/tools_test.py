@@ -1235,3 +1235,72 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
+
+    def unix_to_dos_unit_test(self):
+
+        def save_file(contents):
+            tmp = temp_folder()
+            filepath = os.path.join(tmp, "a_file.txt")
+            save(filepath, contents)
+            return filepath
+
+        fp = save_file(b"a line\notherline\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+
+            tools.unix2dos(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+            tools.unix2dos(fp)
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+
+        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+
+        fp = save_file(b"a line\r\notherline\r\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+
+            tools.dos2unix(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+            tools.dos2unix(fp)
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+
+        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+
+    def unix_to_dos_conanfile_test(self):
+        client = TestClient()
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "file.txt"
+
+    def build(self):
+        assert("\\r\\n" in tools.load("file.txt"))
+        tools.dos2unix("file.txt")
+        assert("\\r\\n" not in tools.load("file.txt"))
+        tools.unix2dos("file.txt")
+        assert("\\r\\n" in tools.load("file.txt"))
+"""
+        client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
+        client.run("create . user/channel")

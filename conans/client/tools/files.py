@@ -297,3 +297,19 @@ def which(filename):
                         return trick_path
 
     return None
+
+
+def unix2dos(filepath):
+    tmp = load(filepath)
+    ret = "\r\n".join(tmp.splitlines())
+    if tmp.endswith("\n"):
+        ret += "\r\n"
+    save(filepath, ret)
+
+
+def dos2unix(filepath):
+    tmp = load(filepath)
+    ret = "\n".join(tmp.splitlines())
+    if tmp.endswith("\n"):
+        ret += "\n"
+    save(filepath, ret)
