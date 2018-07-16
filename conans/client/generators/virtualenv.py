@@ -37,21 +37,21 @@ class VirtualEnvGenerator(Generator):
         :return:
         """
         variables = variables or self.env.items()
-        path_sep, quote_elements, quote_full_value, enable_space_path_sep = ":", True, False, True
-        if flavor in ["cmd", "ps1"]:
-            path_sep, quote_elements, enable_space_path_sep = ";", False, True
-        if flavor in ["ps1"]:
-            quote_full_value = True
+        if flavor == "cmd":
+            path_sep, quote_elements, quote_full_value = ";", False, False
+        elif flavor == "ps1":
+            path_sep, quote_elements, quote_full_value = ";", False, True
+        elif flavor == "sh":
+            path_sep, quote_elements, quote_full_value = ":", True, False
 
         ret = []
         for name, value in variables:
             # activate values
             if isinstance(value, list):
                 placeholder = self._variable_placeholder(flavor, name)
-                if enable_space_path_sep and name in self.append_with_spaces:
+                if name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
-                    value = "\"%s\"" % value if value else ""
                 else:
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
@@ -60,12 +60,12 @@ class VirtualEnvGenerator(Generator):
                     value = path_sep.join(value+[placeholder])
             else:
                 # single value
-                value = "\"%s\"" % value if quote_elements else value
+                activate_value = "\"%s\"" % value if quote_elements else value
             activate_value = "\"%s\"" % value if quote_full_value else value
 
             # deactivate values
             value = os.environ.get(name, "")
-            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
+            deactivate_value = "\"%s\"" % value if quote_full_value else value
             ret.append((name, activate_value, deactivate_value))
         return ret
 
