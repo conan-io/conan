@@ -12,7 +12,7 @@ OTHER_LDFLAGS = $(inherited) {linker_flags} {libs}
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {definitions}
 OTHER_CFLAGS = $(inherited) {c_compiler_flags}
 OTHER_CPLUSPLUSFLAGS = $(inherited) {cpp_compiler_flags}
-FRAMEWORK_SEARCH_PATHS = $(inherited) {build_paths}
+FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths}
 '''
 
     def __init__(self, conanfile):
@@ -27,7 +27,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {build_paths}
         self.c_compiler_flags = " ".join(deps_cpp_info.cflags)
         self.cpp_compiler_flags = " ".join(deps_cpp_info.cppflags)
         self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
-        self.build_paths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.build_paths)
+        self.rootpaths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.rootpaths)
 
     @property
     def filename(self):

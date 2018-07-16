@@ -96,4 +96,4 @@ xcode
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
-        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s/"' % package_path.replace("\\", "/"), xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"), xcode)
