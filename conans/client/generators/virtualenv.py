@@ -62,11 +62,11 @@ class VirtualEnvGenerator(Generator):
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
-            activate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
+            activate_value = "\"%s\"" % value if quote_full_value else value
 
             # deactivate values
             value = os.environ.get(name, "")
-            deactivate_value = "\"%s\"" % value if quote_full_value else value
+            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
             ret.append((name, activate_value, deactivate_value))
         return ret
 
