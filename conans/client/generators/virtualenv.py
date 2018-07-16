@@ -52,6 +52,7 @@ class VirtualEnvGenerator(Generator):
                 if name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
+                    value = "\"%s\"" % value if quote_elements else value
                 else:
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
@@ -60,8 +61,8 @@ class VirtualEnvGenerator(Generator):
                     value = path_sep.join(value+[placeholder])
             else:
                 # single value
-                activate_value = "\"%s\"" % value if quote_elements else value
-            activate_value = "\"%s\"" % value if quote_full_value else value
+                value = "\"%s\"" % value if quote_elements else value
+            activate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
 
             # deactivate values
             value = os.environ.get(name, "")
