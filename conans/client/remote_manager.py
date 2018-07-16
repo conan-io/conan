@@ -12,7 +12,7 @@ from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
-    make_read_only
+    make_read_only, set_dirty, clean_dirty
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch_folder
 from conans.util.log import logger
@@ -23,6 +23,7 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_package_download)
 from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
+from conans.search.search import filter_packages
 
 
 class RemoteManager(object):
@@ -39,6 +40,14 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
+            tgz_path = os.path.join(export_folder, f)
+            if is_dirty(tgz_path):
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(conan_reference), f))
+                os.remove(tgz_path)
+                clean_dirty(tgz_path)
+
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
@@ -99,6 +108,11 @@ class RemoteManager(object):
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,
                                                                              package_reference.conan,
                                                                              package_reference.package_id))
+        tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
+        if is_dirty(tgz_path):
+            self._output.warn("%s: Removing %s, marked as dirty" % (str(package_reference), PACKAGE_TGZ_NAME))
+            os.remove(tgz_path)
+            clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
 
@@ -188,7 +202,8 @@ class RemoteManager(object):
         t1 = time.time()
 
         def filter_function(urls):
-            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
+            file_url = urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+            check_compressed_files(EXPORT_SOURCES_TGZ_NAME, urls)
             if file_url:
                 urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
             else:
@@ -254,7 +269,9 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, reference, query):
-        return self._call_remote(remote, "search_packages", reference, query)
+        packages = self._call_remote(remote, "search_packages", reference, query)
+        packages = filter_packages(query, packages)
+        return packages
 
     def remove(self, conan_ref, remote):
         """
@@ -324,11 +341,10 @@ def compress_package_files(files, symlinks, dest_folder, output):
 
 
 def compress_files(files, symlinks, name, dest_dir):
-    """Compress the package and returns the new dict (name => content) of files,
-    only with the conanXX files and the compressed file"""
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    set_dirty(tgz_path)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -354,10 +370,19 @@ def compress_files(files, symlinks, name, dest_dir):
 
         tgz.close()
 
+    clean_dirty(tgz_path)
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
 
     return tgz_path
+
+
+def check_compressed_files(tgz_name, files):
+    bare_name = os.path.splitext(tgz_name)[0]
+    for f in files:
+        if bare_name == os.path.splitext(f)[0]:
+            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
+                                 "Please upgrade conan client." % f)
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name):
@@ -365,6 +390,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     to destination_dir, unzipping the "tgz_name" if found"""
 
     tgz_file = files.pop(tgz_name, None)
+    check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
         os.remove(tgz_file)

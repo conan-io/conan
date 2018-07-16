@@ -172,7 +172,7 @@ class RestApiClient(object):
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
                 raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbbiden overwrite")
+                                     "Forbidden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 
@@ -206,9 +206,9 @@ class RestApiClient(object):
             return False
 
         if no_overwrite and remote_snapshot:
-            if no_overwrite in ("all"):
+            if no_overwrite in ("all", ):
                 raise ConanException("Local package is different from the remote package. "
-                                     "Forbbiden overwrite")
+                                     "Forbidden overwrite")
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
