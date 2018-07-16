@@ -9,6 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class VirtualBuildEnvTest(unittest.TestCase):
 
+    @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
     def test_delimiter_error(self):
         # https://github.com/conan-io/conan/issues/3080
         conanfile = """from conans import ConanFile
