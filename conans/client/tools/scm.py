@@ -1,8 +1,9 @@
 import os
-import subprocess
-from subprocess import CalledProcessError, PIPE, STDOUT
 
+import re
+import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus
+from subprocess import CalledProcessError, PIPE, STDOUT
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -80,6 +81,7 @@ class Git(object):
         return output
 
     def checkout(self, element):
+        self._check_git_repo()
         # Element can be a tag, branch or commit
         return self.run('checkout "%s"' % element)
 
@@ -98,6 +100,7 @@ class Git(object):
         return tmp
 
     def get_remote_url(self, remote_name=None):
+        self._check_git_repo()
         remote_name = remote_name or "origin"
         try:
             remotes = self.run("remote -v")
@@ -114,6 +117,7 @@ class Git(object):
         return None
 
     def get_commit(self):
+        self._check_git_repo()
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
@@ -123,10 +127,18 @@ class Git(object):
 
     get_revision = get_commit
 
+    def _check_git_repo(self):
+        if not os.path.exists(os.path.join(self.folder, ".git")):
+            raise ConanException("Not a git repository")
+
     def get_branch(self):
+        self._check_git_repo()
         try:
             status = self.run("status -bs --porcelain")
-            branch = status.splitlines()[0].strip("#").strip()
+            # ## feature/scm_branch...myorigin/feature/scm_branch
+            branch = status.splitlines()[0].split("...")[0].strip("#").strip()
+            # Replace non alphanumeric
+            branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
             return branch
         except Exception as e:
             raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))

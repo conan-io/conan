@@ -1087,10 +1087,10 @@ class HelloConan(ConanFile):
     version = get_version()
 
     def build(self):
-        assert("release_" in self.version)
-        assert(len(self.version) == 48)
+        assert("r3le_ase__" in self.version)
+        assert(len(self.version) == 50)
 """
-        path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="release")
+        path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
         client = TestClient()
         client.current_folder = path
         client.run("create . user/channel")
