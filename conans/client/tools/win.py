@@ -418,7 +418,9 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
-    env = env or {}
+    # If the env dict contain lists (from conanfile.env) unroll it.
+    env = {name: (os.pathsep.join(value) if isinstance(value, list) else value)
+           for name, value in (env or {}).items()}
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or os_info.detect_windows_subsystem()
