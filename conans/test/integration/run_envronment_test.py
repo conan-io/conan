@@ -137,5 +137,5 @@ execute_process(COMMAND say_hello)"""
             else:
                 command = "activate_run.bat && say_hello"
 
-            output = subprocess.check_output(command)
+            output = subprocess.check_output(command, shell=True)
             self.assertIn("Hello Tool!", output)

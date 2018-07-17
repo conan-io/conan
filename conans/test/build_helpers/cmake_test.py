@@ -903,7 +903,8 @@ class ConanFileMock(ConanFile):
         self.generators = []
         self.captured_env = {}
 
-    def run(self, command):
+    def run(self, command, run_environment=False):
         self.command = command
+        self.run_environment = run_environment
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
