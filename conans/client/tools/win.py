@@ -445,6 +445,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     else:
         env_vars = {}
 
+    env_vars.update(env)
     with environment_append(env_vars):
         hack_env = ""
         if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
