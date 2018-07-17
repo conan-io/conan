@@ -19,6 +19,16 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_system_requirements_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    def system_requirements(self):
+        self.output.info("Running system requirements!!")
+"""})
+        client.run("install .")
+        self.assertIn("Running system requirements!!", client.out)
+
     def install_transitive_pattern_test(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()
