@@ -358,7 +358,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
-        self.assertIn("Hello/0.1@lasote/stable from local cache\n",
+        self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
@@ -451,6 +451,8 @@ class Pkg(ConanFile):
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(error)
+        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
+                      client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 

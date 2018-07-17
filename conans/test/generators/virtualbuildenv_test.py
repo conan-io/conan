@@ -9,6 +9,20 @@ from conans.test.utils.tools import TestClient
 
 class VirtualBuildEnvTest(unittest.TestCase):
 
+    @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
+    def test_delimiter_error(self):
+        # https://github.com/conan-io/conan/issues/3080
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    settings = "os", "compiler", "arch", "build_type"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
+                   ' -s compiler.runtime=MD -s compiler.version=15')
+        bat = load(os.path.join(client.current_folder, "activate_build.bat"))
+        self.assertIn('SET CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
+
     def environment_deactivate_test(self):
 
         in_windows = platform.system() == "Windows"
@@ -19,7 +33,8 @@ class VirtualBuildEnvTest(unittest.TestCase):
             env = {}
             for line in env_output.splitlines():
                 tmp = line.decode().split("=")
-                if tmp[0] not in ["SHLVL", "_", "PS1"]:
+                # OLDPWD is cleared when a child script is started
+                if tmp[0] not in ["SHLVL", "_", "PS1", "OLDPWD"]:
                     env[tmp[0]] = tmp[1].replace("\\", "/")
             return env
 

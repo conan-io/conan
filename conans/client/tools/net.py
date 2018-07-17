@@ -9,10 +9,13 @@ from conans.errors import ConanException
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256='', destination="."):
+def get(url, md5='', sha1='', sha256='', destination=".", filename=""):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    filename = os.path.basename(url)
+    if not filename and ("?" in url or "=" in url):
+        raise ConanException("Cannot deduce file name form url. Use 'filename' parameter.")
+
+    filename = filename or os.path.basename(url)
     download(url, filename)
 
     if md5:

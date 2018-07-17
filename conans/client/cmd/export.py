@@ -9,11 +9,12 @@ from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
-from conans.client.source import get_scm
+from conans.client.source import get_scm_data
 from conans.errors import ConanException
 from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
+from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
@@ -104,24 +105,29 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 
-    scm = get_scm(conanfile, src_path)
+    scm_data = get_scm_data(conanfile)
 
-    if not scm or not (scm.capture_origin or scm.capture_revision):
+    if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return
 
-    if scm.url == "auto":
+    scm = SCM(scm_data, src_path)
+
+    if scm_data.url == "auto":
         origin = scm.get_remote_url()
         if not origin:
             raise ConanException("Repo origin cannot be deduced by 'auto'")
+        if os.path.exists(origin):
+            output.warn("Repo origin looks like a local path: %s" % origin)
+            origin = origin.replace("\\", "/")
         output.success("Repo origin deduced by 'auto': %s" % origin)
-        scm.url = origin
-    if scm.revision == "auto":
-        scm.revision = scm.get_revision()
-        output.success("Revision deduced by 'auto': %s" % scm.revision)
+        scm_data.url = origin
+    if scm_data.revision == "auto":
+        scm_data.revision = scm.get_revision()
+        output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     # Generate the scm_folder.txt file pointing to the src_path
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):

@@ -231,7 +231,8 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None, winsdk_version=None):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
+                   winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -253,11 +254,10 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
-    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
-        command = "echo Conan:vcvars already set"
+        command = ["echo Conan:vcvars already set"]
         existing_version = existing_version.split(".")[0]
         if existing_version != compiler_version:
             message = "Visual environment already set to %s\n " \
@@ -272,32 +272,32 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         if not vs_path or not os.path.isdir(vs_path):
             raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
         else:
-            vcvars_path = ""
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-                command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                           'call "%s" %s' % (vcvars_path, vcvars_arch))
-                if winsdk_version:
-                    command += " %s" % winsdk_version
-                if vcvars_ver:
-                    command += " -vcvars_ver=%s" % vcvars_ver
+                command = ['set "VSCMD_START_DIR=%%CD%%" && '
+                           'call "%s" %s' % (vcvars_path, vcvars_arch)]
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
-                command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
+                command = ['call "%s" %s' % (vcvars_path, vcvars_arch)]
+        if int(compiler_version) >= 14:
+            if winsdk_version:
+                command.append(winsdk_version)
+            if vcvars_ver:
+                command.append("-vcvars_ver=%s" % vcvars_ver)
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")
         if os_version_setting == '8.1':
-            command += ' store 8.1'
+            command.append('store 8.1')
         elif os_version_setting == '10.0':
             windows_10_sdk = find_windows_10_sdk()
             if not windows_10_sdk:
                 raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
                                      "but Windows 10 SDK wasn't found")
-            command += ' store ' + windows_10_sdk
+            command.append('store %s' % windows_10_sdk)
         else:
             raise ConanException('unsupported Windows Store version %s' % os_version_setting)
-    return command
+    return " ".join(command)
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,

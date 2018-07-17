@@ -69,6 +69,8 @@ class CMakeTest(unittest.TestCase):
         self.assertIsNone(conan_file.command)
         conan_file.name = None
         cmake.patch_config_paths()
+        cmake.test()
+        self.assertIsNone(conan_file.command)
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
@@ -897,6 +899,7 @@ class ConanFileMock(ConanFile):
         self.should_configure = True
         self.should_build = True
         self.should_install = True
+        self.should_test = True
         self.generators = []
         self.captured_env = {}
 

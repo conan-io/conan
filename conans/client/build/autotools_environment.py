@@ -182,6 +182,8 @@ class AutoToolsBuildEnvironment(object):
                                 win_bash=self._win_bash, subsystem=self.subsystem)
 
     def install(self, args="", make_program=None, vars=None):
+        if not self._conanfile.should_install:
+            return
         self.make(args=args, make_program=make_program, target="install", vars=vars)
 
     def _configure_link_flags(self):
