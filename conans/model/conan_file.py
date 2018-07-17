@@ -259,23 +259,22 @@ class ConanFile(object):
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, env=None):
         env = env or {}
-        full_env = copy.copy(self.env)
-        full_env.update(env)
 
-        def _run():
+        def _run(with_env):
             if not win_bash:
-                with tools.environment_append(full_env):
+                with tools.environment_append(with_env):
                     return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, env=full_env)
+                                             msys_mingw=msys_mingw, env=with_env)
         if run_environment:
-            with tools.environment_append(RunEnvironment(self).vars):
-                if os_info.is_macos:
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), command)
-                retcode = _run()
+            env.update(RunEnvironment(self).vars)
+            if os_info.is_macos:
+                command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                                                         command)
+            retcode = _run(env)
         else:
-            retcode = _run()
+            retcode = _run(env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
