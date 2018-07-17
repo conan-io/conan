@@ -20,13 +20,21 @@ class InstallTest(unittest.TestCase):
                          "-s arch=x86 -s compiler.runtime=MD")
 
     def install_system_requirements_test(self):
-        client = TestClient()
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
     def system_requirements(self):
         self.output.info("Running system requirements!!")
 """})
         client.run("install .")
+        self.assertIn("Running system requirements!!", client.out)
+        client.run("export . Pkg/0.1@lasote/testing")
+        client.run("install Pkg/0.1@lasote/testing --build")
+        self.assertIn("Running system requirements!!", client.out)
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Running system requirements!!", client.out)
 
     def install_transitive_pattern_test(self):
