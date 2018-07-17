@@ -58,7 +58,6 @@ target_link_libraries(say_hello hello)"""
 #endif
 
 HELLO_EXPORT void hello();
-
 """
         hello_cpp = r"""#include "hello.h"
 #include <iostream>
