@@ -297,3 +297,19 @@ def which(filename):
                         return trick_path
 
     return None
+
+
+def _replace_with_separator(filepath, sep):
+    tmp = load(filepath)
+    ret = sep.join(tmp.splitlines())
+    if tmp.endswith("\n"):
+        ret += sep
+    save(filepath, ret)
+
+
+def unix2dos(filepath):
+    _replace_with_separator(filepath, "\r\n")
+
+
+def dos2unix(filepath):
+    _replace_with_separator(filepath, "\n")
