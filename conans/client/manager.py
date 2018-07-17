@@ -285,9 +285,8 @@ class ConanManager(object):
             for node in deps_graph.nodes:
                 if not node.conan_ref:
                     continue
-                conanfile = node.conanfile
                 complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
-                                        conanfile, node.conan_ref)
+                                        node.conanfile, node.conan_ref)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)
