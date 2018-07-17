@@ -10,9 +10,8 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
-from conans.client.tools.win import unix_path, WSL, run_in_windows_bash
-from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
-                          detected_architecture, get_gnu_triplet)
+from conans.client.tools.win import unix_path
+from conans.tools import (args_to_string, cpu_count, cross_building, detected_architecture, get_gnu_triplet)
 from conans.errors import ConanException
 from conans.util.files import get_abs_path
 
@@ -132,13 +131,13 @@ class AutoToolsBuildEnvironment(object):
                 triplet_args.append("--target=%s" % (target or self.target))
 
         if pkg_config_paths:
-            pkg_env = {"PKG_CONFIG_PATH":
+            full_env = {"PKG_CONFIG_PATH":
                        os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
                                        for f in pkg_config_paths)}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} \
+            full_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} \
                 if "pkg_config" in self._conanfile.generators else {}
 
         if self._conanfile.package_folder is not None:
@@ -147,23 +146,12 @@ class AutoToolsBuildEnvironment(object):
             elif not any(["--prefix=" in arg for arg in args]):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
-        with environment_append(pkg_env):
-            with environment_append(vars or self.vars):
-                configure_dir = self._adjust_path(configure_dir)
-                command = '%s/configure %s %s' % (configure_dir,
-                                                  args_to_string(args), " ".join(triplet_args))
-                self._conanfile.output.info("Calling:\n > %s" % command)
-                if self._win_bash and self.subsystem == WSL:  # Pass all the env
-                    # FIXME: ? probably the lib directories etc should be adjusted as paths
-                    # according to
-                    # https://blogs.msdn.microsoft.com/commandline/2017/12/22/share-environment-vars-between-wsl-and-windows/
-                    the_env = {}
-                    the_env.update(self._conanfile.env)
-                    the_env.update(pkg_env)
-                    the_env.update(self.vars)
-                    run_in_windows_bash(self._conanfile, command, subsystem=self.subsystem, env=the_env)
-                else:
-                    self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+        full_env.update(vars or self.vars)
+        configure_dir = self._adjust_path(configure_dir)
+        command = '%s/configure %s %s' % (configure_dir,
+                                          args_to_string(args), " ".join(triplet_args))
+        self._conanfile.output.info("Calling:\n > %s" % command)
+        self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem, env=full_env)
 
     def _adjust_path(self, path):
         if self._win_bash:
@@ -174,12 +162,11 @@ class AutoToolsBuildEnvironment(object):
         if not self._conanfile.should_build:
             return
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
-        with environment_append(vars or self.vars):
-            str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
-            self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
-                                                       cpu_count_option]),
-                                win_bash=self._win_bash, subsystem=self.subsystem)
+        full_env = vars or self.vars
+        str_args = args_to_string(args)
+        cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
+        self._conanfile.run("%s" % join_arguments([make_program, target, str_args, cpu_count_option]),
+                            win_bash=self._win_bash, subsystem=self.subsystem, env=full_env)
 
     def install(self, args="", make_program=None, vars=None):
         if not self._conanfile.should_install:

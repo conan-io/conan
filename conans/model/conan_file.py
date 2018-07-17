@@ -1,3 +1,4 @@
+import copy
 import os
 from contextlib import contextmanager
 
@@ -256,13 +257,18 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False):
+            ignore_errors=False, run_environment=False, env=None):
+        env = env or {}
+        full_env = copy.copy(self.env)
+        full_env.update(env)
+
         def _run():
             if not win_bash:
-                return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+                with tools.environment_append(full_env):
+                    return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, env=self.env)
+                                             msys_mingw=msys_mingw, env=full_env)
         if run_environment:
             with tools.environment_append(RunEnvironment(self).vars):
                 if os_info.is_macos:
