@@ -11,7 +11,7 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
 from conans.client.source import get_scm_data
 from conans.errors import ConanException
-from conans.model.conan_file import create_exports, create_exports_sources
+from conans.model.conan_file import create_exports, create_exports_sources, expand_recipe
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
@@ -108,26 +108,40 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     scm_data = get_scm_data(conanfile)
 
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
+        expand_recipe(os.path.join(destination_folder, "conanfile.py"), conanfile, output)
         return
 
     scm = SCM(scm_data, src_path)
 
-    if scm_data.url == "auto":
+    additional_rewrites = []
+    if scm_data.capture_origin:
         origin = scm.get_remote_url()
         if not origin:
             raise ConanException("Repo origin cannot be deduced by 'auto'")
         if os.path.exists(origin):
             output.warn("Repo origin looks like a local path: %s" % origin)
             origin = origin.replace("\\", "/")
+        if not isinstance(origin, str): # PY2: convert to string if possible
+            try:
+                origin = origin.encode('ascii')
+            except:
+                pass
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm_data.url = origin
-    if scm_data.revision == "auto":
-        scm_data.revision = scm.get_revision()
-        output.success("Revision deduced by 'auto': %s" % scm_data.revision)
+        conanfile.scm["url"] = origin
+        additional_rewrites.append( ("scm","url") )
+    if scm_data.capture_revision:
+        revision = scm.get_revision()
+        if not isinstance(revision, str): # PY2: convert to string
+            revision = revision.encode('ascii') # sha/revision numbers should always be convertible
+        scm_data.revision = revision
+        conanfile.scm["revision"] = revision
+        additional_rewrites.append( ("scm","revision") )
+        output.success("Revision deduced by 'auto': %s" % revision)
 
     # Generate the scm_folder.txt file pointing to the src_path
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    expand_recipe(os.path.join(destination_folder, "conanfile.py"), conanfile, output, additional_rewrites)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
