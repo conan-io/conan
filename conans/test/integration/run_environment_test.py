@@ -1,7 +1,7 @@
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
@@ -37,7 +37,9 @@ class HelloConan(ConanFile):
         self.assertIn("Hello Hello0", client.out)
 
     def test_shared_run_environment(self):
-        client = TestClient()
+        test_server = TestServer(users={"user": "mypass"})
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("user", "mypass")]})
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
@@ -86,6 +88,8 @@ class Pkg(ConanFile):
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h})
         client.run("create . Pkg/0.1@user/testing")
+        client.run("upload Pkg/0.1@user/testing -c --all")
+        client.run('remove "*" -f')
 
         reuse = '''from conans import ConanFile
 class HelloConan(ConanFile):
@@ -94,8 +98,9 @@ class HelloConan(ConanFile):
     def build(self):
         self.run("say_hello", run_environment=True)
 '''
+        client2 = TestClient(servers=servers, users={"default": [("user", "mypass")]})
 
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .")
-        client.run("build .")
-        self.assertIn("Hello Tool!", client.out)
+        client2.save({"conanfile.py": reuse}, clean_first=True)
+        client2.run("install .")
+        client2.run("build .")
+        self.assertIn("Hello Tool!", client2.out)
