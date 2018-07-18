@@ -184,8 +184,7 @@ def format_include_paths(include_paths, win_bash=False, subsystem=None, compiler
 
 def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler=None):
     pattern = "-LIBPATH:%s" if str(compiler) == 'Visual Studio' else "-L%s"
-    return [pattern % adjust_path(library_path, win_bash=win_bash,
-                                  subsystem=subsystem, compiler=compiler)
+    return [pattern % adjust_path(library_path, win_bash=win_bash, subsystem=subsystem, compiler=compiler)
             for library_path in library_paths if library_path]
 
 
