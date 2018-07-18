@@ -265,6 +265,7 @@ class ConanFile(object):
                 with tools.environment_append(with_env):
                     return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
+            env.update(self.env)  # Otherwise the vars from deps are not take from the os.environ
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw, env=with_env)
         if run_environment:
