@@ -109,15 +109,16 @@ class HelloConan(ConanFile):
         client2.run("build .")
         self.assertIn("Hello Tool!", client2.out)
 
-        reuse = '''from conans import ConanFile, CMake, tools, RunEnvironment
+        reuse = '''from conans import ConanFile, CMake, tools
 class HelloConan(ConanFile):
     exports = "CMakeLists.txt"
     requires = "Pkg/0.1@lasote/testing"
 
     def build(self):
-        cmake = CMake(self)
-        cmake.configure(run_environment=True)
-        cmake.build()
+        with tools.run_environment(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
 '''
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)

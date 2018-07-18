@@ -377,7 +377,7 @@ class CMake(object):
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None,
-                  pkg_config_paths=None, run_environment=False):
+                  pkg_config_paths=None):
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         if not self._conanfile.should_configure:
@@ -410,9 +410,9 @@ class CMake(object):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
-                    self._conanfile.run(command, run_environment=run_environment)
+                    self._conanfile.run(command)
             else:
-                self._conanfile.run(command, run_environment=run_environment)
+                self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
