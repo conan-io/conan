@@ -85,7 +85,7 @@ class Pkg(ConanFile):
         self.copy("*say_hello.exe", dst="bin", keep_path=False)
         self.copy("*say_hello", dst="bin", keep_path=False)
         self.copy(pattern="*.dll", dst="bin", keep_path=False)
-        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
+        self.copy(pattern="*.dylib", dst="bin", keep_path=False)
         self.copy(pattern="*.so", dst="lib", keep_path=False)
 """
         client.save({"conanfile.py": conanfile,
