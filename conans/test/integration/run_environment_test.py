@@ -4,7 +4,6 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
-
 class RunEnvironmentTest(unittest.TestCase):
 
     def test_run_environment(self):
