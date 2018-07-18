@@ -271,7 +271,7 @@ class ConanFile(object):
             env.update(RunEnvironment(self).vars)
             if os_info.is_macos:
                 if env.get('DYLD_LIBRARY_PATH'):
-                    env_dylib = env.get('DYLD_LIBRARY_PATH')[0]
+                    env_dylib = ":".join(env.get('DYLD_LIBRARY_PATH'))
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (env_dylib, command)
             retcode = _run(env)
         else:
