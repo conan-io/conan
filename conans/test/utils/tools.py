@@ -435,7 +435,7 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
-    # from https://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python
+    # Inspired from https://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python
     @contextmanager
     def stdout_redirector(self, stream):
         original_stdout = None
@@ -447,12 +447,15 @@ class TestClient(object):
             original_stdout    = sys.stdout
             original_stdout_fd = sys.__stdout__.fileno()
 
-        def _redirect_stdout(to_fd):
+        def _redirect_stdout(to_fd, stdout=None):
             """Redirect stdout to the given file descriptor."""
             # Make original_stdout_fd point to the same file as to_fd
             os.dup2(to_fd, original_stdout_fd)
             # Create a new sys.stdout that points to the redirected fd
-            sys.stdout = io.TextIOWrapper(io.open(original_stdout_fd, 'wb'))
+            if stdout:
+                sys.stdout = stdout
+            else:
+                sys.stdout = io.TextIOWrapper(io.open(original_stdout_fd, 'wb'))
 
         # Save a copy of the original stdout fd in saved_stdout_fd
         saved_stdout_fd = os.dup(original_stdout_fd)
@@ -460,13 +463,13 @@ class TestClient(object):
             # Create a temporary file and redirect stdout to it
             tfile = tempfile.TemporaryFile(mode='w+b')
             # Flush and close sys.stdout - also closes the file descriptor (fd)
-            if not original_stdout:
+            if original_stdout is None:
                 sys.stdout.close()
             _redirect_stdout(tfile.fileno())
             # Yield to caller, then redirect stdout back to the saved fd
             yield
             sys.stdout.close()
-            _redirect_stdout(saved_stdout_fd)
+            _redirect_stdout(saved_stdout_fd, original_stdout)
             # Copy contents of temporary file to the given stream
             tfile.flush()
             tfile.seek(0, io.SEEK_SET)
@@ -474,8 +477,6 @@ class TestClient(object):
         finally:
             tfile.close()
             os.close(saved_stdout_fd)
-            if original_stdout:
-                sys.stdout = original_stdout
 
     def _init_collaborators(self, user_io=None):
 
