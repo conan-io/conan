@@ -264,10 +264,12 @@ class ConanFile(object):
             if not win_bash:
                 with tools.environment_append(with_env):
                     return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
-            # FIXME: run in windows bash is not using output
-            env.update(self.env)  # Otherwise the vars from deps are not take from the os.environ
-            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, env=with_env)
+            else:
+                # FIXME: run in windows bash is not using output
+                with_env.update(self.env)  # Otherwise the vars from deps are not take from the os.environ
+                with tools.environment_append(with_env):
+                    return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+                                                 msys_mingw=msys_mingw, env=with_env)
         if run_environment:
             env.update(RunEnvironment(self).vars)
             if os_info.is_macos:

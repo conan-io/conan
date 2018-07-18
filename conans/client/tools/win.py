@@ -419,8 +419,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         It requires to have MSYS2, CYGWIN, or WSL
     """
     # If the env dict contain lists (from conanfile.env) unroll it.
-    env = {name: (os.pathsep.join(value) if isinstance(value, list) else value)
-           for name, value in (env or {}).items()}
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or os_info.detect_windows_subsystem()
@@ -437,8 +435,10 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # https://blogs.msdn.microsoft.com/commandline/2017/12/22/share-environment-vars-between-wsl-and-windows/
         names = []
         for var_name in env:
-            if var_name == "PATH":
-                names.append("PATH/l")  # List of paths
+            if var_name == "PATH":  # Managed automatically
+                continue
+            elif var_name in ["CC", "CXX", "FC"]:
+                names.append("%s/l" % var_name)  # List of paths
             else:
                 names.append(var_name)
         env_vars = {"WSLENV": "$WSLENV:%s" % ":".join(names)} if names else {}
@@ -471,7 +471,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(get_cwd(), cwd)
-
         curdir = unix_path(cwd or get_cwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = os_info.bash_path()
