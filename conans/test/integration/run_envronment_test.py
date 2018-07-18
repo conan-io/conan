@@ -92,6 +92,9 @@ class Pkg(ConanFile):
                      "hello.h": hello_h})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg* --all --confirm")
+        client.run('remove "*" -f')
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
 
         # MAKE SURE WE USE ANOTHER CLIENT, with another USER HOME PATH
         client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
