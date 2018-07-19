@@ -11,6 +11,7 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
 from conans.unicode import get_cwd
+import six
 
 
 _global_output = None
@@ -68,6 +69,11 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        if six.PY2:
+            raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
+        return untargz(filename, destination, pattern)
+
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
 
@@ -291,3 +297,19 @@ def which(filename):
                         return trick_path
 
     return None
+
+
+def _replace_with_separator(filepath, sep):
+    tmp = load(filepath)
+    ret = sep.join(tmp.splitlines())
+    if tmp.endswith("\n"):
+        ret += sep
+    save(filepath, ret)
+
+
+def unix2dos(filepath):
+    _replace_with_separator(filepath, "\r\n")
+
+
+def dos2unix(filepath):
+    _replace_with_separator(filepath, "\n")

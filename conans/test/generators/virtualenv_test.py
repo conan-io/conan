@@ -5,6 +5,7 @@ from conans.test.utils.tools import TestClient
 from conans.tools import os_info, get_env
 from conans.util.files import load
 
+
 class VirtualEnvGeneratorTest(unittest.TestCase):
 
     def basic_test(self, posix_empty_vars=True):
@@ -61,7 +62,7 @@ virtualenv
             self.assertIn('SET PROMPT=(conanenv) %PROMPT%', activate)
             self.assertIn('SET BASE_LIST=dummyValue1;dummyValue2;baseValue1;baseValue2;%BASE_LIST%', activate)
             self.assertIn('SET BASE_VAR=baseValue', activate)
-            self.assertIn('SET CPPFLAGS=-flag1;-flag2;-baseFlag1;-baseFlag2;%CPPFLAGS%', activate)
+            self.assertIn('SET CPPFLAGS=-flag1 -flag2 -baseFlag1 -baseFlag2 %CPPFLAGS%', activate)
             self.assertIn('SET LD_LIBRARY_PATH=dummydir\\lib;basedir\\lib;%LD_LIBRARY_PATH%', activate)
             self.assertIn('SET PATH=dummydir\\bin;basedir\\bin;samebin;%PATH%', activate)
             self.assertIn('SET SPECIAL_VAR=dummyValue', activate)
@@ -69,7 +70,7 @@ virtualenv
             activate = load(os.path.join(client.current_folder, "activate.ps1"))
             self.assertIn('$env:BASE_LIST = "dummyValue1;dummyValue2;baseValue1;baseValue2;$env:BASE_LIST"', activate)
             self.assertIn('$env:BASE_VAR = "baseValue"', activate)
-            self.assertIn('$env:CPPFLAGS = "-flag1;-flag2;-baseFlag1;-baseFlag2;$env:CPPFLAGS"', activate)
+            self.assertIn('$env:CPPFLAGS = "-flag1 -flag2 -baseFlag1 -baseFlag2 $env:CPPFLAGS"', activate)
             self.assertIn('$env:LD_LIBRARY_PATH = "dummydir\\lib;basedir\\lib;$env:LD_LIBRARY_PATH"', activate)
             self.assertIn('$env:PATH = "dummydir\\bin;basedir\\bin;samebin;$env:PATH"', activate)
             self.assertIn('$env:SPECIAL_VAR = "dummyValue"', activate)

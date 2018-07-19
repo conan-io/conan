@@ -62,8 +62,9 @@ class RangeResolver(object):
                                  % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
-            raise ConanException("The version in '%s' from requirement '%s' could not be resolved"
-                                 % (version_range, require))
+            base_conanref = base_conanref or "PROJECT"
+            raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
+                                 "could not be resolved" % (version_range, require, base_conanref))
 
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._client_cache, search_ref)
