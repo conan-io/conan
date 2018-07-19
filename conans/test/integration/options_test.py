@@ -64,3 +64,25 @@ zlib/0.1@lasote/testing
                       client.user_io.out)
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertNotIn("zlib:shared=True", conaninfo)
+
+    def options_any_default_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class MyConanFile(ConanFile):
+    name = "MyConanFile"
+    version = "1.0"
+    options = {"config": "ANY"}
+    default_options = "config=%s"
+
+    def configure(self):
+        if self.options.config is not None:
+            raise Exception
+"""
+        client.save({"conanfile.py": conanfile % ""})
+        error = client.run("create . danimtb/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Please define a default value for 'config' in'default_options'", client.out)
+        # client.save({"conanfile.py": conanfile % "None"})
+        # client.run("create . danimtb/testing")
