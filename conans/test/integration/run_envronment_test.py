@@ -47,10 +47,6 @@ class HelloConan(ConanFile):
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
-if(APPLE)
-    set(CMAKE_SKIP_RPATH 1)
-    set(CMAKE_INSTALL_NAME_DIR "")
-endif()
 add_library(hello SHARED hello.cpp)
 add_executable(say_hello main.cpp)
 target_link_libraries(say_hello hello)"""
@@ -85,7 +81,7 @@ class Pkg(ConanFile):
         self.copy("*say_hello.exe", dst="bin", keep_path=False)
         self.copy("*say_hello", dst="bin", keep_path=False)
         self.copy(pattern="*.dll", dst="bin", keep_path=False)
-        self.copy(pattern="*.dylib", dst="bin", keep_path=False)
+        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
         self.copy(pattern="*.so", dst="lib", keep_path=False)
 """
         client.save({"conanfile.py": conanfile,
