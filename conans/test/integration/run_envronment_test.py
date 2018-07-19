@@ -111,7 +111,15 @@ class HelloConan(ConanFile):
         client2.run("build .")
         self.assertIn("Hello Tool!", client2.out)
 
-        reuse = '''from conans import ConanFile, CMake, tools
+        if platform.system() != "Darwin":
+            # This test is excluded from OSX, because of the SIP protection. CMake helper will
+            # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its
+            # value via run_environment=True doesn't work, because it prepends its value to:
+            # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
+            # and then only applies to the change directory "cd"
+            # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake installed in
+            # system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake" can work
+            reuse = '''from conans import ConanFile, CMake, tools
 class HelloConan(ConanFile):
     exports = "CMakeLists.txt"
     requires = "Pkg/0.1@lasote/testing"
@@ -121,28 +129,27 @@ class HelloConan(ConanFile):
             cmake = CMake(self)
             cmake.configure()
             cmake.build()
-'''
-        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+    '''
+            cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
-if(APPLE)
-    execute_process(COMMAND "DYLD_LIBRARY_PATH=$ENV{DYLD_LIBRARY_PATH} say_hello")
-else()
-    execute_process(COMMAND say_hello)
-endif()"""
-        client2.save({"conanfile.py": reuse,
-                      "CMakeLists.txt": cmake}, clean_first=True)
-        client2.run("install . -g virtualrunenv")
-        client2.run("build .")
-        self.assertIn("Hello Tool!", client2.out)
+execute_process(COMMAND say_hello)
+"""
+            client2.save({"conanfile.py": reuse,
+                          "CMakeLists.txt": cmake}, clean_first=True)
+            client2.run("install . -g virtualrunenv")
+            client2.run("build .")
+            self.assertIn("Hello Tool!", client2.out)
 
         with tools.chdir(client2.current_folder):
             if platform.system() == "Windows":
                 command = "activate_run.bat && say_hello"
-            elif platform.system() == "Darwin":
-                command = "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH bash -c 'source activate_run.sh && say_hello'"
             else:
+                # It is not necessary to use the DYLD_LIBRARY_PATH in OSX because the activate_run.sh
+                # will work perfectly. It is inside the bash, so the loader will use DYLD_LIBRARY_PATH
+                # values. It also works in command line with export DYLD_LIBRARY_PATH=[path] and then
+                # running, or in the same line "$ DYLD_LIBRARY_PATH=[path] say_hello"
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
             output = subprocess.check_output(command, shell=True)
