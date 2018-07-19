@@ -165,6 +165,9 @@ class OptionsValues(object):
             new_values = []
             for v in values:
                 option, value = v.split("=", 1)
+                if not value.strip():
+                    raise ConanException("Please define a default value for '%s' in"
+                                         "'default_options'" % option.strip())
                 new_values.append((option.strip(), value.strip()))
             values = new_values
 
@@ -270,6 +273,9 @@ class OptionsValues(object):
             if not line:
                 continue
             name, value = line.split("=", 1)
+            if not value.strip():
+                raise ConanException("Please define a default value for '%s' in"
+                                     "'default_options'" % name.strip())
             result.append((name.strip(), value.strip()))
         return OptionsValues(result)
 
