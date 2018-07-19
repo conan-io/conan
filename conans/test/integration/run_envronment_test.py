@@ -126,13 +126,16 @@ class HelloConan(ConanFile):
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
-
-execute_process(COMMAND say_hello)"""
+if(APPLE)
+    execute_process(COMMAND DYLD_LIBRARY_PATH=$ENV{DYLD_LIBRARY_PATH} say_hello)
+else()
+    execute_process(COMMAND say_hello)
+endif()"""
         client2.save({"conanfile.py": reuse,
                       "CMakeLists.txt": cmake}, clean_first=True)
         client2.run("install . -g virtualrunenv")
-        #client2.run("build .")
-        #self.assertIn("Hello Tool!", client2.out)
+        client2.run("build .")
+        self.assertIn("Hello Tool!", client2.out)
 
         with tools.chdir(client2.current_folder):
             if platform.system() == "Windows":
