@@ -127,7 +127,7 @@ set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 if(APPLE)
-    execute_process(COMMAND DYLD_LIBRARY_PATH=$ENV{DYLD_LIBRARY_PATH} say_hello)
+    execute_process(COMMAND "DYLD_LIBRARY_PATH=$ENV{DYLD_LIBRARY_PATH} say_hello")
 else()
     execute_process(COMMAND say_hello)
 endif()"""
