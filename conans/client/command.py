@@ -359,6 +359,8 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
+        install_subparser.add_argument("--type", "-t", choices=["git"],
+                                       help='Type of remote config')
 
         args = parser.parse_args(*args)
 
@@ -374,7 +376,7 @@ class Command(object):
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan.config_install(args.item, verify_ssl)
+            return self._conan.config_install(args.item, verify_ssl, args.type)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe. It can be used with a recipe
@@ -528,16 +530,21 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-b", "--build", default=None, action="store_true",
                             help="Execute the build step (variable should_build=True). When "
-                            "specified, configure/install won't run unless --configure/--install "
-                            "specified")
+                            "specified, configure/install/test won't run unless "
+                            "--configure/--install/--test specified")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-c", "--configure", default=None, action="store_true",
-                            help="Execute the configuration step (variable should_configure=True)."
-                            " When specified, build/install won't run unless --build/--install specified")
+                            help="Execute the configuration step (variable should_configure=True). "
+                            "When specified, build/install/test won't run unless "
+                            "--build/--install/--test specified")
         parser.add_argument("-i", "--install", default=None, action="store_true",
                             help="Execute the install step (variable should_install=True). When "
-                            "specified, configure/build won't run unless --configure/--build "
-                            "specified")
+                            "specified, configure/build/test won't run unless "
+                            "--configure/--build/--test specified")
+        parser.add_argument("-t", "--test", default=None, action="store_true",
+                            help="Execute the test step (variable should_test=True). When "
+                            "specified, configure/build/install won't run unless "
+                            "--configure/--build/--install specified")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
@@ -548,10 +555,11 @@ class Command(object):
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
 
-        if args.build or args.configure or args.install:
-            build, config, install = bool(args.build), bool(args.configure), bool(args.install)
+        if args.build or args.configure or args.install or args.test:
+            build, config, install, test = (bool(args.build), bool(args.configure),
+                                            bool(args.install), bool(args.test))
         else:
-            build = config = install = True
+            build = config = install = test = True
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
@@ -559,7 +567,8 @@ class Command(object):
                                  install_folder=args.install_folder,
                                  should_configure=config,
                                  should_build=build,
-                                 should_install=install)
+                                 should_install=install,
+                                 should_test=test)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method. This command works in the user space
@@ -965,7 +974,9 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         # create the parser for the "a" command
-        subparsers.add_parser('list', help='List current remotes')
+        parser_list = subparsers.add_parser('list', help='List current remotes')
+        parser_list.add_argument("-raw", "--raw", action='store_true', default=False,
+                                 help='Raw format. Valid for "remotes.txt" file for "conan config install"')
         parser_add = subparsers.add_parser('add', help='Add a remote')
         parser_add.add_argument('remote', help='Name of the remote')
         parser_add.add_argument('url', help='URL of the remote')
@@ -1014,7 +1025,7 @@ class Command(object):
 
         if args.subcommand == "list":
             remotes = self._conan.remote_list()
-            self._outputer.remote_list(remotes)
+            self._outputer.remote_list(remotes, args.raw)
         elif args.subcommand == "add":
             return self._conan.remote_add(remote, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":

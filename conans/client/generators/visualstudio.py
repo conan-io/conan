@@ -1,5 +1,8 @@
+import os
+
 from conans.model import Generator
 from conans.paths import BUILD_INFO_VISUAL_STUDIO
+import re
 
 
 class VisualStudioGenerator(Generator):
@@ -76,4 +79,8 @@ class VisualStudioGenerator(Generator):
             'exe_flags': " ".join(self._deps_build_info.exelinkflags)
         }
         formatted_template = self.template.format(**fields)
+        userprofile = os.getenv("USERPROFILE")
+        if userprofile:
+            userprofile = userprofile.replace("\\", "/")
+            formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template, flags=re.I)
         return formatted_template

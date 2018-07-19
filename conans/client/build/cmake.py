@@ -395,7 +395,6 @@ class CMake(object):
             args_to_string([source_dir])
         ])
 
-
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
                        os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
@@ -452,6 +451,8 @@ class CMake(object):
         self.build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
+        if not self._conanfile.should_test:
+            return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
         self.build(args=args, build_dir=build_dir, target=target)
