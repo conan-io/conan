@@ -141,12 +141,12 @@ execute_process(COMMAND say_hello)
             client2.run("install . -g virtualrunenv")
             client2.run("build .")
             self.assertIn("Hello Tool!", client2.out)
+        else:
+            client2.run("install . -g virtualrunenv")
 
         with tools.chdir(client2.current_folder):
             if platform.system() == "Windows":
                 command = "activate_run.bat && say_hello"
-            elif platform.system() == "Darwin":
-                command = "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH bash -c 'source activate_run.sh && say_hello'"
             else:
                 # It is not necessary to use the DYLD_LIBRARY_PATH in OSX because the activate_run.sh
                 # will work perfectly. It is inside the bash, so the loader will use DYLD_LIBRARY_PATH
