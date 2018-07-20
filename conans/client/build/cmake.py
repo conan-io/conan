@@ -515,6 +515,63 @@ class CMake(object):
                 if f.endswith(".cmake"):
                     tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
 
+    def patch_deps_paths(self):
+        """
+        changes references to the absolute path of the dependencies of the
+        installed package in generated cmake config files
+        to the appropriate conan variables. This makes
+        most (sensible) cmake config files portable.
+
+        For example, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method and if it depends to a package bar,
+        normally this file will contain absolute paths to the bar package folder,
+        for example it will contain a line such as:
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
+
+        This will cause cmake find_package() method to fail when someone else
+        installs the package via conan.
+
+        This function will replace such mentions to
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "${CONAN_BAR_ROOT}/include")
+
+        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
+        now correctly works on this conan package.
+
+        If the install() method of the CMake object in the conan file is used, this
+        function should be called _after_ that invocation. For example:
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                cmake.install()
+                cmake.patch_deps_paths()
+        """
+        if not self._conanfile.should_install:
+            return
+
+        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
+        for root, _, files in allwalk:
+            for f in files:
+                if f.endswith(".cmake"):
+                    path = os.path.join(root, f)
+                    path_content = tools.load(path)
+
+                    self._conanfile.output.info("Patching paths in cmake file %s" % (path))
+                    for dep in self._conanfile.deps_cpp_info.deps:
+                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
+                        # try to replace only if from str is found
+                        if path_content.find(from_str) != -1:
+                            repl_str = "${CONAN_%s_ROOT}" % dep.upper()
+                            self._conanfile.output.info("Replacing for %s: %s to %s" % (dep, from_str, repl_str))
+                            tools.replace_in_file(path, from_str, repl_str, strict=False)
+
     def _get_cpp_standard_vars(self):
         if not self._cppstd:
             return {}
