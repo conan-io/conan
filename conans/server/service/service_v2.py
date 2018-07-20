@@ -2,6 +2,7 @@ import os
 from bottle import static_file, FileUpload
 
 from conans.errors import NotFoundException
+from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
 from conans.util.files import mkdir
 
@@ -25,8 +26,8 @@ class ConanServiceV2(object):
     def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
         path = self._server_store.get_conanfile_file_path(reference, filename)
-        mimetype = "x-gzip" if path.endswith(".tgz") else "auto"
-        return static_file(os.path.basename(path), root=os.path.dirname(path), mimetype=mimetype)
+        return static_file(os.path.basename(path), root=os.path.dirname(path),
+                           mimetype=get_mime_type(path))
 
     def upload_recipe_file(self, body, headers, reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, reference)
@@ -48,8 +49,8 @@ class ConanServiceV2(object):
     def get_package_file(self, p_reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
         path = self._server_store.get_package_file_path(p_reference, filename)
-        mimetype = "x-gzip" if path.endswith(".tgz") else "auto"
-        return static_file(os.path.basename(path), root=os.path.dirname(path), mimetype=mimetype)
+        return static_file(os.path.basename(path), root=os.path.dirname(path),
+                           mimetype=get_mime_type(path))
 
     def upload_package_file(self, body, headers, p_reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, p_reference.conan)
