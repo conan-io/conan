@@ -10,7 +10,8 @@ from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
+    PACKAGE_TGZ_NAME
 from conans.util.files import decode_text, md5sum
 from conans.util.log import logger
 
@@ -165,6 +166,7 @@ class RestV1Methods(RestCommonMethods):
     def get_recipe(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         return zipped_files, conan_reference
 
@@ -186,6 +188,7 @@ class RestV1Methods(RestCommonMethods):
 
     def get_package(self, package_reference, dest_folder):
         urls = self._get_package_urls(package_reference)
+        check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         return zipped_files
 
