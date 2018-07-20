@@ -9,7 +9,8 @@ from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
+    PACKAGE_TGZ_NAME
 from conans.util.files import decode_text, md5sum
 from conans.util.log import logger
 
@@ -51,6 +52,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(conan_reference)
         data = self.get_json(url)
         files = data["files"]
+        check_compressed_files(EXPORT_TGZ_NAME, files)
         reference = ConanFileReference.loads(data["reference"])
         files.pop(EXPORT_SOURCES_TGZ_NAME, None)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
@@ -77,6 +79,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._package_url(package_reference)
         data = self.get_json(url)
         files = data["files"]
+        check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)

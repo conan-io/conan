@@ -139,7 +139,7 @@ class ConanProxy(object):
                 new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
             # If not found continue with the next, else raise
-            except NotFoundException as exc:
+            except NotFoundException:
                 pass
         else:
             msg = "Unable to find '%s' in remotes" % str(conan_reference)
