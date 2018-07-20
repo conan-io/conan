@@ -9,14 +9,13 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
-from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case, \
-    CONAN_MANIFEST, CONANINFO, CONANFILE
+    CONAN_MANIFEST, CONANFILE
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 from conans.unicode import get_cwd

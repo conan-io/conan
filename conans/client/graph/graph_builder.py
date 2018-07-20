@@ -214,6 +214,7 @@ class DepsGraphBuilder(object):
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
             # new_ref could contain the resolved revision if enabled in the server
+            # !!!! REVIEW THIS
             requirement.conan_reference = new_ref
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)

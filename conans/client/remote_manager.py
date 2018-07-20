@@ -196,9 +196,6 @@ class RemoteManager(object):
         t1 = time.time()
         zipped_files, conan_reference = self._call_remote(remote, "get_recipe", conan_reference,
                                                           dest_folder)
-
-        if not zipped_files:
-            return conan_reference
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote, zipped_files)
 
@@ -331,6 +328,8 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
 def check_compressed_files(tgz_name, files):
     bare_name = os.path.splitext(tgz_name)[0]
     for f in files:
+        if f == tgz_name:
+            continue
         if bare_name == os.path.splitext(f)[0]:
             raise ConanException("This Conan version is not prepared to handle '%s' file format. "
                                  "Please upgrade conan client." % f)
