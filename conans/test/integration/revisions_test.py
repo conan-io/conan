@@ -14,8 +14,7 @@ class RevisionsTest(unittest.TestCase):
         self.users = {}
         with tools.environment_append({"CONAN_SERVER_REVISIONS": "1"}):
             for i in range(3):
-                test_server = TestServer(server_capabilities=[API_V2])
-                self.servers["remote%d" % i] = test_server
+                self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2])
                 self.users["remote%d" % i] = [("lasote", "mypass")]
 
         self.client = TestClient(servers=self.servers, users=self.users)
