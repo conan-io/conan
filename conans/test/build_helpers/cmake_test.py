@@ -9,6 +9,8 @@ from collections import namedtuple
 
 from conans import tools
 from conans.model.conan_file import ConanFile
+from conans.model.ref import ConanFileReference
+from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.build.cmake import CMake
@@ -23,9 +25,11 @@ from conans.errors import ConanException
 class CMakeTest(unittest.TestCase):
     def setUp(self):
         self.tempdir = temp_folder(path_with_spaces=False)
+        self.tempdir2 = temp_folder(path_with_spaces=False)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+        shutil.rmtree(self.tempdir2)
 
     def config_patch_test(self):
         conan_file = ConanFileMock()
@@ -52,6 +56,43 @@ class CMakeTest(unittest.TestCase):
             self.assertEqual("FOLDER: ${CONAN_MYPKG_ROOT}",
                              load(os.path.join(folder, "file3.cmake")))
             self.assertEqual("FOLDER: ${CONAN_MYPKG_ROOT}",
+                             load(os.path.join(folder, "sub", "file3.cmake")))
+
+    def config_patch_deps_test(self):
+        conan_file = ConanFileMock()
+        conan_file.name = "MyPkg"
+        conan_file.settings = Settings()
+        conan_file.source_folder = os.path.join(self.tempdir, "src")
+        conan_file.build_folder = os.path.join(self.tempdir, "build")
+        conan_file.package_folder = os.path.join(self.tempdir, "pkg")
+        conan_file.deps_cpp_info = DepsCppInfo()
+
+        ref = ConanFileReference.loads("MyPkg1/0.1@user/channel")
+        cpp_info = CppInfo(self.tempdir2)
+        conan_file.deps_cpp_info.update(cpp_info, ref.name)
+        self.tempdir = temp_folder(path_with_spaces=False)
+
+        self.assertEqual(list(conan_file.deps_cpp_info.deps), ['MyPkg1'])
+        self.assertEqual(conan_file.deps_cpp_info['MyPkg1'].rootpath,
+                         self.tempdir2)
+
+        msg = "FOLDER: " + self.tempdir2
+        for folder in (conan_file.build_folder, conan_file.package_folder):
+            save(os.path.join(folder, "file1.cmake"), "Nothing")
+            save(os.path.join(folder, "file2"), msg)
+            save(os.path.join(folder, "file3.txt"), msg)
+            save(os.path.join(folder, "file3.cmake"), msg)
+            save(os.path.join(folder, "sub", "file3.cmake"), msg)
+
+        cmake = CMake(conan_file, generator="Unix Makefiles")
+        cmake.patch_deps_paths()
+        for folder in (conan_file.build_folder, conan_file.package_folder):
+            self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
+            self.assertEqual(msg, load(os.path.join(folder, "file2")))
+            self.assertEqual(msg, load(os.path.join(folder, "file3.txt")))
+            self.assertEqual("FOLDER: ${CONAN_MYPKG1_ROOT}",
+                             load(os.path.join(folder, "file3.cmake")))
+            self.assertEqual("FOLDER: ${CONAN_MYPKG1_ROOT}",
                              load(os.path.join(folder, "sub", "file3.cmake")))
 
     def partial_build_test(self):
