@@ -7,7 +7,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
-from platform import node
 
 
 class Printer(object):
@@ -85,7 +84,13 @@ class Printer(object):
                 continue
 
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
-            reg_remote = registry.get_recipe_remote(ref)
+            try:
+                # Excludes PROJECT fake reference
+                reg_remote = registry.get_recipe_remote(ref)
+            except:
+                # Excludes PROJECT fake reference
+                reg_remote = None
+
             # Excludes PROJECT fake reference
 
             if show("id"):
@@ -173,6 +178,7 @@ class Printer(object):
                     self._out.writeln(conan_item["recipe"]["id"])
 
     def print_search_packages(self, search_info, reference, packages_query):
+        assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
             if remote_info["remote"] != 'None':

@@ -59,21 +59,13 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        if not os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
-            expected_calls = [('ping', None),
-                              ('get_conan_manifest_url', None),
-                              ('check_credentials', None),
-                              ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
-                              ('get_conanfile_upload_urls', 'Bearer'),
-                              ('put', None)]
-        else:
-            expected_calls = [('ping', None),
-                              ('get_recipe_file', None),
-                              ('check_credentials', None),
-                              ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
-                              ('upload_recipe_file', 'Bearer')]
+        expected_calls = [('ping', None),
+                          ('get_conan_manifest_url', None),
+                          ('check_credentials', None),
+                          ('authenticate', 'Basic'),
+                          ('get_conanfile_snapshot', 'Bearer'),
+                          ('get_conanfile_upload_urls', 'Bearer'),
+                          ('put', None)]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
@@ -82,7 +74,6 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipUnless(os.getenv("CONAN_TESTING_SERVER_V2_ENABLED") is None, "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()

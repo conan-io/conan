@@ -152,8 +152,8 @@ class RemoteRegistry(object):
         assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            if conan_reference not in refs:
-                raise ConanException("%s does not exist. Use add" % conan_reference)
+            if str(conan_reference) not in refs:
+                raise ConanException("%s does not exist. Use add" % str(conan_reference))
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
             refs[str(conan_reference)] = remote
