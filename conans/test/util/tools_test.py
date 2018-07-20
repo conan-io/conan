@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from bottle import static_file, request
 import mock
 import os
 import platform
@@ -25,13 +25,16 @@ from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
+    StoppableThreadBottle
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
 from conans.util.files import save, load, md5
 import requests
+
+from nose.plugins.attrib import attr
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -83,7 +86,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo yum check-update")
+            self.assertEquals(runner.command_called, "sudo yum update")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
@@ -151,7 +154,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEquals(runner.command_called, "yum check-update")
+            self.assertEquals(runner.command_called, "yum update")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
@@ -332,7 +335,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if os_info.with_apt:
                 update_command = "sudo apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo yum check-update"
+                update_command = "sudo yum update"
             elif os_info.with_zypper:
                 update_command = "sudo zypper --non-interactive ref"
             elif os_info.with_pacman:
@@ -814,6 +817,31 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
+        http_server = StoppableThreadBottle(port=8267)
+
+        with tools.chdir(tools.mkdir_tmp()):
+            with open("manual.html", "w") as fmanual:
+                fmanual.write("this is some content")
+                manual_file = os.path.abspath("manual.html")
+
+        from bottle import static_file, auth_basic
+        @http_server.server.get("/manual.html")
+        def get_manual():
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
+
+        def check_auth(user, password):
+            # Check user/password here
+            return user == "user" and password == "passwd"
+
+        @http_server.server.get('/basic-auth/<user>/<password>')
+        @auth_basic(check_auth)
+        def get_manual_auth(user, password):
+            return static_file(os.path.basename(manual_file),
+                               os.path.dirname(manual_file))
+
+        http_server.run_server()
+
         out = TestBufferConanOutput()
         set_global_instances(out, requests)
         # Connection error
@@ -831,39 +859,36 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
-        tools.download("http://www.zlib.net/manual.html",
-                       dest, out=out,
-                       retry=3, retry_wait=0)
-
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+                       retry_wait=0)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
-            tools.download("http://www.zlib.net/manual.html",
-                           dest, out=out,
+            tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
                            retry=3, retry_wait=0, overwrite=False)
 
         # overwrite = True
-        tools.download("http://www.zlib.net/manual.html",
-                       dest, out=out,
-                       retry=3, retry_wait=0, overwrite=True)
-
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+                       retry_wait=0, overwrite=True)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
 
         # Not authorized
         with self.assertRaises(ConanException):
-            tools.download("https://httpbin.org/basic-auth/user/passwd", dest, overwrite=True)
+            tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
+                           overwrite=True)
 
         # Authorized
-        tools.download("https://httpbin.org/basic-auth/user/passwd", dest, auth=("user", "passwd"),
-                       overwrite=True)
+        tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
+                       auth=("user", "passwd"), overwrite=True)
 
         # Authorized using headers
-        tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
+        tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+        http_server.stop()
 
     def get_gnu_triplet_test(self):
         def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
@@ -993,6 +1018,52 @@ ProgramFiles(x86)=C:\Program Files (x86)
         else:
             self.assertEqual(str, type(result))
 
+    @attr('slow')
+    def get_filename_download_test(self):
+        # Create a tar file to be downloaded from server
+        with tools.chdir(tools.mkdir_tmp()):
+            import tarfile
+            tar_file = tarfile.open("sample.tar.gz", "w:gz")
+            tools.mkdir("test_folder")
+            tar_file.add(os.path.abspath("test_folder"), "test_folder")
+            tar_file.close()
+            file_path = os.path.abspath("sample.tar.gz")
+            assert(os.path.exists(file_path))
+
+        # Instance stoppable thread server and add endpoints
+        thread = StoppableThreadBottle()
+
+        @thread.server.get("/this_is_not_the_file_name")
+        def get_file():
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
+
+        @thread.server.get("/")
+        def get_file2():
+            self.assertEquals(request.query["file"], "1")
+            return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
+
+        thread.run_server()
+
+        # Test: File name cannot be deduced from '?file=1'
+        with self.assertRaisesRegexp(ConanException,
+                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+            tools.get("http://localhost:%s/?file=1" % thread.port)
+
+        # Test: Works with filename parameter instead of '?file=1'
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
+
+        # Test: Use a different endpoint but still not the filename one
+        with tools.chdir(tools.mkdir_tmp()):
+            from zipfile import BadZipfile
+            with self.assertRaises(BadZipfile):
+                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port)
+            tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
+                      filename="sample.tar.gz")
+            self.assertTrue(os.path.exists("test_folder"))
+        thread.stop()
+
 
 class GitToolTest(unittest.TestCase):
 
@@ -1059,10 +1130,10 @@ class GitToolTest(unittest.TestCase):
         def _create_paths():
             tmp = temp_folder()
             submodule_path = os.path.join(
-                tmp, 
+                tmp,
                 os.path.basename(os.path.normpath(submodule)))
             subsubmodule_path = os.path.join(
-                submodule_path, 
+                submodule_path,
                 os.path.basename(os.path.normpath(subsubmodule)))
             return tmp, submodule_path, subsubmodule_path
 
@@ -1079,7 +1150,7 @@ class GitToolTest(unittest.TestCase):
         with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
             git.clone(path, submodule="invalid")
 
-        # Check shallow 
+        # Check shallow
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
         git.clone(path, submodule="shallow")
@@ -1094,6 +1165,30 @@ class GitToolTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
+
+    def git_to_capture_branch_test(self):
+        conanfile = """
+from conans import ConanFile, tools
+
+def get_version():
+    git = tools.Git()
+    try:
+        return "%s_%s" % (git.get_branch(), git.get_revision())
+    except:
+        return None
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = get_version()
+
+    def build(self):
+        assert("r3le_ase__" in self.version)
+        assert(len(self.version) == 50)
+"""
+        path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
+        client = TestClient()
+        client.current_folder = path
+        client.run("create . user/channel")
 
     def git_helper_in_recipe_test(self):
         client = TestClient()
@@ -1167,3 +1262,72 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
+
+    def unix_to_dos_unit_test(self):
+
+        def save_file(contents):
+            tmp = temp_folder()
+            filepath = os.path.join(tmp, "a_file.txt")
+            save(filepath, contents)
+            return filepath
+
+        fp = save_file(b"a line\notherline\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+
+            tools.unix2dos(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+            tools.unix2dos(fp)
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+
+        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+
+        fp = save_file(b"a line\r\notherline\r\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+
+            tools.dos2unix(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+            tools.dos2unix(fp)
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+
+        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+
+    def unix_to_dos_conanfile_test(self):
+        client = TestClient()
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "file.txt"
+
+    def build(self):
+        assert("\\r\\n" in tools.load("file.txt"))
+        tools.dos2unix("file.txt")
+        assert("\\r\\n" not in tools.load("file.txt"))
+        tools.unix2dos("file.txt")
+        assert("\\r\\n" in tools.load("file.txt"))
+"""
+        client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
+        client.run("create . user/channel")

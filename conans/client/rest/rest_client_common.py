@@ -1,6 +1,7 @@
 import json
 import time
 
+import os
 from requests.auth import AuthBase, HTTPBasicAuth
 from six.moves.urllib.parse import urlencode
 

@@ -15,6 +15,35 @@ from conans.test.utils.test_files import temp_folder
 
 
 class RemoveOutdatedTest(unittest.TestCase):
+
+    def remove_query_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Test/0.1@lasote/testing -s os=Windows")
+        client.run("create . Test/0.1@lasote/testing -s os=Linux")
+        client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
+        client.run("create . Test2/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertNotIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
+
+            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("search Test2/0.1@lasote/testing %s" % remote)
+            self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+            client.run("remove Test2/0.1@lasote/testing -q=os=None -f %s" % remote)
+            client.run("search Test2/0.1@lasote/testing %s" % remote)
+            self.assertNotIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+            self.assertIn("There are no packages", client.out)
+
     def remove_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}

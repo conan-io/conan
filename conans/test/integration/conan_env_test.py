@@ -30,7 +30,6 @@ class ConanEnvTest(unittest.TestCase):
           it's running agains the shared in the local cache.
         """
 
-
         conanfile = """
 from conans import ConanFile, CMake, tools
 
@@ -58,10 +57,10 @@ class LibConan(ConanFile):
         self.copy("*main*", dst="bin", keep_path=False)
 
 """
-        cmakelists =  """
-project(mytest)
+        cmakelists = """
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
+project(mytest)
 
 SET(CMAKE_SKIP_RPATH 1)
 ADD_LIBRARY(hello SHARED hello.c)
@@ -173,25 +172,25 @@ import os
 class MyLib(ConanFile):
     apply_env = False
     requires = "Pkg/0.1@lasote/testing"
-    
+
     def _test(self):
         assert("SOME_VAR" not in os.environ)
         assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
-    
+
     def build(self):
         self._test()
-        
+
     def package(self):
         self._test()
-        
+
     def package_info(self):
         self._test()
-    
+
     def build(self):
         self._test()
-              
+
     def imports(self):
-        self._test()     
+        self._test()
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . MyLib/0.1@lasote/testing")

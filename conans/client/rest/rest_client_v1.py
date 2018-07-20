@@ -3,6 +3,7 @@ import time
 
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
+from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
@@ -169,6 +170,7 @@ class RestV1Methods(RestCommonMethods):
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)
+        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, urls)
         if EXPORT_SOURCES_TGZ_NAME not in urls:
             return None
         urls = {EXPORT_SOURCES_TGZ_NAME: urls[EXPORT_SOURCES_TGZ_NAME]}

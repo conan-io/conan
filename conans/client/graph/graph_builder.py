@@ -204,8 +204,14 @@ class DepsGraphBuilder(object):
             recipe_status = RECIPE_WORKSPACE
             remote = WORKSPACE_FILE
         else:
-            result = self._proxy.get_recipe(requirement.conan_reference,
-                                            check_updates, update, remote_name)
+            try:
+                result = self._proxy.get_recipe(requirement.conan_reference,
+                                                check_updates, update, remote_name)
+            except ConanException as e:
+                base_ref = str(current_node.conan_ref or "PROJECT")
+                self._output.error("Failed requirement '%s' from '%s'" % (requirement.conan_reference,
+                                                                          base_ref))
+                raise e
             conanfile_path, recipe_status, remote, new_ref = result
             # new_ref could contain the resolved revision if enabled in the server
             requirement.conan_reference = new_ref

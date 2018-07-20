@@ -1,6 +1,7 @@
 import os
 import time
 
+from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
@@ -62,6 +63,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(conan_reference)
         data = self.get_json(url)
         files = data["files"]
+        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
         files = {EXPORT_SOURCES_TGZ_NAME: files[EXPORT_SOURCES_TGZ_NAME]}

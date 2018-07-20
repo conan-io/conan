@@ -505,9 +505,9 @@ class ConanAPIV1(object):
         self._client_cache.invalidate()
 
     @api_method
-    def config_install(self, item, verify_ssl):
+    def config_install(self, item, verify_ssl, config_type=None):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
@@ -565,7 +565,8 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
+              install_folder=None, should_configure=True, should_build=True, should_install=True,
+              should_test=True, cwd=None):
 
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
@@ -579,7 +580,7 @@ class ConanAPIV1(object):
         manager = self._init_manager(recorder)
         manager.build(conanfile_path, source_folder, build_folder, package_folder,
                       install_folder, should_configure=should_configure, should_build=should_build,
-                      should_install=should_install)
+                      should_install=should_install, should_test=should_test)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):

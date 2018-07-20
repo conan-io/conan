@@ -22,7 +22,12 @@ class FileUploadDownloadController(Controller):
             token = request.query.get("signature", None)
             file_path = service.get_file_path(filepath, token)
             # https://github.com/kennethreitz/requests/issues/1586
-            mimetype = "x-gzip" if filepath.endswith(".tgz") else "auto"
+            if filepath.endswith(".tgz"):
+                mimetype = "x-gzip"
+            elif filepath.endswith(".txz"):
+                mimetype = "x-xz"
+            else:
+                mimetype = "auto"
             return static_file(os.path.basename(file_path),
                                root=os.path.dirname(file_path),
                                mimetype=mimetype)

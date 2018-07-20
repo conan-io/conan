@@ -199,6 +199,14 @@ class Pkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: config install error. Can't clone repo", self.client.out)
 
+    def failed_install_http_test(self):
+        """ should install from a http zip
+        """
+        error = self.client.run('config install httpnonexisting', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Error while installing config from httpnonexisting",
+                      self.client.out)
+
     def install_repo_test(self):
         """ should install from a git repo
         """
@@ -213,6 +221,12 @@ class Pkg(ConanFile):
 
         self.client.run('config install "%s/.git"' % folder)
         self._check("%s/.git" % folder)
+
+    def force_git_type_test(self):
+        client = TestClient()
+        error = client.run('config install httpnonexisting --type=git', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't clone repo", client.out)
 
     def reinstall_test(self):
         """ should use configured URL in conan.conf
