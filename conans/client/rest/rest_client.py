@@ -31,13 +31,8 @@ class RestApiClient(object):
             _, _, cap = tmp.server_info()
             self._capabilities[self.remote_url] = cap
 
-        if API_V2 in self._capabilities[self.remote_url]:
-            checksum_deploy = CHECKSUM_DEPLOY in self._capabilities[self.remote_url]
-            return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers, checksum_deploy)
-        else:
-            return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers)
+        return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
+                             self.requester, self.verify_ssl, self._put_headers)
 
     def get_conan_manifest(self, conan_reference):
         return self._get_api().get_conan_manifest(conan_reference)
