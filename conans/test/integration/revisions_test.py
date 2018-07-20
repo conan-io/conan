@@ -20,10 +20,11 @@ class RevisionsTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def _create_and_upload(self, conanfile, reference):
+    def _create_and_upload(self, conanfile, reference, remote=None):
+        remote = remote or "remote0"
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % str(reference))
-        self.client.run("upload %s -c --all" % str(reference))
+        self.client.run("upload %s -c --all -r %s" % (str(reference), remote))
 
     def test_revisions_recipes_without_scm(self):
         ref = ConanFileReference.loads("lib/1.0@lasote/testing")
