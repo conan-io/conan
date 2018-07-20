@@ -13,6 +13,9 @@ from conans.util.files import load
 
 # complex_search: With ORs and not filtering by not restricted settings
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
+API_V2 = "api_v2"
+# Only when v2 (to be introduced in package indexer when revisions support)
+CHECKSUM_DEPLOY = "checksum_deploy"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
 __version__ = '1.7.0-dev'

@@ -212,7 +212,7 @@ class DepsGraphBuilder(object):
                 self._output.error("Failed requirement '%s' from '%s'" % (requirement.conan_reference,
                                                                           base_ref))
                 raise e
-            conanfile_path, recipe_status, remote = result
+            conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,

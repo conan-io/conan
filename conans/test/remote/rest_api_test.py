@@ -1,20 +1,51 @@
-import unittest
-from conans.client.rest.rest_client import RestApiClient
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.test_files import hello_source_files
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
-from conans.model.info import ConanInfo
-from conans.test.server.utils.server_launcher import TestServerLauncher
-import requests
-from conans.test.utils.test_files import temp_folder
-from conans.model.version import Version
-from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
-import platform
 import os
-from conans.util.files import md5, save
-from conans.model.manifest import FileTreeManifest
+import platform
+import unittest
+
+import requests
 from nose.plugins.attrib import attr
+
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.rest_client_v1 import complete_url
+from conans.model.info import ConanInfo
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.version import Version
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
+from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
+from conans.test.server.utils.server_launcher import TestServerLauncher
+from conans.test.utils.test_files import hello_source_files
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.files import md5, save
+
+
+class RestApiUnitTest(unittest.TestCase):
+
+    def relative_url_completion_test(self):
+
+        # test absolute urls
+        self.assertEquals(complete_url("http://host2", "http://host"), "http://host")
+        self.assertEquals(complete_url("http://host2", "http://host:1234"), "http://host:1234")
+        self.assertEquals(complete_url("http://host2", "https://host"), "https://host")
+        self.assertEquals(complete_url("http://host2", "https://host:1234"), "https://host:1234")
+
+        # test relative urls
+        self.assertEquals(complete_url("http://host", "v1/path_to_file.txt"),
+                          "http://host/v1/path_to_file.txt")
+
+        self.assertEquals(complete_url("http://host:1234", "v1/path_to_file.txt"),
+                          "http://host:1234/v1/path_to_file.txt")
+
+        self.assertEquals(complete_url("https://host", "v1/path_to_file.txt"),
+                          "https://host/v1/path_to_file.txt")
+
+        self.assertEquals(complete_url("https://host:1234", "v1/path_to_file.txt"),
+                          "https://host:1234/v1/path_to_file.txt")
+
+        # test relative urls with subdirectory
+        self.assertEquals(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
+                          "https://host:1234/subdir/v1/path_to_file.txt")
 
 
 @attr('slow')
@@ -48,37 +79,6 @@ class RestApiTest(unittest.TestCase):
     def tearDown(self):
         RestApiTest.server.clean()
 
-    def relative_url_completion_test(self):
-        api = RestApiClient(TestBufferConanOutput(), requester=requests)
-
-        # test absolute urls
-        self.assertEquals(api._complete_url("http://host"), "http://host")
-        self.assertEquals(api._complete_url("http://host:1234"), "http://host:1234")
-        self.assertEquals(api._complete_url("https://host"), "https://host")
-        self.assertEquals(api._complete_url("https://host:1234"), "https://host:1234")
-
-        # test relative urls
-        api.remote_url = "http://host"
-        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
-                          "http://host/v1/path_to_file.txt")
-
-        api.remote_url = "http://host:1234"
-        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
-                          "http://host:1234/v1/path_to_file.txt")
-
-        api.remote_url = "https://host"
-        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
-                          "https://host/v1/path_to_file.txt")
-
-        api.remote_url = "https://host:1234"
-        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
-                          "https://host:1234/v1/path_to_file.txt")
-
-        # test relative urls with subdirectory
-        api.remote_url = "https://host:1234/subdir/"
-        self.assertEquals(api._complete_url("v1/path_to_file.txt"),
-                          "https://host:1234/subdir/v1/path_to_file.txt")
-
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
         self.assertEquals(version, "0.16.0")
@@ -91,14 +91,8 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(conan_reference)
 
         # Get the conans
-        urls = self.api.get_recipe_urls(conan_reference)
-        self.assertIsNotNone(urls)
-        self.assertIn(CONANFILE, urls)
-        self.assertIn(CONAN_MANIFEST, urls)
-
-        # Download them
         tmp_dir = temp_folder()
-        self.api.download_files_to_folder(urls, tmp_dir)
+        self.api.get_recipe(conan_reference, tmp_dir)
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
@@ -122,13 +116,8 @@ class RestApiTest(unittest.TestCase):
         self._upload_package(package_reference)
 
         # Get the package
-        urls = self.api.get_package_urls(package_reference)
-        self.assertIsNotNone(urls)
-        self.assertIn("hello.cpp", urls)
-
-        # Download them
         tmp_dir = temp_folder()
-        self.api.download_files_to_folder(urls, tmp_dir)
+        self.api.get_package(package_reference, tmp_dir)
         self.assertIn("hello.cpp", os.listdir(tmp_dir))
 
     def get_package_info_test(self):
@@ -165,9 +154,10 @@ class RestApiTest(unittest.TestCase):
             self._upload_recipe(conan_reference, files)
 
             # Get the conans
-            urls = self.api.get_recipe_urls(conan_reference)
-            self.assertIsNotNone(urls)
-            self.assertIn("file999.cpp", urls)
+            tmp = temp_folder()
+            files = self.api.get_recipe(conan_reference, tmp)
+            self.assertIsNotNone(files)
+            self.assertTrue(os.path.exists(os.path.join(tmp, "file999.cpp")))
 
     def search_test(self):
         # Upload a conan1

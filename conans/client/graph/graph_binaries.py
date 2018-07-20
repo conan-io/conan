@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:
-            remote = self._registry.get_ref(conan_ref)
+            remote = self._registry.get_recipe_remote(conan_ref)
         remotes = self._registry.remotes
 
         if os.path.exists(package_folder):
