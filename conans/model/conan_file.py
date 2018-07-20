@@ -12,7 +12,6 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
-from conans.client.run_environment import RunEnvironment
 from conans.client.tools.oss import os_info
 
 
