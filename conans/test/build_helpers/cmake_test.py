@@ -38,6 +38,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.source_folder = os.path.join(self.tempdir, "src")
         conan_file.build_folder = os.path.join(self.tempdir, "build")
         conan_file.package_folder = os.path.join(self.tempdir, "pkg")
+        conan_file.deps_cpp_info = DepsCppInfo()
 
         msg = "FOLDER: " + conan_file.package_folder
         for folder in (conan_file.build_folder, conan_file.package_folder):
@@ -85,7 +86,7 @@ class CMakeTest(unittest.TestCase):
             save(os.path.join(folder, "sub", "file3.cmake"), msg)
 
         cmake = CMake(conan_file, generator="Unix Makefiles")
-        cmake.patch_deps_paths()
+        cmake.patch_config_paths()
         for folder in (conan_file.build_folder, conan_file.package_folder):
             self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
             self.assertEqual(msg, load(os.path.join(folder, "file2")))
