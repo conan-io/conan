@@ -17,4 +17,6 @@ from .pkg_config import *
 from .scm import *
 # noinspection PyUnresolvedReferences
 from .apple import *
+# noinspection PyUnresolvedReferences
+from .compiler_id import *
 
