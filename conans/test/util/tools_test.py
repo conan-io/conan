@@ -418,15 +418,27 @@ class SystemPackageToolTest(unittest.TestCase):
 
 
 class RunnerMock(object):
-    def __init__(self, return_ok=True):
+    def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
+        self._output = output
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None, the_input=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
+        if self._output and output and hasattr(output, "write"):
+            output.write(self._output)
+
         return 0 if self.return_ok else 1
+
+    def get_output(self):
+        return self._output
+
+    def set_output(self, output):
+        self._output = output
+
+    output = property(get_output, set_output)
 
 
 class ReplaceInFileTest(unittest.TestCase):
