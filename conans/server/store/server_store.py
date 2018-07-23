@@ -40,8 +40,6 @@ class ServerStore(SimplePaths):
     def get_last_revision(self, reference):
         assert(isinstance(reference, ConanFileReference))
         rev_file = self._last_revision_path(reference)
-        print(rev_file)
-        print(str(reference))
         if self._storage_adapter.path_exists(rev_file):
             return self._storage_adapter.read_file(rev_file, lock_file=rev_file + ".lock")
         else:
