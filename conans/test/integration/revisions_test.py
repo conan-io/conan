@@ -7,6 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
+@unittest.skipUnless(os.environ.get("CONAN_SERVER_REVISIONS", API_V2) == API_V2, "Test only apiv2")
 class RevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -35,6 +36,7 @@ class HelloConan(ConanFile):
         self.output.warn("Revision 1")        
 '''
         self._create_and_upload(conanfile, ref)
+        print(self.servers)
         rev = self.servers["remote0"].paths.get_last_revision(ref)
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
