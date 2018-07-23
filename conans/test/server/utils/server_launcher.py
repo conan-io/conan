@@ -45,6 +45,8 @@ class TestServerLauncher(object):
         mkdir(self.storage_folder)
 
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
+        print("REVISIONS ENABLED?")
+        print(server_config.revisions_enabled)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port
