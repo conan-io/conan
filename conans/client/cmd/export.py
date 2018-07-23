@@ -211,6 +211,8 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
 
     included_exports, excluded_exports = classify_patterns(conanfile.exports)
     included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
+    print(included_exports, excluded_exports)
+    print(included_sources, excluded_sources)
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))

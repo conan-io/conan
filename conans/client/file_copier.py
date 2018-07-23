@@ -76,12 +76,17 @@ class FileCopier(object):
 
         src = os.path.join(base_src, src)
         dst = os.path.join(self._base_dst, dst)
+        print("src", src)
+        print("dst", dst)
 
         files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
                                                          ignore_case)
+        print("files_to_copy", files_to_copy)
+        print("link_folders", link_folders)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
+        print("copied_files", copied_files)
         return copied_files
 
     def _filter_files(self, src, pattern, links, excludes, ignore_case):
@@ -121,6 +126,7 @@ class FileCopier(object):
             pattern = pattern.lower()
 
         files_to_copy = fnmatch.filter(filenames, pattern)
+        linked_folders = fnmatch.filter(linked_folders, pattern)
         if excludes:
             if not isinstance(excludes, (tuple, list)):
                 excludes = (excludes, )
@@ -128,6 +134,7 @@ class FileCopier(object):
                 excludes = [e.lower() for e in excludes]
             for exclude in excludes:
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+                linked_folders = [f for f in linked_folders if not fnmatch.fnmatch(f, exclude)]
 
         if ignore_case:
             files_to_copy = [filenames[f] for f in files_to_copy]
