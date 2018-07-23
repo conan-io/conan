@@ -12,7 +12,7 @@ else{
 
 pyvers = ['py36']
 
-def module = "\"conans.test.integration.revisions_test.RevisionsTest\""
+def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
 def api_confs = ["v2"]
