@@ -2,7 +2,6 @@ import ast
 import asttokens
 import operator
 import os
-from functools import reduce
 from contextlib import contextmanager
 
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
@@ -74,11 +73,11 @@ def compute_conan_expand_replacements(atok, value, mapping):
 def expand_recipe(recipe_path, conanfile, output, additional_expansions=[]):
     atok = asttokens.ASTTokens(load(recipe_path), parse=True)
 
-    # Iterate through the ast at root level and search the one class that derives from ConanFile.
+    # Iterate through the ast at root level and search the ConanFile class by name.
     conanclass_node = None
     for item in atok.tree.body:
         if not isinstance(item, ast.ClassDef): continue
-        if reduce(operator.and_, [not isinstance(x, ast.Name) or x.id != "ConanFile" for x in item.bases], True): continue
+        if item.name !=  conanfile.__name__: continue
         conanclass_node = item
         break
     assert(conanclass_node)
