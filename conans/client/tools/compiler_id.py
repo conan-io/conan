@@ -3,6 +3,7 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 from conans.client.runner import ConanRunner
+from conans.client.tools import which
 from six import StringIO
 import os
 
@@ -86,3 +87,30 @@ def compiler_id(compiler, runner=None):
         minor = int(defines['__GNUC_MINOR__'])
         patch = int(defines['__GNUC_PATCHLEVEL__'])
     return CompilerId(compiler, major, minor, patch)
+
+def guess_compiler(settings, language):
+    def compiler_name(compiler):
+        return '%s.exe' % compiler if os.name == 'nt' else compiler
+
+    env_var = {'C': 'CC', 'C++': 'CXX'}.get(language)
+    if env_var in os.environ:
+        return os.environ[env_var]
+    compiler = settings.get_safe('compiler')
+    if compiler == 'gcc':
+        name = {'C': 'gcc', 'C++': 'g++'}.get(language)
+        return which(compiler_name(name))
+    elif compiler == 'clang':
+        name = {'C': 'clang', 'C++': 'clang++'}.get(language)
+        return which(compiler_name('clang'))
+    elif compiler == 'apple-clang':
+        from conans.client.tools import XCRun
+        xcrun = XCRun(settings)
+        compiler = {'C': xcrun.cc, 'C++': xcrun.cxx}.get(language)
+    else:
+        return None
+
+def guess_c_compiler(settings):
+    return guess_compiler(settings, 'C')
+
+def guess_cxx_compiler(settings):
+    return guess_compiler(settings, 'C++')

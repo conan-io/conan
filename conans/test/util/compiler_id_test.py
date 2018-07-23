@@ -6,6 +6,7 @@
 import unittest
 from conans import tools
 from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.conanfile import MockSettings
 
 
 class CompilerIdTest(unittest.TestCase):
@@ -50,3 +51,12 @@ class CompilerIdTest(unittest.TestCase):
         print(tools.compiler_id('g++'))
         print(tools.compiler_id('clang'))
         print(tools.compiler_id('clang++'))
+
+
+        fake_settings = MockSettings({'compiler': 'gcc'})
+        print(tools.guess_c_compiler(fake_settings))
+        print(tools.guess_cxx_compiler(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'clang'})
+        print(tools.guess_c_compiler(fake_settings))
+        print(tools.guess_cxx_compiler(fake_settings))
