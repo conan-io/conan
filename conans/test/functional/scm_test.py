@@ -3,6 +3,7 @@ import os
 import unittest
 from collections import namedtuple
 
+from conans import tools
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
@@ -413,3 +414,37 @@ class ConanLib(ConanFile):
         the_json = str(scm_data)
         data2 = json.loads(the_json)
         self.assertEquals(data, data2)
+
+    def test_that_scm_is_only_partially_rewritten(self):
+        conanfile = '''
+import os
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {
+        "type": "git",
+        "username": tools.get_env("MY_USERNAME", "error"),
+        "password": tools.get_env("MY_PASSWORD", "error"),
+        "url": "auto",
+        "revision": "auto"
+    }
+
+    def source(self):
+        self.output.warn("scm['username'] = '{}'".format(self.scm['username']))
+        self.output.warn("scm['password'] = '{}'".format(self.scm['password']))
+'''
+        path, commit = create_local_git_repo({"myfile": "contents", "conanfile.py": conanfile},
+                                             branch="my_release")
+        self.client.current_folder = path
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
+        self._commit_contents()
+
+        self.client.save({"conanfile.py": conanfile})
+        with tools.environment_append({"MY_USERNAME": "export user", "MY_PASSWORD": "export password"}):
+            self.client.run("export . user/channel")
+        with tools.environment_append({"MY_USERNAME": "install user", "MY_PASSWORD": "install password"}):
+            self.client.run("install lib/0.1@user/channel --build")
+        self.assertIn("scm['username'] = 'install user'", self.client.out)
+        self.assertIn("scm['password'] = 'install password'", self.client.out)
