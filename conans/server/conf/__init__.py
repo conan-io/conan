@@ -153,8 +153,14 @@ class ConanServerConfigParser(ConfigParser):
     @property
     def revisions_enabled(self):
         try:
+            print("AKI")
+            print(self.env_config)
+            print(self.env_config["revisions"])
+            print(self.env_config["revisions"].__class__)
             revisions_enabled = self._get_conf_server_string("revisions").lower()
             ret = revisions_enabled == "true" or revisions_enabled == "1"
+            print(ret)
+            print("OKO")
             if ret and self.store_adapter != "disk":
                 raise Exception("Revisions mechanism only work with disk storage")
             return ret
