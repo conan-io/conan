@@ -32,6 +32,9 @@ class ConanServerConfigParser(ConfigParser):
         self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
+        print("INIT CONFIG")
+        get_env("CONAN_SERVER_REVISIONS", None, environment)
+        print(os.getenv("CONAN_SERVER_REVISIONS"))
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
                            "store_adapter": get_env("CONAN_STORE_ADAPTER", None, environment),
                            "authorize_timeout": get_env("CONAN_AUTHORIZE_TIMEOUT", None, environment),
