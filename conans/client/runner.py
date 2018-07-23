@@ -16,7 +16,7 @@ class ConanRunner(object):
         self._generate_run_log_file = generate_run_log_file
         self._log_run_to_output = log_run_to_output
 
-    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):
+    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False, the_input=None):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
@@ -29,6 +29,7 @@ class ConanRunner(object):
                   "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else sys.stdout
+        stream_input = the_input if the_input and hasattr(the_input, "read") else sys.stdin
 
         if not self._generate_run_log_file:
             log_filepath = None
@@ -48,17 +49,17 @@ class ConanRunner(object):
                 with open(log_filepath, "a+") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
-                    return self._pipe_os_call(command, stream_output, log_handler, cwd)
+                    return self._pipe_os_call(command, stream_output, log_handler, cwd, stream_input)
             else:
-                return self._pipe_os_call(command, stream_output, None, cwd)
+                return self._pipe_os_call(command, stream_output, None, cwd, stream_input)
 
-    def _pipe_os_call(self, command, stream_output, log_handler, cwd):
+    def _pipe_os_call(self, command, stream_output, log_handler, cwd, stream_input):
 
         try:
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdour,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
+            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd, stdin=stream_input)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
