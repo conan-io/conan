@@ -44,6 +44,8 @@ class TestServerLauncher(object):
         self.storage_folder = os.path.join(base_path, ".conan_server", "data")
         mkdir(self.storage_folder)
 
+        print(server_capabilities)
+        print(os.environ.get("CONAN_SERVER_REVISIONS"))
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
         print("REVISIONS ENABLED?")
         print(server_config.revisions_enabled)
