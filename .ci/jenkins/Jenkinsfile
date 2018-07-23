@@ -1,6 +1,6 @@
 def nightly = (env.JOB_NAME == "ConanNightly")
 
-def slaves = ['Macos']
+def slaves = ['Linux', 'Windows', 'Macos']
 
 def pyvers 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
@@ -10,12 +10,10 @@ else{
 	pyvers = ['py36', 'py27']
 }
 
-pyvers = ['py36']
-
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
-def api_confs = ["v2"]
+def api_confs = ["v1", "v2"]
 
 def win_tmp_base = "D:/J/t/"
 def rest_tmp_base = "/tmp/"
