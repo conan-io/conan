@@ -106,7 +106,7 @@ class RemoteRegistry(object):
     def refs(self):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             _, refs = self._load()
-            return {str(ConanFileReference.loads(ref)): remote for ref, remote in refs.items()}
+            return refs
 
     def get_recipe_remote(self, conan_reference):
         assert(isinstance(conan_reference, ConanFileReference))

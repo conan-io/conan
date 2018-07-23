@@ -323,7 +323,7 @@ class RestV1Methods(RestCommonMethods):
         def is_dir(the_path):
             if the_path == ".":
                 return True
-            for the_file in urls.keys():
+            for the_file in urls:
                 if the_path == the_file:
                     return False
                 elif the_file.startswith(the_path):
@@ -332,7 +332,7 @@ class RestV1Methods(RestCommonMethods):
 
         if is_dir(path):
             ret = []
-            for the_file in urls.keys():
+            for the_file in urls:
                 if path == "." or the_file.startswith(path):
                     tmp = the_file[len(path)-1:].split("/", 1)[0]
                     if tmp not in ret:
