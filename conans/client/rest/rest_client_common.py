@@ -233,6 +233,7 @@ class RestCommonMethods(object):
 
     def _recipe_url(self, conan_reference):
         url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+
         if conan_reference.revision:
             url += "#%s" % conan_reference.revision
         return url.replace("#", "%23")

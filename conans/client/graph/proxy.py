@@ -50,6 +50,7 @@ class ConanProxy(object):
 
         remote = self._registry.get_recipe_remote(reference)
 
+
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
@@ -58,6 +59,7 @@ class ConanProxy(object):
             self._recorder.recipe_fetched_from_cache(reference)
             new_ref = self._registry.get_ref_with_revision(reference) or reference
             return conanfile_path, status, remote, new_ref
+
 
         named_remote = self._registry.remote(remote_name) if remote_name else None
         update_remote = named_remote or remote
@@ -86,6 +88,7 @@ class ConanProxy(object):
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.set_ref(new_ref, update_remote)
+
                     status = RECIPE_UPDATED
                 else:
                     status = RECIPE_UPDATEABLE
