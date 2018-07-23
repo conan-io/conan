@@ -4,6 +4,7 @@ import fasteners
 from collections import OrderedDict, namedtuple
 
 from conans.errors import ConanException, NoRemoteAvailable
+from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
@@ -107,7 +108,8 @@ class RemoteRegistry(object):
             _, refs = self._load()
             return refs
 
-    def get_ref(self, conan_reference):
+    def get_recipe_remote(self, conan_reference):
+        assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             remote_name = refs.get(str(conan_reference))
@@ -117,44 +119,44 @@ class RemoteRegistry(object):
                 return None
 
     def remove_ref(self, conan_reference, quiet=False):
+        assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
             try:
-                del refs[conan_reference]
+                del refs[str(conan_reference)]
                 self._save(remotes, refs)
             except:
                 if not quiet:
                     self._output.warn("Couldn't delete '%s' from remote registry"
-                                      % conan_reference)
+                                      % str(conan_reference))
 
     def set_ref(self, conan_reference, remote):
+        assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            refs[conan_reference] = remote.name
+            refs[str(conan_reference)] = remote.name
             self._save(remotes, refs)
 
     def add_ref(self, conan_reference, remote):
+        assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
             if conan_reference in refs:
                 raise ConanException("%s already exists. Use update" % conan_reference)
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
-            refs[conan_reference] = remote
+            refs[str(conan_reference)] = remote
             self._save(remotes, refs)
 
     def update_ref(self, conan_reference, remote):
+        assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            conan_reference = str(conan_reference)
             remotes, refs = self._load()
-            if conan_reference not in refs:
-                raise ConanException("%s does not exist. Use add" % conan_reference)
+            if str(conan_reference) not in refs:
+                raise ConanException("%s does not exist. Use add" % str(conan_reference))
             if remote not in remotes:
                 raise ConanException("%s not in remotes" % remote)
-            refs[conan_reference] = remote
+            refs[str(conan_reference)] = remote
             self._save(remotes, refs)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
