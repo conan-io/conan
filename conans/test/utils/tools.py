@@ -459,22 +459,22 @@ class TestClient(object):
 
         # Save a copy of the original stdout fd in saved_stdout_fd
         saved_stdout_fd = os.dup(original_stdout_fd)
+        # Create a temporary file and redirect stdout to it
+        tfile = tempfile.TemporaryFile(mode='w+b')
+        # Flush and close sys.stdout - also closes the file descriptor (fd)
+        if original_stdout is None:
+            sys.stdout.close()
+        _redirect_stdout(tfile.fileno())
         try:
-            # Create a temporary file and redirect stdout to it
-            tfile = tempfile.TemporaryFile(mode='w+b')
-            # Flush and close sys.stdout - also closes the file descriptor (fd)
-            if original_stdout is None:
-                sys.stdout.close()
-            _redirect_stdout(tfile.fileno())
             # Yield to caller, then redirect stdout back to the saved fd
             yield
+        finally:
             sys.stdout.close()
             _redirect_stdout(saved_stdout_fd, original_stdout)
             # Copy contents of temporary file to the given stream
             tfile.flush()
             tfile.seek(0, io.SEEK_SET)
             stream.write(tfile.read())
-        finally:
             tfile.close()
             os.close(saved_stdout_fd)
 
