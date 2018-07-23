@@ -1,3 +1,4 @@
+import os
 import unittest
 from conans.test.utils.tools import TestServer, TestClient
 from bottle import request
@@ -58,7 +59,8 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        expected_calls = [('get_conan_manifest_url', None),
+        expected_calls = [('ping', None),
+                          ('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_conanfile_snapshot', 'Bearer'),
@@ -84,7 +86,8 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(errors)
 
-        expected_calls = [('get_conan_manifest_url', None),
+        expected_calls = [('ping', None),
+                          ('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_conanfile_snapshot', 'Bearer'),

@@ -32,11 +32,9 @@ def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
-    src_ref = ConanFileReference.loads(reference)
-
-    short_paths = _prepare_sources(client_cache, src_ref, remote_manager, registry)
-    package_ids = _get_package_ids(client_cache, src_ref, package_ids)
-    package_copy(src_ref, user_channel, package_ids, client_cache, user_io,
+    short_paths = _prepare_sources(client_cache, reference, remote_manager, registry)
+    package_ids = _get_package_ids(client_cache, reference, package_ids)
+    package_copy(reference, user_channel, package_ids, client_cache, user_io,
                  short_paths, force)
 
 
