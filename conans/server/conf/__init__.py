@@ -26,15 +26,13 @@ class ConanServerConfigParser(ConfigParser):
     values from environment variables or from file.
     Environment variables have PRECEDENCE over file values
     """
-    def __init__(self, base_folder, storage_folder=None, environment=os.environ):
+    def __init__(self, base_folder, storage_folder=None, environment=None):
+        environment = environment or os.environ
         ConfigParser.__init__(self)
         self.optionxform = str  # This line keeps the case of the key, important for users case
         self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
-        print("INIT CONFIG")
-        print(get_env("CONAN_SERVER_REVISIONS", None, environment))
-        print(os.getenv("CONAN_SERVER_REVISIONS"))
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
                            "store_adapter": get_env("CONAN_STORE_ADAPTER", None, environment),
                            "authorize_timeout": get_env("CONAN_AUTHORIZE_TIMEOUT", None, environment),

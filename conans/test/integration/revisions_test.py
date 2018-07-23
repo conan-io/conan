@@ -36,7 +36,6 @@ class HelloConan(ConanFile):
         self.output.warn("Revision 1")        
 '''
         self._create_and_upload(conanfile, ref)
-        print(self.servers)
         rev = self.servers["remote0"].paths.get_last_revision(ref)
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
