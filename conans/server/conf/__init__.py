@@ -47,7 +47,7 @@ class ConanServerConfigParser(ConfigParser):
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment),
-                           "revisions": get_env("CONAN_SERVER_REVISIONS", False, environment)}
+                           "revisions": get_env("CONAN_SERVER_REVISIONS", None, environment)}
 
     def _get_file_conf(self, section, varname=None):
         """ Gets the section or variable from config file.
