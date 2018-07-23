@@ -105,9 +105,8 @@ virtualenv
 
             deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
             if posix_empty_vars:
+                self.assertIn('export PS1=$OLD_PS1', deactivate)
                 self.assertIn('unset OLD_PS1', deactivate)
-                if not get_env("PS1"):
-                    self.assertIn('unset PS1', deactivate)
                 self.assertIn('unset BASE_LIST', deactivate)
                 self.assertIn('unset BASE_VAR', deactivate)
                 self.assertIn('unset CPPFLAGS', deactivate)
@@ -115,8 +114,7 @@ virtualenv
                 self.assertIn('PATH="%s"\nexport PATH' % env.setdefault('PATH',''), deactivate)
                 self.assertIn('unset SPECIAL_VAR', deactivate)
             else:
-                self.assertIn('OLD_PS1="%s"\nexport OLD_PS1' % env.setdefault('OLD_PS1', ''), deactivate)
-                self.assertIn('PS1="%s"\nexport PS1' % env.setdefault('PS1', ''), deactivate)
+                self.assertIn('export PS1=$OLD_PS1', deactivate)
                 self.assertIn('BASE_LIST="%s"\nexport BASE_LIST' % env.setdefault('BASE_LIST', ''), deactivate)
                 self.assertIn('BASE_VAR="%s"\nexport BASE_VAR' % env.setdefault('BASE_VAR', ''), deactivate)
                 self.assertIn('CPPFLAGS="%s"\nexport CPPFLAGS' % env.setdefault('CPPFLAGS', ''), deactivate)
