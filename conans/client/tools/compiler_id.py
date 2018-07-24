@@ -51,6 +51,8 @@ class CompilerId(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+UNKWNON_COMPILER = CompilerId(None, None, None, None)
+
 
 def compiler_id(compiler, runner=None):
     try:
@@ -59,15 +61,14 @@ def compiler_id(compiler, runner=None):
         DEVNULL = open(os.devnull, 'rb')
     runner = runner or ConanRunner()
     result = StringIO()
-    stdin = StringIO()
     command = compiler
     # -E run only preprocessor
     # -dM generate list of #define directives
+    # - read input file from standard input
     command += ' -E -dM -'
     exit_code = runner(command, output=result, the_input=DEVNULL)
-    compiler, major, minor, patch = None, None, None, None
     if 0 != exit_code:
-        return CompilerId(compiler, major, minor, patch)
+        return UNKWNON_COMPILER
     output = result.getvalue()
     defines = dict()
     for line in output.split('\n'):
@@ -76,16 +77,25 @@ def compiler_id(compiler, runner=None):
             name = tokens[1]
             value = ' '.join(tokens[2:])
             defines[name] = value
-    if '__clang_major__' in defines:
-        compiler = APPLE_CLANG if '__APPLE_CC__' in defines else CLANG
-        major = int(defines['__clang_major__'])
-        minor = int(defines['__clang_minor__'])
-        patch = int(defines['__clang_patchlevel__'])
-    elif '__GNUC__' in defines:
-        compiler = GCC
-        major = int(defines['__GNUC__'])
-        minor = int(defines['__GNUC_MINOR__'])
-        patch = int(defines['__GNUC_PATCHLEVEL__'])
+    try:
+        if '__clang_major__' in defines:
+            compiler = APPLE_CLANG if '__apple_build_version__' in defines else CLANG
+            major = int(defines['__clang_major__'])
+            minor = int(defines['__clang_minor__'])
+            patch = int(defines['__clang_patchlevel__'])
+        elif '__GNUC__' in defines:
+            compiler = GCC
+            major = int(defines['__GNUC__'])
+            minor = int(defines['__GNUC_MINOR__'])
+            patch = int(defines['__GNUC_PATCHLEVEL__'])
+        else:
+            return UNKWNON_COMPILER
+    except KeyError:
+        # required macro wasn't defined
+        return UNKWNON_COMPILER
+    except ValueError:
+        # macro was defined, but wasn't parsed as an integer
+        return UNKWNON_COMPILER
     return CompilerId(compiler, major, minor, patch)
 
 
@@ -102,11 +112,12 @@ def guess_compiler(settings, language):
         return which(compiler_name(name))
     elif compiler == 'clang':
         name = {'C': 'clang', 'C++': 'clang++'}.get(language)
-        return which(compiler_name('clang'))
+        return which(compiler_name(name))
     elif compiler == 'apple-clang':
         from conans.client.tools import XCRun
         xcrun = XCRun(settings)
         compiler = {'C': xcrun.cc, 'C++': xcrun.cxx}.get(language)
+        return compiler
     else:
         return None
 

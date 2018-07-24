@@ -15,7 +15,23 @@ class CompilerIdTest(unittest.TestCase):
         runner.output = "#define UNKNOWN 1"
 
         compiler_id = tools.compiler_id('gcc', runner=runner)
-        self.assertEqual(compiler_id, tools.CompilerId(None, None, None, None))
+        self.assertEqual(compiler_id, tools.UNKWNON_COMPILER)
+
+    def test_malformed_numbers(self):
+        runner = RunnerMock()
+        runner.output = "#define __GNUC__ A\n" \
+                        "#define __GNUC_MINOR__ B\n" \
+                        "#define __GNUC_PATCHLEVEL__ C\n"
+
+        compiler_id = tools.compiler_id('gcc', runner=runner)
+        self.assertEqual(compiler_id, tools.UNKWNON_COMPILER)
+
+    def test_incomplete(self):
+        runner = RunnerMock()
+        runner.output = "#define __GNUC__ 1\n"
+
+        compiler_id = tools.compiler_id('gcc', runner=runner)
+        self.assertEqual(compiler_id, tools.UNKWNON_COMPILER)
 
     def test_gcc(self):
         runner = RunnerMock()
