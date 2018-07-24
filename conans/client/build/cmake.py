@@ -528,23 +528,18 @@ class CMake(object):
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
-                    tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
-
-        # patch paths of dependent packages that are found in any cmake files of the current package
-        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
-        for root, _, files in allwalk:
-            for f in files:
-                if f.endswith(".cmake"):
                     path = os.path.join(root, f)
-                    path_content = tools.load(path)
+                    tools.replace_in_file(path, pf, replstr, strict=False)
 
+                    # patch paths of dependent packages that are found in any cmake files of the current package
+                    path_content = tools.load(path)
                     for dep in self._conanfile.deps_cpp_info.deps:
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
                         # try to replace only if from str is found
                         if path_content.find(from_str) != -1:
-                            repl_str = "${CONAN_%s_ROOT}" % dep.upper()
-                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, repl_str))
-                            tools.replace_in_file(path, from_str, repl_str, strict=False)
+                            dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
+                            tools.replace_in_file(path, from_str, dep_str, strict=False)
 
     def _get_cpp_standard_vars(self):
         if not self._cppstd:
