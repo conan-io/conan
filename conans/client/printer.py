@@ -43,8 +43,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, project_reference, _info, registry,
-                   remote=None, node_times=None, path_resolver=None, package_filter=None,
+    def print_info(self, deps_graph, project_reference, _info, registry, node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
 
@@ -54,8 +53,6 @@ class Printer(object):
                                        file for a project on the path. This may be None,
                                        in which case the project itself will not be part
                                        of the printed dependencies.
-                remote: Remote specified in install command.
-                        Could be different from the registry one.
         """
         if _info is None:  # No filter
             def show(_):
@@ -181,8 +178,8 @@ class Printer(object):
         assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
-            if remote_info["remote"] != 'None':
-                self._out.info("Existing recipe in remote '%s':\n" % str(remote_info["remote"]))
+            if remote_info["remote"]:
+                self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
