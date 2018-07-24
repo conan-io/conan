@@ -40,7 +40,7 @@ class CompilerId(object):
         return '%s %s.%s.%s' % (self.compiler, self.major, self.minor, self.patch)
 
     def __repr__(self):
-        return '%s %s.%s.%s' % (self.compiler, self.major, self.minor, self.patch)
+        return self.__str__()
 
     def __eq__(self, other):
         return self.compiler == other.compiler and \
