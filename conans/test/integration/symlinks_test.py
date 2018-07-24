@@ -186,7 +186,7 @@ class ConanSymlink(ConanFile):
         directory = os.path.join(self.client.current_folder, "another_directory")
         other_dir = os.path.join(self.client.current_folder, "another_other_directory")
         mkdir(other_dir)
-        os.symlink(directory, os.path.join(other_dir, "another_directory"), True)
+        os.symlink(directory, os.path.join(other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
@@ -206,7 +206,7 @@ class ConanSymlink(ConanFile):
         directory = os.path.join(self.client.current_folder, "another_directory")
         other_dir = os.path.join(self.client.current_folder, "another_other_directory")
         mkdir(other_dir)
-        os.symlink(directory, os.path.join(other_dir, "another_directory"), True)
+        os.symlink(directory, os.path.join(other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
