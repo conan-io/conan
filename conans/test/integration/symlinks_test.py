@@ -28,7 +28,6 @@ class HelloConan(ConanFile):
 
     def package(self):
         self.copy("*.txt*", links=True)
-        self.copy("*.so*", links=True)
 """
 
 test_conanfile = """[requires]
@@ -38,7 +37,7 @@ Hello/0.1@lasote/stable
 ., * -> .
 """
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -56,18 +55,19 @@ class SymLinksTest(unittest.TestCase):
             # Save any different string, random, or the base path
             save(filepath, base)
             self.assertEqual(load(link), base)
-            filepath = os.path.join(base, "version1")
             link = os.path.join(base, "latest")
             self.assertEqual(os.readlink(link), "version1")
-            filepath = os.path.join(base, "latest/file2.txt")
+            filepath = os.path.join(base, "latest", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
-            filepath = os.path.join(base, "edge/file2.txt")
+            filepath = os.path.join(base, "edge", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
 
     def basic_test(self):
         client = TestClient()
+        print("registry", client.paths.registry)
+        print("current folder", client.current_folder)
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 

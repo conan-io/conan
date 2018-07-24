@@ -92,13 +92,9 @@ class FileCopier(object):
         """
         filenames = []
         linked_folders = []
+        linked_files = []
         for root, subfolders, files in os.walk(src, followlinks=True):
             if root in self._excluded:
-                subfolders[:] = []
-                continue
-
-            if links and os.path.islink(root):
-                linked_folders.append(os.path.relpath(root, src))
                 subfolders[:] = []
                 continue
             basename = os.path.basename(root)
@@ -106,14 +102,22 @@ class FileCopier(object):
             if basename in [".git", ".svn"]:
                 subfolders[:] = []
                 continue
-            if basename == "test_package":  # DO NOT export test_package/build folder
+            # DO NOT export test_package/build folder
+            if basename == "test_package":
                 try:
                     subfolders.remove("build")
                 except:
                     pass
 
+            if os.path.islink(root):
+                linked_folders.append(os.path.relpath(root, src))
+            #     subfolders[:] = []
+            #     continue
+
             relative_path = os.path.relpath(root, src)
             for f in files:
+                if os.path.islink(f):
+                    linked_files.append(f)
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
 
@@ -121,8 +125,16 @@ class FileCopier(object):
             filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
 
-        files_to_copy = fnmatch.filter(filenames, pattern)
-        linked_folders = fnmatch.filter(linked_folders, pattern)
+        filtered_files = fnmatch.filter(filenames, pattern)
+
+        linked_folders_files = linked_folders + linked_files
+        delete_items = [file for file in filtered_files for linked in linked_folders_files if
+                        linked in file]
+        files_to_copy = [file for file in filtered_files if file not in delete_items]
+
+        if not links:
+            linked_files.clear()
+            linked_folders.clear()
 
         if excludes:
             if not isinstance(excludes, (tuple, list)):
@@ -131,16 +143,28 @@ class FileCopier(object):
                 excludes = [e.lower() for e in excludes]
             for exclude in excludes:
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
-                linked_folders = [f for f in linked_folders if not fnmatch.fnmatch(f, exclude)]
+                linked_folders = [folder for folder in linked_folders for file in files_to_copy if
+                                  folder in file]
+                linked_files = [linked_file for linked_file in linked_files if
+                                linked_file in files_to_copy]
 
         if ignore_case:
             files_to_copy = [filenames[f] for f in files_to_copy]
 
-        return files_to_copy, linked_folders
+        return files_to_copy, linked_folders + linked_files
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
+        # Order linked folders staring with less dependant from others
+        links = []
         for linked_folder in linked_folders:
+            link = os.readlink(os.path.join(src, linked_folder))
+            if link in linked_folders:
+                links.append(linked_folder)
+            else:
+                links.insert(0, linked_folder)
+        # Look for symlinks in origin
+        for linked_folder in links:
             link = os.readlink(os.path.join(src, linked_folder))
             dst_link = os.path.join(dst, linked_folder)
             try:
@@ -153,7 +177,7 @@ class FileCopier(object):
             mkdir(os.path.dirname(dst_link))
             os.symlink(link, dst_link)
         # Remove empty links
-        for linked_folder in linked_folders:
+        for linked_folder in links:
             dst_link = os.path.join(dst, linked_folder)
             abs_path = os.path.realpath(dst_link)
             if not os.path.exists(abs_path):
