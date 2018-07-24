@@ -178,8 +178,8 @@ class Printer(object):
         assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
-            if remote_info["remote"] != 'None':
-                self._out.info("Existing recipe in remote '%s':\n" % str(remote_info["remote"]))
+            if remote_info["remote"]:
+                self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
