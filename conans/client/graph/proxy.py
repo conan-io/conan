@@ -72,7 +72,7 @@ class ConanProxy(object):
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     reference = self._remote_manager.get_recipe(reference, update_remote)
-                    self._registry.set_ref(reference, update_remote)
+                    self._registry.set_ref(reference, update_remote.name)
                     status = RECIPE_UPDATED
                 else:
                     status = RECIPE_UPDATEABLE
@@ -89,7 +89,7 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             new_reference = self._remote_manager.get_recipe(conan_reference, the_remote)
-            self._registry.set_ref(new_reference, the_remote)
+            self._registry.set_ref(new_reference, the_remote.name)
             self._recorder.recipe_downloaded(conan_reference, the_remote.url)
             return new_reference
 

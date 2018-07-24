@@ -197,5 +197,5 @@ class ConanApiAuthManager(object):
             raise ConanException("Password contains not allowed symbols")
 
         # Store result in DB
-        remote, prev_user, user = update_localdb(self._localdb, user, token, self._remote)
-        return token, remote, prev_user, user
+        remote_name, prev_user, user = update_localdb(self._localdb, user, token, self._remote)
+        return token, remote_name, prev_user, user

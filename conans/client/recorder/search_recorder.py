@@ -24,23 +24,23 @@ class SearchRecorder(object):
         self.keyword = "results"
         self._info = OrderedDict()
 
-    def add_recipe(self, remote, reference, with_packages=True):
+    def add_recipe(self, remote_name, reference, with_packages=True):
         recipe = _SearchRecipe(reference)
         recipe.with_packages = with_packages
-        if remote not in self._info:
-            self._info[remote] = OrderedDict()
-        self._info[remote][reference] = {"recipe": recipe, "packages": []}
+        if remote_name not in self._info:
+            self._info[remote_name] = OrderedDict()
+        self._info[remote_name][reference] = {"recipe": recipe, "packages": []}
 
-    def add_package(self, remote, reference, package_id, options, settings, requires, outdated):
-        self._info[remote][reference]["packages"].append(_SearchPackage(package_id, options,
-                                                                        settings, requires,
-                                                                        outdated))
+    def add_package(self, remote_name, reference, package_id, options, settings, requires, outdated):
+        self._info[remote_name][reference]["packages"].append(_SearchPackage(package_id, options,
+                                                                             settings, requires,
+                                                                             outdated))
 
     def get_info(self):
         info = {"error": self.error, self.keyword: []}
 
-        for remote, recipe_packages in sorted(self._info.items()):
-            remote_info = {"remote": remote, "items": []}
+        for remote_name, recipe_packages in sorted(self._info.items()):
+            remote_info = {"remote": remote_name, "items": []}
             for reference, item in recipe_packages.items():
                 recipe_info = item["recipe"].to_dict()
                 if item["recipe"].with_packages:
