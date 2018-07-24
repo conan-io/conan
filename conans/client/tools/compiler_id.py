@@ -4,6 +4,7 @@
 
 from conans.client.runner import ConanRunner
 from conans.client.tools import which
+from conans.model.version import Version
 from six import StringIO
 import os
 
@@ -19,6 +20,17 @@ class CompilerId(object):
         self._major = major
         self._minor = minor
         self._patch = patch
+        self._version = Version('%s.%s.%s' % (major, minor, patch))
+
+    def check_settings(self, settings):
+        compiler = settings.get_safe('compiler')
+        compiler_version = settings.get_safe('compiler.version')
+        if not compiler or not compiler_version:
+            return False
+        version = Version(compiler_version)
+        if compiler != self._compiler:
+            return False
+        return self._version.compatible(version)
 
     @property
     def compiler(self):

@@ -61,6 +61,47 @@ class CompilerIdTest(unittest.TestCase):
         compiler_id = tools.compiler_id('clang', runner=runner)
         self.assertEqual(compiler_id, tools.CompilerId(tools.APPLE_CLANG, 9, 1, 0))
 
+    def test_check_version_no_compiler(self):
+        compiler_id = tools.CompilerId('gcc', 4, 8, 1)
+
+        fake_settings = MockSettings({})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+    def test_check_version(self):
+        compiler_id = tools.CompilerId('gcc', 4, 8, 1)
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '4.8.1'})
+        self.assertTrue(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '4.8'})
+        self.assertTrue(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '4'})
+        self.assertTrue(compiler_id.check_settings(fake_settings))
+
+    def test_check_version_negative(self):
+        compiler_id = tools.CompilerId('gcc', 4, 8, 1)
+
+        fake_settings = MockSettings({'compiler': 'clang', 'compiler.version': '6.0.1'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '8.1.0'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '8.1'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '8'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '4.8.2'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
+
+        fake_settings = MockSettings({'compiler': 'gcc', 'compiler.version': '4.9'})
+        self.assertFalse(compiler_id.check_settings(fake_settings))
 
     def test_real(self):
         print(tools.compiler_id('gcc'))
