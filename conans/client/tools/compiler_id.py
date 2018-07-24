@@ -7,10 +7,9 @@ from conans.client.tools import which
 from six import StringIO
 import os
 
-
-GCC = 'GCC'
-CLANG = 'Clang'
-APPLE_CLANG = 'Apple Clang'
+GCC = 'gcc'
+CLANG = 'clang'
+APPLE_CLANG = 'apple-clang'
 
 
 class CompilerId(object):
