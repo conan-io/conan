@@ -37,13 +37,6 @@ class SCMTest(unittest.TestCase):
         self.reference = ConanFileReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
-    def _commit_contents(self):
-        self.client.runner("git init .", cwd=self.client.current_folder)
-        self.client.runner('git config user.email "you@example.com"', cwd=self.client.current_folder)
-        self.client.runner('git config user.name "Your Name"', cwd=self.client.current_folder)
-        self.client.runner("git add .", cwd=self.client.current_folder)
-        self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
-
     def test_scm_other_type_ignored(self):
         conanfile = '''
 from conans import ConanFile, tools
@@ -105,7 +98,7 @@ class ConanLib(ConanFile):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         error = self.client.run("export . user/channel", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Repo origin cannot be deduced by 'auto'",
@@ -141,7 +134,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace("short_paths = True", "short_paths = False")
         conanfile = conanfile.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
         self.client.run("create . user/channel")
 
@@ -154,7 +147,7 @@ class ConanLib(ConanFile):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=curdir)
         self.client.run("export . user/channel")
 
@@ -175,7 +168,6 @@ class ConanLib(ConanFile):
                                               "myfile.txt": "My file!",
                                               "conanfile.py": conanfile}, branch="my_release")
         self.client.current_folder = path
-        self._commit_contents()
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
@@ -195,7 +187,7 @@ class ConanLib(ConanFile):
         self.output.warn("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         self.client.save({"aditional_file.txt": "contents"})
 
         self.client.run("source . --source-folder=./source")
@@ -214,7 +206,7 @@ class ConanLib(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
@@ -233,7 +225,7 @@ class ConanLib(ConanFile):
         self.output.warn("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
 
         self.client.run("source . --source-folder=./source")
         self.assertFalse(os.path.exists(os.path.join(curdir, "source", "myfile.txt")))
@@ -248,7 +240,7 @@ class ConanLib(ConanFile):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        self._commit_contents()
+        create_local_git_repo(folder=self.client.current_folder)
         cmd = 'git remote add origin "%s"' % curdir
         self.client.runner(cmd, cwd=curdir)
         self.client.run("export . lasote/channel")
@@ -280,8 +272,6 @@ class ConanLib(ConanFile):
                                              branch="my_release")
         self.client.current_folder = path
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
-        self._commit_contents()
-
         self.client.run("create . lib/1.0@user/channel")
         self.assertIn("Contents: contents", self.client.out)
         self.client.save({"myfile": "Contents 2"})

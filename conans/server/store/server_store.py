@@ -104,12 +104,13 @@ class ServerStore(SimplePaths):
         if p_reference.revision:
             return p_reference
 
-        latest = self.get_last_package_revision(p_reference)
+        reference = self.ref_with_rev(p_reference.conan)
+        ret = PackageReference(reference, p_reference.package_id)
+
+        latest = self.get_last_package_revision(ret)
         if not latest:
             raise NotFoundException("Package not found: '%s'" % str(p_reference))
 
-        reference = self.ref_with_rev(p_reference.conan)
-        ret = PackageReference(reference, p_reference.package_id)
         ret.revision = latest
         return ret
 

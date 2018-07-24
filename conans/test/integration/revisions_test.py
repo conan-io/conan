@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from conans import tools, API_V2
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
 
 @unittest.skipUnless(os.environ.get("CONAN_SERVER_REVISIONS", API_V2) == API_V2, "Test only apiv2")
@@ -20,10 +20,10 @@ class RevisionsTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def _create_and_upload(self, conanfile, reference, remote=None):
+    def _create_and_upload(self, conanfile, reference, remote=None, args=""):
         remote = remote or "remote0"
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . %s" % str(reference))
+        self.client.run("create . %s %s" % (str(reference), args))
         self.client.run("upload %s -c --all -r %s" % (str(reference), remote))
 
     def test_revisions_recipes_without_scm(self):
@@ -99,8 +99,89 @@ class HelloConan(ConanFile):
         contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "1")
 
+    def test_search_with_revision(self):
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    settings = "os"
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        self._create_and_upload(conanfile, ref, args="-s os=Linux")
+        rev1 = self.servers["remote0"].paths.get_last_revision(ref)
+        self._create_and_upload(conanfile.replace('"os"', '"os", "arch"'), ref, args="-s arch=x86")
+        rev2 = self.servers["remote0"].paths.get_last_revision(ref)
+        self.assertNotEqual(rev1, rev2)
+
+        # Search every package in local cache (we get both binary packages)
+        self.client.run("search lib/1.0@lasote/testing")
+        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
+        # Search only revision 1 in local cache
+        self.client.run("search lib/1.0@lasote/testing#%s" % rev1)
+        self.assertNotIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
+        # Search only revision 2 in local cache
+        self.client.run("search lib/1.0@lasote/testing#%s" % rev2)
+        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
+        # Search all in remote (will give us the latest)
+        self.client.run("search lib/1.0@lasote/testing -r remote0")
+        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
+        # Search rev1 in remote
+        self.client.run("search lib/1.0@lasote/testing#%s -r remote0" % rev1)
+        self.assertNotIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
+        # Search rev2 in remote
+        self.client.run("search lib/1.0@lasote/testing#%s -r remote0" % rev2)
+        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
+
     def test_with_scm(self):
-        #
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    scm = {
+        "revision": "auto",
+        "url": "auto",
+        "type": "git"
+    }
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        path, commit = create_local_git_repo({"myfile": "contents",
+                                              "conanfile.py": conanfile}, branch="my_release")
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
+
+        git = tools.Git(path)
+        commit = git.get_commit()
+        self.client.current_folder = path
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -c --all -r remote0" % str(ref))
+        rev_server = self.servers["remote0"].paths.get_last_revision(ref)
+        self.assertEqual(commit, rev_server)
+
+        self.client.run("remove %s -f" % str(ref))
+        self.client.run("install %s#%s" % (str(ref), rev_server))
+        self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+
+        self.client.run("remove %s -f" % str(ref))
+        self.client.run("install %s" % str(ref))
+        self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+
+    def test_upload_change_local_registry_with_revision(self):
+        # An old recipe doesn't have revision in the registry, then we upload it to a server with
+        # revisions, it should update the local registry with the revision
         pass
 
     def test_revision_delete_latest(self):
@@ -123,7 +204,3 @@ class HelloConan(ConanFile):
         # If we know the recipe is not versioned (registry) ???
         pass
 
-    def test_upload_change_local_registry_with_revision(self):
-        # An old recipe doesn't have revision in the registry, then we upload it to a server with
-        # revisions, it should update the local registry with the revision
-        pass

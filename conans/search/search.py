@@ -136,7 +136,10 @@ def _get_local_infos_min(paths, reference):
             if not os.path.exists(info_path):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
-            conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+            info = ConanInfo.loads(conan_info_content)
+            if reference.revision and info.recipe_revision and info.recipe_revision != reference.revision:
+                continue
+            conan_vars_info = info.serialize_min()
             result[package_id] = conan_vars_info
 
         except Exception as exc:
