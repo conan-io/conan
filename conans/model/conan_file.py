@@ -1,3 +1,6 @@
+import ast
+import asttokens
+import operator
 import os
 from contextlib import contextmanager
 
@@ -13,7 +16,109 @@ from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
+from conans.util.files import load, save
 
+# Simple tag function to mark values that should be expanded during recipe export.
+def conan_expand(value):
+    return value
+
+# Formats the expanded values.
+def format_expanded_value(value, indentation):
+    import pprint
+    lines = pprint.pformat(value).splitlines()
+    if isinstance(value, dict) or isinstance(value, list) or isinstance(value, tuple):
+        indentation += 1
+    formated = ('\n' + ' '*indentation).join(lines)
+    return formated
+
+# Recursively map all nodes that are within Tuples, Lists, and Dicts.
+def map_value_nodes(node):
+    sub_nodes = None
+    if isinstance(node, ast.Tuple) or isinstance(node, ast.List):
+        sub_nodes = dict([(idx, map_value_nodes(n)) for idx,n in enumerate(node.elts) ])
+    elif isinstance(node, ast.Dict):
+        sub_nodes = {}
+        assert(len(node.keys) == len(node.values))
+        for key, value in zip(node.keys,node.values):
+            if isinstance(key, ast.Str):
+                sub_nodes[key.s] = map_value_nodes(value)
+            elif isinstance(key, ast.Num):
+                sub_nodes[key.n] = map_value_nodes(value)
+    if sub_nodes: return sub_nodes
+    return node
+
+def is_conan_expand_call(node):
+    if not isinstance(node, ast.Call): return False
+    if not isinstance(node.func, ast.Name): return False
+    if node.func.id != "conan_expand": return False
+    return True
+
+# Traverse the mappings and schedule the replacements when the conan_expand function is found.
+def compute_conan_expand_replacements(atok, value, mapping):
+    if not isinstance(mapping, dict):
+        # Base case, there is no hierarchical mapping information anymore.
+        # Check if a replacement should be performed.
+        if is_conan_expand_call(mapping):
+            value_range = atok.get_text_range(mapping)
+            return {value_range: format_expanded_value(value, mapping.col_offset-1)}
+        return {}
+    # Hierarchical mapping information is available, recurse if possible and collect results.
+    replacements = {}
+    for key, mapping_value in mapping.items():
+        if isinstance(value, dict) or isinstance(value, list) or isinstance(value, tuple):
+            replacements.update(compute_conan_expand_replacements(atok, value[key], mapping_value))
+        # TODO support special types if needed
+    return replacements
+
+def expand_recipe(recipe_path, conanfile, output, additional_expansions=[]):
+    atok = asttokens.ASTTokens(load(recipe_path), parse=True)
+
+    # Iterate through the ast at root level and search the ConanFile class by name.
+    conanclass_node = None
+    for item in atok.tree.body:
+        if not isinstance(item, ast.ClassDef): continue
+        if item.name !=  conanfile.__name__: continue
+        conanclass_node = item
+        break
+    assert(conanclass_node)
+
+    # Iterate through the class and determine a mapping between class members and ast nodes.
+    member_value_mapping = {}
+    for node in conanclass_node.body:
+        if not isinstance(node, ast.Assign): continue
+        assert(len(node.targets) == 1)
+        if isinstance(node.targets[0], ast.Name):
+            member_value_mapping[node.targets[0].id] = map_value_nodes(node.value)
+        # TODO only simple assignments are supported for now, i.e., tuple unpacking is not working atm
+
+    # Calculate replacements by looking for conan_expand calls within the mapped nodes.
+    replacements = {}
+    for member, mapping in member_value_mapping.items():
+        value = getattr(conanfile, member)
+        replacements.update(compute_conan_expand_replacements(atok, value, mapping))
+
+    # Check for missed conan_expand calls and emit warning.
+    for node in ast.walk(atok.tree):
+        if not is_conan_expand_call(node): continue
+        if atok.get_text_range(node) in replacements: continue
+        output.writeln("(Line %d:%d) WARNING: \'%s\' could not be expanded." % (node.lineno, node.col_offset, atok.get_text(node)),
+                               front=Color.BRIGHT_RED)
+
+    # Add program defined replacements.
+    for trace in additional_expansions:
+        assert(isinstance(trace, tuple) and len(trace) > 0)
+        node = member_value_mapping[trace[0]]
+        value = getattr(conanfile, trace[0])
+        for element in trace[1:]:
+            assert(element in node and element in value)
+            node = node[element]
+            value = value[element]
+        node_range = atok.get_text_range(node)
+        replacements[node_range] = format_expanded_value(value, node.col_offset-1)
+
+    # Convert replacement dictionary into list and perform replacement.
+    replacements = [ (range[0], range[1], value) for range, value in replacements.items() ]
+    save(recipe_path, asttokens.util.replace(atok.text, replacements))
 
 def create_options(conanfile):
     try:
