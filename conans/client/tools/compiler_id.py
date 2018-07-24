@@ -15,6 +15,7 @@ APPLE_CLANG = 'Apple Clang'
 
 class CompilerId(object):
     def __init__(self, compiler, major, minor, patch):
+        # type: (str, int, int, int) -> object
         self._compiler = compiler
         self._major = major
         self._minor = minor
@@ -44,9 +45,9 @@ class CompilerId(object):
 
     def __eq__(self, other):
         return self.compiler == other.compiler and \
-        self.major == other.major and \
-        self.minor == other.minor and \
-        self.patch == other.patch
+               self.major == other.major and \
+               self.minor == other.minor and \
+               self.patch == other.patch
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -88,9 +89,10 @@ def compiler_id(compiler, runner=None):
         patch = int(defines['__GNUC_PATCHLEVEL__'])
     return CompilerId(compiler, major, minor, patch)
 
+
 def guess_compiler(settings, language):
-    def compiler_name(compiler):
-        return '%s.exe' % compiler if os.name == 'nt' else compiler
+    def compiler_name(executable):
+        return '%s.exe' % executable if os.name == 'nt' else executable
 
     env_var = {'C': 'CC', 'C++': 'CXX'}.get(language)
     if env_var in os.environ:
@@ -109,8 +111,10 @@ def guess_compiler(settings, language):
     else:
         return None
 
+
 def guess_c_compiler(settings):
     return guess_compiler(settings, 'C')
+
 
 def guess_cxx_compiler(settings):
     return guess_compiler(settings, 'C++')
