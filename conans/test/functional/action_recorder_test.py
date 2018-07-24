@@ -53,7 +53,7 @@ class ActionRecorderTest(unittest.TestCase):
         tracer.package_downloaded(self.ref_p1, "http://drl.com")
         tracer.recipe_downloaded(self.ref2, "http://drl.com")
         tracer.package_install_error(self.ref_p2, INSTALL_ERROR_MISSING, "no package found",
-                                     remote="https://drl.com")
+                                     remote_name="https://drl.com")
 
         tracer.recipe_fetched_from_cache(self.ref3)
         tracer.package_built(self.ref_p3)

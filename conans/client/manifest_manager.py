@@ -49,7 +49,7 @@ class ManifestManager(object):
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
 
     def _handle_folder(self, folder, ref, read_manifest, interactive, remote, verify):
-        assert(isinstance(remote, Remote))
+        assert(isinstance(remote, Remote) or remote is None)
         remote_name = "local cache" if not remote else "%s:%s" % (remote.name, remote.url)
         if os.path.exists(folder):
             self._handle_manifest(ref, folder, read_manifest, interactive, remote_name, verify)
@@ -57,17 +57,17 @@ class ManifestManager(object):
             if verify:
                 raise ConanException("New manifest '%s' detected.\n"
                                      "Remote: %s\nProject manifest doesn't match installed one"
-                                     % (str(ref), remote))
+                                     % (str(ref), remote_name))
             else:
-                self._check_accept_install(interactive, ref, remote)
+                self._check_accept_install(interactive, ref, remote_name)
                 self._log.append("Installed manifest for '%s' from %s"
-                                 % (str(ref), remote))
+                                 % (str(ref), remote_name))
                 read_manifest.save(folder)
 
-    def _check_accept_install(self, interactive, ref, remote):
+    def _check_accept_install(self, interactive, ref, remote_name):
         if (interactive and
             not self._user_io.request_boolean("Installing %s from %s\n"
-                                              "Do you trust it?" % (str(ref), remote),
+                                              "Do you trust it?" % (str(ref), remote_name),
                                               True)):
             raise ConanException("Installation of '%s' rejected!" % str(ref))
 
