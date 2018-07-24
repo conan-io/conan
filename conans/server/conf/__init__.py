@@ -28,7 +28,9 @@ class ConanServerConfigParser(ConfigParser):
     """
     def __init__(self, base_folder, storage_folder=None, environment=None):
         environment = environment or os.environ
+
         ConfigParser.__init__(self)
+        environment = environment or os.environ
         self.optionxform = str  # This line keeps the case of the key, important for users case
         self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')

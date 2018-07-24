@@ -68,13 +68,15 @@ def _file_document(name, path):
     return {"name": name, "path": path, "md5": md5sum(path), "sha1": sha1sum(path)}
 
 
-def log_recipe_upload(conan_reference, duration, files_uploaded, remote):
+
+def log_recipe_upload(conan_reference, duration, files_uploaded, remote_name):
+    assert(isinstance(conan_reference, ConanFileReference))
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
     _append_action("UPLOADED_RECIPE", {"_id": str(conan_reference),
                                        "duration": duration,
                                        "files": files_uploaded,
-                                       "remote": remote.name})
+                                       "remote": remote_name})
 
 
 def log_package_upload(package_ref, duration, files_uploaded, remote):
@@ -87,21 +89,23 @@ def log_package_upload(package_ref, duration, files_uploaded, remote):
                                         "remote": remote.name})
 
 
-def log_recipe_download(conan_reference, duration, remote, files_downloaded):
+def log_recipe_download(conan_reference, duration, remote_name, files_downloaded):
+    assert(isinstance(conan_reference, ConanFileReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_RECIPE", {"_id": str(conan_reference),
                                          "duration": duration,
-                                         "remote": remote.name,
+                                         "remote": remote_name,
                                          "files": files_downloaded})
 
 
-def log_recipe_sources_download(conan_reference, duration, remote, files_downloaded):
+def log_recipe_sources_download(conan_reference, duration, remote_name, files_downloaded):
+    assert(isinstance(conan_reference, ConanFileReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": str(conan_reference),
                                                  "duration": duration,
-                                                 "remote": remote.name,
+                                                 "remote": remote_name,
                                                  "files": files_downloaded})
 
 

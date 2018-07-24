@@ -18,7 +18,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
 
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
-    registry.set_ref(reference, remote)
+    registry.set_ref(reference, remote.name)
 
     if recipe:
         return

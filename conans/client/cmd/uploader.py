@@ -104,7 +104,7 @@ class CmdUpload(object):
                     recorder.add_package(conan_ref.full_repr(), package_id)
 
         if not defined_remote and not skip_upload:
-            self._registry.set_ref(conan_ref, upload_remote)
+            self._registry.set_ref(conan_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)

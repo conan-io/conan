@@ -68,7 +68,6 @@ try{
                                     }
                                 }
                             }
-
                             if(slave == "Linux"){
                                 sh "docker pull lasote/conantests"
                                 docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {

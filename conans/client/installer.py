@@ -221,7 +221,7 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder, remote_url):
+def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder):
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
 
@@ -232,7 +232,7 @@ def raise_package_not_found_error(conan_file, conan_ref, package_id, out, record
 ''' % (conan_ref, settings_text, options_text, package_id)
     out.warn(msg)
     recorder.package_install_error(PackageReference(conan_ref, package_id),
-                                   INSTALL_ERROR_MISSING, msg, remote=remote_url)
+                                   INSTALL_ERROR_MISSING, msg)
     raise ConanException('''Missing prebuilt package for '%s'
 Try to build it from sources with "--build %s"
 Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
@@ -269,7 +269,7 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
-                    raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder, None)
+                    raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder)
 
                 self._propagate_info(node, inverse_levels, deps_graph, output)
                 if node.binary == BINARY_SKIP:  # Privates not necessary
@@ -299,7 +299,7 @@ class ConanInstaller(object):
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._download_package(conan_file, package_ref, output, package_folder, node.binary_remote)
                     if node.binary_remote != node.remote:
-                        self._registry.set_ref(conan_ref, node.binary_remote)
+                        self._registry.set_ref(conan_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
@@ -358,7 +358,7 @@ class ConanInstaller(object):
                 msg = "--keep-build specified, but build folder not found"
                 self._recorder.package_install_error(package_ref,
                                                      INSTALL_ERROR_MISSING_BUILD_FOLDER,
-                                                     msg, remote=None)
+                                                     msg, remote_name=None)
                 raise ConanException(msg)
         else:
             with self._client_cache.conanfile_write_lock(conan_ref):
@@ -373,7 +373,7 @@ class ConanInstaller(object):
                 builder.package()
             except ConanException as exc:
                 self._recorder.package_install_error(package_ref, INSTALL_ERROR_BUILDING,
-                                                     str(exc), remote=None)
+                                                     str(exc), remote_name=None)
                 raise exc
             else:
                 # Log build
