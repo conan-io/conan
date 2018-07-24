@@ -95,15 +95,15 @@ class RegistryTest(unittest.TestCase):
         registry = self._get_registry()
         ref = ConanFileReference.loads("lib/1.0@user/channel")
         # Test already exists
-        registry.add_ref(ref, "conan.io")
+        registry.set_ref(ref, "conan.io", check_exists=True)
         with self.assertRaisesRegexp(ConanException, "already exists"):
-            registry.add_ref(ref.copy_with_revision("revision"), "conan.io")
+            registry.set_ref(ref.copy_with_revision("revision"), "conan.io", check_exists=True)
 
     def revisions_delete_test(self):
         ref = "lib/1.0@user/channel"
         registry = self._get_registry()
         # Test delete without revision
-        registry.add_ref(ConanFileReference.loads(ref + "#revision"), "conan.io")
+        registry.set_ref(ConanFileReference.loads(ref + "#revision"), "conan.io")
         registry.remove_ref(ConanFileReference.loads(ref))
         self.assertIsNone(registry.get_ref_with_revision(ConanFileReference.loads(ref)))
 
@@ -111,11 +111,11 @@ class RegistryTest(unittest.TestCase):
         # Test get with revision, only if revision
         ref = ConanFileReference.loads("lib/1.0@user/channel")
         registry = self._get_registry()
-        registry.add_ref(ref, "conan.io")
+        registry.set_ref(ref, "conan.io")
         self.assertEquals(registry.get_ref_with_revision(ref), ref)
         registry.remove_ref(ref)
         ref_with_rev = ref.copy_with_revision("Revision")
-        registry.add_ref(ref_with_rev, "conan.io")
+        registry.set_ref(ref_with_rev, "conan.io")
         self.assertEquals(registry.get_ref_with_revision(ref), ref_with_rev)
         self.assertEquals(registry.get_ref_with_revision(ref_with_rev), ref_with_rev)
         self.assertNotEquals(registry.get_ref_with_revision(ref.copy_with_revision("OtherRevision")),
@@ -124,7 +124,7 @@ class RegistryTest(unittest.TestCase):
     def revisions_update_test(self):
         ref = ConanFileReference.loads("lib/1.0@user/channel")
         registry = self._get_registry()
-        registry.add_ref(ref.copy_with_revision("revision"), "conan.io")
+        registry.set_ref(ref.copy_with_revision("revision"), "conan.io")
         registry.update_ref(ref, "conan.io2")
         self.assertEquals(registry.get_recipe_remote(ref).name, "conan.io2")
         self.assertEquals(registry.get_recipe_remote(ref.copy_with_revision("revision")).name,
