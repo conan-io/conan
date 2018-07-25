@@ -88,7 +88,8 @@ class CmdUpload(object):
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
                                       upload_remote)
 
-        recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
+        if not skip_upload:
+            recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
 
         if packages_ids:
             # Filter packages that don't match the recipe revision
@@ -118,7 +119,10 @@ class CmdUpload(object):
                 if ret_upload_package:
                     recorder.add_package(new_ref.full_repr(), package_id)
 
-        if not defined_remote and not skip_upload:
+        if skip_upload:
+            return
+
+        if not defined_remote:
             self._registry.set_ref(new_ref, upload_remote.name)
         elif defined_remote == upload_remote and new_ref != conan_ref:
             self._registry.set_ref(new_ref, upload_remote.name)

@@ -59,7 +59,7 @@ class RemoteManager(object):
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
         if skip_upload:
-            return None
+            return conan_reference
 
         revision = self._client_cache.recipe_revision(conan_reference)
         conan_reference.revision = revision
