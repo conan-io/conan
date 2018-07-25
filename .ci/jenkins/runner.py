@@ -23,6 +23,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
 
     if flavor == "revisions":
         exluded_tags.append("only_without_revisions")
+    elif flavor == "no_revisions":
+        exluded_tags.append("only_revisions")
 
     if exluded_tags:
         exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
