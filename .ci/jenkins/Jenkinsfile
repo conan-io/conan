@@ -16,7 +16,8 @@ def api_confs = ["v1", "v2"]
 
 
 builder = new ConanBuilder("${env.WORKSPACE}", slaves, pyvers, api_confs)
-builder.build()
+def jobs = builder.get_jobs()
+parallel jobs
 
 
 class ConanBuilder{
@@ -46,7 +47,7 @@ class ConanBuilder{
 
     }
 
-    def build(){
+    def get_jobs(){
         def builders = [:]
         for (x in slaves) {
             def slave = x
@@ -74,7 +75,7 @@ class ConanBuilder{
                 }
             }
         }
-        parallel builders
+        return builders
     }
 
     def prepare_source(slave, pyver, api_conf){
