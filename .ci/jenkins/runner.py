@@ -117,4 +117,3 @@ if __name__ == "__main__":
 
     run_tests(module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
               args.exclude_tag, num_cores=args.num_cores, server_api=args.server_api)
-

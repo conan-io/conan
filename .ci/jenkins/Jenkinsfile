@@ -32,7 +32,7 @@ try{
             def slave = x
             for (y in pyvers) {
                 for (z in api_confs){
-                    if (flavor == "revisions" && api_confs == "v1"){
+                    if (flavor == "revisions" && api_conf == "v1"){
                         continue;
                     }
                     def pyver = y
