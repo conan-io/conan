@@ -383,6 +383,7 @@ class MyTest(ConanFile):
                       self.client.out)
 
     def build_order_build_requires_test(self):
+        # https://github.com/conan-io/conan/issues/3267
         client = TestClient()
         conanfile = """from conans import ConanFile
 class AConan(ConanFile):
@@ -402,6 +403,7 @@ class AConan(ConanFile):
                       client.out)
 
     def build_order_privates_test(self):
+        # https://github.com/conan-io/conan/issues/3267
         client = TestClient()
         conanfile = """from conans import ConanFile
 class AConan(ConanFile):

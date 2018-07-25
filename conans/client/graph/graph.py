@@ -230,10 +230,15 @@ class DepsGraph(object):
         return closure
 
     def collapse_graph(self):
+        """Computes and return a new graph, that doesn't have duplicated nodes with the same
+        PackageReference. This is the case for build_requires and private requirements
+        """
         result = DepsGraph()
         result.add_node(self.root.partial_copy())
-        unique_nodes = {}
-        nodes_map = {self.root: result.root}
+        unique_nodes = {}  # {PackageReference: Node (result, unique)}
+        nodes_map = {self.root: result.root}  # {Origin Node: Result Node}
+        # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
+        # without Edges
         for node in self.nodes:
             if not node.conan_ref:
                 continue
@@ -246,6 +251,7 @@ class DepsGraph(object):
                 result_node = unique_nodes[package_ref]
             nodes_map[node] = result_node
 
+        # Compute the new edges of the graph
         for node in self.nodes:
             result_node = nodes_map[node]
             for dep in node.dependencies:
