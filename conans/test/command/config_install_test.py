@@ -1,5 +1,6 @@
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 import os
 import zipfile
@@ -121,7 +122,8 @@ Other/1.2@user/channel conan-center
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
-        self.assertEqual(registry.refs, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        self.assertEqual(registry.refs, {ConanFileReference.loads("MyPkg/0.1@user/channel"):
+                                             "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),

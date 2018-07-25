@@ -1,6 +1,7 @@
 import time
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
@@ -90,6 +91,20 @@ class CmdUpload(object):
         recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
 
         if packages_ids:
+            # Filter packages that don't match the recipe revision
+            if new_ref.revision:
+                recipe_package_ids = []
+                for package_id in packages_ids:
+                    pref = PackageReference(new_ref, package_id)
+                    package_folder = self._client_cache.package(pref, conan_file.short_paths)
+                    rec_rev = ConanInfo.load_from_package(package_folder).recipe_revision
+                    if new_ref.revision != rec_rev:
+                        self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
+                                               "the current recipe revision" % package_id)
+                    else:
+                        recipe_package_ids.append(package_id)
+                packages_ids = recipe_package_ids
+
             # Can't use build_policy_always here because it's not loaded (only load_class)
             if conan_file.build_policy == "always":
                 raise ConanException("Conanfile has build_policy='always', "

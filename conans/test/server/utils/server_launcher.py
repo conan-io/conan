@@ -34,7 +34,7 @@ class TestServerLauncher(object):
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
 
-        # Define storage_folder, if not, it will be readed from conf file and
+        # Define storage_folder, if not, it will be read from conf file and
         # pointed to real user home
         self.storage_folder = os.path.join(base_path, ".conan_server", "data")
         mkdir(self.storage_folder)

@@ -49,6 +49,11 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
+    def with_revisions_test(self):
+        self.client.run("remote add_ref Hello/0.1@user/testing#revision remote0")
+        self.client.run("remote list_ref")
+        self.assertIn("Hello/0.1@user/testing#revision", self.client.out)
+
     def remove_remote_test(self):
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)

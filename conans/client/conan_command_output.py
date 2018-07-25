@@ -33,7 +33,7 @@ class CommandOutputer(object):
 
     def remote_ref_list(self, refs):
         for ref, remote_name in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote_name))
+            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)

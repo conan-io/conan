@@ -106,10 +106,9 @@ class RemoteRegistry(object):
     def refs(self):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             _, refs = self._load()
-            return {str(ConanFileReference.loads(ref)): remote for ref, remote in refs.items()}
+            return {ConanFileReference.loads(ref): remote for ref, remote in refs.items()}
 
     def get_ref_with_revision(self, conan_reference):
-
         assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
@@ -146,9 +145,7 @@ class RemoteRegistry(object):
         # Finds a "conan_reference" (even without revision) in the refs (that can contain revisions)
         for ref in refs:
             ref = ConanFileReference.loads(ref)
-            if conan_reference == ref:
-                return ref
-            if not conan_reference.revision and ref.copy_without_revision() == conan_reference:
+            if conan_reference.copy_without_revision() == ref.copy_without_revision():
                 return ref
         return None
 
@@ -156,15 +153,17 @@ class RemoteRegistry(object):
         assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            if check_exists:
-                new_ref = conan_reference.copy_without_revision()
-                for ref in refs:
-                    ref = ConanFileReference.loads(ref).copy_without_revision()
-                    if new_ref == ref:
-                        raise ConanException("%s already exists. Use update" % str(conan_reference))
-                if remote_name not in remotes:
-                    raise ConanException("%s not in remotes" % remote_name)
-            refs.pop(str(conan_reference), None)
+            full_ref = self._find_ref_in(conan_reference, refs)
+            if full_ref:
+                if not check_exists:
+                    self.update_ref(conan_reference, remote_name)
+                    return
+                else:
+                    raise ConanException("%s already exists. Use update" % str(conan_reference))
+
+            if remote_name not in remotes:
+                raise ConanException("%s not in remotes" % remote_name)
+
             refs[conan_reference.full_repr()] = remote_name
             self._save(remotes, refs)
 
@@ -177,7 +176,8 @@ class RemoteRegistry(object):
                 raise ConanException("%s does not exist. Use add" % str(conan_reference))
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
-            refs[full_ref.full_repr()] = remote_name
+            refs.pop(full_ref.full_repr())
+            refs[conan_reference.full_repr()] = remote_name
             self._save(remotes, refs)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
