@@ -220,7 +220,7 @@ class RestV1Methods(RestCommonMethods):
             deleted.remove(ignore_deleted_file)
 
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False, conan_reference
+            return False, conan_reference.copy_without_revision()
 
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):

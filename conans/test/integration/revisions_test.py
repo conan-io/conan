@@ -178,35 +178,6 @@ class HelloConan(ConanFile):
         self.client.run("install %s" % str(self.ref))
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
 
-    def test_upload_change_local_registry_with_revision(self):
-        # An old recipe doesn't have revision in the registry, then we upload it to a server with
-        # revisions, it should update the local registry with the revision
-        self.client.save({"conanfile.py": self.conanfile})
-        self.client.run("create . %s" % str(self.ref))
-        self.client.run("upload %s --all -c -r remote_norevisions" % str(self.ref))
-        new_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
-        self.assertIsNone(new_ref.revision)
-        self.assertEqual(new_ref, self.ref)
-
-        self.client.run("upload %s --all -c -r remote0" % str(self.ref))
-        new_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
-        self.assertIsNotNone(new_ref.revision)
-        self.assertNotEqual(new_ref, self.ref)
-
-    def test_upload_revision_and_upload_norevision(self):
-        # A recipe versioned in a remote is uploaded to a remote without revisions
-        self.client.save({"conanfile.py": self.conanfile})
-        self.client.run("create . %s" % str(self.ref))
-        self.client.run("upload %s --all -c -r remote0" % str(self.ref))
-        new_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
-        self.assertIsNotNone(new_ref.revision)
-        self.assertNotEqual(new_ref, self.ref)
-
-        self.client.run("upload %s --all -c -r remote_norevisions" % str(self.ref))
-        new_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
-        self.assertIsNone(new_ref.revision)
-        self.assertEqual(new_ref, self.ref)
-
     def test_info(self):
         conanfile = '''
 from conans import ConanFile
@@ -220,6 +191,7 @@ class HelloConan(ConanFile):
         self.client.run("info %s" % str(self.ref))
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
+        self.client.remote_registry.remove_ref(self.ref)
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))
         self.assertNotIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)

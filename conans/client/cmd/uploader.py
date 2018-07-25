@@ -86,7 +86,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
-                                      upload_remote) or conan_ref
+                                      upload_remote)
 
         recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
 
@@ -118,7 +118,9 @@ class CmdUpload(object):
                 if ret_upload_package:
                     recorder.add_package(new_ref.full_repr(), package_id)
 
-        if not skip_upload:
+        if not defined_remote and not skip_upload:
+            self._registry.set_ref(new_ref, upload_remote.name)
+        elif defined_remote == upload_remote and new_ref != conan_ref:
             self._registry.set_ref(new_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
