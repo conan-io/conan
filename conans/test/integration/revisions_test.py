@@ -2,12 +2,15 @@ import os
 import unittest
 from collections import OrderedDict
 
+from nose.plugins.attrib import attr
+from time import sleep
+
 from conans import tools, API_V2, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
 
-@unittest.skipUnless(os.environ.get("CONAN_SERVER_REVISIONS", API_V2) == API_V2, "Test only apiv2")
+@attr('only_revisions')
 class RevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -17,7 +20,7 @@ class RevisionsTest(unittest.TestCase):
             self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2, REVISIONS])
             self.users["remote%d" % i] = [("lasote", "mypass")]
 
-        self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
+        self.servers["remote_norevisions"] = TestServer()
         self.users["remote_norevisions"] = [("lasote", "mypass")]
         self.client = TestClient(servers=self.servers, users=self.users)
         self.conanfile = '''
@@ -237,6 +240,7 @@ class HelloConan(ConanFile):
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
 
         # Same recipe, but will generate different package
+        sleep(0.1)
         client2 = TestClient(servers=self.servers, users=self.users)
         client2.save({"conanfile.py": conanfile})
         client2.run("create . %s" % str(self.ref))
@@ -280,6 +284,13 @@ class HelloConan(ConanFile):
         # Pending to better index
         pass
 
-
     def test_alias_with_revisions(self):
         pass
+
+    def test_conflict_with_different_revisions_but_same_ref(self):
+        pass
+
+    def test_upload_not_override(self):
+        pass
+
+

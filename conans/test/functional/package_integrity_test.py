@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.conanfile import TestConanFile
@@ -29,6 +31,7 @@ class PackageIngrityTest(unittest.TestCase):
         self.assertFalse(os.path.exists(conan_folder + ".count"))
         self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
 
+    @attr('only_without_revisions')
     def upload_dirty_test(self):
         test_server = TestServer([], users={"lasote": "mypass"})
         client = TestClient(servers={"default": test_server},

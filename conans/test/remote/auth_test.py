@@ -1,5 +1,7 @@
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans import tools
 from conans.test.utils.tools import TestServer, TestClient
 from conans.paths import CONANFILE
@@ -79,6 +81,7 @@ class AuthorizeTest(unittest.TestCase):
                                                "CONAN_LOGIN_USERNAME": "pepe"})
             self.assertIn("Too many failed login attempts, bye!", client.user_io.out)
 
+    @attr('only_without_revisions')
     def max_retries_test(self):
         """Bad login 3 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),

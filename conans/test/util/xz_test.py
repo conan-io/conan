@@ -4,6 +4,8 @@ import six
 import unittest
 import tarfile
 
+from nose.plugins.attrib import attr
+
 from conans.test.utils.test_files import temp_folder
 from conans.tools import unzip, save
 from conans.util.files import load, save_files
@@ -45,12 +47,13 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_sources.txz' file format", client.out)
 
+    @attr('only_without_revisions')
     def test_error_package_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
-        export = server.paths.export(ref)
+        export = server.paths.export(ref)  # *1 the path can't be known before upload a revision
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     exports_sources = "*"

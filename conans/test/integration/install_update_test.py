@@ -1,4 +1,7 @@
 import unittest
+
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -166,6 +169,7 @@ class Pkg(ConanFile):
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 
+    @attr('only_without_revisions')
     def remove_old_sources_test(self):
         # https://github.com/conan-io/conan/issues/1841
         test_server = TestServer()

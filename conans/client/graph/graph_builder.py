@@ -103,7 +103,7 @@ class DepsGraphBuilder(object):
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
                 # Necessary to make sure that it is pointing to the correct aliased
                 require.conan_reference = alias_ref
-                if previous_node.conan_ref != alias_ref:
+                if previous_node.conan_ref.copy_without_revision() != alias_ref.copy_without_revision():
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"

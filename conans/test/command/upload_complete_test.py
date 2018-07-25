@@ -4,6 +4,7 @@ import platform
 import stat
 import unittest
 
+from nose.plugins.attrib import attr
 from requests.packages.urllib3.exceptions import ConnectionError
 
 from conans.client.manager import CONANFILE
@@ -57,6 +58,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
+@attr('only_without_revisions')
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):

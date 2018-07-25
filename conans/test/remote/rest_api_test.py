@@ -50,6 +50,7 @@ class RestApiUnitTest(unittest.TestCase):
 
 @attr('slow')
 @attr('rest_api')
+@attr('only_without_revisions')
 class RestApiTest(unittest.TestCase):
     '''Open a real server (sockets) to test rest_api function.'''
 

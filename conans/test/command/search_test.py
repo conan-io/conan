@@ -3,6 +3,8 @@ import os
 import shutil
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
 from conans.model.manifest import FileTreeManifest
@@ -81,10 +83,11 @@ conan_vars4 = """[settings]
 """
 
 
+@attr('only_without_revisions')
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"local": TestServer(server_capabilities=[]),
+        self.servers = {"local": TestServer(),
                         "search_able": TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])}
         self.client = TestClient(servers=self.servers)
 
@@ -981,6 +984,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
+@attr('only_without_revisions')
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords

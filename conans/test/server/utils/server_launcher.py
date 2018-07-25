@@ -44,8 +44,8 @@ class TestServerLauncher(object):
             server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
             if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
                 server_capabilities.add(API_V2)
-            if server_config.revisions_enabled:
-                server_capabilities.append(REVISIONS)
+            if server_config.revisions_enabled or os.getenv("CONAN_TESTING_SERVER_REVISIONS_ENABLED"):
+                server_capabilities.add(REVISIONS)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port

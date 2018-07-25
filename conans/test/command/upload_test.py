@@ -8,7 +8,7 @@ import os
 from mock import mock
 from conans.errors import ConanException
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-
+from nose.plugins.attrib import attr
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -21,6 +21,7 @@ class MyPkg(ConanFile):
 """
 
 
+@attr('only_without_revisions')
 class UploadTest(unittest.TestCase):
 
     def not_existing_error_test(self):
@@ -310,6 +311,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
         # upload recipe and packages
+        # *1
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
@@ -363,6 +365,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create without changes
+        # *1
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
