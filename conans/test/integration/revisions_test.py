@@ -6,17 +6,9 @@ from conans import tools, API_V2, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
+
 @unittest.skipUnless(os.environ.get("CONAN_SERVER_REVISIONS", API_V2) == API_V2, "Test only apiv2")
 class RevisionsTest(unittest.TestCase):
-
-    conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    def build(self):
-        self.output.warn("Revision 1")        
-'''
-    ref = ConanFileReference.loads("lib/1.0@lasote/testing")
 
     def setUp(self):
         self.servers = OrderedDict()
@@ -28,6 +20,14 @@ class HelloConan(ConanFile):
         self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
         self.users["remote_norevisions"] = [("lasote", "mypass")]
         self.client = TestClient(servers=self.servers, users=self.users)
+        self.conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        self.ref = ConanFileReference.loads("lib/1.0@lasote/testing")
 
     def _create_and_upload(self, conanfile, reference, remote=None, args=""):
         remote = remote or "remote0"
