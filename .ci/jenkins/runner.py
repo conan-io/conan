@@ -13,7 +13,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
               exluded_tags, num_cores=3, verbosity=None, server_api=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
-    exluded_tags = exluded_tags or ""
+    exluded_tags = exluded_tags or []
     venv_dest = os.path.join(tmp_folder, "venv")
     if not os.path.exists(venv_dest):
         os.makedirs(venv_dest)
@@ -22,10 +22,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                             "activate")
 
     if flavor == "revisions":
-        exluded_tags = exluded_tags or ["only_without_revisions",]
+        exluded_tags.append("only_without_revisions")
 
     if exluded_tags:
-        exluded_tags = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
+        exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
 
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
@@ -58,7 +58,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
-                                       "excluded_tags": exluded_tags,
+                                       "excluded_tags": exluded_tags_str,
                                        "venv_dest": venv_dest,
                                        "verbosity": verbosity,
                                        "venv_exe": venv_exe,
