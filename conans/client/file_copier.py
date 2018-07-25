@@ -79,11 +79,12 @@ class FileCopier(object):
         src = os.path.join(base_src, src)
         dst = os.path.join(self._base_dst, dst)
 
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
-                                                         ignore_case)
+        files_to_copy, link_folders, link_files = self._filter_files(src, pattern, links, excludes,
+                                                                     ignore_case)
 
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._link_folders(src, dst, link_folders)
+        self._link_files(src, dst, link_files)
         self._copied.extend(files_to_copy)
         return copied_files
 
@@ -120,8 +121,19 @@ class FileCopier(object):
             for f in files:
                 f = os.path.join(relative_path, f).replace("\\", "/").replace("./", "")
                 if os.path.islink(f):
+                    print("FILEEEEE:", f)
                     filepaths.append((f, f))
                 else:
+                    if not symlink:
+                        # Check upstream symlinks
+                        base_path = src.replace("\\", "/")
+                        folder_path = base_path
+                        print("before split", f)
+                        for folder in f.split("/")[:-1]:
+                            folder_path = folder_path + folder + "/"
+                            if os.path.islink(folder_path):
+                                symlink = folder_path.replace(base_path, "")[:-1]
+                                break
                     filepaths.append((f, symlink))
 
         if ignore_case:
@@ -155,33 +167,58 @@ class FileCopier(object):
             filtered_filepaths = [uncased_filepaths[(file, symlink)] for file, symlink in filtered_filepaths]
 
         files_to_copy = []
-        print("filtered_filepaths:", filtered_filepaths)
         for item in filtered_filepaths:
             if item[1]:
-                if os.path.isdir(item[1]):
-                    linked_folders.append(item[1])
+                if os.path.isdir(os.path.join(src, item[1])):
+                    if item[1] not in linked_folders:
+                        linked_folders.append(item[1])
                 else:
-                    linked_files.append(item[1])
+                    if item[1] not in linked_files:
+                        linked_files.append(item[1])
             else:
                 files_to_copy.append(item[0])
 
-        print("RETURN:", files_to_copy, linked_folders + linked_files)
-        return files_to_copy, linked_folders + linked_files
+        print("filtered_filepaths:", filtered_filepaths)
+        print("RETURN:", files_to_copy, linked_folders, linked_files)
+        return files_to_copy, linked_folders, linked_files
+
+    @staticmethod
+    def _link_files(src, dst, linked_files):
+        links = []
+        for linked_file in linked_files:
+            link = os.readlink(os.path.join(src, linked_file))
+            if link in linked_files:
+                links.append(linked_file)
+            else:
+                links.insert(0, linked_file)
+        print("_link_files:", links)
+        for linked_file in links:
+            dst_link = os.path.join(dst, linked_file)  # link file in dst
+            src_link = os.path.join(src, linked_file)  # link file in src
+            original_link = os.readlink(src_link)      # 'linked to' file in src
+            new_link = os.path.join(dst, original_link.replace(src, ""))  # 'linked to' file in dst
+            print(original_link, src_link, new_link, dst_link)
+            if os.path.isfile(new_link) and os.path.exists(new_link):
+                os.symlink(new_link, dst_link)
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
         # Order linked folders starting with less dependant from others
         links = []
         for linked_folder in linked_folders:
-            link = os.readlink(os.path.join(src, linked_folder))
-            if link in linked_folders:
+            src_link = os.path.join(src, linked_folder)
+            original_link = os.readlink(src_link)
+            if os.path.basename(original_link) in linked_folders:
                 links.append(linked_folder)
             else:
                 links.insert(0, linked_folder)
         # Look for symlinks in origin
+        print("_link_folders:", links)
         for linked_folder in links:
-            link = os.readlink(os.path.join(src, linked_folder))
-            dst_link = os.path.join(dst, linked_folder)
+            dst_link = os.path.join(dst, linked_folder)  # link folder in dst
+            src_link = os.path.join(src, linked_folder)  # link folder in src
+            original_link = os.readlink(src_link)        # 'linked to' folder in src
+            new_link = os.path.join(dst, original_link.replace(src, ""))  # 'linked to' folder dst
             try:
                 # Remove the previous symlink
                 os.remove(dst_link)
@@ -189,8 +226,8 @@ class FileCopier(object):
                 pass
             # link is a string relative to linked_folder
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-            mkdir(os.path.dirname(dst_link))
-            os.symlink(link, dst_link)
+            # mkdir(os.path.dirname(dst_link))
+            os.symlink(new_link, dst_link)
         # Remove empty links
         for linked_folder in links:
             dst_link = os.path.join(dst, linked_folder)

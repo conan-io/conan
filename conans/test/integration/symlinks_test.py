@@ -38,6 +38,7 @@ Hello/0.1@lasote/stable
 ., * -> .
 """
 
+
 # @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
@@ -48,7 +49,11 @@ class SymLinksTest(unittest.TestCase):
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
-            self.assertEqual(os.readlink(link), "file1.txt")
+            print("BAAAAAAAAAAAAAAAAAAAAASEEE", base)
+            print("FILEPATH", filepath)
+            print("link", link)
+            print("link pointing to", os.readlink(link))
+            self.assertEqual(os.readlink(link), filepath)
             file1 = load(filepath)
             self.assertEqual("Hello1", file1)
             file1 = load(link)
@@ -57,7 +62,7 @@ class SymLinksTest(unittest.TestCase):
             save(filepath, base)
             self.assertEqual(load(link), base)
             link = os.path.join(base, "latest")
-            self.assertEqual(os.readlink(link), "version1")
+            self.assertEqual(os.readlink(link), os.path.join(base, "version1"))
             filepath = os.path.join(base, "latest", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
@@ -71,15 +76,10 @@ class SymLinksTest(unittest.TestCase):
         print("current folder", client.current_folder)
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-
-        self._check(client, ref)
-
-        client.run("install conanfile.txt --build")
         self._check(client, ref)
 
     def package_files_test(self):
