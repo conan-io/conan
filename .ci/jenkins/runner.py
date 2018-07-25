@@ -9,7 +9,7 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder,
+def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
               exluded_tags, num_cores=3, verbosity=None, server_api=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
@@ -20,6 +20,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
+
+    if flavor == "revisions":
+        exluded_tags = exluded_tags or ["only_without_revisions",]
+
     if exluded_tags:
         exluded_tags = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
 
@@ -70,6 +74,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     if server_api == "v2":
         env["CONAN_TESTING_SERVER_V2_ENABLED"] = "1"
+    if flavor == "revisions":
+        env["CONAN_TESTING_SERVER_REVISIONS_ENABLED"] = "1"
+
     with chdir(source_folder):
         with environment_append(env):
             run(command)
@@ -100,9 +107,14 @@ if __name__ == "__main__":
     parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
+    parser.add_argument('--flavor', '-f', nargs=1, action=Extender,
+                        help='Flavors (revisions, no_revisions)')
 
     args = parser.parse_args()
+    module = args.module
 
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag,
-              num_cores=args.num_cores, server_api=args.server_api)
+    module = "conans.test.model"
+
+    run_tests(module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
+              args.exclude_tag, num_cores=args.num_cores, server_api=args.server_api)
 
