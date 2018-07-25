@@ -64,8 +64,8 @@ class RemoteManager(object):
         revision = self._client_cache.recipe_revision(conan_reference)
         conan_reference.revision = revision
 
-        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry, retry_wait,
-                                         ignore_deleted_file, no_overwrite)
+        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
+                                         retry_wait, ignore_deleted_file, no_overwrite)
 
         duration = time.time() - t1
         log_recipe_upload(new_ref, duration, the_files, remote.name)

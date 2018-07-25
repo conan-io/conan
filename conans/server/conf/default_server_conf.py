@@ -11,9 +11,7 @@ port: 9300
 public_port:
 host_name: localhost
 
-# Choose file adapter, "disk" for disk storage
 # Authorize timeout are seconds the client has to upload/download files until authorization expires
-store_adapter: disk
 authorize_timeout: 1800
 
 # Just for disk storage adapter
@@ -24,7 +22,6 @@ updown_secret: {updown_secret}
 
 # Enable the revisions mechanism in the server
 revisions: False
-
 
 # Check docs.conan.io to implement a different authenticator plugin for conan_server
 # if custom_authenticator is not specified, [users] section will be used to authenticate

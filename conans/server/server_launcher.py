@@ -9,7 +9,7 @@ from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.server.plugin_loader import load_authentication_plugin
 from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
-from conans import __version__ as SERVER_VERSION
+from conans import __version__ as SERVER_VERSION, REVISIONS
 from conans.paths import conan_expand_user
 from conans import SERVER_CAPABILITIES
 
@@ -34,9 +34,15 @@ class ServerLauncher(object):
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
 
-        server_store = get_server_store(server_config, updown_auth_manager=updown_auth_manager)
+        server_store = get_server_store(server_config.disk_storage_path,
+                                        server_config.revisions_enabled,
+                                        server_config.public_url,
+                                        updown_auth_manager=updown_auth_manager)
 
         server_capabilities = SERVER_CAPABILITIES
+
+        if server_config.revisions_enabled:
+            server_capabilities.append(REVISIONS)
 
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, server_store,

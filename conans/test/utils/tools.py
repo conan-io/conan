@@ -404,6 +404,10 @@ class TestClient(object):
                 add_server_to_registry(name, server)
 
     @property
+    def remote_registry(self):
+        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
+
+    @property
     def paths(self):
         return self.client_cache
 

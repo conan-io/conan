@@ -1,6 +1,5 @@
 import fasteners
 import os
-from abc import ABCMeta, abstractmethod
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
@@ -9,47 +8,7 @@ from conans.util.files import path_exists
 from conans.paths import SimplePaths
 
 
-class ServerStorageAdapter(object):
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def get_download_urls(self, paths, user=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_upload_urls(self, paths_sizes, user=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_snapshot(self, absolute_path="", files_subset=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def delete_folder(self, path):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def delete_empty_dirs(self, deleted_refs):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def path_exists(self, path):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def read_file(self, path, lock_file=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def write_file(self, path, contents, lock_file=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def base_storage_folder(self):
-        raise NotImplementedError()
-
-
-class ServerDiskAdapter(ServerStorageAdapter):
+class ServerDiskAdapter(object):
     '''Manage access to disk files with common methods required
     for conan operations'''
     def __init__(self, base_url, base_storage_path, updown_auth_manager):

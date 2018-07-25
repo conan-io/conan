@@ -84,10 +84,10 @@ class CmdUpload(object):
             self._check_recipe_date(conan_ref, upload_remote)
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
-        conan_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
-                                        upload_remote) or conan_ref
+        new_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
+                                      upload_remote) or conan_ref
 
-        recorder.add_recipe(conan_ref.full_repr(), upload_remote.name, upload_remote.url)
+        recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
 
         if packages_ids:
             # Can't use build_policy_always here because it's not loaded (only load_class)
@@ -96,15 +96,15 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
-                ret_upload_package = self._upload_package(PackageReference(conan_ref, package_id),
+                ret_upload_package = self._upload_package(PackageReference(new_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
                                                           skip_upload, integrity_check,
                                                           no_overwrite, upload_remote)
                 if ret_upload_package:
-                    recorder.add_package(conan_ref.full_repr(), package_id)
+                    recorder.add_package(new_ref.full_repr(), package_id)
 
-        if not defined_remote and not skip_upload:
-            self._registry.set_ref(conan_ref, upload_remote.name)
+        if not skip_upload:
+            self._registry.set_ref(new_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)

@@ -36,7 +36,6 @@ class ConanServerConfigParser(ConfigParser):
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
-                           "store_adapter": get_env("CONAN_STORE_ADAPTER", None, environment),
                            "authorize_timeout": get_env("CONAN_AUTHORIZE_TIMEOUT", None, environment),
                            "disk_storage_path": get_env("CONAN_STORAGE_PATH", storage_folder, environment),
                            "jwt_secret": get_env("CONAN_JWT_SECRET", None, environment),
@@ -158,8 +157,6 @@ class ConanServerConfigParser(ConfigParser):
         try:
             revisions_enabled = self._get_conf_server_string("revisions").lower()
             ret = revisions_enabled == "true" or revisions_enabled == "1"
-            if ret and self.store_adapter != "disk":
-                raise Exception("Revisions mechanism only work with disk storage")
             return ret
         except ConanException:
             return None
@@ -205,10 +202,6 @@ class ConanServerConfigParser(ConfigParser):
             raise ConanException("'updown_secret' setting is needed. Please, write a value "
                                  "in server.conf or set CONAN_UPDOWN_SECRET env value.")
 
-    @property
-    def store_adapter(self):
-        return self._get_conf_server_string("store_adapter")
-
     def _get_conf_server_string(self, keyname):
         """ Gets the value of a server config value either from the environment
         or the config file. Values from the environment have priority. If the
@@ -231,18 +224,9 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_server_store(config, public_url=None, updown_auth_manager=None):
-    store_adapter = config.store_adapter
-    if store_adapter == "disk":
-        public_url = public_url or config.public_url
-        disk_controller_url = "%s/%s" % (public_url, "files")
-        if not updown_auth_manager:
-            raise Exception("Updown auth manager needed for disk controller (not s3)")
-        adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
-    else:
-        # Want to develop new adapter? create a subclass of
-        # ServerStorageAdapter and implement the abstract methods
-        raise Exception("Store adapter not implemented! Change 'store_adapter' "
-                        "variable in server.conf file to one of the available options: 'disk' ")
-    revisions_enabled = config.revisions_enabled
+def get_server_store(disk_storage_path, revisions_enabled, public_url, updown_auth_manager):
+    disk_controller_url = "%s/%s" % (public_url, "files")
+    if not updown_auth_manager:
+        raise Exception("Updown auth manager needed for disk controller (not s3)")
+    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
     return ServerStore(revisions_enabled, adapter)

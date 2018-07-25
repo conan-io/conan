@@ -164,6 +164,7 @@ class RemoteRegistry(object):
                         raise ConanException("%s already exists. Use update" % str(conan_reference))
                 if remote_name not in remotes:
                     raise ConanException("%s not in remotes" % remote_name)
+            refs.pop(str(conan_reference), None)
             refs[conan_reference.full_repr()] = remote_name
             self._save(remotes, refs)
 

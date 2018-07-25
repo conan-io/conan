@@ -2,7 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
-from conans import tools, API_V2
+from conans import tools, API_V2, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
@@ -13,11 +13,12 @@ class RevisionsTest(unittest.TestCase):
     def setUp(self):
         self.servers = OrderedDict()
         self.users = {}
-        with tools.environment_append({"CONAN_SERVER_REVISIONS": "1"}):
-            for i in range(3):
-                self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2])
-                self.users["remote%d" % i] = [("lasote", "mypass")]
+        for i in range(3):
+            self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2, REVISIONS])
+            self.users["remote%d" % i] = [("lasote", "mypass")]
 
+        self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
+        self.users["remote_norevisions"] = [("lasote", "mypass")]
         self.client = TestClient(servers=self.servers, users=self.users)
 
     def _create_and_upload(self, conanfile, reference, remote=None, args=""):
@@ -182,7 +183,25 @@ class HelloConan(ConanFile):
     def test_upload_change_local_registry_with_revision(self):
         # An old recipe doesn't have revision in the registry, then we upload it to a server with
         # revisions, it should update the local registry with the revision
-        pass
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s --all -c -r remote_norevisions" % str(ref))
+        new_ref = self.client.remote_registry.get_ref_with_revision(ref)
+        self.assertIsNone(new_ref.revision)
+        self.assertEqual(new_ref, ref)
+
+        self.client.run("upload %s --all -c -r remote0" % str(ref))
+        new_ref = self.client.remote_registry.get_ref_with_revision(ref)
+        self.assertIsNotNone(new_ref.revision)
+        self.assertNotEqual(new_ref, ref)
 
     def test_revision_delete_latest(self):
         # Pending to better index

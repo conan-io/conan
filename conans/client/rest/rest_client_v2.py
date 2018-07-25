@@ -18,11 +18,12 @@ from conans.util.log import logger
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 put_headers=None, checksum_deploy=False):
+                 revisions_enabled, put_headers=None, checksum_deploy=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
                                             verify_ssl, put_headers)
         self._checksum_deploy = checksum_deploy
+        self._revisions_enabled = revisions_enabled
 
     @property
     def remote_api_url(self):
@@ -134,7 +135,9 @@ class RestV2Methods(RestCommonMethods):
         try:
             data = self.get_json(url)
         except NotFoundException:
-            data = {"files": {}, "reference": str(conan_reference)}
+            ref = conan_reference.full_repr() if self._revisions_enabled else str(conan_reference)
+            data = {"files": {},
+                    "reference": ref}
 
         remote_snapshot = data["files"]
         new_ref = ConanFileReference.loads(data["reference"])

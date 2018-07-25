@@ -10,7 +10,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
 import time
 import shutil
-from conans import SERVER_CAPABILITIES, API_V2
+from conans import SERVER_CAPABILITIES, API_V2, REVISIONS
 from conans.paths import SimplePaths
 from conans.server.conf import get_server_store
 
@@ -31,28 +31,31 @@ class TestServerLauncher(object):
         if not base_path:
             base_path = temp_folder()
 
-        if server_capabilities is None:
-            server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
-            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
-                server_capabilities.add(API_V2)
-
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
 
-        # Define storage_folder, if not, it will be readed from conf file and pointed to real user home
+        # Define storage_folder, if not, it will be readed from conf file and
+        # pointed to real user home
         self.storage_folder = os.path.join(base_path, ".conan_server", "data")
         mkdir(self.storage_folder)
 
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
+        if server_capabilities is None:
+            server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
+            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
+                server_capabilities.add(API_V2)
+            if server_config.revisions_enabled:
+                server_capabilities.append(REVISIONS)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port
 
+        revisions_enabled = server_config.revisions_enabled or REVISIONS in server_capabilities
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
-        self.server_store = get_server_store(server_config, public_url=base_url,
-                                             updown_auth_manager=updown_auth_manager)
+        self.server_store = get_server_store(server_config.disk_storage_path, revisions_enabled,
+                                             base_url, updown_auth_manager)
 
         # Prepare some test users
         if not read_permissions:
