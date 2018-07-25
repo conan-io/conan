@@ -28,6 +28,7 @@ class HelloConan(ConanFile):
 
     def package(self):
         self.copy("*.txt*", links=True)
+        self.copy("*.so*", links=True)
 """
 
 test_conanfile = """[requires]

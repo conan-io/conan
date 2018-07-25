@@ -3,6 +3,8 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
+from past.builtins import reduce
+
 from conans.util.files import mkdir
 
 
@@ -90,10 +92,11 @@ class FileCopier(object):
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
-        filenames = []
+        filepaths = []
         linked_folders = []
         linked_files = []
         for root, subfolders, files in os.walk(src, followlinks=True):
+            symlink = False
             if root in self._excluded:
                 subfolders[:] = []
                 continue
@@ -110,31 +113,35 @@ class FileCopier(object):
                     pass
 
             if os.path.islink(root):
-                linked_folders.append(os.path.relpath(root, src))
-            #     subfolders[:] = []
-            #     continue
+                linked_folder = os.path.relpath(root, src).replace("\\", "/").replace("./", "")
+                symlink = linked_folder
 
             relative_path = os.path.relpath(root, src)
             for f in files:
+                f = os.path.join(relative_path, f).replace("\\", "/").replace("./", "")
                 if os.path.islink(f):
-                    linked_files.append(f)
-                relative_name = os.path.normpath(os.path.join(relative_path, f))
-                filenames.append(relative_name)
+                    filepaths.append((f, f))
+                else:
+                    filepaths.append((f, symlink))
 
         if ignore_case:
-            filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
+            filepaths = {(file.lower(), symlink): (file, symlink) for file, symlink in filepaths}
+            uncased_filepaths = filepaths
 
-        filtered_files = fnmatch.filter(filenames, pattern)
-
-        linked_folders_files = linked_folders + linked_files
-        delete_items = [file for file in filtered_files for linked in linked_folders_files if
-                        linked in file]
-        files_to_copy = [file for file in filtered_files if file not in delete_items]
+        # Filter fnmatch
+        filtered_filepaths = []
+        for item in filepaths:
+            result = fnmatch.filter([item[0]], pattern)
+            if result:
+                filtered_filepaths.append((result[0], item[1]))
 
         if not links:
-            linked_files.clear()
-            linked_folders.clear()
+            withtout_links = []
+            for item in filtered_filepaths:
+                if not item[1]:
+                    withtout_links.append(item)
+            filtered_filepaths = withtout_links
 
         if excludes:
             if not isinstance(excludes, (tuple, list)):
@@ -142,20 +149,28 @@ class FileCopier(object):
             if ignore_case:
                 excludes = [e.lower() for e in excludes]
             for exclude in excludes:
-                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
-                linked_folders = [folder for folder in linked_folders for file in files_to_copy if
-                                  folder in file]
-                linked_files = [linked_file for linked_file in linked_files if
-                                linked_file in files_to_copy]
+                filtered_filepaths = [f for f in filtered_filepaths if not fnmatch.fnmatch(f[0], exclude)]
 
         if ignore_case:
-            files_to_copy = [filenames[f] for f in files_to_copy]
+            filtered_filepaths = [uncased_filepaths[(file, symlink)] for file, symlink in filtered_filepaths]
 
+        files_to_copy = []
+        print("filtered_filepaths:", filtered_filepaths)
+        for item in filtered_filepaths:
+            if item[1]:
+                if os.path.isdir(item[1]):
+                    linked_folders.append(item[1])
+                else:
+                    linked_files.append(item[1])
+            else:
+                files_to_copy.append(item[0])
+
+        print("RETURN:", files_to_copy, linked_folders + linked_files)
         return files_to_copy, linked_folders + linked_files
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
-        # Order linked folders staring with less dependant from others
+        # Order linked folders starting with less dependant from others
         links = []
         for linked_folder in linked_folders:
             link = os.readlink(os.path.join(src, linked_folder))
