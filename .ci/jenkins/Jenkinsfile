@@ -1,19 +1,36 @@
 def nightly = (env.JOB_NAME == "ConanNightly")
 
+def full_test = true
+
+if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
+    full_test = true
+}
+
+def full_test = true
+
 def slaves = ['Linux', 'Windows', 'Macos']
 
 def pyvers 
-if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
+if (full_test){
     pyvers = ['py36', 'py34', 'py27']
 }
 else{
 	pyvers = ['py36', 'py27']
 }
 
+def flavors = ["no_revisions"]
+if (full_test){
+    flavors = ["no_revisions", "revisions"]
+}
+
+def api_confs = ["v1"]
+if (full_test){
+    api_confs = ["v1", "v2"]
+}
+
+
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
-
-def api_confs = ["v1", "v2"]
 
 def win_tmp_base = "D:/J/t/"
 def rest_tmp_base = "/tmp/"
@@ -21,9 +38,6 @@ def runner = ".ci/jenkins/runner.py"
 
 def commit
 def branch
-
-def flavors = ["no_revisions", "revisions"]
-
 
 try{
     for (flavor in flavors){

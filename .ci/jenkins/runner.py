@@ -13,7 +13,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
               exluded_tags, num_cores=3, verbosity=None, server_api=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
-    exluded_tags = exluded_tags or []
     venv_dest = os.path.join(tmp_folder, "venv")
     if not os.path.exists(venv_dest):
         os.makedirs(venv_dest)
@@ -109,8 +108,7 @@ if __name__ == "__main__":
     parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--flavor', '-f', nargs=1, action=Extender,
-                        help='Flavors (revisions, no_revisions)')
+    parser.add_argument('--flavor', '-f', help='Flavor (revisions, no_revisions)')
 
     args = parser.parse_args()
     module = args.module
