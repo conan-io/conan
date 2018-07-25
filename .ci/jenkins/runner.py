@@ -25,8 +25,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     elif flavor == "no_revisions":
         exluded_tags.append("only_revisions")
 
-    if exluded_tags:
-        exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags])
+    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags]) if exluded_tags else ""
 
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
@@ -111,9 +110,6 @@ if __name__ == "__main__":
     parser.add_argument('--flavor', '-f', help='Flavor (revisions, no_revisions)')
 
     args = parser.parse_args()
-    module = args.module
 
-    module = "conans.test.model"
-
-    run_tests(module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
               args.exclude_tag, num_cores=args.num_cores, server_api=args.server_api)
