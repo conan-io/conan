@@ -13,7 +13,7 @@ else{
 def api_confs = ["v1", "v2"]
 
 
-builder = ConanBuilder("${WORKSPACE}", slaves, pyvers, api_confs)
+builder = ConanBuilder("${env.WORKSPACE}", slaves, pyvers, api_confs)
 builder.build()
 
 
