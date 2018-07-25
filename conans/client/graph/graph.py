@@ -34,6 +34,17 @@ class Node(object):
         self.binary_remote = None
         self.build_require = False
 
+    def partial_copy(self):
+        result = Node(self.conan_ref, self.conanfile)
+        result.dependants = set()
+        result.dependencies = []
+        result.binary = self.binary
+        result.recipe = self.recipe
+        result.remote = self.remote
+        result.binary_remote = self.binary_remote
+        result.build_require = self.build_require
+        return result
+
     def add_edge(self, edge):
         if edge.src == self:
             if edge not in self.dependencies:
@@ -218,9 +229,40 @@ class DepsGraph(object):
             current = new_current
         return closure
 
+    def collapse_graph(self):
+        result = DepsGraph()
+        result.add_node(self.root.partial_copy())
+        unique_nodes = {}
+        nodes_map = {self.root: result.root}
+        for node in self.nodes:
+            if not node.conan_ref:
+                continue
+            package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
+            if package_ref not in unique_nodes:
+                result_node = node.partial_copy()
+                result.add_node(result_node)
+                unique_nodes[package_ref] = result_node
+            else:
+                result_node = unique_nodes[package_ref]
+            nodes_map[node] = result_node
+
+        for node in self.nodes:
+            result_node = nodes_map[node]
+            for dep in node.dependencies:
+                src = result_node
+                dst = nodes_map[dep.dst]
+                result.add_edge(src, dst, dep.private)
+            for dep in node.dependants:
+                src = nodes_map[dep.src]
+                dst = result_node
+                result.add_edge(src, dst, dep.private)
+
+        return result
+
     def build_order(self, references):
-        levels = self.inverse_levels()
-        closure = self._inverse_closure(references)
+        new_graph = self.collapse_graph()
+        levels = new_graph.inverse_levels()
+        closure = new_graph._inverse_closure(references)
         result = []
         for level in reversed(levels):
             new_level = [n.conan_ref for n in level if (n in closure and n.conan_ref)]
