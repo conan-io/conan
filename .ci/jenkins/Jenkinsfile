@@ -32,12 +32,14 @@ try{
             def slave = x
             for (y in pyvers) {
                 for (z in api_confs){
-                    if (flavor == "revisions" && api_conf == "v1"){
-                        continue;
-                    }
                     def pyver = y
                     def api_conf = z
                     def name = "${slave} - ${flavor} - ${pyver} - API${api_conf}"
+
+                    if (flavor == "revisions" && api_conf == "v1"){
+                        continue;
+                    }
+
                     builders[name] = {
                         node(slave) {
                             stage(name){
