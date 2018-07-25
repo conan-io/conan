@@ -6,25 +6,14 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_test = true
 }
 
-def full_test = true
-
 def slaves = ['Linux', 'Windows', 'Macos']
+def flavors = ["no_revisions"]
+def pyvers  = ['py36', 'py27']
+def api_confs = ["v1"]
 
-def pyvers 
 if (full_test){
     pyvers = ['py36', 'py34', 'py27']
-}
-else{
-	pyvers = ['py36', 'py27']
-}
-
-def flavors = ["no_revisions"]
-if (full_test){
     flavors = ["no_revisions", "revisions"]
-}
-
-def api_confs = ["v1"]
-if (full_test){
     api_confs = ["v1", "v2"]
 }
 
