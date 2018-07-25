@@ -111,38 +111,38 @@ class HelloConan(ConanFile):
 '''
         self._create_and_upload(conanfile, ref, args="-s os=Linux")
         rev1 = self.servers["remote0"].paths.get_last_revision(ref)
-        self._create_and_upload(conanfile.replace('"os"', '"os", "arch"'), ref, args="-s arch=x86")
+        self._create_and_upload(conanfile.replace('"os"', '"arch"'), ref, args="-s arch=x86")
         rev2 = self.servers["remote0"].paths.get_last_revision(ref)
         self.assertNotEqual(rev1, rev2)
 
         # Search every package in local cache (we get both binary packages)
         self.client.run("search lib/1.0@lasote/testing")
-        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
         # Search only revision 1 in local cache
         self.client.run("search lib/1.0@lasote/testing#%s" % rev1)
-        self.assertNotIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertNotIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
         # Search only revision 2 in local cache
         self.client.run("search lib/1.0@lasote/testing#%s" % rev2)
-        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
         # Search all in remote (will give us the latest)
         self.client.run("search lib/1.0@lasote/testing -r remote0")
-        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
         # Search rev1 in remote
         self.client.run("search lib/1.0@lasote/testing#%s -r remote0" % rev1)
-        self.assertNotIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertNotIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
         # Search rev2 in remote
         self.client.run("search lib/1.0@lasote/testing#%s -r remote0" % rev2)
-        self.assertIn("6ca62fad41b8c97d21c03f0d0f246e1347b20777", self.client.out)
+        self.assertIn("a363db07e8420d258dca5a64aad6a5b8ecbbdd66", self.client.out)
         self.assertNotIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", self.client.out)
 
     def test_with_scm(self):
