@@ -279,3 +279,7 @@ class HelloConan(ConanFile):
     def test_revision_delete_latest(self):
         # Pending to better index
         pass
+
+
+    def test_alias_with_revisions(self):
+        pass
