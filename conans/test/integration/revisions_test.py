@@ -213,6 +213,7 @@ class HelloConan(ConanFile):
         client2.run("create . %s" % str(self.ref))
         client2.run("upload %s -c --all -r remote0" % str(self.ref))
 
+        time.sleep(0.1)
         # install of the client1 (no-update)
         self.client.run("install %s" % str(self.ref))
         self.assertIn("lib/1.0@lasote/testing from 'remote0' - Cache", self.client.out)
