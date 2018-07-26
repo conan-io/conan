@@ -51,10 +51,6 @@ class SymLinksTest(unittest.TestCase):
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
-            print("BAAAAAAAAAAAAAAAAAAAAASEEE", base)
-            print("FILEPATH", filepath)
-            print("link", link)
-            print("link pointing to", os.readlink(link))
             self.assertEqual(os.readlink(link), "file1.txt")
             file1 = load(filepath)
             self.assertEqual("Hello1", file1)
@@ -74,8 +70,6 @@ class SymLinksTest(unittest.TestCase):
 
     def basic_test(self):
         client = TestClient()
-        print("registry", client.paths.registry)
-        print("current folder", client.current_folder)
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
         client.run("export . lasote/stable")

@@ -339,8 +339,6 @@ class ConanManager(object):
         :return:
         """
 
-        print("IMPORTS()")
-
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._load_consumer_conanfile(conan_file_path, info_folder,
                                                   output, deps_info_required=True)

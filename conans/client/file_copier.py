@@ -3,10 +3,6 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
-from past.builtins import reduce
-
-from conans.util.files import mkdir
-
 
 def report_copied_files(copied, output):
     ext_files = defaultdict(list)
@@ -89,9 +85,6 @@ class FileCopier(object):
         return copied_files
 
     def _filter_files(self, src, pattern, links, excludes, ignore_case):
-
-        print("_filter_files SRC:", src)
-
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
@@ -120,20 +113,15 @@ class FileCopier(object):
 
             relative_path = os.path.relpath(root, src)
             for f in files:
-                print("iterating files:", root, f, "-> islink?", os.path.islink(os.path.join(root, f)))
                 f = os.path.normpath(os.path.join(relative_path, f))
                 if os.path.islink(os.path.join(root, f)):
-                    print("FILEEEEE:", f)
                     filepaths.append((f, f))
                 else:
                     if not symlink:
                         # Check upstream symlinked folders
-                        print("Check upstream symlinked folders!!!!!!!!!!!!!!")
                         folder_path = src.replace("\\", "/")[:-1]
-                        print("file", f)
                         for folder in f.split("/")[:-1]:
                             folder_path = folder_path + "/" + folder
-                            print("folder_path", folder_path, os.path.islink(folder_path))
                             if os.path.islink(folder_path):
                                 symlink = os.path.relpath(folder_path, src)
                                 break
@@ -181,8 +169,6 @@ class FileCopier(object):
             else:
                 files_to_copy.append(item[0])
 
-        print("filtered_filepaths:", filtered_filepaths)
-        print("RETURN:", files_to_copy, linked_folders, linked_files)
         return files_to_copy, linked_folders, linked_files
 
     @staticmethod
@@ -194,7 +180,6 @@ class FileCopier(object):
                 links.append(linked_file)
             else:
                 links.insert(0, linked_file)
-        print("_link_files:", links)
         for linked_file in links:
             src_link = os.path.join(src, linked_file)  # link file in src
             src_linked = os.readlink(src_link)      # 'linked to' file in src
@@ -203,8 +188,6 @@ class FileCopier(object):
             print("SRC:", src)
             print(src_link, "==>", src_linked, ":", new_dst_link, "-->", dst_linked)
             if os.path.isfile(dst_linked) and os.path.exists(dst_linked):
-                print("src_linked exists?", os.path.exists(src_linked))
-                print("new_dst_link exists?", os.path.exists(new_dst_link))
                 try:
                     # Remove the previous symlink
                     os.remove(new_dst_link)
@@ -230,8 +213,6 @@ class FileCopier(object):
             src_linked = os.readlink(src_link)        # 'linked to' folder in src
             new_dst_link = os.path.join(dst, linked_folder)  # link folder in dst
             dst_linked = os.path.join(dst, src_linked.replace(src[:-1], ""))  # 'linked to' folder dst
-            print("SRC:", src)
-            print(src_link, "==>", src_linked, ":", new_dst_link, "-->", dst_linked)
             try:
                 # Remove the previous symlink
                 os.remove(new_dst_link)
@@ -239,9 +220,6 @@ class FileCopier(object):
                 pass
             # link is a string relative to linked_folder
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-            # mkdir(os.path.dirname(dst_link))
-            print("src_linked exists?", os.path.exists(src_linked))
-            print("new_dst_link exists?", os.path.exists(new_dst_link))
             os.symlink(src_linked, new_dst_link)
         # Remove empty links
         for linked_folder in links:
