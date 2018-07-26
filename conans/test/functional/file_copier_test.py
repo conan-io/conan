@@ -47,20 +47,15 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub1, "sub1", "file1.txt"), "Hello1 sub")
 
         for links in (False, True):
-            print("LINKS:", links)
             folder2 = temp_folder()
             copier = FileCopier(folder1, folder2)
             copier("*.txt", "texts", links=links)
             if links:
-                self.assertEqual(os.readlink(os.path.join(folder2, "texts", "subdir2")),
-                                 os.path.join(folder2, "texts", "subdir1"))  # @UndefinedVariable
-                self.assertEqual("Hello1",
-                                 load(os.path.join(folder2, "texts", "subdir2", "file1.txt")))
-                self.assertEqual(['file1.txt', 'sub1'].sort(),
-                                 os.listdir(os.path.join(folder2, "texts", "subdir2")).sort())
-            self.assertEqual("Hello1", load(os.path.join(folder2, "texts", "subdir1", "file1.txt")))
-            self.assertEqual("Hello1 sub",
-                             load(os.path.join(folder2, "texts", "subdir1", "sub1", "file1.txt")))
+                self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1") # @UndefinedVariable
+            self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
+            self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
+            self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
+            self.assertEqual(['file1.txt', 'sub1'].sort(), os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
 
         for links in (False, True):
             folder2 = temp_folder()
@@ -76,10 +71,10 @@ class FileCopierTest(unittest.TestCase):
         sub1 = os.path.join(folder1, "subdir1")
         sub2 = os.path.join(folder1, "subdir2")
         os.makedirs(sub1)
-        os.symlink(sub1, sub2)  # @UndefinedVariable
+        os.symlink("subdir1", sub2)  # @UndefinedVariable
         save(os.path.join(sub1, "file1.txt"), "Hello1")
         save(os.path.join(sub1, "file2.c"), "Hello2")
-        save(os.path.join(sub1, "sub1", "file1.txt"), "Hello1 sub")
+        save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
 
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)
@@ -87,8 +82,7 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual(os.listdir(folder2), [])
         copier("*.txt", links=True)
         self.assertEqual(sorted(os.listdir(folder2)), sorted(["subdir1", "subdir2"]))
-        self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")),
-                         os.path.join(folder2, "subdir1"))  # @UndefinedVariable
+        self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")), "subdir1")  # @UndefinedVariable
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir2/file1.txt")))
 
