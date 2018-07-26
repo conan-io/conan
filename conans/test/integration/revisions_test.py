@@ -284,6 +284,13 @@ class HelloConan(ConanFile):
         # Pending to better index
         pass
 
+    def test_revision_remove(self):
+        # Remove all by global ref?
+        # Remove by ref + rev
+        # Remove all packages in a ref
+        # Remove one package in a ref (last) (check dirs cleaned)
+        pass
+
     def test_alias_with_revisions(self):
         pass
 

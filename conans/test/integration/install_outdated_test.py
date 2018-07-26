@@ -1,4 +1,7 @@
 import unittest
+
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -55,6 +58,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)
 
+    @attr('only_without_revisions')
     def install_outdated_dep_test(self):
         # A new recipe that depends on Hello0/0.1
         new_client = TestClient(servers=self.servers,
@@ -91,6 +95,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.user_io.out)
 
+    @attr('only_without_revisions')
     def install_outdated_and_dep_test(self):
         # regression test for https://github.com/conan-io/conan/issues/1053
         # A new recipe that depends on Hello0/0.1

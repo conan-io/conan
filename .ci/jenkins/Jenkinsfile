@@ -43,6 +43,10 @@ try{
                         continue;
                     }
 
+                    if (flavor == "revisions" && pyver != "py36"){
+                        continue;
+                    }
+
                     builders[name] = {
                         node(slave) {
                             stage(name){

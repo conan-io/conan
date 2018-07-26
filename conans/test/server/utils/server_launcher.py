@@ -42,7 +42,7 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
-            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
+            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED") or os.getenv("CONAN_TESTING_SERVER_REVISIONS_ENABLED"):
                 server_capabilities.add(API_V2)
             if server_config.revisions_enabled or os.getenv("CONAN_TESTING_SERVER_REVISIONS_ENABLED"):
                 server_capabilities.add(REVISIONS)

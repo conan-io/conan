@@ -30,7 +30,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
                       self.client.user_io.out)
         self.client.run("remote list_ref")
-        self.assertIn("Hello0/0.1@lasote/stable: remote1", self.client.user_io.out)
+        self.assertIn(": remote1", self.client.user_io.out)
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")

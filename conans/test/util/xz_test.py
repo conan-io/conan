@@ -14,7 +14,9 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 
 
+@attr('only_without_revisions')
 class XZTest(TestCase):
+
     def test_error_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
@@ -47,7 +49,6 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_sources.txz' file format", client.out)
 
-    @attr('only_without_revisions')
     def test_error_package_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")

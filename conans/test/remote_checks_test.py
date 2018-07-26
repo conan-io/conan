@@ -1,4 +1,7 @@
 import unittest
+
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient, TestServer,\
     inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from collections import OrderedDict
@@ -6,6 +9,7 @@ from collections import OrderedDict
 
 class RemoteChecksTest(unittest.TestCase):
 
+    @attr('only_without_revisions')
     def test_recipe_updates(self):
         servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
         client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
