@@ -156,7 +156,7 @@ class RemoteRegistry(object):
             full_ref = self._find_ref_in(conan_reference, refs)
             if full_ref:
                 if not check_exists:
-                    self.update_ref(conan_reference, remote_name)
+                    self._update_ref(conan_reference, remote_name)
                     return
                 else:
                     raise ConanException("%s already exists. Use update" % str(conan_reference))
@@ -167,18 +167,23 @@ class RemoteRegistry(object):
             refs[conan_reference.full_repr()] = remote_name
             self._save(remotes, refs)
 
+    def _update_ref(self, conan_reference, remote_name):
+        """without lock, to be called from set_ref (avoid double locking)"""
+        assert (isinstance(conan_reference, ConanFileReference))
+        remotes, refs = self._load()
+        full_ref = self._find_ref_in(conan_reference, refs)
+        if not full_ref:
+            raise ConanException("%s does not exist. Use add" % str(conan_reference))
+        if remote_name not in remotes:
+            raise ConanException("%s not in remotes" % remote_name)
+        refs.pop(full_ref.full_repr())
+        refs[conan_reference.full_repr()] = remote_name
+        self._save(remotes, refs)
+
     def update_ref(self, conan_reference, remote_name):
         assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
-            remotes, refs = self._load()
-            full_ref = self._find_ref_in(conan_reference, refs)
-            if not full_ref:
-                raise ConanException("%s does not exist. Use add" % str(conan_reference))
-            if remote_name not in remotes:
-                raise ConanException("%s not in remotes" % remote_name)
-            refs.pop(full_ref.full_repr())
-            refs[conan_reference.full_repr()] = remote_name
-            self._save(remotes, refs)
+            self._update_ref(conan_reference, remote_name)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
         self._remotes = None  # invalidate cached remotes
