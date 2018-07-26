@@ -143,3 +143,20 @@ class RegistryTest(unittest.TestCase):
         registry.set_ref(ref.copy_with_revision("revision"), "conan.io")
         self.assertIn(ref.copy_with_revision("revision"), registry.refs)
         self.assertNotIn(ref, registry.refs)
+
+    def clear_revision_test(self):
+        ref = ConanFileReference.loads("lib/1.0@user/channel")
+        registry = self._get_registry()
+
+        registry.set_ref(ref.copy_with_revision("revision"), "conan.io")
+        tmp = registry.get_ref_with_revision(ref)
+        self.assertEquals(tmp.revision, "revision")
+
+        registry.clear_revision(ref)
+        ref2 = registry.get_ref_with_revision(ref)
+        self.assertIsNone(ref2.revision)
+
+        registry.set_ref(ref.copy_with_revision("revision"), "conan.io")
+        registry.clear_revision(ref.copy_without_revision())
+        ref2 = registry.get_ref_with_revision(ref)
+        self.assertIsNone(ref2.revision)
