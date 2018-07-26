@@ -86,10 +86,10 @@ class ServerDiskAdapter(object):
         for ref in deleted_refs:
             ref_path = paths.conan(ref)
             for _ in range(4 if not ref.revision else 5):
-                if set(os.listdir(ref_path)) == lock_files:
-                    for lock_file in lock_files:
-                        os.unlink(os.path.join(ref_path, lock_file))
                 if os.path.exists(ref_path):
+                    if set(os.listdir(ref_path)) == lock_files:
+                        for lock_file in lock_files:
+                            os.unlink(os.path.join(ref_path, lock_file))
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
                         os.rmdir(ref_path)
                     except OSError:

@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
 
 
 def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
-              exluded_tags, num_cores=3, verbosity=None, server_api=None):
+              excluded_tags, num_cores=3, verbosity=None, server_api=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     venv_dest = os.path.join(tmp_folder, "venv")
@@ -21,11 +21,11 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                             "activate")
 
     if flavor == "revisions":
-        exluded_tags.append("only_without_revisions")
+        excluded_tags.append("only_without_revisions")
     elif flavor == "no_revisions":
-        exluded_tags.append("only_revisions")
+        excluded_tags.append("only_revisions")
 
-    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in exluded_tags]) if exluded_tags else ""
+    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
 
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""

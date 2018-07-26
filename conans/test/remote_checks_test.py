@@ -148,7 +148,7 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+        self.assertIn(": server1", client.out)
 
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
