@@ -20,7 +20,7 @@ class RevisionsTest(unittest.TestCase):
             self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2, REVISIONS])
             self.users["remote%d" % i] = [("lasote", "mypass")]
 
-        self.servers["remote_norevisions"] = TestServer()
+        self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
         self.users["remote_norevisions"] = [("lasote", "mypass")]
         self.client = TestClient(servers=self.servers, users=self.users)
         self.conanfile = '''
@@ -195,6 +195,7 @@ class HelloConan(ConanFile):
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
         self.client.remote_registry.remove_ref(self.ref)
+        self.assertIsNone(self.client.remote_registry.get_ref_with_revision(self.ref))
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))
         self.assertNotIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)

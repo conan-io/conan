@@ -38,7 +38,7 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
-               output, client_cache):
+               output, client_cache, remote_registry):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -59,7 +59,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
                              % (conan_ref_str, " ".join(str(s) for s in refs)))
     output = ScopedOutput(str(conan_ref), output)
     with client_cache.conanfile_write_lock(conan_ref):
-        _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source)
+        _export_conanfile(conanfile_path, output, client_cache, remote_registry, conanfile, conan_ref, keep_source)
 
 
 def _load_export_conanfile(conanfile_path, output, name, version):
@@ -131,7 +131,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     return scm_data
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+def _export_conanfile(conanfile_path, output, paths, remote_registry, conanfile, conan_ref, keep_source):
 
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
@@ -152,6 +152,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
+        # The recipe cannot be associated to a server revision anymore
+        remote_registry.clear_revision(conan_ref)
     digest.save(exports_folder)
 
     source = paths.source(conan_ref, conanfile.short_paths)

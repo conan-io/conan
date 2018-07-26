@@ -309,7 +309,7 @@ class ConanAPIV1(object):
             if not not_export:
                 scoped_output.highlight("Exporting package recipe")
                 cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                           self._user_io.out, self._client_cache)
+                           self._user_io.out, self._client_cache, self._registry)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [name]
@@ -379,7 +379,7 @@ class ConanAPIV1(object):
             raise ConanException("Specified name/version doesn't match with the "
                                  "name/version in the conanfile")
         cmd_export(conanfile_path, name, version, user, channel, False,
-                   self._user_io.out, self._client_cache)
+                   self._user_io.out, self._client_cache, self._registry)
 
         if not (name and version):
             name = conanfile.name
@@ -641,7 +641,7 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                   self._user_io.out, self._client_cache)
+                   self._user_io.out, self._client_cache, self._registry)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

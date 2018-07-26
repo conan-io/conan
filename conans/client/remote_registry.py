@@ -180,6 +180,14 @@ class RemoteRegistry(object):
         refs[conan_reference.full_repr()] = remote_name
         self._save(remotes, refs)
 
+    def clear_revision(self, conan_reference):
+        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
+            remotes, refs = self._load()
+            full_ref = self._find_ref_in(conan_reference, refs)
+            if full_ref and full_ref.revision:
+                remote_name = refs[full_ref.full_repr()]
+                self._update_ref(full_ref.copy_without_revision(), remote_name)
+
     def update_ref(self, conan_reference, remote_name):
         assert(isinstance(conan_reference, ConanFileReference))
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
