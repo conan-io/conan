@@ -3,6 +3,8 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
+from conans.util.files import mkdir
+
 
 def report_copied_files(copied, output):
     ext_files = defaultdict(list)
@@ -106,7 +108,7 @@ class FileCopier(object):
                     subfolders.remove("build")
                 except:
                     pass
-
+            # Mark folder is a symlink
             if os.path.islink(root):
                 symlink = os.path.relpath(root, src)
 
@@ -172,10 +174,9 @@ class FileCopier(object):
 
     @staticmethod
     def _link_elements(src, dst, linked_elements):
-        print("_link_elements:", linked_elements)
         for linked_element in linked_elements:
             src_link = os.path.join(src, linked_element)  # link element in src
-            src_linked = os.readlink(src_link)        # 'linked to' element in src
+            src_linked = os.readlink(src_link)  # 'linked to' element in src
             new_dst_link = os.path.join(dst, linked_element)  # link element in dst
             try:
                 # Remove the previous symlink
