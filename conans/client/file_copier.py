@@ -127,12 +127,13 @@ class FileCopier(object):
                     filepaths.append((f, f))
                 else:
                     if not symlink:
-                        # Check upstream symlinks
-                        base_path = src.replace("\\", "/")
-                        folder_path = base_path
-                        print("before split", f)
+                        # Check upstream symlinked folders
+                        print("Check upstream symlinked folders!!!!!!!!!!!!!!")
+                        folder_path = src.replace("\\", "/")[:-1]
+                        print("file", f)
                         for folder in f.split("/")[:-1]:
-                            folder_path = folder_path + folder + "/"
+                            folder_path = folder_path + "/" + folder
+                            print("folder_path", folder_path, os.path.islink(folder_path))
                             if os.path.islink(folder_path):
                                 symlink = os.path.relpath(folder_path, src)
                                 break
