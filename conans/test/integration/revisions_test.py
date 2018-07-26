@@ -300,4 +300,7 @@ class HelloConan(ConanFile):
     def test_upload_not_override(self):
         pass
 
+    def test_export_cleans_revision_in_registy(self):
+        pass
+
 
