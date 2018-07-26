@@ -2,6 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+import time
 from nose.plugins.attrib import attr
 from time import sleep
 
@@ -205,6 +206,7 @@ class HelloConan(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
 
+        time.sleep(0.1)
         client2 = TestClient(servers=self.servers, users=self.users)
         conanfile2 = self.conanfile + " "
         client2.save({"conanfile.py": conanfile2})
@@ -219,6 +221,7 @@ class HelloConan(ConanFile):
 
         # install with update
         self.client.run("install %s --update" % str(self.ref))
+        self.assertNotIn("lib/1.0@lasote/testing from 'remote0' - Newer", self.client.out)
         self.assertIn("The current binary package doesn't belong to the current recipe revision:",
                       self.client.out)
         self.assertIn("lib/1.0@lasote/testing from 'remote0' - Updated", self.client.out)
