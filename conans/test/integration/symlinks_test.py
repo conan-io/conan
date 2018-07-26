@@ -27,7 +27,9 @@ class HelloConan(ConanFile):
         os.symlink("other_empty_folder", "other_link")
 
     def package(self):
+        print("conanfile.package(): *.txt*")
         self.copy("*.txt*", links=True)
+        print("conanfile.package(): *.so*")
         self.copy("*.so*", links=True)
 """
 
@@ -39,7 +41,7 @@ Hello/0.1@lasote/stable
 """
 
 
-# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -53,7 +55,7 @@ class SymLinksTest(unittest.TestCase):
             print("FILEPATH", filepath)
             print("link", link)
             print("link pointing to", os.readlink(link))
-            self.assertEqual(os.readlink(link), filepath)
+            self.assertEqual(os.readlink(link), "file1.txt")
             file1 = load(filepath)
             self.assertEqual("Hello1", file1)
             file1 = load(link)
@@ -62,7 +64,7 @@ class SymLinksTest(unittest.TestCase):
             save(filepath, base)
             self.assertEqual(load(link), base)
             link = os.path.join(base, "latest")
-            self.assertEqual(os.readlink(link), os.path.join(base, "version1"))
+            self.assertEqual(os.readlink(link), "version1")
             filepath = os.path.join(base, "latest", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)

@@ -90,6 +90,8 @@ class FileCopier(object):
 
     def _filter_files(self, src, pattern, links, excludes, ignore_case):
 
+        print("_filter_files SRC:", src)
+
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
@@ -114,13 +116,13 @@ class FileCopier(object):
                     pass
 
             if os.path.islink(root):
-                linked_folder = os.path.relpath(root, src).replace("\\", "/").replace("./", "")
-                symlink = linked_folder
+                symlink = os.path.relpath(root, src)
 
             relative_path = os.path.relpath(root, src)
             for f in files:
-                f = os.path.join(relative_path, f).replace("\\", "/").replace("./", "")
-                if os.path.islink(f):
+                print("iterating files:", root, f, "-> islink?", os.path.islink(os.path.join(root, f)))
+                f = os.path.normpath(os.path.join(relative_path, f))
+                if os.path.islink(os.path.join(root, f)):
                     print("FILEEEEE:", f)
                     filepaths.append((f, f))
                 else:
@@ -132,7 +134,7 @@ class FileCopier(object):
                         for folder in f.split("/")[:-1]:
                             folder_path = folder_path + folder + "/"
                             if os.path.islink(folder_path):
-                                symlink = folder_path.replace(base_path, "")[:-1]
+                                symlink = os.path.relpath(folder_path, src)
                                 break
                     filepaths.append((f, symlink))
 
@@ -193,13 +195,21 @@ class FileCopier(object):
                 links.insert(0, linked_file)
         print("_link_files:", links)
         for linked_file in links:
-            dst_link = os.path.join(dst, linked_file)  # link file in dst
             src_link = os.path.join(src, linked_file)  # link file in src
-            original_link = os.readlink(src_link)      # 'linked to' file in src
-            new_link = os.path.join(dst, original_link.replace(src, ""))  # 'linked to' file in dst
-            print(original_link, src_link, new_link, dst_link)
-            if os.path.isfile(new_link) and os.path.exists(new_link):
-                os.symlink(new_link, dst_link)
+            src_linked = os.readlink(src_link)      # 'linked to' file in src
+            new_dst_link = os.path.join(dst, linked_file)  # link file in dst
+            dst_linked = os.path.join(dst, src_linked.replace(src[:-1], ""))  # 'linked to' file in dst
+            print("SRC:", src)
+            print(src_link, "==>", src_linked, ":", new_dst_link, "-->", dst_linked)
+            if os.path.isfile(dst_linked) and os.path.exists(dst_linked):
+                print("src_linked exists?", os.path.exists(src_linked))
+                print("new_dst_link exists?", os.path.exists(new_dst_link))
+                try:
+                    # Remove the previous symlink
+                    os.remove(new_dst_link)
+                except OSError:
+                    pass
+                os.symlink(src_linked, new_dst_link)
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
@@ -215,25 +225,29 @@ class FileCopier(object):
         # Look for symlinks in origin
         print("_link_folders:", links)
         for linked_folder in links:
-            dst_link = os.path.join(dst, linked_folder)  # link folder in dst
             src_link = os.path.join(src, linked_folder)  # link folder in src
-            original_link = os.readlink(src_link)        # 'linked to' folder in src
-            new_link = os.path.join(dst, original_link.replace(src, ""))  # 'linked to' folder dst
+            src_linked = os.readlink(src_link)        # 'linked to' folder in src
+            new_dst_link = os.path.join(dst, linked_folder)  # link folder in dst
+            dst_linked = os.path.join(dst, src_linked.replace(src[:-1], ""))  # 'linked to' folder dst
+            print("SRC:", src)
+            print(src_link, "==>", src_linked, ":", new_dst_link, "-->", dst_linked)
             try:
                 # Remove the previous symlink
-                os.remove(dst_link)
+                os.remove(new_dst_link)
             except OSError:
                 pass
             # link is a string relative to linked_folder
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             # mkdir(os.path.dirname(dst_link))
-            os.symlink(new_link, dst_link)
+            print("src_linked exists?", os.path.exists(src_linked))
+            print("new_dst_link exists?", os.path.exists(new_dst_link))
+            os.symlink(src_linked, new_dst_link)
         # Remove empty links
         for linked_folder in links:
             dst_link = os.path.join(dst, linked_folder)
-            abs_path = os.path.realpath(dst_link)
+            abs_path = os.path.realpath(new_dst_link)
             if not os.path.exists(abs_path):
-                os.remove(dst_link)
+                os.remove(new_dst_link)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):
