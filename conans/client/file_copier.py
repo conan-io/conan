@@ -79,8 +79,7 @@ class FileCopier(object):
                                                                      ignore_case)
 
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
-        self._link_folders(src, dst, link_folders)
-        self._link_files(src, dst, link_files)
+        self._link_elements(src, dst, link_folders + link_files)
         self._copied.extend(files_to_copy)
         return copied_files
 
@@ -172,61 +171,25 @@ class FileCopier(object):
         return files_to_copy, linked_folders, linked_files
 
     @staticmethod
-    def _link_files(src, dst, linked_files):
-        links = []
-        for linked_file in linked_files:
-            link = os.readlink(os.path.join(src, linked_file))
-            if link in linked_files:
-                links.append(linked_file)
-            else:
-                links.insert(0, linked_file)
-        for linked_file in links:
-            src_link = os.path.join(src, linked_file)  # link file in src
-            src_linked = os.readlink(src_link)      # 'linked to' file in src
-            new_dst_link = os.path.join(dst, linked_file)  # link file in dst
-            dst_linked = os.path.join(dst, src_linked.replace(src[:-1], ""))  # 'linked to' file in dst
-            print("SRC:", src)
-            print(src_link, "==>", src_linked, ":", new_dst_link, "-->", dst_linked)
-            if os.path.isfile(dst_linked) and os.path.exists(dst_linked):
-                try:
-                    # Remove the previous symlink
-                    os.remove(new_dst_link)
-                except OSError:
-                    pass
-                os.symlink(src_linked, new_dst_link)
-
-    @staticmethod
-    def _link_folders(src, dst, linked_folders):
-        # Order linked folders starting with less dependant from others
-        links = []
-        for linked_folder in linked_folders:
-            src_link = os.path.join(src, linked_folder)
-            original_link = os.readlink(src_link)
-            if os.path.basename(original_link) in linked_folders:
-                links.append(linked_folder)
-            else:
-                links.insert(0, linked_folder)
-        # Look for symlinks in origin
-        print("_link_folders:", links)
-        for linked_folder in links:
-            src_link = os.path.join(src, linked_folder)  # link folder in src
-            src_linked = os.readlink(src_link)        # 'linked to' folder in src
-            new_dst_link = os.path.join(dst, linked_folder)  # link folder in dst
-            dst_linked = os.path.join(dst, src_linked.replace(src[:-1], ""))  # 'linked to' folder dst
+    def _link_elements(src, dst, linked_elements):
+        print("_link_elements:", linked_elements)
+        for linked_element in linked_elements:
+            src_link = os.path.join(src, linked_element)  # link element in src
+            src_linked = os.readlink(src_link)        # 'linked to' element in src
+            new_dst_link = os.path.join(dst, linked_element)  # link element in dst
             try:
                 # Remove the previous symlink
                 os.remove(new_dst_link)
             except OSError:
                 pass
-            # link is a string relative to linked_folder
+            # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             os.symlink(src_linked, new_dst_link)
-        # Remove empty links
-        for linked_folder in links:
-            dst_link = os.path.join(dst, linked_folder)
-            abs_path = os.path.realpath(new_dst_link)
+            # Remove empty links
+            dst_link = os.path.join(dst, linked_element)
+            abs_path = os.path.realpath(dst_link)
             if not os.path.exists(abs_path):
-                os.remove(new_dst_link)
+                os.remove(dst_link)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):
