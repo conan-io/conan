@@ -43,7 +43,7 @@ try{
                         continue;
                     }
 
-                    if (flavor == "revisions" && pyver != "py36"){
+                    if (flavor == "revisions" && pyver == "py34"){
                         continue;
                     }
 

@@ -63,7 +63,8 @@ class RestApiTest(unittest.TestCase):
             plugin = VersionCheckerPlugin(Version("0.16.0"), Version("0.16.0"), ["ImCool"])
             cls.server = TestServerLauncher(server_version=Version("0.16.0"),
                                             min_client_compatible_version=Version("0.16.0"),
-                                            plugins=[plugin])
+                                            plugins=[plugin],
+                                            server_capabilities=[])
             cls.server.start()
 
             cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)

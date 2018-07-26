@@ -103,13 +103,19 @@ class DepsGraphBuilder(object):
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
                 # Necessary to make sure that it is pointing to the correct aliased
                 require.conan_reference = alias_ref
-                if previous_node.conan_ref.copy_without_revision() != alias_ref.copy_without_revision():
+                conflict = self._conflicting_references(previous_node.conan_ref, alias_ref)
+                if conflict == 2:  # Revisions conflict
+                    raise ConanException("Conflict in %s\n"
+                                         "    Different revisions of %s has been requested"
+                                         % (node.conan_ref, require.conan_reference))
+                elif conflict:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
                                          "    To change it, override it in your base requirements"
                                          % (node.conan_ref, require.conan_reference,
                                             previous_node.conan_ref, previous_node.conan_ref))
+
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
@@ -119,6 +125,14 @@ class DepsGraphBuilder(object):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
                                     new_options, new_loop_ancestors, aliased, check_updates, update,
                                     remote_name)
+
+    @staticmethod
+    def _conflicting_references(ref1, ref2):
+        if ref1.copy_without_revision() != ref2.copy_without_revision():
+            return 1
+        if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
+            return 2
+        return False
 
     def _recurse(self, closure, new_reqs, new_options):
         """ For a given closure, if some requirements or options coming from downstream

@@ -54,6 +54,7 @@ class TestServerLauncher(object):
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
+        base_url = base_url or server_config.public_url
         self.server_store = get_server_store(server_config.disk_storage_path, revisions_enabled,
                                              base_url, updown_auth_manager)
 

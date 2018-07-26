@@ -283,11 +283,55 @@ class HelloConan(ConanFile):
                       self.client.out)
         self.assertIn("Uploading package 1/1", self.client.out)
 
+    def test_conflict_with_different_revisions_but_same_ref(self):
+        """Diamond requiring different revisions in the reference"""
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile): 
+    pass
+'''
+        ref_a = ConanFileReference.loads("libA/1.0@lasote/testing")
+        self._create_and_upload(conanfile, ref_a)
+        rev = self.servers["remote0"].paths.get_last_revision(ref_a)
+        self._create_and_upload(conanfile + " ", ref_a)  # New revision
+        rev2 = self.servers["remote0"].paths.get_last_revision(ref_a)
+
+        ref_b = ConanFileReference.loads("libB/1.0@lasote/testing")
+        req = "%s#%s" % (ref_a, rev)
+        self._create_and_upload(conanfile.replace("pass", 'requires = "%s"' % req), ref_b)
+
+        ref_c = ConanFileReference.loads("libC/1.0@lasote/testing")
+        req = "%s#%s" % (ref_a, rev2)
+        self._create_and_upload(conanfile.replace("pass", 'requires = "%s"' % req), ref_c)
+
+        ref_d = ConanFileReference.loads("libD/1.0@lasote/testing")
+        repl = 'requires = "%s", "%s"' % (str(ref_c), str(ref_b))
+        self.client.save({"conanfile.py": conanfile.replace("pass", repl)})
+        error = self.client.run("create . %s" % str(ref_d), ignore_error=True)
+
+        self.assertTrue(error)
+        self.assertIn("Different revisions of libA/1.0@lasote/testing "
+                      "has been requested", self.client.out)
+
+        self.client.run('remove "*" -f')
+        self.client.run("create . %s" % str(ref_d), ignore_error=True)
+        error = self.client.run("create . %s" % str(ref_d), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Different revisions of libA/1.0@lasote/testing "
+                      "has been requested", self.client.out)
+
+    def test_upload_not_override(self):
+        pass
+
+    def test_export_cleans_revision_in_registy(self):
+        pass
+
     def test_revision_delete_latest(self):
-        # Pending to better index
         pass
 
     def test_revision_remove(self):
+        # Pending to better index
         # Remove all by global ref?
         # Remove by ref + rev
         # Remove all packages in a ref
@@ -295,15 +339,6 @@ class HelloConan(ConanFile):
         pass
 
     def test_alias_with_revisions(self):
-        pass
-
-    def test_conflict_with_different_revisions_but_same_ref(self):
-        pass
-
-    def test_upload_not_override(self):
-        pass
-
-    def test_export_cleans_revision_in_registy(self):
         pass
 
 
