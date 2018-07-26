@@ -141,6 +141,10 @@ class RestV2Methods(RestCommonMethods):
 
         remote_snapshot = data["files"]
         new_ref = ConanFileReference.loads(data["reference"])
+
+        if no_overwrite and new_ref.revision:
+            self._output.warn("Server uses revisions, argument '--no-overwrite' is useless")
+
         local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff

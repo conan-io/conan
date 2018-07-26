@@ -321,11 +321,56 @@ class HelloConan(ConanFile):
         self.assertIn("Different revisions of libA/1.0@lasote/testing "
                       "has been requested", self.client.out)
 
-    def test_upload_not_override(self):
-        pass
+    def test_upload_not_overwrite(self):
+
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
+        self.assertIn("Server uses revisions, argument '--no-overwrite' is useless",
+                      self.client.out)
+        self.client.save({"conanfile.py": self.conanfile + " "})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
+        self.assertIn("Server uses revisions, argument '--no-overwrite' is useless",
+                      self.client.out)
 
     def test_export_cleans_revision_in_registy(self):
-        pass
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
+        self.assertIsNotNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+
+        # No changes
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("export . %s" % str(self.ref))
+        self.assertIsNotNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+
+        # Export new recipe, the revision is cleared
+        self.client.save({"conanfile.py": self.conanfile + " "})
+        self.client.run("export . %s" % str(self.ref))
+        self.assertIsNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+
+    def test_alias_with_revisions(self):
+
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        full_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
+
+        self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+
+        alias = """from conans import ConanFile
+
+class AliasConanfile(ConanFile):
+    alias = "%s"
+""" % full_ref.full_repr()
+
+        self.client.save({"conanfile.py": alias})
+        self.client.run("export . lib/snap@lasote/testing")
+        self.client.run("install lib/snap@lasote/testing --build")
+        self.assertIn("Revision 1", self.client.out)
 
     def test_revision_delete_latest(self):
         pass
@@ -338,7 +383,5 @@ class HelloConan(ConanFile):
         # Remove one package in a ref (last) (check dirs cleaned)
         pass
 
-    def test_alias_with_revisions(self):
-        pass
 
 
