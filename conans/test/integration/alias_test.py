@@ -8,6 +8,17 @@ from conans.client.tools.files import replace_in_file
 
 class ConanAliasTest(unittest.TestCase):
 
+    def test_alias_different_name(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@user/channel")
+        client.run("alias myalias/1.0@user/channel lib/1.0@user/channel")
+        client.run("install myalias/1.0@user/channel")
+
     def complete_large_test(self):
         # https://github.com/conan-io/conan/issues/2583
         conanfile0 = """from conans import ConanFile

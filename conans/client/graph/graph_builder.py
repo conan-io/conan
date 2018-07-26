@@ -223,6 +223,8 @@ class DepsGraphBuilder(object):
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
+            current_node.conanfile.requires.pop(alias_reference.name)
+            current_node.conanfile.requires[requirement.conan_reference.name] = requirement
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
