@@ -124,7 +124,7 @@ class CmdUpload(object):
 
         if not defined_remote:
             self._registry.set_ref(new_ref, upload_remote.name)
-        elif defined_remote == upload_remote and new_ref != conan_ref:
+        elif defined_remote == upload_remote:
             self._registry.set_ref(new_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):

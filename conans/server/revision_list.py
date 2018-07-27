@@ -35,7 +35,7 @@ class RevisionList(object):
 
     def remove_revision(self, revision_id):
         index = self._find_revision_index(revision_id)
-        if not index:
+        if index is None:
             return
         self._data["revisions"].pop(index)
 

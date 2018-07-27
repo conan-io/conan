@@ -227,6 +227,22 @@ class HelloConan(ConanFile):
         self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
                       self.client.out)
 
+    def test_registry_revision_updated(self):
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev)
+
+        self.client.save({"conanfile.py": self.conanfile + " "})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev2 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        remote_rev2 = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev2, rev2)
+        self.assertNotEquals(rev, rev2)
+
     def test_update_package(self):
         conanfile = '''
 import time
@@ -390,6 +406,7 @@ class AliasConanfile(ConanFile):
         self.assertIsNone(last_rev)
 
     def test_recipe_revision_delete_one(self):
+        # Upload revision1
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
@@ -397,15 +414,20 @@ class AliasConanfile(ConanFile):
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)
 
+        # Upload revision2
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev2 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
-
-        self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev))
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev2)
 
+        # Remove revision2
+        self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev2))
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev)
+
+        # Upload revision3
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 3")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
@@ -414,16 +436,43 @@ class AliasConanfile(ConanFile):
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev3)
 
+        # Remove revision 3, local rev is None and remote is rev1
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
-        now_rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
-        self.assertEquals(now_rev, rev2)
+        now_rev = self.client.remote_registry.get_ref_with_revision(self.ref)
+        self.assertIsNone(now_rev)
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
-        self.assertEquals(remote_rev, rev2)
-
+        self.assertEquals(remote_rev, rev)
 
     def test_remote_search(self):
-        # FIX FIRST THIS BEFORE REMOVE
-        pass
+        conanfile = '''
+import time
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    settings = "os"
+    def package(self):
+        tools.save(os.path.join(self.package_folder, "file.txt"), str(time.time()))
+'''
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s -s os=Windows" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref)
+        # Create other recipe revision with a different binary package
+        self.client.save({"conanfile.py": conanfile + " "})
+        self.client.run("create . %s -s os=Linux" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev2 = self.servers["remote0"].paths.get_last_revision(self.ref)
+        # Search with revision1 (only win package available)
+        self.client.run("search %s#%s -r remote0" % (str(self.ref), rev1))
+        self.assertIn("Existing recipe in remote 'remote0'", self.client.out)
+        self.assertIn("os: Windows", self.client.out)
+        self.assertNotIn("os: Linux", self.client.out)
+        # Search with revision2 (only linux package available)
+        self.client.run("search %s#%s -r remote0" % (str(self.ref), rev2))
+        self.assertIn("Existing recipe in remote 'remote0'", self.client.out)
+        self.assertIn("os: Linux", self.client.out)
+        self.assertNotIn("os: Windows", self.client.out)
 
     def test_revision_remove(self):
         # Pending to better index
