@@ -156,6 +156,8 @@ class RestCommonMethods(object):
         """
         query = ''
         if pattern:
+            if isinstance(pattern, ConanFileReference):
+                pattern = pattern.full_repr()
             params = {"q": pattern}
             if not ignorecase:
                 params["ignorecase"] = "False"
@@ -190,7 +192,7 @@ class RestCommonMethods(object):
     def remove_conanfile(self, conan_reference):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
@@ -202,7 +204,7 @@ class RestCommonMethods(object):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
         payload = {"package_ids": package_ids}
-        url = "%s/conans/%s/packages/delete" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference) + "/packages/delete"
         return self._post_json(url, payload)
 
     @handle_return_deserializer()
@@ -210,7 +212,8 @@ class RestCommonMethods(object):
         """ Remove recipe files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/remove_files" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference)
+        url = "/%s/remove_files" % url
         return self._post_json(url, payload)
 
     @handle_return_deserializer()
@@ -218,9 +221,8 @@ class RestCommonMethods(object):
         """ Remove package files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/packages/%s/remove_files" % (self.remote_api_url,
-                                                         "/".join(package_reference.conan),
-                                                         package_reference.package_id)
+        url = self._package_url(package_reference)
+        url = "/%s/remove_files" % (url, package_reference.package_id)
         return self._post_json(url, payload)
 
     def _post_json(self, url, payload):

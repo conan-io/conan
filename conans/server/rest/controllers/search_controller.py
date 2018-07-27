@@ -21,7 +21,7 @@ class SearchController(Controller):
             if isinstance(ignorecase, str):
                 ignorecase = False if 'false' == ignorecase.lower() else True
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            references = [str(ref) for ref in search_service.search(pattern, ignorecase)]
+            references = [ref.full_repr() for ref in search_service.search(pattern, ignorecase)]
             return {"results": references}
 
         @app.route('%s/search' % r.recipe, method=["GET"])

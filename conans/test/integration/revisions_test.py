@@ -372,7 +372,57 @@ class AliasConanfile(ConanFile):
         self.client.run("install lib/snap@lasote/testing --build")
         self.assertIn("Revision 1", self.client.out)
 
-    def test_revision_delete_latest(self):
+    def test_recipe_revision_delete_all(self):
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        self.client.remote_registry.get_ref_with_revision(self.ref)
+
+        self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+
+        self.client.run("remove %s -r remote0 -f" % str(self.ref))
+        rev = self.client.remote_registry.get_ref_with_revision(self.ref)
+        self.assertIsNone(rev)
+
+        last_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertIsNone(last_rev)
+
+    def test_recipe_revision_delete_one(self):
+        self.client.save({"conanfile.py": self.conanfile})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev)
+
+        self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev2 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+
+        self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev))
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev2)
+
+        self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 3")})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        rev3 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        self.assertNotEquals(rev3, rev2)
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev3)
+
+        self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
+        now_rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        self.assertEquals(now_rev, rev2)
+        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        self.assertEquals(remote_rev, rev2)
+
+
+    def test_remote_search(self):
+        # FIX FIRST THIS BEFORE REMOVE
         pass
 
     def test_revision_remove(self):
@@ -381,6 +431,7 @@ class AliasConanfile(ConanFile):
         # Remove by ref + rev
         # Remove all packages in a ref
         # Remove one package in a ref (last) (check dirs cleaned)
+        # Remove one revision of a package
         pass
 
 

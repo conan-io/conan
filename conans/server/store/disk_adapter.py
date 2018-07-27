@@ -3,7 +3,7 @@ import os
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.server.store.server_store import LAST_REVISION_FILE
+from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
 from conans.util.files import path_exists
 from conans.paths import SimplePaths
@@ -82,7 +82,7 @@ class ServerDiskAdapter(object):
 
     def delete_empty_dirs(self, deleted_refs):
         paths = SimplePaths(self._store_folder)
-        lock_files = set([LAST_REVISION_FILE, "%s.lock" % LAST_REVISION_FILE])
+        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
         for ref in deleted_refs:
             ref_path = paths.conan(ref)
             for _ in range(4 if not ref.revision else 5):

@@ -67,20 +67,19 @@ class FileUploadDownloadService(object):
 
 class SearchService(object):
 
-    def __init__(self, authorizer, paths, auth_user):
+    def __init__(self, authorizer, server_store, auth_user):
         self._authorizer = authorizer
-        self._paths = paths
+        self._server_store = server_store
         self._auth_user = auth_user
 
     def search_packages(self, reference, query):
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = search_packages(self._paths, reference, query)
+        info = search_packages(self._server_store, reference, query)
         return info
 
     def search_recipes(self, pattern=None, ignorecase=True):
 
-        def get_folders_levels(_pattern):
-            """If a reference with revisions is detected compare with 5 levels of subdirs"""
+        def get_ref(_pattern):
             if not isinstance(_pattern, ConanFileReference):
                 try:
                     ref = ConanFileReference.loads(_pattern)
@@ -88,8 +87,19 @@ class SearchService(object):
                     ref = None
             else:
                 ref = _pattern
+            return ref
 
+        def get_folders_levels(_pattern):
+            """If a reference with revisions is detected compare with 5 levels of subdirs"""
+            ref = get_ref(_pattern)
             return 5 if ref and ref.revision else 4
+
+        # Check directly if it is a reference
+        ref = get_ref(pattern)
+        if ref:
+            path = self._server_store.conan(ref, resolve_latest=False)
+            if self._server_store.path_exists(path):
+                return [ref]
 
         # Conan references in main storage
         if pattern:
@@ -97,7 +107,7 @@ class SearchService(object):
             b_pattern = translate(pattern)
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
 
-        subdirs = list_folder_subdirs(basedir=self._paths.store, level=get_folders_levels(pattern))
+        subdirs = list_folder_subdirs(basedir=self._server_store.store, level=get_folders_levels(pattern))
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:
