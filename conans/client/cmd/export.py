@@ -22,6 +22,8 @@ from conans.search.search import search_recipes
 
 
 def export_alias(reference, target_reference, client_cache):
+    if reference.name != target_reference.name:
+        raise ConanException("An alias can only be defined to a package with the same name")
     conanfile = """
 from conans import ConanFile
 
