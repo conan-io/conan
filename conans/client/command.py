@@ -256,8 +256,8 @@ class Command(object):
         specifying the recipe reference and package ID to be installed. Not transitive, requirements
         of the specified reference will NOT be retrieved. Useful together with 'conan copy' to
         automate the promotion of packages to a different user/channel. Only if a reference
-        is specified, it will download all packages from the specified remote. Otherwise, it will
-        search sequentially in the configured remotes.
+        is specified, it will download all packages from the specified remote. If no remote is
+        specified, it will use the default remote.
         """
 
         parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
