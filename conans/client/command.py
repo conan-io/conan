@@ -294,6 +294,9 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
+        parser.add_argument("-df", "--deploy-folder", action=OnceArgument,
+                            help='Use this directory as the directory where to copy all package '
+                                 'contents after package step.')
 
         _add_manifests_arguments(parser)
 
@@ -333,7 +336,8 @@ class Command(object):
                                                      build=args.build, profile_name=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder)
+                                                     install_folder=args.install_folder,
+                                                     deploy_folder=args.deploy_folder)
         except ConanException as exc:
             info = exc.info
             raise

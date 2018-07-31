@@ -406,12 +406,14 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generators=None, install_folder=None, cwd=None):
+                          update=False, generators=None, install_folder=None,
+                          deploy_folder=None, cwd=None):
 
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
             install_folder = _make_abs_path(install_folder, cwd)
+            deploy_folder = _make_abs_path(deploy_folder, cwd)
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -423,8 +425,10 @@ class ConanAPIV1(object):
                 generators = False
 
             mkdir(install_folder)
+            mkdir(deploy_folder)
             manager = self._init_manager(recorder)
             manager.install(reference=reference, install_folder=install_folder,
+                            deploy_folder=deploy_folder,
                             remote_name=remote_name, profile=profile, build_modes=build,
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,

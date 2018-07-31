@@ -217,13 +217,14 @@ class ConanManager(object):
         build_mode.report_matches()
         workspace.generate()
 
-    def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
+    def install(self, reference, install_folder, deploy_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, inject_require=None,
                 install_reference=False, keep_build=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
+        @param deploy_folder: user-specified place where package contents will be copied
         @param remote: install only from that remote
         @param profile: Profile object with both the -s introduced options and profile read values
         @param build_modes: List of build_modes specified
@@ -311,8 +312,8 @@ class ConanManager(object):
             if install_reference:
                 # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
                 deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
-                if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                    run_deploy(deploy_conanfile, install_folder, output)
+                # if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                run_deploy(deploy_conanfile, install_folder, deploy_folder, output)
 
     def source(self, conanfile_path, source_folder, info_folder):
         """
