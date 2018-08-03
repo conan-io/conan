@@ -41,6 +41,7 @@ def create(reference, manager, user_io, profile, remote_name, update, build_mode
     else:
         manager.install(reference=reference,
                         install_folder=None,  # Not output anything
+                        deploy_folder=None,
                         manifest_folder=manifest_folder,
                         manifest_verify=manifest_verify,
                         manifest_interactive=manifest_interactive,
