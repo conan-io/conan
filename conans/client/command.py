@@ -8,7 +8,6 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-from conans.client.remote_registry import RemoteRegistry
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
@@ -172,6 +171,21 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx)
+
+    def display(self, *args):
+        """Displays conanfile attributes, like name, version, options
+        Works both locally, in local cache and remote
+        """
+        parser = argparse.ArgumentParser(description=self.display.__doc__, prog="conan display")
+        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                            " (conanfile.py) or to a recipe file. e.g., "
+                            "./my_project/conanfile.py. It could also be a reference")
+        parser.add_argument("attribute", help='The attribute to be displayed, e.g "name"')
+        parser.add_argument("-r", "--remote", help='look in the specified remote server',
+                            action=OnceArgument)
+        args = parser.parse_args(*args)
+        result = self._conan.display(args.path_or_reference, args.attribute, args.remote)
+        self._user_io.out.write(str(result))
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method. This command

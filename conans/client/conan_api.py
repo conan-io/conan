@@ -31,12 +31,13 @@ from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, exception_message_safe, mkdir
+from conans.util.files import save_files, exception_message_safe, mkdir,\
+    mkdir_tmp
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
-from conans.tools import set_global_instances
+from conans.tools import set_global_instances, save
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
@@ -48,6 +49,7 @@ from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
+from conans.model.conan_file import create_options
 
 
 default_manifest_folder = '.conan_manifests'
@@ -249,6 +251,32 @@ class ConanAPIV1(object):
         save_files(cwd, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
+
+    @api_method
+    def display(self, path, attribute, remote_name=None):
+        if remote_name:
+            remote = self.get_remote_by_name(remote_name)
+            reference = ConanFileReference.loads(path)
+            conanfile = self._remote_manager.get_path(reference, None, "conanfile.py", remote)
+            path = os.path.join(mkdir_tmp(), "conanfile.py")
+            save(path, conanfile)
+
+        cwd = get_cwd()
+        try:
+            reference = ConanFileReference.loads(path)
+            conanfile_path = self._client_cache.conanfile(reference)
+        except ConanException:
+            conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        conanfile = load_conanfile_class(conanfile_path)
+        try:
+            if attribute == "options":
+                options = create_options(conanfile)
+                return options._package_options
+
+            attr = getattr(conanfile, attribute)
+            return attr
+        except AttributeError as e:
+            raise ConanException(str(e))
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
