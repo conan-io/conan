@@ -1171,7 +1171,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "help"))]
+                                   "alias", "download", "display", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
