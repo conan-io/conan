@@ -19,6 +19,7 @@ from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
 from conans.search.search import search_recipes
+import six
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -52,6 +53,8 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_linter(conanfile_path, output)
     conanfile = _load_export_conanfile(conanfile_path, output, name, version)
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    output = ScopedOutput(str(conan_ref), output)
+    output.highlight("Exporting package recipe")
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
     refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
@@ -59,13 +62,27 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
                              % (conan_ref_str, " ".join(str(s) for s in refs)))
-    output = ScopedOutput(str(conan_ref), output)
     with client_cache.conanfile_write_lock(conan_ref):
         _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source)
+    return conan_ref
+
+
+def process_preexport(conanfile, conanfile_path):
+    if hasattr(conanfile, "preexport") and callable(conanfile.preexport):
+        conanfile.recipe_folder = os.path.dirname(conanfile_path)
+        try:
+            conanfile.preexport()
+        except TypeError as e:
+            if six.PY2:
+                raise ConanException("preexport(self) not supported in python 2")
+
+            conanfile.preexport = classmethod(conanfile.preexport)
+            conanfile.preexport()
 
 
 def _load_export_conanfile(conanfile_path, output, name, version):
     conanfile = load_conanfile_class(conanfile_path)
+    process_preexport(conanfile, conanfile_path)
 
     for field in ["url", "license", "description"]:
         field_value = getattr(conanfile, field, None)
