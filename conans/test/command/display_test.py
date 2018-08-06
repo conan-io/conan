@@ -64,3 +64,20 @@ class Pkg(ConanFile):
         self.assertEquals(client.out, """option1: ['False', 'True'], default=False
 option2: ['1', '2', '3'], default=2
 option3: ANY, default=randomANY""")
+
+    def preexport_display_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile, load
+import os
+class Pkg(ConanFile):
+    name = "MyPkg"
+    @classmethod
+    def preexport(self):
+        self.version = load(os.path.join(self.recipe_folder, "version.txt"))
+"""
+        client.save({"conanfile.py": conanfile,
+                     "version.txt": "1.2.3"})
+        client.run("display . name")
+        self.assertEqual("MyPkg", client.out)
+        client.run("display . version")
+        self.assertEqual("1.2.3", client.out)

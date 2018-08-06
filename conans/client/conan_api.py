@@ -11,7 +11,7 @@ from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput, ScopedOutput
+from conans.client.output import ConanOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
 from conans.client.recorder.search_recorder import SearchRecorder
@@ -44,7 +44,7 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports
-from conans.client.cmd.export import cmd_export, export_alias
+from conans.client.cmd.export import cmd_export, export_alias, process_preexport
 from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
@@ -268,6 +268,7 @@ class ConanAPIV1(object):
         except ConanException:
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = load_conanfile_class(conanfile_path)
+        process_preexport(conanfile, conanfile_path)
         try:
             if attribute == "options":
                 options = create_options(conanfile)
@@ -322,25 +323,16 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            if not name or not version:
-                conanfile = load_conanfile_class(conanfile_path)
-                name, version = conanfile.name, conanfile.version
-                if not name or not version:
-                    raise ConanException("conanfile.py doesn't declare package name or version")
-
-            reference = ConanFileReference(name, version, user, channel)
-            scoped_output = ScopedOutput(str(reference), self._user_io.out)
             # Make sure keep_source is set for keep_build
             if keep_build:
                 keep_source = True
             # Forcing an export!
             if not not_export:
-                scoped_output.highlight("Exporting package recipe")
-                cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                           self._user_io.out, self._client_cache)
+                reference = cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                                       self._user_io.out, self._client_cache)
 
             if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [name]
+                build_modes = [reference.name]
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
