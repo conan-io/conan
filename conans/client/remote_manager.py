@@ -1,18 +1,21 @@
 import os
-import shutil
-import tarfile
-import time
-import traceback
 import stat
+import tarfile
+import traceback
 
+import shutil
+import time
 from requests.exceptions import ConnectionError
 
+from conans.client.remote_registry import Remote
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
+
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
-    make_read_only
+    make_read_only, set_dirty, clean_dirty
+
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch_folder
 from conans.util.log import logger
@@ -21,12 +24,14 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_recipe_sources_download,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
+
 from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
+from conans.search.search import filter_packages
 
 
 class RemoteManager(object):
-    """ Will handle the remotes to get conans, packages etc """
+    """ Will handle the remotes to get recipes, packages etc """
 
     def __init__(self, client_cache, auth_manager, output):
         self._client_cache = client_cache
@@ -36,9 +41,16 @@ class RemoteManager(object):
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
                       skip_upload=False, no_overwrite=None):
         """Will upload the conans to the first remote"""
-
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
+            tgz_path = os.path.join(export_folder, f)
+            if is_dirty(tgz_path):
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(conan_reference), f))
+                os.remove(tgz_path)
+                clean_dirty(tgz_path)
+
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
@@ -49,18 +61,18 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file, no_overwrite)
+        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry, retry_wait,
+                                         ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
-        log_recipe_upload(conan_reference, duration, the_files, remote)
+        log_recipe_upload(new_ref, duration, the_files, remote.name)
         if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(new_ref), remote.name)
             url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
             msg += ": %s" % url
         else:
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
-        return ret
+        return new_ref
 
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
@@ -99,6 +111,11 @@ class RemoteManager(object):
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,
                                                                              package_reference.conan,
                                                                              package_reference.package_id))
+        tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
+        if is_dirty(tgz_path):
+            self._output.warn("%s: Removing %s, marked as dirty" % (str(package_reference), PACKAGE_TGZ_NAME))
+            os.remove(tgz_path)
+            clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
 
@@ -161,53 +178,29 @@ class RemoteManager(object):
         dest_folder = self._client_cache.export(conan_reference)
         rmdir(dest_folder)
 
-        def filter_function(urls):
-            if CONANFILE not in list(urls.keys()):
-                raise NotFoundException("Conan '%s' doesn't have a %s!"
-                                        % (conan_reference, CONANFILE))
-            urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
-            return urls
-
         t1 = time.time()
-        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
-        urls = filter_function(urls)
-        if not urls:
-            return conan_reference
-
-        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
-
+        zipped_files, conan_reference = self._call_remote(remote, "get_recipe", conan_reference,
+                                                          dest_folder)
         duration = time.time() - t1
-        log_recipe_download(conan_reference, duration, remote, zipped_files)
+        log_recipe_download(conan_reference, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
         touch_folder(dest_folder)
+        return conan_reference
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        def filter_function(urls):
-            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
-            if file_url:
-                urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
-            else:
-                return None
-            return urls
-
-        urls = self._call_remote(remote, "get_recipe_urls", conan_reference)
-        urls = filter_function(urls)
-        if not urls:
-            return conan_reference
-
-        zipped_files = self._call_remote(remote, "download_files_to_folder", urls, export_folder)
-
-        duration = time.time() - t1
-        log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
-
+        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
+                                         export_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
-            return
+            return conan_reference
+
+        duration = time.time() - t1
+        log_recipe_sources_download(conan_reference, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
         c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
@@ -215,6 +208,7 @@ class RemoteManager(object):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
+        return conan_reference
 
     def get_package(self, package_reference, dest_folder, remote, output, recorder):
         package_id = package_reference.package_id
@@ -222,8 +216,7 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            urls = self._call_remote(remote, "get_package_urls", package_reference)
-            zipped_files = self._call_remote(remote, "download_files_to_folder", urls, dest_folder)
+            zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
@@ -254,7 +247,9 @@ class RemoteManager(object):
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, reference, query):
-        return self._call_remote(remote, "search_packages", reference, query)
+        packages = self._call_remote(remote, "search_packages", reference, query)
+        packages = filter_packages(query, packages)
+        return packages
 
     def remove(self, conan_ref, remote):
         """
@@ -275,6 +270,7 @@ class RemoteManager(object):
         return self._call_remote(remote, 'authenticate', name, password)
 
     def _call_remote(self, remote, method, *argc, **argv):
+        assert(isinstance(remote, Remote))
         self._auth_manager.remote = remote
         try:
             return getattr(self._auth_manager, method)(*argc, **argv)
@@ -324,11 +320,10 @@ def compress_package_files(files, symlinks, dest_folder, output):
 
 
 def compress_files(files, symlinks, name, dest_dir):
-    """Compress the package and returns the new dict (name => content) of files,
-    only with the conanXX files and the compressed file"""
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    set_dirty(tgz_path)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -354,10 +349,19 @@ def compress_files(files, symlinks, name, dest_dir):
 
         tgz.close()
 
+    clean_dirty(tgz_path)
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
 
     return tgz_path
+
+
+def check_compressed_files(tgz_name, files):
+    bare_name = os.path.splitext(tgz_name)[0]
+    for f in files:
+        if bare_name == os.path.splitext(f)[0] and f != tgz_name:
+            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
+                                 "Please upgrade conan client." % f)
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name):
@@ -365,6 +369,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     to destination_dir, unzipping the "tgz_name" if found"""
 
     tgz_file = files.pop(tgz_name, None)
+    check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
         os.remove(tgz_file)
@@ -382,7 +387,7 @@ def uncompress_file(src_path, dest_folder):
             if os.path.exists(dest_folder):
                 shutil.rmtree(dest_folder)
                 error_msg += "Folder removed"
-        except Exception as e:
+        except Exception:
             error_msg += "Folder not removed, files/package might be damaged, remove manually"
         raise ConanException(error_msg)
 

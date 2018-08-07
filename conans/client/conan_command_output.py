@@ -24,13 +24,16 @@ class CommandOutputer(object):
         for p in sorted(profiles):
             self.user_io.out.info(p)
 
-    def remote_list(self, remotes):
+    def remote_list(self, remotes, raw):
         for r in remotes:
-            self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+            if raw:
+                self.user_io.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+            else:
+                self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote))
+        for ref, remote_name in refs.items():
+            self.user_io.out.info("%s: %s" % (ref, remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
@@ -137,7 +140,7 @@ class CommandOutputer(object):
                                   (remote["name"], str(remote["user_name"]), anonymous,
                                    authenticated))
 
-    def print_user_set(self, remote, prev_user, user):
+    def print_user_set(self, remote_name, prev_user, user):
         previous_username = prev_user or "None"
         previous_anonymous = " (anonymous)" if not prev_user else ""
         username = user or "None"
@@ -145,8 +148,8 @@ class CommandOutputer(object):
 
         if prev_user == user:
             self.user_io.out.info("User of remote '%s' is already '%s'%s" %
-                                  (remote, previous_username, previous_anonymous))
+                                  (remote_name, previous_username, previous_anonymous))
         else:
             self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
-                                  (remote, previous_username, previous_anonymous, username,
+                                  (remote_name, previous_username, previous_anonymous, username,
                                    anonymous))

@@ -54,8 +54,6 @@ class Printer(object):
                                        file for a project on the path. This may be None,
                                        in which case the project itself will not be part
                                        of the printed dependencies.
-                remote: Remote specified in install command.
-                        Could be different from the registry one.
         """
         if _info is None:  # No filter
             def show(_):
@@ -82,7 +80,13 @@ class Printer(object):
                 continue
 
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
-            reg_remote = registry.get_ref(ref)
+            try:
+                # Excludes PROJECT fake reference
+                reg_remote = registry.get_recipe_remote(ref)
+            except:
+                # Excludes PROJECT fake reference
+                reg_remote = None
+
             # Excludes PROJECT fake reference
 
             if show("id"):
@@ -170,10 +174,11 @@ class Printer(object):
                     self._out.writeln(conan_item["recipe"]["id"])
 
     def print_search_packages(self, search_info, reference, packages_query):
+        assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
-            if remote_info["remote"] != 'None':
-                self._out.info("Existing recipe in remote '%s':\n" % str(remote_info["remote"]))
+            if remote_info["remote"]:
+                self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:

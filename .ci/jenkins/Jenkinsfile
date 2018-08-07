@@ -7,7 +7,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     pyvers = ['py36', 'py34', 'py27']
 }
 else{
-	pyvers = ['py36', 'py34', 'py27']
+	pyvers = ['py36', 'py27']
 }
 
 def module = "\"conans.test\""
@@ -66,13 +66,13 @@ try{
                         }
 
                         if(slave == "Linux"){
+                            sh "docker pull lasote/conantests"
                             docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
                                 sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                             }
                         }
                         else if(slave == "Windows"){
                             try{
-
                               withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
                                 bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
                               }

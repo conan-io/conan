@@ -2,6 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
 from conans.util.files import load
+import re
 
 
 class RemoteTest(unittest.TestCase):
@@ -15,6 +16,13 @@ class RemoteTest(unittest.TestCase):
             self.users["remote%d" % i] = [("lasote", "mypass")]
 
         self.client = TestClient(servers=self.servers, users=self.users)
+
+    def list_raw_test(self):
+        self.client.run("remote list --raw")
+        output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        self.assertIn("remote0 http://fake.com True", output)
+        self.assertIn("remote1 http://fake.com True", output)
+        self.assertIn("remote2 http://fake.com True", output)
 
     def basic_test(self):
         self.client.run("remote list")

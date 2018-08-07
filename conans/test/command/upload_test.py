@@ -2,9 +2,12 @@ import unittest
 from conans.tools import environment_append
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
-from conans.util.files import save
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import save, is_dirty, gzopen_without_timestamps
 import os
+from mock import mock
+from conans.errors import ConanException
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 
 
 conanfile = """from conans import ConanFile
@@ -74,6 +77,62 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
         self.assertIn("Uploading conan_package.tgz", client.user_io.out)
         self.assertIn("Uploading conanfile.py", client.user_io.out)
+
+    def broken_sources_tgz_test(self):
+        # https://github.com/conan-io/conan/issues/2854
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "source.h": "my source"})
+        client.run("create . user/testing")
+        ref = ConanFileReference.loads("Hello0/1.2.1@user/testing")
+
+        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+            raise ConanException("Error gzopen %s" % name)
+        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps', new=gzopen_patched):
+            error = client.run("upload * --confirm", ignore_error=True)
+            self.assertTrue(error)
+            self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
+
+            export_folder = client.client_cache.export(ref)
+            tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
+            self.assertTrue(os.path.exists(tgz))
+            self.assertTrue(is_dirty(tgz))
+
+        client.run("upload * --confirm")
+        self.assertIn("WARN: Hello0/1.2.1@user/testing: Removing conan_sources.tgz, marked as dirty",
+                      client.out)
+        self.assertTrue(os.path.exists(tgz))
+        self.assertFalse(is_dirty(tgz))
+
+    def broken_package_tgz_test(self):
+        # https://github.com/conan-io/conan/issues/2854
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "source.h": "my source"})
+        client.run("create . user/testing")
+        package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
+        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+            if name == PACKAGE_TGZ_NAME:
+                raise ConanException("Error gzopen %s" % name)
+            return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
+        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps', new=gzopen_patched):
+            error = client.run("upload * --confirm --all", ignore_error=True)
+            self.assertTrue(error)
+            self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
+
+            export_folder = client.client_cache.package(package_ref)
+            tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
+            self.assertTrue(os.path.exists(tgz))
+            self.assertTrue(is_dirty(tgz))
+
+        client.run("upload * --confirm --all")
+        self.assertIn("WARN: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Removing conan_package.tgz, marked as dirty",
+                      client.out)
+        self.assertTrue(os.path.exists(tgz))
+        self.assertFalse(is_dirty(tgz))
 
     def corrupt_upload_test(self):
         client = self._client()
@@ -228,14 +287,14 @@ class MyPkg(ConanFile):
 
         # First time upload
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
         self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # CASE: Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # CASE: Without changes
         client.run("create . frodo/stable")
@@ -243,7 +302,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.all_output)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # CASE: When recipe and package changes
         new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
@@ -254,7 +313,7 @@ class MyPkg(ConanFile):
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
         # CASE: When package changes
@@ -267,7 +326,7 @@ class MyPkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("ERROR: Local package is different from the remote package", client.out)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading conan_package.tgz", client.out)
 
     def upload_no_overwrite_recipe_test(self):
@@ -294,21 +353,21 @@ class MyPkg(ConanFile):
 
         # First time upload
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
         self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
 
         # Upload again
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create without changes
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create with recipe and package changes
         new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
@@ -319,7 +378,7 @@ class MyPkg(ConanFile):
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertIn("Forbidden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
         # Create with package changes
@@ -330,7 +389,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
-        self.assertNotIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Forbidden overwrite", client.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
