@@ -1,0 +1,247 @@
+<style>
+    table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+.selected {
+    border: 3px solid black;
+}
+</style>
+<script type="text/javascript">
+    function handleEvent(id) {
+        selected = document.getElementsByClassName('selected');
+        if (selected[0]) selected[0].className = '';
+        cell = document.getElementById(id);
+        cell.className = 'selected';
+        elem = document.getElementById('SelectedPackage');
+        elem.innerHTML = id;
+    }
+
+</script>
+<h1>TBB/2018_U5@conan/stable</h1>
+    
+<h2>'conan-center':</h2>
+<table>
+<tr>
+<th></th>
+<th>x86 Debug<br>shared=False</th>
+<th>x86 Debug<br>shared=True</th>
+<th>x86 Release<br>shared=False</th>
+<th>x86 Release<br>shared=True</th>
+<th>x86_64 Debug<br>shared=False</th>
+<th>x86_64 Debug<br>shared=True</th>
+<th>x86_64 Release<br>shared=False</th>
+<th>x86_64 Release<br>shared=True</th>
+</tr>
+<tr>
+<td>Linux gcc 4.9 (libstdc++)</td>
+<td bgcolor=#00ff00 id="5ed92a804c7a381e9c7cf78a4a1014211406a691" onclick=handleEvent("5ed92a804c7a381e9c7cf78a4a1014211406a691")></td>
+<td bgcolor=#00ff00 id="f4b96cb95839df53a03d44cf595e9789c0d81f3a" onclick=handleEvent("f4b96cb95839df53a03d44cf595e9789c0d81f3a")></td>
+<td bgcolor=#00ff00 id="2760e30a121bf3f1c577193786d4b3ef425f913d" onclick=handleEvent("2760e30a121bf3f1c577193786d4b3ef425f913d")></td>
+<td bgcolor=#00ff00 id="4ff349c178a3d5c628460d957988bc516103d5d0" onclick=handleEvent("4ff349c178a3d5c628460d957988bc516103d5d0")></td>
+<td bgcolor=#00ff00 id="87fb0b451a964f931487412a0e21bdef04c50390" onclick=handleEvent("87fb0b451a964f931487412a0e21bdef04c50390")></td>
+<td bgcolor=#00ff00 id="9d2db714eade779aac646dc5de0a519e4373387a" onclick=handleEvent("9d2db714eade779aac646dc5de0a519e4373387a")></td>
+<td bgcolor=#00ff00 id="75afd4a5a43dc297f65bd5338e9887b268cb97ba" onclick=handleEvent("75afd4a5a43dc297f65bd5338e9887b268cb97ba")></td>
+<td bgcolor=#00ff00 id="41b4a670ac66e314bb644198013c12a53602fa3d" onclick=handleEvent("41b4a670ac66e314bb644198013c12a53602fa3d")></td>
+</tr>
+<tr>
+<td>Linux gcc 5 (libstdc++)</td>
+<td bgcolor=#00ff00 id="1fa9e43da2ea3318c9775cecf227d111029aa001" onclick=handleEvent("1fa9e43da2ea3318c9775cecf227d111029aa001")></td>
+<td bgcolor=#00ff00 id="9558613aabc6322601036d3ea5c9977a5650f982" onclick=handleEvent("9558613aabc6322601036d3ea5c9977a5650f982")></td>
+<td bgcolor=#00ff00 id="d849d1d13471e0f88b6c3564c09098b0a7c79ae1" onclick=handleEvent("d849d1d13471e0f88b6c3564c09098b0a7c79ae1")></td>
+<td bgcolor=#00ff00 id="87fdf97cb701ccab39d07def20f53b2bc695cf6e" onclick=handleEvent("87fdf97cb701ccab39d07def20f53b2bc695cf6e")></td>
+<td bgcolor=#00ff00 id="3d8c85c54f7fd2f6b48e52cc88af1bf81a02a93d" onclick=handleEvent("3d8c85c54f7fd2f6b48e52cc88af1bf81a02a93d")></td>
+<td bgcolor=#00ff00 id="b119f41c66afd41cb80db719447078009c7674f0" onclick=handleEvent("b119f41c66afd41cb80db719447078009c7674f0")></td>
+<td bgcolor=#00ff00 id="90ee443cae5dd5c1b4861766ac14dc6fae231a92" onclick=handleEvent("90ee443cae5dd5c1b4861766ac14dc6fae231a92")></td>
+<td bgcolor=#00ff00 id="2de3d908e1d9b246c9b2b6ea5c083ff1297f138b" onclick=handleEvent("2de3d908e1d9b246c9b2b6ea5c083ff1297f138b")></td>
+</tr>
+<tr>
+<td>Linux gcc 6 (libstdc++)</td>
+<td bgcolor=#00ff00 id="6b7dd0343ff7b0bb364b8af9237cc4369b37a400" onclick=handleEvent("6b7dd0343ff7b0bb364b8af9237cc4369b37a400")></td>
+<td bgcolor=#00ff00 id="ddb5ef8b1b9d8457766c6bd53320726c2a736642" onclick=handleEvent("ddb5ef8b1b9d8457766c6bd53320726c2a736642")></td>
+<td bgcolor=#00ff00 id="9365150c116789e63d86ec1234a7c004f00fe796" onclick=handleEvent("9365150c116789e63d86ec1234a7c004f00fe796")></td>
+<td bgcolor=#00ff00 id="93dd62b24e52a8dc9a333d01bc5f41196a2f3781" onclick=handleEvent("93dd62b24e52a8dc9a333d01bc5f41196a2f3781")></td>
+<td bgcolor=#00ff00 id="82fd1e7eb7a45a501543891b72dab34a5d7cee52" onclick=handleEvent("82fd1e7eb7a45a501543891b72dab34a5d7cee52")></td>
+<td bgcolor=#00ff00 id="fad222f3269e5757866c65bc94f5f5c3c6b63e58" onclick=handleEvent("fad222f3269e5757866c65bc94f5f5c3c6b63e58")></td>
+<td bgcolor=#00ff00 id="587df1d6a993e6eff4d3791612ba383ca625243c" onclick=handleEvent("587df1d6a993e6eff4d3791612ba383ca625243c")></td>
+<td bgcolor=#00ff00 id="dd7003527612b7813026d97ea769611f0722ea52" onclick=handleEvent("dd7003527612b7813026d97ea769611f0722ea52")></td>
+</tr>
+<tr>
+<td>Linux gcc 7 (libstdc++)</td>
+<td bgcolor=#00ff00 id="da50f5f7a2d70efc05c693569f8027529feff3a4" onclick=handleEvent("da50f5f7a2d70efc05c693569f8027529feff3a4")></td>
+<td bgcolor=#00ff00 id="2baadf38d5025b65d2181d80d334d399aa46afe1" onclick=handleEvent("2baadf38d5025b65d2181d80d334d399aa46afe1")></td>
+<td bgcolor=#00ff00 id="322f63ec4c971bfdea7ae2c683fba715a0ba114a" onclick=handleEvent("322f63ec4c971bfdea7ae2c683fba715a0ba114a")></td>
+<td bgcolor=#00ff00 id="1c14fed0d0428a6efc3b9c19ab969bca584842a7" onclick=handleEvent("1c14fed0d0428a6efc3b9c19ab969bca584842a7")></td>
+<td bgcolor=#00ff00 id="4e54a2085b064ce4acf33d77f8e46b7ddb19327e" onclick=handleEvent("4e54a2085b064ce4acf33d77f8e46b7ddb19327e")></td>
+<td bgcolor=#00ff00 id="d6c697a8f87611de645254c549b776b9f6a9aaf4" onclick=handleEvent("d6c697a8f87611de645254c549b776b9f6a9aaf4")></td>
+<td bgcolor=#00ff00 id="0ab9fcf606068d4347207cc29edd400ceccbc944" onclick=handleEvent("0ab9fcf606068d4347207cc29edd400ceccbc944")></td>
+<td bgcolor=#00ff00 id="27cb7fbffba1a5268eda91c4da54b0254d48c3b1" onclick=handleEvent("27cb7fbffba1a5268eda91c4da54b0254d48c3b1")></td>
+</tr>
+<tr>
+<td>Linux gcc 8 (libstdc++)</td>
+<td bgcolor=#00ff00 id="c7f04dfb06c1d2617a5529174b570a943dbbda76" onclick=handleEvent("c7f04dfb06c1d2617a5529174b570a943dbbda76")></td>
+<td bgcolor=#00ff00 id="ecdb8f3b56f325228325fb29864a623ffea49c5e" onclick=handleEvent("ecdb8f3b56f325228325fb29864a623ffea49c5e")></td>
+<td bgcolor=#00ff00 id="496879c8b4989ea0a448e12aea2f77eba94a3096" onclick=handleEvent("496879c8b4989ea0a448e12aea2f77eba94a3096")></td>
+<td bgcolor=#00ff00 id="1cad9d427db0ff1194455fcb1491ad951c1c7361" onclick=handleEvent("1cad9d427db0ff1194455fcb1491ad951c1c7361")></td>
+<td bgcolor=#00ff00 id="53e54cee32d9188343afbb7932c2fa579e37bd78" onclick=handleEvent("53e54cee32d9188343afbb7932c2fa579e37bd78")></td>
+<td bgcolor=#00ff00 id="42fe16a62ee59f9d4394be4537fa7caca1ccf11b" onclick=handleEvent("42fe16a62ee59f9d4394be4537fa7caca1ccf11b")></td>
+<td bgcolor=#00ff00 id="2d5685a99e2ff5a0d2b054bb1fbfa46781f8a46a" onclick=handleEvent("2d5685a99e2ff5a0d2b054bb1fbfa46781f8a46a")></td>
+<td bgcolor=#00ff00 id="8202e68161573c3cd2b21f8a8b6da5d3c6ad4e15" onclick=handleEvent("8202e68161573c3cd2b21f8a8b6da5d3c6ad4e15")></td>
+</tr>
+<tr>
+<td>Macos apple-clang 7.3 (libc++)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="2b31d17272e0538065ac1b8fc29ebbeb1394ce71" onclick=handleEvent("2b31d17272e0538065ac1b8fc29ebbeb1394ce71")></td>
+<td bgcolor=#00ff00 id="97e28fcef10071bd2797ec4b6e15a3d4cc4adf3b" onclick=handleEvent("97e28fcef10071bd2797ec4b6e15a3d4cc4adf3b")></td>
+<td bgcolor=#00ff00 id="f38e981ab93119e082fa013de58daa826eaa9dcb" onclick=handleEvent("f38e981ab93119e082fa013de58daa826eaa9dcb")></td>
+<td bgcolor=#00ff00 id="0b89d7271c641c0ed63cb474727fe5887401d9c0" onclick=handleEvent("0b89d7271c641c0ed63cb474727fe5887401d9c0")></td>
+</tr>
+<tr>
+<td>Macos apple-clang 8.1 (libc++)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="7649a66e045da5b3bacb07e1b6ae998d3b8fd329" onclick=handleEvent("7649a66e045da5b3bacb07e1b6ae998d3b8fd329")></td>
+<td bgcolor=#00ff00 id="713c8f9f0f7056b5ad753fb8f0ed446c9d93f6d8" onclick=handleEvent("713c8f9f0f7056b5ad753fb8f0ed446c9d93f6d8")></td>
+<td bgcolor=#00ff00 id="7586e5a72612387c5beb630c8ff07f1a397d08b6" onclick=handleEvent("7586e5a72612387c5beb630c8ff07f1a397d08b6")></td>
+<td bgcolor=#00ff00 id="02772c8aa900542216d40c34d033b637fe2193a8" onclick=handleEvent("02772c8aa900542216d40c34d033b637fe2193a8")></td>
+</tr>
+<tr>
+<td>Macos apple-clang 9.0 (libc++)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="f331ba4cb4cf3b345ec2ebc265629b6ee1340312" onclick=handleEvent("f331ba4cb4cf3b345ec2ebc265629b6ee1340312")></td>
+<td bgcolor=#00ff00 id="93dd79ac3950846c0e468743f665f1e1fc97a1a9" onclick=handleEvent("93dd79ac3950846c0e468743f665f1e1fc97a1a9")></td>
+<td bgcolor=#00ff00 id="7fe67dff831b24bc4a8b5db678a51f1be5e44e7c" onclick=handleEvent("7fe67dff831b24bc4a8b5db678a51f1be5e44e7c")></td>
+<td bgcolor=#00ff00 id="3cfade032d90e40671f831047a4b021865f8396f" onclick=handleEvent("3cfade032d90e40671f831047a4b021865f8396f")></td>
+</tr>
+<tr>
+<td>Macos apple-clang 9.1 (libc++)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="0693779dd255ed6c8882d702bdd53144c32ae3ae" onclick=handleEvent("0693779dd255ed6c8882d702bdd53144c32ae3ae")></td>
+<td bgcolor=#00ff00 id="776ee518174f0560af13f6035a6af2ced684a2b3" onclick=handleEvent("776ee518174f0560af13f6035a6af2ced684a2b3")></td>
+<td bgcolor=#00ff00 id="de56269f90f07cc61427d9012acf098d4354f43d" onclick=handleEvent("de56269f90f07cc61427d9012acf098d4354f43d")></td>
+<td bgcolor=#00ff00 id="17bbaf14f04b80904f04c74eda265378d62c479f" onclick=handleEvent("17bbaf14f04b80904f04c74eda265378d62c479f")></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 12 (MD)</td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="960268f3098725d1de102ebd273986b9d4d3f610" onclick=handleEvent("960268f3098725d1de102ebd273986b9d4d3f610")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="a4501f33ae09df332b76b4d6f0e5cebffbe83874" onclick=handleEvent("a4501f33ae09df332b76b4d6f0e5cebffbe83874")></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 12 (MDd)</td>
+<td></td>
+<td bgcolor=#00ff00 id="fa7d82e9aef838f6e189f16d15b790c16a9a36cd" onclick=handleEvent("fa7d82e9aef838f6e189f16d15b790c16a9a36cd")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="2747b6e662e99c0588be0fd0e7c3870ec66aa8f9" onclick=handleEvent("2747b6e662e99c0588be0fd0e7c3870ec66aa8f9")></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 14 (MD)</td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="ca0c09cfa678fd91b04c82824988c42e9ac40ddf" onclick=handleEvent("ca0c09cfa678fd91b04c82824988c42e9ac40ddf")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="c85f9b402dd4d46acdf074e1c63b768a41181d7a" onclick=handleEvent("c85f9b402dd4d46acdf074e1c63b768a41181d7a")></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 14 (MDd)</td>
+<td></td>
+<td bgcolor=#00ff00 id="80166202f625101565fba7a537eb34961fbcaf89" onclick=handleEvent("80166202f625101565fba7a537eb34961fbcaf89")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="c83d8b197f1a331ca3b55943846d427ad4f7f8e1" onclick=handleEvent("c83d8b197f1a331ca3b55943846d427ad4f7f8e1")></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 15 (MD)</td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="c97b9e1abccf18d0aefcbcdef01d2c4689917df6" onclick=handleEvent("c97b9e1abccf18d0aefcbcdef01d2c4689917df6")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="970e773c5651dc2560f86200a4ea56c23f568ff9" onclick=handleEvent("970e773c5651dc2560f86200a4ea56c23f568ff9")></td>
+</tr>
+<tr>
+<td>Windows Visual Studio 15 (MDd)</td>
+<td></td>
+<td bgcolor=#00ff00 id="2c3ed620f02d73526549b31cf660e3e1dc5cd3b1" onclick=handleEvent("2c3ed620f02d73526549b31cf660e3e1dc5cd3b1")></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="ff82a1e70ba8430648a79986385b20a3648f8c19" onclick=handleEvent("ff82a1e70ba8430648a79986385b20a3648f8c19")></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Windows gcc 4.9 (libstdc++) (seh) (posix)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="b8ea9e6f23dbb90483d0d2fd2f3c2fce6f4322ce" onclick=handleEvent("b8ea9e6f23dbb90483d0d2fd2f3c2fce6f4322ce")></td>
+<td></td>
+<td bgcolor=#00ff00 id="9618ca7c7f904f39d49d627d9d1cf57ef35b52a0" onclick=handleEvent("9618ca7c7f904f39d49d627d9d1cf57ef35b52a0")></td>
+</tr>
+<tr>
+<td>Windows gcc 5 (libstdc++) (seh) (posix)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="85075e2159a5f79fc7f7351c8660b54659331181" onclick=handleEvent("85075e2159a5f79fc7f7351c8660b54659331181")></td>
+<td></td>
+<td bgcolor=#00ff00 id="f8ee90640e8252f2d043aa06aa466880999ba724" onclick=handleEvent("f8ee90640e8252f2d043aa06aa466880999ba724")></td>
+</tr>
+<tr>
+<td>Windows gcc 6 (libstdc++) (seh) (posix)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="2e41a308a2a91375bfa5bf66e7d742d461f788f0" onclick=handleEvent("2e41a308a2a91375bfa5bf66e7d742d461f788f0")></td>
+<td></td>
+<td bgcolor=#00ff00 id="810e323ce8b9b9eea2be175178282688df03526e" onclick=handleEvent("810e323ce8b9b9eea2be175178282688df03526e")></td>
+</tr>
+<tr>
+<td>Windows gcc 7 (libstdc++) (seh) (posix)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td bgcolor=#00ff00 id="4f0b12b12a9756b114c74a2f7c339e689236ec28" onclick=handleEvent("4f0b12b12a9756b114c74a2f7c339e689236ec28")></td>
+<td></td>
+<td bgcolor=#00ff00 id="6920843c25a648e7a7c6ac927266fb02ff0c137f" onclick=handleEvent("6920843c25a648e7a7c6ac927266fb02ff0c137f")></td>
+</tr>
+</table>
+<br>Selected: <div id="SelectedPackage"></div>
+<br>Legend<br><table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Outdated from recipe</td></tr><tr><td bgcolor=#00ff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Updated</td></tr><tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Non existing</td></tr></table>

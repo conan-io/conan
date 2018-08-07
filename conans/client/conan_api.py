@@ -467,7 +467,7 @@ class ConanAPIV1(object):
             workspace = Workspace.get_workspace(wspath, wsinstall_folder)
             if workspace:
                 self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
-                manager = self._init_manager(recorder)
+                manager = self._init_manager(recorder, workspace)
                 manager.install_workspace(profile, workspace, remote_name, build, update)
                 return
 
@@ -538,7 +538,7 @@ class ConanAPIV1(object):
                                                     options, env)
         recorder = ActionRecorder()
         graph_manager = self._init_graph_manager(recorder)
-        deps_graph, _, _ = graph_manager.load_graph(reference, None, profile, None, check_updates,
+        deps_graph, _, _ = graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
                                                     False, remote_name)
         return deps_graph.build_order(build_order)
 
