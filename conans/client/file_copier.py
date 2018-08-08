@@ -181,10 +181,20 @@ class FileCopier(object):
 
     @staticmethod
     def _link_elements(src, dst, linked_elements):
+        # order elements from less dependant to more
+        linked_elements_ordered = []
         for link_element in linked_elements:
+            if os.readlink(os.path.join(src, link_element)) in linked_elements:
+                linked_elements_ordered.append(link_element)
+            else:
+                linked_elements_ordered.insert(0, link_element)
+        for link_element in linked_elements_ordered:
             src_link = os.path.join(src, link_element)  # link element in src
             linked_to_element = os.readlink(src_link)  # 'linked to' element in src
             dst_link = os.path.join(dst, link_element)  # link element in dst
+            print("src_link:", src_link)
+            print("linked_to_element:", linked_to_element)
+            print("dst_link:", dst_link)
             try:
                 # Remove the previous symlink
                 os.remove(dst_link)
@@ -193,9 +203,13 @@ class FileCopier(object):
             # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             os.symlink(linked_to_element, dst_link)
-            # Remove empty links
-            abs_path = os.path.realpath(dst_link)
+        # Remove empty links
+        for link_element in linked_elements_ordered:
+            dst_link = os.path.join(dst, link_element)  # link element in dst
+            abs_path = os.path.join(dst, os.readlink(dst_link))
+            print("REMOVE dst_link:", dst_link, "REMOVE abs_path:", abs_path)
             if not os.path.exists(abs_path):
+                print("REMOVING EMPTY LINK", link_element, abs_path, dst_link)
                 os.remove(dst_link)
 
     @staticmethod

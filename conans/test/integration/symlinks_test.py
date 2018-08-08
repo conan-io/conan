@@ -41,7 +41,7 @@ Hello/0.1@lasote/stable
 """
 
 
-# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -49,6 +49,7 @@ class SymLinksTest(unittest.TestCase):
         if build:
             folders.append(client.paths.build(ref))
         for base in folders:
+            print("FOLDER:", base)
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
             self.assertEqual(os.readlink(link), "file1.txt")
