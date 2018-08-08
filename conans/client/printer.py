@@ -43,8 +43,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, _info, registry,
-                   node_times=None, path_resolver=None, package_filter=None,
+    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
 
@@ -72,6 +71,8 @@ class Printer(object):
             node = list_nodes[0]
             conan = node.conanfile
             if not ref:
+                # ref is only None iff info is being printed for a project directory, and
+                # not a passed in reference
                 if conan.output is None:  # Identification of "virtual" node
                     continue
                 ref = str(conan)

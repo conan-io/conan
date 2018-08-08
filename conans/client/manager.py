@@ -1,6 +1,6 @@
 import os
 
-from conans.client import packager, settings_preprocessor
+from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
 from conans.client.generators import write_generators
