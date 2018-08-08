@@ -1,6 +1,6 @@
 import os
 
-from conans.client import packager
+from conans.client import packager, settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
 from conans.client.generators import write_generators
@@ -36,6 +36,19 @@ class ConanManager(object):
         self._recorder = recorder
         self._registry = registry
         self._graph_manager = graph_manager
+
+    def _load_install_conanfile(self, loader, reference_or_path):
+        """loads a conanfile for installation: install, info
+        """
+        if isinstance(reference_or_path, ConanFileReference):
+            conanfile = loader.load_virtual([reference_or_path])
+        else:
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            if reference_or_path.endswith(".py"):
+                conanfile = loader.load_conan(reference_or_path, output, consumer=True)
+            else:
+                conanfile = loader.load_conan_txt(reference_or_path, output)
+        return conanfile
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
 

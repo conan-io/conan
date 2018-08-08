@@ -42,7 +42,7 @@ def html_binary_graph(search_info, reference, table_filename):
             settings = package["settings"]
             if settings:
                 row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
-                                        settings.get("compiler.version", "None"))
+                                         settings.get("compiler.version", "None"))
                 column_name = []
                 for setting, value in settings.items():
                     if setting.startswith("compiler."):
