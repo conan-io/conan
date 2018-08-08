@@ -74,21 +74,21 @@ class CommandOutputer(object):
     def nodes_to_build(self, nodes_to_build):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def info(self, deps_graph, only, package_filter, show_paths, project_reference):
+    def info(self, deps_graph, only, package_filter, show_paths):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
-        Printer(self.user_io.out).print_info(deps_graph, project_reference,
+        Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache, package_filter=package_filter,
                                              show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
+    def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(project_reference, deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph)
         else:
             from conans.client.graph.grapher import ConanGrapher
-            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher = ConanGrapher(deps_graph)
 
         cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(graph_filename):

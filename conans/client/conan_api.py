@@ -35,7 +35,6 @@ from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
-from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
@@ -201,19 +200,17 @@ class ConanAPIV1(object):
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager,
-                               settings_preprocessor, interactive=interactive)
+                               interactive=interactive)
 
         return conan, client_cache, user_io
 
-    def __init__(self, client_cache, user_io, runner, remote_manager,
-                 _settings_preprocessor, interactive=True):
+    def __init__(self, client_cache, user_io, runner, remote_manager, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
         if not interactive:
@@ -222,8 +219,7 @@ class ConanAPIV1(object):
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager, self._settings_preprocessor,
-                            action_recorder, self._registry)
+                            self._remote_manager, action_recorder, self._registry)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
