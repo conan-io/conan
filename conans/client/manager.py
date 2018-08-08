@@ -80,7 +80,7 @@ class ConanManager(object):
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
         deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
-                                                          False, update, remote_name)
+                                                          False, update, remote_name, self._recorder, workspace)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")

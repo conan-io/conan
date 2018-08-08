@@ -463,7 +463,7 @@ class ConanAPIV1(object):
             workspace = Workspace.get_workspace(wspath, wsinstall_folder)
             if workspace:
                 self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
-                manager = self._init_manager(recorder, workspace)
+                manager = self._init_manager(recorder)
                 manager.install_workspace(profile, workspace, remote_name, build, update)
                 return
 
