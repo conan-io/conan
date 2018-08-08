@@ -114,15 +114,17 @@ class FileCopier(object):
 
             relative_path = os.path.relpath(root, src)
             for f in files:
-                f = os.path.normpath(os.path.join(relative_path, f))
+                f = os.path.normpath(os.path.join(relative_path, f)).replace("\\", "/")
                 if os.path.islink(os.path.join(root, f)):
                     filepaths.append((f, f))
                 else:
                     if not symlink:
                         # Check upstream symlinked folders
                         folder_path = src.replace("\\", "/")[:-1]
+                        print("file split:", f, f.split("/")[:-1])
                         for folder in f.split("/")[:-1]:
                             folder_path = folder_path + "/" + folder
+                            print("folder_path:", folder_path)
                             if os.path.islink(folder_path):
                                 symlink = os.path.relpath(folder_path, src)
                                 break
@@ -158,6 +160,8 @@ class FileCopier(object):
         if ignore_case:
             filtered_filepaths = [uncased_filepaths[(file, symlink)] for file, symlink in filtered_filepaths]
 
+        print("FILTERED FILEPATHS:", filtered_filepaths)
+
         files_to_copy = []
         for item in filtered_filepaths:
             if item[1]:
@@ -170,24 +174,26 @@ class FileCopier(object):
             else:
                 files_to_copy.append(item[0])
 
+        print("FILES TO COPY:", files_to_copy)
+        print("LINKED FOLDERS:", linked_folders)
+        print("LINKED FILES:", linked_files)
         return files_to_copy, linked_folders, linked_files
 
     @staticmethod
     def _link_elements(src, dst, linked_elements):
-        for linked_element in linked_elements:
-            src_link = os.path.join(src, linked_element)  # link element in src
-            src_linked = os.readlink(src_link)  # 'linked to' element in src
-            new_dst_link = os.path.join(dst, linked_element)  # link element in dst
+        for link_element in linked_elements:
+            src_link = os.path.join(src, link_element)  # link element in src
+            linked_to_element = os.readlink(src_link)  # 'linked to' element in src
+            dst_link = os.path.join(dst, link_element)  # link element in dst
             try:
                 # Remove the previous symlink
-                os.remove(new_dst_link)
+                os.remove(dst_link)
             except OSError:
                 pass
             # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-            os.symlink(src_linked, new_dst_link)
+            os.symlink(linked_to_element, dst_link)
             # Remove empty links
-            dst_link = os.path.join(dst, linked_element)
             abs_path = os.path.realpath(dst_link)
             if not os.path.exists(abs_path):
                 os.remove(dst_link)
