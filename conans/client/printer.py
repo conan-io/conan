@@ -76,7 +76,6 @@ class Printer(object):
                 if conan.output is None:  # Identification of "virtual" node
                     continue
                 ref = str(conan)
-
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 

@@ -217,18 +217,14 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-    def _init_graph_manager(self, action_recorder, workspace=None):
-        graph_manager = GraphManager(self._user_io.out,
-                                     self._client_cache, self._registry, self._remote_manager,
-                                     action_recorder, workspace=workspace, runner=self._runner)
-        return graph_manager
+        self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
+                                           self._remote_manager, runner=self._runner)
 
-    def _init_manager(self, action_recorder, workspace=None):
+    def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
-        graph_manager = self._init_graph_manager(action_recorder, workspace)
         return ConanManager(self._client_cache, self._user_io, self._runner,
                             self._remote_manager, action_recorder, self._registry,
-                            graph_manager)
+                            self._graph_manager)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -537,9 +533,8 @@ class ConanAPIV1(object):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
         recorder = ActionRecorder()
-        graph_manager = self._init_graph_manager(recorder)
-        deps_graph, _, _ = graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
-                                                    False, remote_name)
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
+                                                          False, remote_name, recorder, workspace=None)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -548,9 +543,8 @@ class ConanAPIV1(object):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
         recorder = ActionRecorder()
-        graph_manager = self._init_graph_manager(recorder)
-        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
-                                                            False, remote_name)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
+                                                                  False, remote_name, recorder, workspace=None)
         ret = []
         for level in deps_graph.by_levels():
             for node in level:
@@ -566,9 +560,8 @@ class ConanAPIV1(object):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
         recorder = ActionRecorder()
-        graph_manager = self._init_graph_manager(recorder)
-        deps_graph, conanfile, _ = graph_manager.load_graph(reference, None, profile, build, update,
-                                                            False, remote_name)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
+                                                                  False, remote_name, recorder, workspace=None)
         return deps_graph, conanfile
 
     @api_method

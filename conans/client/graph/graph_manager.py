@@ -46,16 +46,13 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, action_recorder, workspace,
-                 runner):
-        self._proxy = ConanProxy(client_cache, output, remote_manager,
-                                 recorder=action_recorder, registry=registry)
+    def __init__(self, output, client_cache, registry, remote_manager, runner):
+        self._proxy = ConanProxy(client_cache, output, remote_manager, registry=registry)
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
-        self._workspace = workspace
         self._runner = runner
 
     def load_consumer_conanfile(self, conanfile_path, info_folder, output,
@@ -77,7 +74,8 @@ class GraphManager(object):
 
         return conanfile
 
-    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name):
+    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
+                   recorder, workspace):
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -114,7 +112,7 @@ class GraphManager(object):
         deps_graph = self._load_graph(conanfile, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
-                                      loader=loader)
+                                      loader=loader, recorder=recorder, workspace=workspace)
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -129,7 +127,7 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
-                                profile_build_requires, loader):
+                                profile_build_requires, loader, recorder, workspace):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
@@ -166,21 +164,21 @@ class GraphManager(object):
 
                 build_requires_profile_graph = self._load_graph(virtual, check_updates, update, build_mode,
                                                                 remote_name, new_profile_build_requires,
-                                                                loader)
+                                                                loader, recorder, workspace)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def _load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, loader):
-        builder = DepsGraphBuilder(self._proxy, self._output, loader, self._resolver, self._workspace)
+                    profile_build_requires, loader, recorder, workspace):
+        builder = DepsGraphBuilder(self._proxy, self._output, loader, self._resolver, workspace, recorder)
         graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, self._registry, self._workspace)
+                                                  self._remote_manager, self._registry, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires, loader)
+                                     profile_build_requires, loader, recorder, workspace)
         return graph
 
 
