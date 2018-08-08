@@ -1,6 +1,6 @@
 import os
 
-from conans.client import packager
+from conans.client import packager, settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
 from conans.client.generators import write_generators
@@ -31,14 +31,13 @@ class ConanManager(object):
     business logic
     """
     def __init__(self, client_cache, user_io, runner, remote_manager,
-                 settings_preprocessor, recorder, registry):
+                 recorder, registry):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._settings_preprocessor = settings_preprocessor
         self._recorder = recorder
         self._registry = registry
 
@@ -81,7 +80,7 @@ class ConanManager(object):
         if local:
             cache_settings.remove_undefined()
         else:
-            self._settings_preprocessor.preprocess(cache_settings)
+            settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
