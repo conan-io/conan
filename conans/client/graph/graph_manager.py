@@ -154,7 +154,8 @@ class GraphManager(object):
                 virtual = loader.load_virtual(package_build_requires.values(), scope_options=False,
                                               build_requires_options=node.conanfile.build_requires_options)
                 build_requires_package_graph = self._load_graph(virtual, check_updates, update, build_mode,
-                                                                remote_name, profile_build_requires, loader)
+                                                                remote_name, profile_build_requires, loader,
+                                                                recorder, workspace)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:

@@ -45,7 +45,7 @@ class ConanManager(object):
 
         deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile,
                                                           build_mode=None, check_updates=False, update=False,
-                                                          remote_name=None)
+                                                          remote_name=None, recorder=self._recorder, workspace=None)
 
         # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
         # which is the exported pkg
