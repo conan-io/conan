@@ -20,7 +20,7 @@ class TestlinksConan(ConanFile):
         os.makedirs("foo/test/bar")
         with open("foo/test/bar/hello_world.txt", "w"):
             os.utime("foo/test/bar/hello_world.txt", None)
-        os.symlink("test/bar", "foo/test_link")
+        os.symlink(os.path.join("test", "bar"), os.path.join("foo", "test_link"))
 
     def package(self):
         self.copy("*", src=".", dst=".", links=True)
