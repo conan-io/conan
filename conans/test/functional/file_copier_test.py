@@ -37,18 +37,18 @@ class FileCopierTest(unittest.TestCase):
 
     # @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def basic_with_linked_dir_test(self):
-        folder1 = temp_folder()
+        folder1 = os.path.join(temp_folder(), "folder1")
         sub1 = os.path.join(folder1, "subdir1")
         sub2 = os.path.join(folder1, "subdir2")
         os.makedirs(sub1)
-        os.symlink(sub1, sub2)
+        os.symlink("subdir1", sub2)
         save(os.path.join(sub1, "file1.txt"), "Hello1")
         save(os.path.join(sub1, "file2.c"), "Hello2")
         save(os.path.join(sub1, "sub1", "file1.txt"), "Hello1 sub")
 
         for links in (False, True):
             print("LINKS:", links)
-            folder2 = temp_folder()
+            folder2 = os.path.join(temp_folder(), "folder2")
             copier = FileCopier(folder1, folder2)
             copier("*.txt", "texts", links=links)
             if links:
