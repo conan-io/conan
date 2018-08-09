@@ -27,9 +27,7 @@ class HelloConan(ConanFile):
         os.symlink("other_empty_folder", "other_link")
 
     def package(self):
-        print("conanfile.package(): *.txt*")
         self.copy("*.txt*", links=True)
-        print("conanfile.package(): *.so*")
         self.copy("*.so*", links=True)
 """
 
@@ -49,7 +47,6 @@ class SymLinksTest(unittest.TestCase):
         if build:
             folders.append(client.paths.build(ref))
         for base in folders:
-            print("FOLDER:", base)
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
             self.assertEqual(os.readlink(link), "file1.txt")

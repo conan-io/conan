@@ -47,7 +47,6 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub1, "sub1", "file1.txt"), "Hello1 sub")
 
         for links in (False, True):
-            print("LINKS:", links)
             folder2 = os.path.join(temp_folder(), "folder2")
             copier = FileCopier(folder1, folder2)
             copier("*.txt", "texts", links=links)
