@@ -115,6 +115,8 @@ macro(find_package)
     endif()
 endmacro()
 
+enable_testing()
+
 """
             subprojects = ' '.join(self._workspace_packages.keys())
             cmake = template.format(name=self._name, subprojects=subprojects)
