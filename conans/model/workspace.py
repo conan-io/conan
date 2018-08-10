@@ -108,8 +108,16 @@ class Workspace(object):
 cmake_minimum_required(VERSION 3.3)
 project({name} CXX)
 
+macro(find_package)
+    set(CONAN_SUBPROJECTS {subprojects})
+    if(NOT "${{ARGV0}}" IN_LIST CONAN_SUBPROJECTS)
+        _find_package(${{ARGV}})
+    endif()
+endmacro()
+
 """
-            cmake = template.format(name=self._name)
+            subprojects = ' '.join(self._workspace_packages.keys())
+            cmake = template.format(name=self._name, subprojects=subprojects)
             for _, workspace_package in self._workspace_packages.items():
                 build_folder = workspace_package.build_folder
                 build_folder = build_folder.replace("\\", "/")
