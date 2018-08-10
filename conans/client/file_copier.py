@@ -136,9 +136,9 @@ class FileCopier(object):
         # Filter fnmatch
         filtered_filepaths = []
         for item in filepaths:
-            result = fnmatch.filter([item[0]], pattern)
+            result = fnmatch.fnmatchcase(item[0], pattern)
             if result:
-                filtered_filepaths.append((result[0], item[1]))
+                filtered_filepaths.append(item)
 
         if not links:
             withtout_links = []

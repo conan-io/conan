@@ -160,7 +160,7 @@ class TestConan(ConanFile):
         self._check(client, ref, build=False)
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class ExportSymLinksTest(unittest.TestCase):
 
     def _initialize_client(self, conanfile):
@@ -220,9 +220,9 @@ class ConanSymlink(ConanFile):
     exports_sources = ["*"]
 
     def package(self):
-        self.copy("*NOT_TO_COPY.TXT")
+        self.copy("*NOT_TO_COPY.TXT", ignore_case=%s)
 """
-        self._initialize_client(conanfile)
+        self._initialize_client(conanfile % "False")
         directory = os.path.join(self.client.current_folder, "another_directory")
         other_dir = os.path.join(self.client.current_folder, "another_other_directory")
         mkdir(other_dir)
@@ -238,4 +238,7 @@ class ConanSymlink(ConanFile):
         pkg_ref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_other_dir = os.path.join(self.client.paths.package(pkg_ref),
                                          "another_other_directory")
+        self.assertFalse(os.path.exists(package_other_dir))
+        self.client.save({"conanfile.py": conanfile % "True"})
+        self.client.run("create . danimtb/testing")
         self.assertTrue(os.path.exists(package_other_dir))
