@@ -379,7 +379,51 @@ class MyTest(ConanFile):
                          load(os.path.join(self.client.current_folder, "file.json")))
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
-        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}', self.client.user_io.out)
+        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
+                      self.client.out)
+
+    def build_order_build_requires_test(self):
+        # https://github.com/conan-io/conan/issues/3267
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class AConan(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . tool/0.1@user/channel")
+        client.run("create . dep/0.1@user/channel")
+        conanfile = conanfile + 'requires = "dep/0.1@user/channel"'
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Pkg/0.1@user/channel")
+        client.run("export . Pkg2/0.1@user/channel")
+        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
+                     "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
+        client.run("info . -pr=myprofile -bo=tool/0.1@user/channel")
+        self.assertIn("[tool/0.1@user/channel], [Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
+                      client.out)
+
+    def build_order_privates_test(self):
+        # https://github.com/conan-io/conan/issues/3267
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class AConan(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . tool/0.1@user/channel")
+        conanfile_dep = conanfile + 'requires = "tool/0.1@user/channel"'
+        client.save({"conanfile.py": conanfile_dep})
+        client.run("create . dep/0.1@user/channel")
+        conanfile_pkg = conanfile + 'requires = ("dep/0.1@user/channel", "private"),'
+        client.save({"conanfile.py": conanfile_pkg})
+        client.run("export . Pkg/0.1@user/channel")
+        client.run("export . Pkg2/0.1@user/channel")
+        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel"},
+                    clean_first=True)
+        client.run("info . -bo=tool/0.1@user/channel")
+        self.assertIn("[tool/0.1@user/channel], [dep/0.1@user/channel], "
+                      "[Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
+                      client.out)
 
     def diamond_build_order_test(self):
         self.client = TestClient()

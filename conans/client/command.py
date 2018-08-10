@@ -8,7 +8,6 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-from conans.client.remote_registry import RemoteRegistry
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
@@ -256,8 +255,8 @@ class Command(object):
         specifying the recipe reference and package ID to be installed. Not transitive, requirements
         of the specified reference will NOT be retrieved. Useful together with 'conan copy' to
         automate the promotion of packages to a different user/channel. Only if a reference
-        is specified, it will download all packages from the specified remote. Otherwise, it will
-        search sequentially in the configured remotes.
+        is specified, it will download all packages from the specified remote. If no remote is
+        specified, it will use the default remote.
         """
 
         parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
@@ -273,7 +272,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         return self._conan.download(reference=args.reference, package=args.package,
-                                    remote=args.remote, recipe=args.recipe)
+                                    remote_name=args.remote, recipe=args.recipe)
 
     def install(self, *args):
         """Installs the requirements specified in a recipe (conanfile.py or conanfile.txt). It can
@@ -316,7 +315,7 @@ class Command(object):
                 info = self._conan.install(path=args.path_or_reference,
                                            settings=args.settings, options=args.options,
                                            env=args.env,
-                                           remote=args.remote,
+                                           remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
                                            build=args.build, profile_name=args.profile,
@@ -327,7 +326,7 @@ class Command(object):
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
-                                                     remote=args.remote,
+                                                     remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=args.manifests_interactive,
                                                      build=args.build, profile_name=args.profile,
@@ -438,7 +437,7 @@ class Command(object):
                                                options=args.options,
                                                env=args.env,
                                                profile_name=args.profile,
-                                               remote=args.remote,
+                                               remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
@@ -456,7 +455,7 @@ class Command(object):
                                                        options=args.options,
                                                        env=args.env,
                                                        profile_name=args.profile,
-                                                       remote=args.remote,
+                                                       remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
             self._outputer.nodes_to_build(nodes)
@@ -464,7 +463,7 @@ class Command(object):
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
             data = self._conan.info(args.path_or_reference,
-                                    remote=args.remote,
+                                    remote_name=args.remote,
                                     settings=args.settings,
                                     options=args.options,
                                     env=args.env,
@@ -472,7 +471,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
-            deps_graph, project_reference = data
+            deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -485,10 +484,9 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
-                self._outputer.info(deps_graph, only, args.remote,
-                                    args.package_filter, args.paths, project_reference)
+                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method. e.g., Downloads and unzip the package
@@ -755,7 +753,7 @@ class Command(object):
 
         return self._conan.remove(pattern=reference or args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
-                                  force=args.force, remote=args.remote, outdated=args.outdated)
+                                  force=args.force, remote_name=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
         """Copies conan recipes and packages to another user/channel. Useful to promote packages
@@ -823,17 +821,18 @@ class Command(object):
                 info = self._conan.users_list(args.remote)
                 self._outputer.print_user_list(info)
             elif args.password is None:  # set user for remote (no password indicated)
-                remote, prev_user, user = self._conan.user_set(args.name, args.remote)
-                self._outputer.print_user_set(remote, prev_user, user)
+                remote_name, prev_user, user = self._conan.user_set(args.name, args.remote)
+                self._outputer.print_user_set(remote_name, prev_user, user)
             else:  # login a remote
-                remote = args.remote or self._conan.get_default_remote().name
+                remote_name = args.remote or self._conan.get_default_remote().name
                 name = args.name
                 password = args.password
                 if not password:
-                    name, password = self._user_io.request_login(remote_name=remote, username=name)
-                remote, prev_user, user = self._conan.authenticate(name, remote=remote,
-                                                                   password=password)
-                self._outputer.print_user_set(remote, prev_user, user)
+                    name, password = self._user_io.request_login(remote_name=remote_name, username=name)
+                remote_name, prev_user, user = self._conan.authenticate(name,
+                                                                        remote_name=remote_name,
+                                                                        password=password)
+                self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
             info = exc.info
             raise
@@ -887,7 +886,8 @@ class Command(object):
 
         try:
             if reference:
-                info = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                info = self._conan.search_packages(reference, query=args.query,
+                                                   remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], reference, args.query,
@@ -898,7 +898,8 @@ class Command(object):
 
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 
-                info = self._conan.search_recipes(args.pattern_or_reference, remote=args.remote,
+                info = self._conan.search_recipes(args.pattern_or_reference,
+                                                  remote_name=args.remote,
                                                   case_sensitive=args.case_sensitive)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
                 try:
@@ -956,7 +957,8 @@ class Command(object):
 
         try:
             info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
-                                      remote=args.remote, all_packages=args.all, force=args.force,
+                                      remote_name=args.remote, all_packages=args.all,
+                                      force=args.force,
                                       confirm=args.confirm, retry=args.retry,
                                       retry_wait=args.retry_wait, skip_upload=args.skip_upload,
                                       integrity_check=args.check, no_overwrite=args.no_overwrite)
@@ -1019,7 +1021,7 @@ class Command(object):
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
-        remote = args.remote if hasattr(args, 'remote') else None
+        remote_name = args.remote if hasattr(args, 'remote') else None
         new_remote = args.new_remote if hasattr(args, 'new_remote') else None
         url = args.url if hasattr(args, 'url') else None
 
@@ -1027,22 +1029,22 @@ class Command(object):
             remotes = self._conan.remote_list()
             self._outputer.remote_list(remotes, args.raw)
         elif args.subcommand == "add":
-            return self._conan.remote_add(remote, url, verify_ssl, args.insert, args.force)
+            return self._conan.remote_add(remote_name, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
-            return self._conan.remote_remove(remote)
+            return self._conan.remote_remove(remote_name)
         elif args.subcommand == "rename":
-            return self._conan.remote_rename(remote, new_remote)
+            return self._conan.remote_rename(remote_name, new_remote)
         elif args.subcommand == "update":
-            return self._conan.remote_update(remote, url, verify_ssl, args.insert)
+            return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
             refs = self._conan.remote_list_ref()
             self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
-            return self._conan.remote_add_ref(reference, remote)
+            return self._conan.remote_add_ref(reference, remote_name)
         elif args.subcommand == "remove_ref":
             return self._conan.remote_remove_ref(reference)
         elif args.subcommand == "update_ref":
-            return self._conan.remote_update_ref(reference, remote)
+            return self._conan.remote_update_ref(reference, remote_name)
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
