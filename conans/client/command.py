@@ -60,8 +60,8 @@ _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current
                       "relative path to current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache. Use this for testing purposes"
-                     " only")
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
+                     "Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., 'boost/*', "
                               "'MyPackage/1.2@user/channel'")
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
@@ -211,8 +211,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Use this for '
-                                 'testing purposes only')
+                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                                 'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
