@@ -3,6 +3,8 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
+from conans.util.files import mkdir
+
 
 def report_copied_files(copied, output):
     ext_files = defaultdict(list)
@@ -188,6 +190,9 @@ class FileCopier(object):
                 os.remove(dst_link)
             except OSError:
                 pass
+            # Create parent directories
+            if not os.path.exists(os.path.dirname(dst_link)):
+                mkdir(os.path.dirname(dst_link))
             # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             os.symlink(linked_to_element, dst_link)
