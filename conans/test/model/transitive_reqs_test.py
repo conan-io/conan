@@ -1659,10 +1659,10 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=1", "os=Linux")
 
     def test_errors(self):
-        with self.assertRaisesRegexp(ConanException, "root: No subclass of ConanFile"):
+        with self.assertRaisesRegexp(ConanException, "root.py: No subclass of ConanFile"):
             self.root("")
 
-        with self.assertRaisesRegexp(ConanException, "root: More than 1 conanfile in the file"):
+        with self.assertRaisesRegexp(ConanException, "root.py: More than 1 conanfile in the file"):
             self.root("""from conans import ConanFile
 class HelloConan(ConanFile):pass
 class ByeConan(ConanFile):pass""")

@@ -1,4 +1,3 @@
-import imp
 import inspect
 import os
 import sys
@@ -58,8 +57,7 @@ def _parse_file(conan_file_path):
 
     try:
         current_dir = os.path.dirname(conan_file_path)
-        old_path = sys.path[:]
-        sys.path = [current_dir]
+        sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
@@ -86,7 +84,7 @@ def _parse_file(conan_file_path):
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))
     finally:
-        sys.path[:] = old_path
+        sys.path.pop()
 
     return loaded, filename
 
