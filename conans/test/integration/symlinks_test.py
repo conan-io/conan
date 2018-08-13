@@ -159,7 +159,7 @@ class TestConan(ConanFile):
         self._check(client, ref, build=False)
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class ExportSymLinksTest(unittest.TestCase):
 
     def _initialize_client(self, conanfile):
@@ -168,6 +168,8 @@ class ExportSymLinksTest(unittest.TestCase):
                           "src/main.cpp": "cpp fake content",
                           "CMakeLists.txt": "cmake fake content",
                           "another_directory/not_to_copy.txt": ""})
+        self.other_dir = os.path.join(self.client.current_folder, "another_other_directory")
+        mkdir(self.other_dir)
 
     def export_pattern_test(self):
         conanfile = """
@@ -179,15 +181,18 @@ class ConanSymlink(ConanFile):
     exports_sources = ["src/*", "CMakeLists.txt"]
 """
         self._initialize_client(conanfile)
-        directory = os.path.join(self.client.current_folder, "another_directory")
-        other_dir = os.path.join(self.client.current_folder, "another_other_directory")
-        mkdir(other_dir)
-        os.symlink(directory, os.path.join(other_dir, "another_directory"))
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-        cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
-                                       "another_other_directory")
+        export_sources = self.client.paths.export_sources(ref)
+        cache_other_dir = os.path.join(export_sources, "another_other_directory")
+        cache_src = os.path.join(export_sources, "src")
+        cache_main = os.path.join(cache_src, "main.cpp")
+        cache_cmake = os.path.join(export_sources, "CMakeLists.txt")
         self.assertFalse(os.path.exists(cache_other_dir))
+        self.assertTrue(os.path.exists(cache_src))
+        self.assertTrue(os.path.exists(cache_main))
+        self.assertTrue(os.path.exists(cache_cmake))
 
     def export_exclude_test(self):
         conanfile = """
@@ -199,12 +204,15 @@ class ConanSymlink(ConanFile):
     exports_sources = ["*", "!*another_directory*"]
 """
         self._initialize_client(conanfile)
-        directory = os.path.join(self.client.current_folder, "another_directory")
-        other_dir = os.path.join(self.client.current_folder, "another_other_directory")
-        mkdir(other_dir)
-        os.symlink(directory, os.path.join(other_dir, "another_directory"))
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-        cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
-                                       "another_other_directory")
+        export_sources = self.client.paths.export_sources(ref)
+        cache_other_dir = os.path.join(export_sources, "another_other_directory")
+        cache_src = os.path.join(export_sources, "src")
+        cache_main = os.path.join(cache_src, "main.cpp")
+        cache_cmake = os.path.join(export_sources, "CMakeLists.txt")
         self.assertFalse(os.path.exists(cache_other_dir))
+        self.assertTrue(os.path.exists(cache_src))
+        self.assertTrue(os.path.exists(cache_main))
+        self.assertTrue(os.path.exists(cache_cmake))
