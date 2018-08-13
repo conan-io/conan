@@ -1,5 +1,6 @@
 from conans.model.ref import ConanFileReference
 from conans.client.loader_parse import _parse_file
+from conans.client.recorder.action_recorder import ActionRecorder
 
 
 def conan_python_require(require):
@@ -11,7 +12,9 @@ def conan_python_require(require):
         return conan_python_require._modules[require]
     except KeyError:
         r = ConanFileReference.loads(require)
-        path = conan_python_require._proxy.get_recipe(r, False, False)
+        result = conan_python_require._proxy.get_recipe(r, False, False, remote_name=None,
+                                                        recorder=ActionRecorder())
+        path, _, _, _ = result
         module, _ = _parse_file(path)
         conan_python_require._modules[require] = module
     return module

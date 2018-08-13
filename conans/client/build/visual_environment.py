@@ -94,7 +94,7 @@ class VisualStudioBuildEnvironment(object):
         return ret
 
     def _std_cpp(self):
-       return vs_std_cpp(self._settings)
+        return vs_std_cpp(self._settings)
 
 
 def vs_build_type_flags(settings):

@@ -72,7 +72,7 @@ class CmdUpload(object):
                 integrity_check, no_overwrite, remote_name, recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
 
-        defined_remote = self._registry.get_ref(conan_ref)
+        defined_remote = self._registry.get_recipe_remote(conan_ref)
         if remote_name:  # If remote_name is given, use it
             upload_remote = self._registry.remote(remote_name)
         elif defined_remote:  # Else, if the package had defined a remote, use it
@@ -104,11 +104,11 @@ class CmdUpload(object):
                     recorder.add_package(str(conan_ref), package_id)
 
         if not defined_remote and not skip_upload:
-            self._registry.set_ref(conan_ref, upload_remote)
+            self._registry.set_ref(conan_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)
-        current_remote = self._registry.get_ref(conan_reference)
+        current_remote = self._registry.get_recipe_remote(conan_reference)
         if remote != current_remote:
             conanfile = load_conanfile_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,

@@ -16,4 +16,5 @@ from conans.client.graph.python_requires import conan_python_require
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
-__version__ = '1.6.0-dev'
+__version__ = '1.7.0-dev'
+

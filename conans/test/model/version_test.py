@@ -85,3 +85,9 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(v1.pre(), "0.2.3-alpha1")
         self.assertEqual(v1.build, "build2")
         self.assertEqual(v1.stable(), "0.2.3-alpha1+build2")
+
+    def build_test(self):
+        v1 = Version("0.2.3-alpha1+build2")
+        self.assertEqual(v1.build, "build2")
+        v2 = Version("0.2.3+b178")
+        self.assertEqual(v2.build, "b178")

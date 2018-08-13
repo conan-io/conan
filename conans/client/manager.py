@@ -45,7 +45,7 @@ class ConanManager(object):
 
         deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile,
                                                           build_mode=None, check_updates=False, update=False,
-                                                          remote_name=None)
+                                                          remote_name=None, recorder=self._recorder, workspace=None)
 
         # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
         # which is the exported pkg
@@ -80,7 +80,7 @@ class ConanManager(object):
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
         deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
-                                                          False, update, remote_name)
+                                                          False, update, remote_name, self._recorder, workspace)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
@@ -117,7 +117,8 @@ class ConanManager(object):
             generators.add("txt")  # Add txt generator by default
 
         result = self._graph_manager.load_graph(reference, create_reference, profile,
-                                                build_modes, False, update, remote_name)
+                                                build_modes, False, update, remote_name, self._recorder,
+                                                None)
         deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):
@@ -147,9 +148,8 @@ class ConanManager(object):
             for node in deps_graph.nodes:
                 if not node.conan_ref:
                     continue
-                conanfile = node.conanfile
                 complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
-                                        conanfile, node.conan_ref)
+                                        node.conanfile, node.conan_ref)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)
@@ -220,7 +220,8 @@ class ConanManager(object):
                                 install_folder, output, local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-              test=False, should_configure=True, should_build=True, should_install=True):
+              test=False, should_configure=True, should_build=True, should_install=True,
+              should_test=True):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: path to a conanfile.py
         """
@@ -249,6 +250,7 @@ class ConanManager(object):
         conan_file.should_configure = should_configure
         conan_file.should_build = should_build
         conan_file.should_install = should_install
+        conan_file.should_test = should_test
 
         try:
             mkdir(build_folder)
