@@ -18,7 +18,8 @@ from conans.client.profile_loader import read_conaninfo_profile
 from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
-from conans.client.graph.python_requires import conan_python_require
+from conans.client.graph.python_requires import ConanPythonRequire
+import sys
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -49,9 +50,9 @@ class _RecipeBuildRequires(OrderedDict):
 class GraphManager(object):
     def __init__(self, output, client_cache, registry, remote_manager, runner):
         self._proxy = ConanProxy(client_cache, output, remote_manager, registry=registry)
-        conan_python_require._proxy = self._proxy
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
+        sys.modules["conan_python_require"] = ConanPythonRequire(self._proxy, self._resolver)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager

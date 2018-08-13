@@ -77,39 +77,51 @@ class MyConanfileBase(ConanFile):
         self.output.info("My cool package_info!")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export . MyConanfileBase/1.1@user/testing")
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
 
     def reuse_test(self):
-        client = TestClient()
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
         self._define_base(client)
-        reuse = """from conans import ConanFile, conan_python_require
-base = conan_python_require("MyConanfileBase/1.1@user/testing")
+        reuse = """from conans import ConanFile
+import conan_python_require
+base = conan_python_require("MyConanfileBase/1.1@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     pass
 """
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
+
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("install Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
+        client.run("remove * -f")
+        client.run("download Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.out)
 
     def reuse_version_ranges_test(self):
         client = TestClient()
         self._define_base(client)
-        reuse = """from conans import ConanFile, conan_python_require
-base = conan_python_require("MyConanfileBase/[~1.0]@user/testing")
+        reuse = """from conans import ConanFile
+import conan_python_require
+base = conan_python_require("MyConanfileBase/[>1.0,<1.2]@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     pass
 """
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
 
 class PythonBuildTest(unittest.TestCase):
