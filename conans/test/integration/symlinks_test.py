@@ -159,7 +159,7 @@ class TestConan(ConanFile):
         self._check(client, ref, build=False)
 
 
-# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class ExportSymLinksTest(unittest.TestCase):
 
     def _initialize_client(self, conanfile):
