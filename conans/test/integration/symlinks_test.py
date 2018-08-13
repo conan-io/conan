@@ -169,6 +169,8 @@ class ExportSymLinksTest(unittest.TestCase):
                           "src/main.cpp": "cpp fake content",
                           "CMakeLists.txt": "cmake fake content",
                           "another_directory/not_to_copy.txt": ""})
+        self.other_dir = os.path.join(self.client.current_folder, "another_other_directory")
+        mkdir(self.other_dir)
 
     def export_pattern_test(self):
         conanfile = """
@@ -180,10 +182,7 @@ class ConanSymlink(ConanFile):
     exports_sources = ["src/*", "CMakeLists.txt"]
 """
         self._initialize_client(conanfile)
-        directory = os.path.join(self.client.current_folder, "another_directory")
-        other_dir = os.path.join(self.client.current_folder, "another_other_directory")
-        mkdir(other_dir)
-        os.symlink(directory, os.path.join(other_dir, "another_directory"))
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
@@ -200,10 +199,7 @@ class ConanSymlink(ConanFile):
     exports_sources = ["*", "!*another_directory*"]
 """
         self._initialize_client(conanfile)
-        directory = os.path.join(self.client.current_folder, "another_directory")
-        other_dir = os.path.join(self.client.current_folder, "another_other_directory")
-        mkdir(other_dir)
-        os.symlink("another_directory", os.path.join("another_other_directory", "another_directory"))
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         cache_other_dir = os.path.join(self.client.paths.export_sources(ref),
@@ -223,10 +219,6 @@ class ConanSymlink(ConanFile):
         self.copy("*NOT_TO_COPY.TXT", ignore_case=%s)
 """
         self._initialize_client(conanfile % "False")
-        directory = os.path.join(self.client.current_folder, "another_directory")
-        other_dir = os.path.join(self.client.current_folder, "another_other_directory")
-        mkdir(other_dir)
-        self.assertTrue(os.path.exists(directory))
         with chdir(self.client.current_folder):
             os.symlink(os.path.join("..", "another_directory"),
                        os.path.join("another_other_directory", "another_directory"))
