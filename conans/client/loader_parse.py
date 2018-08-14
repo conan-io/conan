@@ -24,7 +24,6 @@ def _parse_module(conanfile_module, filename):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
-    @param consumer: if this is a root node in the hierarchy, the consumer project
     @return: the main ConanFile class from the module
     """
     result = None
@@ -35,8 +34,8 @@ def _parse_module(conanfile_module, filename):
                 attr.__dict__["__module__"] == filename):
             if result is None:
                 result = attr
-            #else:
-            #    raise ConanException("More than 1 conanfile in the file")
+            else:
+                raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
             registered_generators.add(attr.__name__, attr)
@@ -62,6 +61,7 @@ def _parse_file(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
+            # This has been deprecated. To be replaced by __import__
             loaded = imp.load_source(filename, conan_file_path)
             sys.dont_write_bytecode = False
         # Put all imported files under a new package name

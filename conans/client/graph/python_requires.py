@@ -1,5 +1,8 @@
+import os
+import sys
+import imp
+
 from conans.model.ref import ConanFileReference
-from conans.client.loader_parse import _parse_file
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.requires import Requirement
 
@@ -22,6 +25,11 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, _ = result
-            module, _ = _parse_file(path)
+            try:
+                current_dir = os.path.dirname(path)
+                sys.path.append(current_dir)
+                module = imp.load_source("python_require", path)
+            finally:
+                sys.path.pop()
             self._modules[require] = module
         return module
