@@ -413,7 +413,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
             install_folder = _make_abs_path(install_folder, cwd)
-            deploy_folder = _make_abs_path(deploy_folder, cwd)
+            if deploy_folder is not None:
+                deploy_folder = _make_abs_path(deploy_folder, cwd)
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests

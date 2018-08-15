@@ -117,9 +117,7 @@ def run_deploy(conanfile, install_folder, deploy_folder, output):
         conanfile.copy_deps = file_importer
         conanfile.copy = file_copier
 
-        base_folder = install_folder
-        if deploy_folder:
-            base_folder = deploy_folder
+        base_folder = deploy_folder or install_folder
 
         with get_env_context_manager(conanfile):
             conanfile.install_folder = base_folder
