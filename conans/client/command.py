@@ -312,6 +312,9 @@ class Command(object):
             try:
                 reference = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
+                reference = None
+
+            if not reference:
                 info = self._conan.install(path=args.path_or_reference,
                                            settings=args.settings, options=args.options,
                                            env=args.env,
