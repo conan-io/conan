@@ -728,8 +728,9 @@ class ConanAPIV1(object):
         return recorder.get_info()
 
     @api_method
-    def upload(self, pattern, package=None, remote_name=None, all_packages=False, force=False,
-               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False,
+    def upload(self, pattern, package=None, query=None, remote_name=None,
+               all_packages=False, force=False, confirm=False, retry=2,
+               retry_wait=5, skip_upload=False, integrity_check=False,
                no_overwrite=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
@@ -746,7 +747,8 @@ class ConanAPIV1(object):
                              self._registry)
         try:
             uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
-                            retry_wait, skip_upload, integrity_check, no_overwrite, remote_name)
+                            retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,
+                            query=query)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
