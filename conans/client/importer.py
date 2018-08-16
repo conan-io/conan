@@ -96,29 +96,40 @@ def remove_imports(conanfile, copied_files, output):
                 output.warn("Unable to remove imported file from build: %s" % f)
 
 
-def run_deploy(conanfile, install_folder, output):
+def default_deploy(conanfile, deploy_folder):
+    conanfile.copy(pattern="*", dst=deploy_folder)
+
+
+def run_deploy(conanfile, install_folder, deploy_folder, output):
     deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 
-    # This is necessary to capture FileCopier full destination paths
-    # Maybe could be improved in FileCopier
-    def file_copier(*args, **kwargs):
-        file_copy = FileCopier(conanfile.package_folder, install_folder)
-        copied = file_copy(*args, **kwargs)
-        _make_files_writable(copied)
-        package_copied.update(copied)
+    if (hasattr(conanfile, "deploy") and callable(conanfile.deploy)) or deploy_folder:
+        # This is necessary to capture FileCopier full destination paths
+        # Maybe could be improved in FileCopier
+        def file_copier(*args, **kwargs):
+            file_copy = FileCopier(conanfile.package_folder, install_folder)
+            copied = file_copy(*args, **kwargs)
+            _make_files_writable(copied)
+            package_copied.update(copied)
 
-    conanfile.copy_deps = file_importer
-    conanfile.copy = file_copier
-    conanfile.install_folder = install_folder
-    with get_env_context_manager(conanfile):
-        with tools.chdir(install_folder):
-            conanfile.deploy()
+        conanfile.copy_deps = file_importer
+        conanfile.copy = file_copier
 
-    copied_files = file_importer.copied_files
-    copied_files.update(package_copied)
-    _report_save_manifest(copied_files, deploy_output, install_folder, "deploy_manifest.txt")
+        base_folder = deploy_folder or install_folder
+
+        with get_env_context_manager(conanfile):
+            conanfile.install_folder = base_folder
+            with tools.chdir(base_folder):
+                if not hasattr(conanfile, "deploy") or not callable(conanfile.deploy):
+                    conanfile.output.warn("Recipe has no deploy method, using default.")
+                    conanfile.deploy = default_deploy
+                conanfile.deploy(conanfile, deploy_folder)
+
+        copied_files = file_importer.copied_files
+        copied_files.update(package_copied)
+        _report_save_manifest(copied_files, deploy_output, base_folder, "deploy_manifest.txt")
 
 
 class _FileImporter(object):
