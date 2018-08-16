@@ -86,13 +86,13 @@ qmake
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
 
-    def test_qmake_hyphen(self):
+    def test_qmake_hyphen_dot(self):
         client = TestClient()
         dep = """
 from conans import ConanFile
 
 class TestConan(ConanFile):
-    name = "Pkg-Name"
+    name = "Pkg-Name.World"
     version = "0.1"
 
     def package_info(self):
@@ -104,7 +104,7 @@ class TestConan(ConanFile):
 """
         base = '''
 [requires]
-Pkg-Name/0.1@lasote/testing
+Pkg-Name.World/0.1@lasote/testing
 [generators]
 qmake
     '''
@@ -116,9 +116,9 @@ qmake
         qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
-        self.assertIn("CONAN_LIBS_PKG_NAME_RELEASE += -lhellor", qmake)
-        self.assertIn("CONAN_LIBS_PKG_NAME_DEBUG += -lhellod", qmake)
-        self.assertIn("CONAN_LIBS_PKG_NAME += -lhello", qmake)
+        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_RELEASE += -lhellor", qmake)
+        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_DEBUG += -lhellod", qmake)
+        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD += -lhello", qmake)
         self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
