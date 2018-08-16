@@ -545,14 +545,8 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
                                                                   False, remote_name, recorder, workspace=None)
-        ret = []
-        for level in deps_graph.by_levels():
-            for node in level:
-                if node.binary == BINARY_BUILD:
-                    if node.conan_ref not in ret:
-                        ret.append(node.conan_ref)
-
-        return ret, conanfile
+        nodes_to_build = deps_graph.nodes_to_build()
+        return nodes_to_build, conanfile
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
