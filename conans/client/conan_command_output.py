@@ -99,13 +99,15 @@ class CommandOutputer(object):
         printer = Printer(self.user_io.out)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, search_info, reference, packages_query, table):
+    def print_search_packages(self, search_info, reference, packages_query, table,
+                                outdated=False):
         if table:
             from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
-            printer.print_search_packages(search_info, reference, packages_query)
+            printer.print_search_packages(search_info, reference, packages_query,
+                                          outdated=outdated)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
