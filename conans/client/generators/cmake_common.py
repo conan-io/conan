@@ -237,9 +237,8 @@ endmacro()
 macro(conan_set_std)
   # Do not warn "Manually-specified variables were not used by the project"
   set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
-  # TODO: Check version where CMake supports 20, still not released
-  if (CMAKE_VERSION VERSION_LESS "3.1" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20"
-                                       OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")
+  if (CMAKE_VERSION VERSION_LESS "3.1" OR 
+     (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
     if(CONAN_STD_CXX_FLAG)
       message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
       set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
@@ -250,7 +249,7 @@ macro(conan_set_std)
       set(CMAKE_CXX_STANDARD ${CONAN_CMAKE_CXX_STANDARD})
       set(CMAKE_CXX_EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS})
     endif()
-  endif ()
+  endif()
 endmacro()
 
 macro(conan_set_rpath)
