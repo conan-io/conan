@@ -7,6 +7,41 @@ from conans.util.files import load
 
 class GeneratorsTest(unittest.TestCase):
 
+    def env_applied_test(self):
+        conanfile = """
+import os
+
+from conans import ConanFile
+from conans.model import Generator
+
+
+class mygen(Generator):
+    @property
+    def filename(self):
+        return "file.txt"
+
+    @property
+    def content(self):
+        return self.conanfile.get_info()
+
+class MyCf(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    generators = "mygen"
+
+    def get_info(self):
+        return os.environ["MY_ENV_VAR"]
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        error = client.run("install . ", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Generator mygen(file:file.txt) failed", client.out)
+
+        client.run("install . -e MY_ENV_VAR=23")
+        gen = load(os.path.join(client.current_folder, "file.txt"))
+        self.assertEquals(gen, "23")
+
     def test_error(self):
         base = '''
 [generators]

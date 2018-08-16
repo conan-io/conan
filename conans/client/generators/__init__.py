@@ -1,9 +1,11 @@
 from os.path import join
 
+from conans import tools
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
+from conans.model.conan_file import get_env_context_manager
 from conans.util.files import save, normalize
 
 from .virtualrunenv import VirtualRunEnvGenerator
@@ -88,24 +90,25 @@ def write_generators(conanfile, path, output):
             output.warn("Generator %s failed with new __init__(), trying old one")
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
-        try:
-            generator.output_path = path
-            content = generator.content
-            if isinstance(content, dict):
-                if generator.filename:
-                    output.warn("Generator %s is multifile. Property 'filename' not used"
-                                % (generator_name,))
-                for k, v in content.items():
-                    v = normalize(v)
-                    output.info("Generator %s created %s" % (generator_name, k))
-                    save(join(path, k), v)
-            else:
-                content = normalize(content)
-                output.info("Generator %s created %s" % (generator_name, generator.filename))
-                save(join(path, generator.filename), content)
-        except Exception as e:
-            if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                output.error(traceback.format_exc())
-            output.error("Generator %s(file:%s) failed\n%s"
-                         % (generator_name, generator.filename, str(e)))
-            raise ConanException(e)
+        with get_env_context_manager(conanfile):
+            try:
+                generator.output_path = path
+                content = generator.content
+                if isinstance(content, dict):
+                    if generator.filename:
+                        output.warn("Generator %s is multifile. Property 'filename' not used"
+                                    % (generator_name,))
+                    for k, v in content.items():
+                        v = normalize(v)
+                        output.info("Generator %s created %s" % (generator_name, k))
+                        save(join(path, k), v)
+                else:
+                    content = normalize(content)
+                    output.info("Generator %s created %s" % (generator_name, generator.filename))
+                    save(join(path, generator.filename), content)
+            except Exception as e:
+                if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                    output.error(traceback.format_exc())
+                output.error("Generator %s(file:%s) failed\n%s"
+                             % (generator_name, generator.filename, str(e)))
+                raise ConanException(e)
