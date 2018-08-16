@@ -224,7 +224,7 @@ class HelloConan(ConanFile):
         self.assertIn("The current binary package doesn't belong to the current recipe revision:",
                       self.client.out)
         self.assertIn("lib/1.0@lasote/testing from 'remote0' - Updated", self.client.out)
-        self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
+        self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
                       self.client.out)
 
     def test_registry_revision_updated(self):

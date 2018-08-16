@@ -81,8 +81,7 @@ class GraphBinariesAnalyzer(object):
                 recipe_revision_of_package = ConanInfo.load_from_package(package_folder).recipe_revision
                 if recipe_revision_of_package != conan_ref.revision:
                     output.info("The current binary package doesn't belong to the current recipe "
-                                "revision: %s. Deleting..." % str(package_ref))
-                    rmdir(package_folder)
+                                "revision: %s" % str(package_ref))
 
         if remote_name:
             remote = self._registry.remote(remote_name)
