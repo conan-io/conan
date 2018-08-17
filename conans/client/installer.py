@@ -287,8 +287,7 @@ class ConanInstaller(object):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         output = ScopedOutput(str(conan_ref), self._out)
         package_ref = PackageReference(conan_ref, package_id)
-        package_folder = self._client_cache.package(package_ref,
-                                                    conan_file.short_paths)
+        package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):
             if package_ref not in processed_package_references:
