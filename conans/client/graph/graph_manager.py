@@ -1,4 +1,5 @@
 import os
+import sys
 import fnmatch
 from collections import OrderedDict
 
@@ -19,7 +20,6 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.python_requires import ConanPythonRequire
-import sys
 
 
 class _RecipeBuildRequires(OrderedDict):
