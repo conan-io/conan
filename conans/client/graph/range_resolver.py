@@ -27,6 +27,7 @@ class RangeResolver(object):
         self._output = output
         self._client_cache = client_cache
         self._remote_search = remote_search
+        self._cached_remote_found = {}
 
     def resolve(self, require, base_conanref, update, remote_name):
         version_range = require.version_range
@@ -69,13 +70,14 @@ class RangeResolver(object):
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._client_cache, search_ref)
         if local_found:
-            resolved_version = self._resolve_version(version_range, local_found)
-            if resolved_version:
-                return resolved_version
+            return self._resolve_version(version_range, local_found)
 
     def _resolve_remote(self, search_ref, version_range, remote_name):
         # We should use ignorecase=False, we want the exact case!
-        remote_found = self._remote_search.search_remotes(search_ref, remote_name)
+        remote_found = self._cached_remote_found.get(search_ref)
+        if remote_found is None:
+            remote_found = self._remote_search.search_remotes(search_ref, remote_name)
+            self._cached_remote_found[search_ref] = remote_found
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 

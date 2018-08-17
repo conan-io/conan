@@ -1,6 +1,6 @@
 import os
 import unittest
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE, SimplePaths
@@ -141,8 +141,10 @@ def _get_edges(graph):
 class MockSearchRemote(object):
     def __init__(self, packages=None):
         self.packages = packages or []
+        self.count = Counter()
 
     def search_remotes(self, pattern, ignorecase):  # @UnusedVariable
+        self.count[pattern] += 1
         return self.packages
 
 
@@ -168,9 +170,9 @@ class SayConan(ConanFile):
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
             self.retriever.conan(say_ref, say_content)
 
-    def root(self, content):
+    def root(self, content, update=False):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None)
+        deps_graph = self.builder.load_graph(root_conan, update, update, None)
         return deps_graph
 
     def test_local_basic(self):
@@ -205,7 +207,63 @@ class SayConan(ConanFile):
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
             remote_packages.append(say_ref)
         self.remote_search.packages = remote_packages
-        self.test_local_basic()
+        for expr, solution in [(">0.0", "2.2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
+                               ("", "2.2.1"),
+                               ("~0", "0.3"),
+                               ("~=1", "1.2.1"),
+                               ("~1.1", "1.1.2"),
+                               ("~=2", "2.2.1"),
+                               ("~=2.1", "2.1"),
+                               ]:
+            deps_graph = self.root(hello_content % expr, update=True)
+            self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
+            self.assertEqual(2, len(deps_graph.nodes))
+            hello = _get_nodes(deps_graph, "Hello")[0]
+            say = _get_nodes(deps_graph, "Say")[0]
+            self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
+
+            self.assertEqual(hello.conan_ref, None)
+            conanfile = hello.conanfile
+            self.assertEqual(conanfile.version, "1.2")
+            self.assertEqual(conanfile.name, "Hello")
+            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+
+    def test_remote_optimized(self):
+        self.resolver._local_search = None
+        remote_packages = []
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
+            remote_packages.append(say_ref)
+        self.remote_search.packages = remote_packages
+
+        dep_content = """from conans import ConanFile
+class Dep1Conan(ConanFile):
+    requires = "Say/[%s]@memsharded/testing"
+"""
+        dep_ref = ConanFileReference.loads("Dep1/0.1@memsharded/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        dep_ref = ConanFileReference.loads("Dep2/0.1@memsharded/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+
+        hello_content = """from conans import ConanFile
+class HelloConan(ConanFile):
+    name = "Hello"
+    requires = "Dep1/0.1@memsharded/testing", "Dep2/0.1@memsharded/testing"
+"""
+        deps_graph = self.root(hello_content, update=True)
+        self.assertEqual(4, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        dep1 = _get_nodes(deps_graph, "Dep1")[0]
+        dep2 = _get_nodes(deps_graph, "Dep2")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, dep1), Edge(hello, dep2),
+                                                  Edge(dep1, say), Edge(dep2, say)})
+
+        # Most important check: counter of calls to remote
+        self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
 
     @parameterized.expand([("", "0.3", None, None),
                            ('"Say/1.1@memsharded/testing"', "1.1", False, False),
