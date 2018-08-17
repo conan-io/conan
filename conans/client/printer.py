@@ -84,10 +84,7 @@ class Printer(object):
                 # Excludes PROJECT fake reference
                 reg_remote = registry.get_recipe_remote(ref)
             except:
-                # Excludes PROJECT fake reference
                 reg_remote = None
-
-            # Excludes PROJECT fake reference
 
             if show("id"):
                 self._out.writeln("    ID: %s" % package_id, Color.BRIGHT_GREEN)
