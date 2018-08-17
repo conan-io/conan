@@ -1,7 +1,6 @@
 import json
 import time
 
-import os
 from requests.auth import AuthBase, HTTPBasicAuth
 from six.moves.urllib.parse import urlencode
 
@@ -190,7 +189,7 @@ class RestCommonMethods(object):
     def remove_conanfile(self, conan_reference):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
@@ -202,7 +201,7 @@ class RestCommonMethods(object):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
         payload = {"package_ids": package_ids}
-        url = "%s/conans/%s/packages/delete" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference) + "/packages/delete"
         return self._post_json(url, payload)
 
     @handle_return_deserializer()
@@ -210,7 +209,7 @@ class RestCommonMethods(object):
         """ Remove recipe files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/remove_files" % (self.remote_api_url, '/'.join(conan_reference))
+        url = self._recipe_url(conan_reference) + "/remove_files"
         return self._post_json(url, payload)
 
     @handle_return_deserializer()

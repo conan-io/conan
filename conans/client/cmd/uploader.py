@@ -83,8 +83,7 @@ class CmdUpload(object):
         if not force:
             self._check_recipe_date(conan_ref, upload_remote)
 
-        self._user_io.out.info("Uploading %s to remote '%s'"
-                               % (str(conan_ref), upload_remote.name))
+        self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
         self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, upload_remote)
 
         recorder.add_recipe(str(conan_ref), upload_remote.name, upload_remote.url)

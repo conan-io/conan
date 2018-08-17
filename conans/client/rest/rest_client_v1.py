@@ -323,6 +323,7 @@ class RestV1Methods(RestCommonMethods):
         def is_dir(the_path):
             if the_path == ".":
                 return True
+
             for the_file in urls:
                 if the_path == the_file:
                     return False
