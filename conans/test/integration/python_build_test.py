@@ -83,9 +83,8 @@ class MyConanfileBase(ConanFile):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         self._define_base(client)
-        reuse = """from conans import ConanFile
-import conan_python_require
-base = conan_python_require("MyConanfileBase/1.1@lasote/testing")
+        reuse = """from conans import ConanFile, python_requires
+base = python_requires("MyConanfileBase/1.1@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     pass
 """
@@ -109,9 +108,8 @@ class PkgTest(base.MyConanfileBase):
     def reuse_version_ranges_test(self):
         client = TestClient()
         self._define_base(client)
-        reuse = """from conans import ConanFile
-import conan_python_require
-base = conan_python_require("MyConanfileBase/[>1.0,<1.2]@lasote/testing")
+        reuse = """from conans import ConanFile, python_requires
+base = python_requires("MyConanfileBase/[>1.0,<1.2]@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     pass
 """

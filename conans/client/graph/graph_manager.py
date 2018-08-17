@@ -52,7 +52,7 @@ class GraphManager(object):
         self._proxy = ConanProxy(client_cache, output, remote_manager, registry=registry)
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
-        sys.modules["conan_python_require"] = ConanPythonRequire(self._proxy, self._resolver)
+        sys.modules["conans"].python_requires = ConanPythonRequire(self._proxy, self._resolver)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
