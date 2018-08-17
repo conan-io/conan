@@ -219,8 +219,7 @@ class RestCommonMethods(object):
         """ Remove package files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "/%s/remove_files" % (self._package_url(package_reference),
-                                    package_reference.package_id)
+        url = "/%s/remove_files" % self._package_url(package_reference)
         return self._post_json(url, payload)
 
     def _post_json(self, url, payload):
