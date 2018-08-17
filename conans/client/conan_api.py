@@ -35,7 +35,6 @@ from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
-from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
@@ -48,6 +47,8 @@ from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
+from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.graph import BINARY_BUILD
 
 
 default_manifest_folder = '.conan_manifests'
@@ -201,29 +202,29 @@ class ConanAPIV1(object):
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager,
-                               settings_preprocessor, interactive=interactive)
+                               interactive=interactive)
 
         return conan, client_cache, user_io
 
-    def __init__(self, client_cache, user_io, runner, remote_manager,
-                 _settings_preprocessor, interactive=True):
+    def __init__(self, client_cache, user_io, runner, remote_manager, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._settings_preprocessor = _settings_preprocessor
         self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-
         if not interactive:
             self._user_io.disable_input()
+
+        self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
+                                           self._remote_manager, runner=self._runner)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
-                            self._remote_manager, self._settings_preprocessor,
-                            action_recorder, self._registry)
+                            self._remote_manager, action_recorder, self._registry,
+                            self._graph_manager)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -429,7 +430,7 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators, install_reference=True)
+                            generators=generators)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
@@ -531,37 +532,31 @@ class ConanAPIV1(object):
                          install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        graph = manager.info_build_order(reference, profile, build_order, remote_name, check_updates)
-        return graph
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
+                                                          False, remote_name, recorder, workspace=None)
+        return deps_graph.build_order(build_order)
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote_name=None, check_updates=None, install_folder=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        ret = manager.info_nodes_to_build(reference, profile, build_modes, remote_name,
-                                          check_updates)
-        ref_list, project_reference = ret
-        return ref_list, project_reference
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
+                                                                  False, remote_name, recorder, workspace=None)
+        nodes_to_build = deps_graph.nodes_to_build()
+        return nodes_to_build, conanfile
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
              profile_name=None, update=False, install_folder=None, build=None):
         reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
                                                     options, env)
-
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        ret = manager.info_get_graph(reference, remote_name=remote_name, profile=profile,
-                                     check_updates=update, build_mode=build)
-        deps_graph, project_reference = ret
-        return deps_graph, project_reference
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
+                                                                  False, remote_name, recorder, workspace=None)
+        return deps_graph, conanfile
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,

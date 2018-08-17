@@ -60,6 +60,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(channel)
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
+        if revision:
+            ConanName.validate_name(revision)
         obj.revision = revision
         return obj
 
@@ -117,11 +119,11 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
     """
     revision = None
 
-    def __new__(cls, conan, package_id, revision=None):
-        if revision:
-            ConanName.validate_name(revision)
+    def __new__(cls, conan, package_id):
+        revision = None
         if "#" in package_id:
-            package_id, revision = package_id.split("#", 1)
+            package_id, revision = package_id.rsplit("#", 1)
+            ConanName.validate_name(revision)
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
         return obj
@@ -133,13 +135,9 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         try:
             conan = ConanFileReference.loads(tmp[0].strip())
             package_id = tmp[1].strip()
-            if "#" in package_id:
-                package_id, revision = package_id.split("#", 1)
-            else:
-                revision = None
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
-        return PackageReference(conan, package_id, revision)
+        return PackageReference(conan, package_id)
 
     def __repr__(self):
         return "%s:%s" % (self.conan, self.package_id)

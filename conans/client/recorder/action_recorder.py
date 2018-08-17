@@ -95,7 +95,7 @@ class ActionRecorder(object):
         for _package_ref, _package_actions in self._inst_packages_actions.items():
             # Could be a download and then an access to cache, we want the first one
             _package_action = _package_actions[0]
-            if _package_ref.conan.copy_without_revision() == reference.copy_without_revision():
+            if _package_ref.conan == reference:
                 ret.append((_package_ref, _package_action))
         return ret
 

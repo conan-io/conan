@@ -8,7 +8,6 @@ from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-from conans.client.remote_registry import RemoteRegistry
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
@@ -61,8 +60,8 @@ _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current
                       "relative path to current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache. Use this for testing purposes"
-                     " only")
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
+                     "Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., 'boost/*', "
                               "'MyPackage/1.2@user/channel'")
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
@@ -212,8 +211,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Use this for '
-                                 'testing purposes only')
+                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                                 'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -256,8 +255,8 @@ class Command(object):
         specifying the recipe reference and package ID to be installed. Not transitive, requirements
         of the specified reference will NOT be retrieved. Useful together with 'conan copy' to
         automate the promotion of packages to a different user/channel. Only if a reference
-        is specified, it will download all packages from the specified remote. Otherwise, it will
-        search sequentially in the configured remotes.
+        is specified, it will download all packages from the specified remote. If no remote is
+        specified, it will use the default remote.
         """
 
         parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
@@ -472,7 +471,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
-            deps_graph, project_reference = data
+            deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -485,10 +484,9 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
-                self._outputer.info(deps_graph, only, args.package_filter, args.paths,
-                                    project_reference)
+                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method. e.g., Downloads and unzip the package
@@ -723,7 +721,8 @@ class Command(object):
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
-                            help="Remove only outdated from recipe packages")
+                            help="Remove only outdated from recipe packages. " \
+                                 "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Select package to remove specifying the package ID")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
@@ -742,6 +741,9 @@ class Command(object):
 
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+
+        if args.outdated and not args.pattern_or_reference:
+            raise ConanException("'--outdated' argument can only be used with a reference")
 
         if args.locks:
             if args.pattern_or_reference:
@@ -855,7 +857,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
-                            help='Show only outdated from recipe packages')
+                            help="Show only outdated from recipe packages. " \
+                                 "This flag can only be used with a reference")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help="Remote to search in. '-r all' searches all remotes")
@@ -894,10 +897,12 @@ class Command(object):
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], reference, args.query,
-                                                     args.table)
+                                                     args.table, outdated=args.outdated)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
+                elif args.outdated:
+                    raise ConanException("'--outdated' argument can only be used with a reference")
 
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 

@@ -68,7 +68,6 @@ def _file_document(name, path):
     return {"name": name, "path": path, "md5": md5sum(path), "sha1": sha1sum(path)}
 
 
-
 def log_recipe_upload(conan_reference, duration, files_uploaded, remote_name):
     assert(isinstance(conan_reference, ConanFileReference))
     files_uploaded = files_uploaded or {}

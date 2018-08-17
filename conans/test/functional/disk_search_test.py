@@ -29,7 +29,7 @@ class SearchTest(unittest.TestCase):
             info = ConanInfo().loads("[settings]\n[options]")
             save(os.path.join(artif1, CONANINFO), info.dumps())
 
-        packages = search_packages(self.paths, conan_ref1, "")
+        packages = search_packages(self.paths, conan_ref1, "", None)
         all_artif = [_artif for _artif in sorted(packages)]
         self.assertEqual(all_artif, artifacts)
 

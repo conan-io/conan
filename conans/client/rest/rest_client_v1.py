@@ -209,6 +209,9 @@ class RestV1Methods(RestCommonMethods):
         the_files: dict with relative_path: content
         """
         self.check_credentials()
+        # In case the recipe comes from a revisioned remote we clean the revision
+        # because current remote doesn't support it
+        conan_reference = conan_reference.copy_without_revision()
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
@@ -220,7 +223,7 @@ class RestV1Methods(RestCommonMethods):
             deleted.remove(ignore_deleted_file)
 
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False, conan_reference.copy_without_revision()
+            return False, conan_reference
 
         if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
@@ -239,8 +242,7 @@ class RestV1Methods(RestCommonMethods):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return (files_to_upload or deleted), conan_reference.copy_without_revision()
-
+        return (files_to_upload or deleted), conan_reference
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """

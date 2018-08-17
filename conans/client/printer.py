@@ -1,12 +1,12 @@
+import fnmatch
+
 from collections import OrderedDict
 
 from conans.paths import SimplePaths
-
 from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
-import fnmatch
 
 
 class Printer(object):
@@ -43,7 +43,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, project_reference, _info, registry, node_times=None, path_resolver=None, package_filter=None,
+    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None, package_filter=None,
                    show_paths=False):
         """ Print the dependency information for a conan file
 
@@ -73,10 +73,9 @@ class Printer(object):
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference
-                if project_reference is None:
+                if conan.output is None:  # Identification of "virtual" node
                     continue
-                else:
-                    ref = project_reference
+                ref = str(conan)
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 
@@ -133,7 +132,7 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
-                    ref = d.conan_ref if d.conan_ref else project_reference
+                    ref = d.conan_ref if d.conan_ref else str(d.conanfile)
                     self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):
@@ -173,7 +172,8 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     self._out.writeln(conan_item["recipe"]["id"])
 
-    def print_search_packages(self, search_info, reference, packages_query):
+    def print_search_packages(self, search_info, reference, packages_query,
+                              outdated=False):
         assert(isinstance(reference, ConanFileReference))
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         for remote_info in search_info:
@@ -182,11 +182,11 @@ class Printer(object):
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = ("There are no packages for reference '%s' matching the query '%s'" %
-                                (str(reference), packages_query))
+                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" % \
+                                ("outdated " if outdated else "", str(reference), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no packages for reference '%s', but package recipe found." % \
-                            str(reference)
+                    warn_msg = "There are no %spackages for reference '%s', but package recipe found." % \
+                            ("outdated " if outdated else "", str(reference))
                 self._out.info(warn_msg)
                 continue
 

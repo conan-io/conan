@@ -20,8 +20,8 @@ class ConanControllerV2(Controller):
         def get_package_snapshot(name, version, username, channel, package_id, auth_user,
                                  revision=None, p_revision=None):
 
-            reference = ConanFileReference(name, version, username, channel, revision)
-            package_reference = PackageReference(reference, package_id, p_revision)
+            package_reference = get_package_ref(name, version, username, channel, package_id,
+                                                revision, p_revision)
             snapshot = conan_service.get_package_snapshot(package_reference, auth_user)
             return snapshot
 
@@ -30,8 +30,8 @@ class ConanControllerV2(Controller):
         @app.route(r.package_revision_file, method=["GET"])
         def get_package_file(name, version, username, channel, package_id, the_path, auth_user,
                              revision=None, p_revision=None):
-            reference = ConanFileReference(name, version, username, channel, revision)
-            package_reference = PackageReference(reference, package_id, p_revision)
+            package_reference = get_package_ref(name, version, username, channel, package_id,
+                                                revision, p_revision)
             file_generator = conan_service.get_package_file(package_reference, the_path, auth_user)
             return file_generator
 
@@ -41,8 +41,8 @@ class ConanControllerV2(Controller):
 
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Non checksum storage")
-            reference = ConanFileReference(name, version, username, channel, revision)
-            package_reference = PackageReference(reference, package_id, p_revision)
+            package_reference = get_package_ref(name, version, username, channel, package_id,
+                                                revision, p_revision)
             conan_service.upload_package_file(request.body, request.headers, package_reference,
                                               the_path, auth_user)
 
@@ -69,3 +69,9 @@ class ConanControllerV2(Controller):
             reference = ConanFileReference(name, version, username, channel, revision)
             conan_service.upload_recipe_file(request.body, request.headers, reference, the_path,
                                              auth_user)
+
+
+def get_package_ref(name, version, username, channel, package_id, revision, p_revision):
+    reference = ConanFileReference(name, version, username, channel, revision)
+    package_id = "%s#%s" % (package_id, p_revision) if p_revision else package_id
+    return PackageReference(reference, package_id)

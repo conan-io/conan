@@ -267,8 +267,7 @@ class ClientCache(SimplePaths):
         self._no_lock = None
 
     def recipe_revision(self, conan_reference):
-        conanfile_path = os.path.join(self.export(conan_reference), CONANFILE)
-        conanfile = load_conanfile_class(conanfile_path)
+        conanfile = load_conanfile_class(self.conanfile(conan_reference))
         try:
             scm_data = SCMData(conanfile)
         except ConanException:
