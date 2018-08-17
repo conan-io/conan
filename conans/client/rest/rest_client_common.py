@@ -1,7 +1,6 @@
 import json
 import time
 
-import os
 from requests.auth import AuthBase, HTTPBasicAuth
 from six.moves.urllib.parse import urlencode
 
@@ -212,8 +211,7 @@ class RestCommonMethods(object):
         """ Remove recipe files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = self._recipe_url(conan_reference)
-        url = "/%s/remove_files" % url
+        url = self._recipe_url(conan_reference) + "/remove_files"
         return self._post_json(url, payload)
 
     @handle_return_deserializer()

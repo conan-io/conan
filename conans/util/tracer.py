@@ -69,7 +69,6 @@ def _file_document(name, path):
 
 
 def log_recipe_upload(conan_reference, duration, files_uploaded, remote_name):
-    assert(isinstance(conan_reference, ConanFileReference))
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
     _append_action("UPLOADED_RECIPE", {"_id": str(conan_reference),

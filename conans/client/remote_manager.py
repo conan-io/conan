@@ -348,6 +348,16 @@ def compress_package_files(files, symlinks, dest_folder, output):
             CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
+def check_compressed_files(tgz_name, files):
+    bare_name = os.path.splitext(tgz_name)[0]
+    for f in files:
+        if f == tgz_name:
+            continue
+        if bare_name == os.path.splitext(f)[0]:
+            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
+                                 "Please upgrade conan client." % f)
+
+
 def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
