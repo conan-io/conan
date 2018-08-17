@@ -191,11 +191,14 @@ class OptionsValues(object):
             self._package_values = PackageOptionValues()
 
     def descope_options(self, name):
+        print("descope_options(): INIT", self._package_values.fields)
         package_values = self._reqs_options.pop(name, None)
         if package_values:
             self._package_values.update(package_values)
+        print("descope_options(): FINISH", self._package_values.fields)
 
     def clear_unscoped_options(self):
+        print("clear_unscoped_options()", self._package_values.fields)
         self._package_values.clear()
 
     def __getitem__(self, item):
@@ -581,9 +584,14 @@ class Options(object):
                 self._package_options.set_local(user_values._package_values)
             else:
                 self._package_options.values = user_values._package_values
+            print("initialize_upstream():", user_values._reqs_options.items())
             for package_name, package_values in user_values._reqs_options.items():
+                print("package name:", package_name)
+                print("package_values:", package_values.fields)
                 pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
                 pkg_values.update(package_values)
+                print("pkg_values:", pkg_values.fields)
+            print("Package options", self._package_options.items())
 
     def validate(self):
         return self._package_options.validate()
