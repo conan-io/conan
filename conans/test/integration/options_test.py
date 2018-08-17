@@ -65,7 +65,7 @@ zlib/0.1@lasote/testing
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertNotIn("zlib:shared=True", conaninfo)
 
-    def asterisc_operator_configure_test(self):
+    def general_scope_options_test(self):
         client = TestClient()
         conanfile_libA = """
 from conans import ConanFile
@@ -99,3 +99,11 @@ class LibB(ConanFile):
         client.run("info conanfile_libb.py -o *:shared=True --graph graph.html")
         self.assertNotIn("PROJECT: shared=False", client.out)
         self.assertIn("PROJECT: shared=True", client.out)
+        self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+        client.save({
+            "conanfile_libb.py":
+                conanfile_libB.replace("        self.options[\"*\"].shared = self.options.shared", "")})
+        client.run("info conanfile_libb.py -o *:shared=True --graph graph.html")
+        self.assertNotIn("PROJECT: shared=False", client.out)
+        self.assertIn("PROJECT: shared=True", client.out)
+        self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)

@@ -191,14 +191,11 @@ class OptionsValues(object):
             self._package_values = PackageOptionValues()
 
     def descope_options(self, name):
-        print("descope_options(): INIT", self._package_values.fields)
         package_values = self._reqs_options.pop(name, None)
         if package_values:
             self._package_values.update(package_values)
-        print("descope_options(): FINISH", self._package_values.fields)
 
     def clear_unscoped_options(self):
-        print("clear_unscoped_options()", self._package_values.fields)
         self._package_values.clear()
 
     def __getitem__(self, item):
