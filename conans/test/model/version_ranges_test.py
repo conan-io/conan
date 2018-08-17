@@ -242,9 +242,9 @@ class ChatConan(ConanFile):
         chat = _get_nodes(deps_graph, "Chat")[0]
         edges = {Edge(hello, say), Edge(chat, hello)}
         if override is not None:
-            self.assertIn("override", self.output)
+            self.assertIn("overridden", self.output)
         else:
-            self.assertNotIn("override", self.output)
+            self.assertNotIn("overridden", self.output)
         if override is False:
             edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
 

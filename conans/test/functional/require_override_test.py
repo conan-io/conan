@@ -75,5 +75,5 @@ class RequireOverrideTest(unittest.TestCase):
                                                       "libC/1.0@user/channel",
                                                       ("libA/1.0@user/channel", "override")])
             self.client.run("create . user/channel")
-            self.assertIn("libA/2.0@user/channel overriden by project/1.0@user/channel",
+            self.assertIn("libA/2.0@user/channel overridden by project/1.0@user/channel",
                           self.client.out)
