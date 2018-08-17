@@ -61,8 +61,8 @@ class RemoteManager(object):
         if skip_upload:
             return None
 
-        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry, retry_wait,
-                                         ignore_deleted_file, no_overwrite)
+        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
+                                         retry_wait, ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
         log_recipe_upload(new_ref, duration, the_files, remote.name)
         if ret:
@@ -106,6 +106,7 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
+
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'" % (package_reference,
@@ -319,6 +320,16 @@ def compress_package_files(files, symlinks, dest_folder, output):
             CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
+def check_compressed_files(tgz_name, files):
+    bare_name = os.path.splitext(tgz_name)[0]
+    for f in files:
+        if f == tgz_name:
+            continue
+        if bare_name == os.path.splitext(f)[0]:
+            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
+                                 "Please upgrade conan client." % f)
+
+
 def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
@@ -354,14 +365,6 @@ def compress_files(files, symlinks, name, dest_dir):
     log_compressed_files(files, duration, tgz_path)
 
     return tgz_path
-
-
-def check_compressed_files(tgz_name, files):
-    bare_name = os.path.splitext(tgz_name)[0]
-    for f in files:
-        if bare_name == os.path.splitext(f)[0] and f != tgz_name:
-            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
-                                 "Please upgrade conan client." % f)
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name):

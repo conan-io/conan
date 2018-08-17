@@ -817,7 +817,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
-        http_server = StoppableThreadBottle(port=8267)
+        http_server = StoppableThreadBottle()
 
         with tools.chdir(tools.mkdir_tmp()):
             with open("manual.html", "w") as fmanual:

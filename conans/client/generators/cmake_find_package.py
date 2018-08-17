@@ -27,6 +27,7 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST}})
     if(CONAN_FOUND_LIBRARY)
         list(APPEND {name}_LIBRARIES ${{CONAN_FOUND_LIBRARY}})
         if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
+            # Create a micro-target for each lib/a found
             set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}})
             if(NOT TARGET ${{_LIB_NAME}})
                 # Create a micro-target for each lib/a found
