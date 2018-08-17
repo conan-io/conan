@@ -276,7 +276,9 @@ class RestV1Methods(RestCommonMethods):
             self._output.writeln("")
             self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
-            self._remove_package_files(package_reference, deleted)
+            raise Exception("This shouldn't be happening, deleted files "
+                            "in local package present in remote: %s.\n Please, report it at "
+                            "https://github.com/conan-io/conan/issues " % str(deleted))
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
         return files_to_upload or deleted
