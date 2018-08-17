@@ -55,19 +55,10 @@ class ConanFileLoader(object):
 
             print("User options 1:", self._user_options)
             if consumer:
-                # Apply "*" scoped options to result.name scope
-                try:
-                    self._user_options[result.name] = self._user_options["*"]
-                except:
-                    pass
+                self._user_options.descope_options("*")
                 self._user_options.descope_options(result.name)
-                print("User options 2:", self._user_options)
-                print("Result options 1:", result.options.values)
                 result.options.initialize_upstream(self._user_options, local=local)
-                print("Result options 2:", result.options.values)
-                print("User options 3:", self._user_options)
                 self._user_options.clear_unscoped_options()
-                print("User options 4:", self._user_options)
             else:
                 result.in_local_cache = True
 

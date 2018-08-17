@@ -486,9 +486,8 @@ class PackageOptions(object):
 
 
 class Options(object):
-    """ all options of a package, both its own options and the upstream
-    ones.
-    Owned by conanfile
+    """ All options of a package, both its own options and the upstream ones.
+    Owned by ConanFile.
     """
     def __init__(self, options):
         assert isinstance(options, PackageOptions)
@@ -584,14 +583,9 @@ class Options(object):
                 self._package_options.set_local(user_values._package_values)
             else:
                 self._package_options.values = user_values._package_values
-            print("initialize_upstream():", user_values._reqs_options.items())
             for package_name, package_values in user_values._reqs_options.items():
-                print("package name:", package_name)
-                print("package_values:", package_values.fields)
                 pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
                 pkg_values.update(package_values)
-                print("pkg_values:", pkg_values.fields)
-            print("Package options", self._package_options.items())
 
     def validate(self):
         return self._package_options.validate()
