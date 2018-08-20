@@ -19,6 +19,7 @@ from conans.util.files import save, rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
+from conans.model.values import Values
 
 
 class ConanManager(object):
@@ -163,6 +164,9 @@ class ConanManager(object):
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
             if not isinstance(reference, ConanFileReference):
+                # FIXME: This is a hack, for https://github.com/conan-io/conan/issues/3367, the full settings are
+                # required at "conan export-pkg", but only the current consumer settings are stored in full_settings
+                conanfile.info.full_settings = Values.from_list(profile.settings.items())
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)

@@ -12,6 +12,34 @@ from parameterized import parameterized
 
 class ExportPkgTest(unittest.TestCase):
 
+    def test_transitive_without_settings(self):
+        # https://github.com/conan-io/conan/issues/3367
+        conanfile = """from conans import ConanFile
+class PkgC(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgC/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgB(ConanFile):
+    settings = "arch"
+    requires = "PkgC/0.1@user/testing"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgB/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgA(ConanFile):
+    requires = "PkgB/0.1@user/testing"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("install . -if=build")
+        client.run("build . -bf=build")
+        client.run("export-pkg . PkgA/0.1@user/testing -bf=build")
+        self.assertIn("PkgA/0.1@user/testing: Package "
+                      "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",
+                      client.out)
+
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
         conanfile = """from conans import ConanFile
