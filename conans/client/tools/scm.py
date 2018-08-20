@@ -96,7 +96,6 @@ class Git(object):
             tmp = grep_stdout.splitlines()
         except CalledProcessError:
             tmp = []
-        tmp.append(".git")
         return tmp
 
     def get_remote_url(self, remote_name=None):
