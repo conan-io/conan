@@ -50,7 +50,7 @@ class DepsGraphBuilder(object):
 
         # After resolving ranges,
         for req in conanfile.requires.values():
-            alias = aliased.get(req.conan_reference, None)
+            alias = aliased.get(req.conan_reference)
             if alias:
                 req.conan_reference = alias
 
