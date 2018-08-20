@@ -18,6 +18,7 @@ from conans.client.profile_loader import read_conaninfo_profile
 from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
+import time
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -109,10 +110,12 @@ class GraphManager(object):
                 conanfile = loader.load_conan_txt(reference, output)
 
         build_mode = BuildMode(build_mode, self._output)
+        t0 = time.time()
         deps_graph = self._load_graph(conanfile, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
                                       loader=loader, recorder=recorder, workspace=workspace)
+        print "LOAD GRAPH ", time.time() - t0
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 

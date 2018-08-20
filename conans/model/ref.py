@@ -60,6 +60,15 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
 
+    def serialize(self):
+        return repr(self)
+
+    @staticmethod
+    def deserialize(data):
+        if data is None:
+            return None
+        return ConanFileReference.loads(data)
+
     @staticmethod
     def loads(text):
         """ Parses a text string to generate a ConanFileReference object

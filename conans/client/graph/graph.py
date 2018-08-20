@@ -1,7 +1,9 @@
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
 from collections import OrderedDict
+from conans.model.conan_file import ConanFile
+from conans.client.remote_registry import Remote
 
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -33,6 +35,29 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+
+    def serialize(self):
+        result = {}
+        result["conan_ref"] = self.conan_ref.serialize() if self.conan_ref else None
+        result["conanfile"] = self.conanfile.serialize()
+        result["binary"] = self.binary
+        result["recipe"] = self.recipe
+        result["remote"] = self.remote.serialize() if self.remote else None
+        result["binary_remote"] = self.binary_remote.serialize() if self.binary_remote else None
+        result["build_require"] = self.build_require
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        conan_ref = ConanFileReference.deserialize(data["conan_ref"])
+        conanfile = ConanFile.deserialize(data["conanfile"])
+        result = Node(conan_ref, conanfile)
+        result.binary = data["binary"]
+        result.recipe = data["recipe"]
+        result.remote = Remote.deserialize(data["remote"])
+        result.binary_remote = Remote.deserialize(data["binary_remote"])
+        result.build_require = data["build_require"]
+        return result
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)
@@ -120,11 +145,35 @@ class Edge(object):
     def __hash__(self):
         return hash((self.src, self.dst))
 
+    def serialize(self):
+        result = {}
+        result["src"] = id(self.src)
+        result["dst"] = id(self.dst)
+        result["private"] = self.private
+        return result
+
 
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
         self.root = None
+
+    def serialize(self):
+        result = {}
+        result["nodes"] = {id(n): n.serialize() for n in self.nodes}
+        result["edges"] = [e.serialize() for n in self.nodes for e in n.dependencies]
+        result["root"] = id(self.root)
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = DepsGraph()
+        nodes_dict = {id_: Node.deserialize(n) for id_, n in data["nodes"].items()}
+        result.nodes = set(nodes_dict.values())
+        result.root = nodes_dict[data["root"]]
+        for edge in data["edges"]:
+            result.add_edge(nodes_dict[edge["src"]], nodes_dict[edge["dst"]], edge["private"])
+        return result
 
     def add_graph(self, node, graph, build_require=False):
         for n in graph.nodes:
@@ -275,7 +324,7 @@ class DepsGraph(object):
             if new_level:
                 result.append(new_level)
         return result
-    
+
     def nodes_to_build(self):
         ret = []
         for level in self.by_levels():

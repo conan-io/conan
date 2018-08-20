@@ -20,6 +20,8 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._workspace = workspace
         self._recorder = recorder
+        self._load_time = 0
+        self._num_loads = 0
 
     def load_graph(self, conanfile, check_updates, update, remote_name):
         check_updates = check_updates or update
@@ -216,8 +218,12 @@ class DepsGraphBuilder(object):
             conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
+        t0 = time.time()
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
+        self._load_time += (time.time() - t0)
+        self._num_loads += 1
+        print "TOTAL RECIPE LOAD TIME ", self._num_loads, " = ", self._load_time
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
