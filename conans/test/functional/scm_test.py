@@ -1,6 +1,5 @@
 import json
 import os
-import platform
 import unittest
 from collections import namedtuple
 
@@ -197,8 +196,6 @@ other_folder/excluded_subfolder
         self.assertFalse(os.path.exists(os.path.join(bf, "my_excluded_folder")))
         self.assertTrue(os.path.exists(os.path.join(bf, "other_folder", "valid_file")))
         self.assertFalse(os.path.exists(os.path.join(bf, "other_folder", "excluded_subfolder")))
-        self.assertFalse(os.path.exists(os.path.join(bf, "other_folder", "excluded_subfolder",
-                                                     "some_file")))
 
     def test_local_source(self):
         curdir = self.client.current_folder
