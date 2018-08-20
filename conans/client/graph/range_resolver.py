@@ -74,10 +74,11 @@ class RangeResolver(object):
 
     def _resolve_remote(self, search_ref, version_range, remote_name):
         # We should use ignorecase=False, we want the exact case!
-        remote_found = self._cached_remote_found.get(search_ref)
+        remote_found = self._cached_remote_found.setdefault(remote_name, {}).get(search_ref)
         if remote_found is None:
             remote_found = self._remote_search.search_remotes(search_ref, remote_name)
-            self._cached_remote_found[search_ref] = remote_found
+            # Empty list, just in case it returns None
+            self._cached_remote_found[search_ref] = remote_found or []
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 
