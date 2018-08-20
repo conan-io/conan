@@ -175,7 +175,7 @@ class ConanLib(ConanFile):
 *.pyc
 my_excluded_folder
 other_folder/excluded_subfolder
-""".replace("/", "\\" if platform.system() == "Windows" else "/"),
+""",
                                               "myfile.txt": "My file!",
                                               "my_excluded_folder/some_file": "hey Apple!",
                                               "other_folder/excluded_subfolder/some_file": "hey Apple!",
