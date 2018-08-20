@@ -89,12 +89,12 @@ class Git(object):
     def excluded_files(self):
         try:
 
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el))
+            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in os.walk(self.folder)
                           for el in fs + dirpaths]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes('\n'.join(file_paths))
+            paths = to_file_bytes("\n".join(file_paths))
             grep_stdout = decode_text(p.communicate(input=paths)[0])
             tmp = grep_stdout.splitlines()
         except CalledProcessError:
