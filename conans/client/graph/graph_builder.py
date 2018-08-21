@@ -13,12 +13,13 @@ from conans.model.workspace import WORKSPACE_FILE
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, proxy, output, loader, resolver, workspace):
+    def __init__(self, proxy, output, loader, resolver, workspace, recorder):
         self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
         self._workspace = workspace
+        self._recorder = recorder
 
     def load_graph(self, conanfile, check_updates, update, remote_name):
         check_updates = check_updates or update
@@ -49,7 +50,7 @@ class DepsGraphBuilder(object):
 
         # After resolving ranges,
         for req in conanfile.requires.values():
-            alias = aliased.get(req.conan_reference, None)
+            alias = aliased.get(req.conan_reference)
             if alias:
                 req.conan_reference = alias
 
@@ -139,7 +140,7 @@ class DepsGraphBuilder(object):
 
     def _config_node(self, node, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
-        requirement values, cause they can be overriden by downstream requires
+        requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
@@ -206,7 +207,7 @@ class DepsGraphBuilder(object):
         else:
             try:
                 result = self._proxy.get_recipe(requirement.conan_reference,
-                                                check_updates, update, remote_name)
+                                                check_updates, update, remote_name, self._recorder)
             except ConanException as e:
                 base_ref = str(current_node.conan_ref or "PROJECT")
                 self._output.error("Failed requirement '%s' from '%s'" % (requirement.conan_reference,

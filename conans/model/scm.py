@@ -65,10 +65,10 @@ class SCM(object):
         return self.repo.excluded_files()
 
     def clone(self):
-        return self.repo.clone(self._data.url, submodule=self._data.submodule)
+        return self.repo.clone(self._data.url)
 
     def checkout(self):
-        return self.repo.checkout(self._data.revision)
+        return self.repo.checkout(self._data.revision, submodule=self._data.submodule)
 
     def get_remote_url(self):
         return self.repo.get_remote_url()
