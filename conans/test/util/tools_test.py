@@ -656,6 +656,7 @@ class HelloConan(ConanFile):
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)
