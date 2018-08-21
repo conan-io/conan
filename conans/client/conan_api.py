@@ -48,7 +48,6 @@ from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
 from conans.client.graph.graph_manager import GraphManager
-from conans.client.graph.graph import BINARY_BUILD
 
 
 default_manifest_folder = '.conan_manifests'
