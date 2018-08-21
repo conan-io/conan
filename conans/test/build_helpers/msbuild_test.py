@@ -43,9 +43,8 @@ class MSBuildTest(unittest.TestCase):
         self.assertNotIn("<RuntimeLibrary>", template)
 
     @attr('slow')
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def build_vs_project_test(self):
-        if platform.system() != "Windows":
-            return
         conan_build_vs = """
 from conans import ConanFile, MSBuild
 
@@ -120,10 +119,9 @@ class HelloConan(ConanFile):
         command = msbuild.get_command("project_file.sln", properties={"MyProp1": "MyValue1", "MyProp2": "MyValue2"})
         self.assertIn(' /p:MyProp1="MyValue1" /p:MyProp2="MyValue2"', command)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def reuse_msbuild_object_test(self):
         # https://github.com/conan-io/conan/issues/2865
-        if platform.system() != "Windows":
-            return
         conan_build_vs = """
 from conans import ConanFile, MSBuild
 
