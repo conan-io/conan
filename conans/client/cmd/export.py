@@ -11,7 +11,6 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
 from conans.client.source import get_scm_data
 from conans.errors import ConanException
-from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
@@ -73,12 +72,10 @@ def _load_export_conanfile(conanfile_path, output, name, version):
             output.warn("Conanfile doesn't have '%s'.\n"
                         "It is recommended to add it as attribute" % field)
 
-    try:
-        # Exports is the only object field, we need to do this, because conan export needs it
-        conanfile.exports = create_exports(conanfile)
-        conanfile.exports_sources = create_exports_sources(conanfile)
-    except Exception as e:  # re-raise with file name
-        raise ConanException("%s: %s" % (conanfile_path, str(e)))
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+    if isinstance(conanfile.exports_sources, str):
+        conanfile.exports_sources = (conanfile.exports_sources, )
 
     # check name and version were specified
     if not conanfile.name:

@@ -46,14 +46,14 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, runner):
+    def __init__(self, output, client_cache, registry, remote_manager, loader):
         self._proxy = ConanProxy(client_cache, output, remote_manager, registry=registry)
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
-        self._runner = runner
+        self._loader = loader
 
     def load_consumer_conanfile(self, conanfile_path, info_folder, output,
                                 deps_info_required=False):
@@ -64,11 +64,12 @@ class GraphManager(object):
         cache_settings.values = profile.settings_values
         # We are recovering state from captured profile from conaninfo, remove not defined
         cache_settings.remove_undefined()
-        loader = ConanFileLoader(self._runner, cache_settings, profile, None)
+        self._loader.define_settings_profile(cache_settings, profile, None)
         if conanfile_path.endswith(".py"):
-            conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=True)
+            conanfile = self._loader.load_conan(conanfile_path, output, consumer=True, local=True)
+            conanfile.develop = True
         else:
-            conanfile = loader.load_conan_txt(conanfile_path, output)
+            conanfile = self._loader.load_conan_txt(conanfile_path, output)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -93,26 +94,27 @@ class GraphManager(object):
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
         settings_preprocessor.preprocess(cache_settings)
-        loader = ConanFileLoader(self._runner, cache_settings, profile, create_reference)
+        self._loader.define_settings_profile(cache_settings, profile, create_reference)
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = loader.load_virtual(reference)
+            conanfile = self._loader.load_virtual(reference)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
-            conanfile = loader.load_virtual([reference])
+            conanfile = self._loader.load_virtual([reference])
         else:
             output = ScopedOutput("PROJECT", self._output)
             if reference.endswith(".py"):
-                conanfile = loader.load_conan(reference, output, consumer=True)
+                conanfile = self._loader.load_conan(reference, output, consumer=True)
+                conanfile.develop = True
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
-                conanfile = loader.load_conan_txt(reference, output)
+                conanfile = self._loader.load_conan_txt(reference, output)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(conanfile, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
-                                      loader=loader, recorder=recorder, workspace=workspace)
+                                      recorder=recorder, workspace=workspace)
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -127,7 +129,7 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
-                                profile_build_requires, loader, recorder, workspace):
+                                profile_build_requires, recorder, workspace):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
@@ -151,26 +153,26 @@ class GraphManager(object):
 
             if package_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = loader.load_virtual(package_build_requires.values(), scope_options=False,
-                                              build_requires_options=node.conanfile.build_requires_options)
+                virtual = self._loader.load_virtual(package_build_requires.values(), scope_options=False,
+                                                    build_requires_options=node.conanfile.build_requires_options)
                 build_requires_package_graph = self._load_graph(virtual, check_updates, update, build_mode,
-                                                                remote_name, profile_build_requires, loader,
+                                                                remote_name, profile_build_requires,
                                                                 recorder, workspace)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = loader.load_virtual(new_profile_build_requires.values(), scope_options=False,
-                                              build_requires_options=node.conanfile.build_requires_options)
+                virtual = self._loader.load_virtual(new_profile_build_requires.values(), scope_options=False,
+                                                    build_requires_options=node.conanfile.build_requires_options)
 
                 build_requires_profile_graph = self._load_graph(virtual, check_updates, update, build_mode,
                                                                 remote_name, new_profile_build_requires,
-                                                                loader, recorder, workspace)
+                                                                recorder, workspace)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def _load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, loader, recorder, workspace):
-        builder = DepsGraphBuilder(self._proxy, self._output, loader, self._resolver, workspace, recorder)
+                    profile_build_requires, recorder, workspace):
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, workspace, recorder)
         graph = builder.load_graph(conanfile, check_updates, update, remote_name)
         if build_mode is None:
             return graph
@@ -179,7 +181,7 @@ class GraphManager(object):
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires, loader, recorder, workspace)
+                                     profile_build_requires, recorder, workspace)
         return graph
 
 

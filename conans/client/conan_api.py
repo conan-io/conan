@@ -48,7 +48,7 @@ from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
 from conans.client.graph.graph_manager import GraphManager
-from conans.client.graph.graph import BINARY_BUILD
+from conans.client.loader import ConanFileLoader
 
 
 default_manifest_folder = '.conan_manifests'
@@ -217,8 +217,9 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
+        self._loader = ConanFileLoader(self._runner)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
-                                           self._remote_manager, runner=self._runner)
+                                           self._remote_manager, self._loader)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
