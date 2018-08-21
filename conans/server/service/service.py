@@ -192,10 +192,6 @@ class ConanService(object):
         self._authorizer.check_delete_conan(self._auth_user, reference)
         self._server_store.remove_conanfile_files(reference, files)
 
-    def remove_package_files(self, package_reference, files):
-        self._authorizer.check_delete_package(self._auth_user, package_reference)
-        self._server_store.remove_package_files(package_reference, files)
-
     # Package methods
     def get_package_snapshot(self, package_reference):
         """Gets a list with filepaths and the urls and md5:

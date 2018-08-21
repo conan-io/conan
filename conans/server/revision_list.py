@@ -8,16 +8,16 @@ from conans.errors import ConanException
 class RevisionList(object):
 
     def __init__(self):
-        self._data = {"revisions": list()}
+        self._data = []
 
     @staticmethod
     def loads(contents):
         ret = RevisionList()
-        ret._data = json.loads(contents)
+        ret._data = json.loads(contents)["revisions"]
         return ret
 
     def dumps(self):
-        return json.dumps(self._data)
+        return json.dumps({"revisions": self._data})
 
     def add_revision(self, revision_id):
         if self.latest_revision() == revision_id:
@@ -26,21 +26,21 @@ class RevisionList(object):
         if self._find_revision_index(revision_id) is not None:
             raise ConanException("Revision already exists: %s" % revision_id)
         now = time.time()
-        self._data["revisions"].append({"id": revision_id, "time": now})
+        self._data.append({"id": revision_id, "time": now})
 
     def latest_revision(self):
-        if not self._data["revisions"]:
+        if not self._data:
             return None
-        return self._data["revisions"][-1]["id"]
+        return self._data[-1]["id"]
 
     def remove_revision(self, revision_id):
         index = self._find_revision_index(revision_id)
         if index is None:
             return
-        self._data["revisions"].pop(index)
+        self._data.pop(index)
 
     def _find_revision_index(self, revision_id):
-        for i, rev in enumerate(self._data["revisions"]):
+        for i, rev in enumerate(self._data):
             if rev["id"] == revision_id:
                 return i
         return None
