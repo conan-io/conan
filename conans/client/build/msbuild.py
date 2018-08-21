@@ -60,7 +60,7 @@ class MSBuild(object):
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
 
-        command.append("msbuild %s /p:Configuration=%s" % (project_file, build_type))
+        command.append('msbuild "%s" /p:Configuration="%s"' % (project_file, build_type))
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
                      'armv7': 'ARM',
@@ -96,7 +96,7 @@ class MSBuild(object):
             command.append("/target:%s" % ";".join(targets))
 
         if toolset:
-            command.append("/p:PlatformToolset=%s" % toolset)
+            command.append('/p:PlatformToolset="%s"' % toolset)
 
         if props_file_path:
             command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
