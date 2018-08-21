@@ -50,7 +50,7 @@ class DepsGraphBuilder(object):
 
         # After resolving ranges,
         for req in conanfile.requires.values():
-            alias = aliased.get(req.conan_reference, None)
+            alias = aliased.get(req.conan_reference)
             if alias:
                 req.conan_reference = alias
 
@@ -140,7 +140,7 @@ class DepsGraphBuilder(object):
 
     def _config_node(self, node, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
-        requirement values, cause they can be overriden by downstream requires
+        requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
         """
         try:

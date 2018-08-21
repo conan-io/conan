@@ -439,7 +439,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content2)
         deps_graph = self.root(chat_content)
 
-        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overriden by "
+        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overridden by "
                       "your conanfile to Say/0.2@user/testing", self.output)
         self.assertNotIn("Conflict", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -1514,7 +1514,7 @@ class LibDConan(ConanFile):
 
         with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
             self.root(self.consumer_content)
-        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overriden by "
+        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
