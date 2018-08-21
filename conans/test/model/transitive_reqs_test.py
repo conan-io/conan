@@ -101,7 +101,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None)
+        self.loader = ConanFileLoader(None, None, None)
         self.loader.define_settings_profile(Settings.loads(""), Profile(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
@@ -1476,7 +1476,7 @@ class ConsumerConan(ConanFile):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None)
+        self.loader = ConanFileLoader(None, None, None)
         self.loader.define_settings_profile(Settings.loads(""), Profile(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
@@ -1603,7 +1603,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings.values = Values.loads(settings)
         profile = Profile()
         profile.options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None)
+        loader = ConanFileLoader(None, None, None)
         loader.define_settings_profile(full_settings, profile, None)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
@@ -1889,7 +1889,7 @@ class ChatConan(ConanFile):
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
-        loader = ConanFileLoader(None)
+        loader = ConanFileLoader(None, None, None)
         loader.define_settings_profile(Settings.loads(""), profile, None)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
