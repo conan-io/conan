@@ -139,25 +139,3 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("create . danimtb/testing")
         self.assertIn("build() completed", client.out)
-
-    def quotes_msbuild_test(self):
-        # https://github.com/conan-io/conan/issues/2865
-        conan_build_vs = """
-from conans import ConanFile, MSBuild
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-    settings = "os", "build_type", "arch", "compiler"
-
-    def build(self):
-        msbuild = MSBuild(self)
-        self.output.info(msbuild.get_command("MyProject.sln", build_type="Release DLL"))
-"""
-        client = TestClient()
-        files = get_vs_project_files()
-        files[CONANFILE] = conan_build_vs
-        client.save(files)
-        client.run("create . danimtb/testing")
-        self.assertIn('msbuild "MyProject.sln" /p:Configuration="Release DLL" /p:Platform="x64" '
-                      '/m:8', client.out)

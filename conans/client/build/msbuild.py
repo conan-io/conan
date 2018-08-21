@@ -49,7 +49,7 @@ class MSBuild(object):
         command = []
 
         if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-            command.append("devenv %s /upgrade &&" % project_file)
+            command.append('devenv "%s" /upgrade &&' % project_file)
         else:
             self._output.info("Skipped sln project upgrade")
 
