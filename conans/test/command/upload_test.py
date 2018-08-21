@@ -167,7 +167,6 @@ class UploadTest(unittest.TestCase):
             self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
 
             export_folder = client.client_cache.package(package_ref)
-            print(export_folder)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))

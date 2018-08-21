@@ -65,12 +65,12 @@ _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildin
                         "(from previous 'conan install'). Defaulted to --build-folder")
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
                      "Use this for testing purposes only")
-_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '{}', "
-                              "'{}'".format(_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
+_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
+                              "'%s'" % (_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
-_QUERY_HELP = ("Packages query: '{}'. The 'pattern_or_reference' parameter has "
-               "to be a reference: {}".format(_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
+_QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
+               "to be a reference: %s" % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
                        " relative path to current directory can also be specified")
 
