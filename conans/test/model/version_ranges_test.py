@@ -1,20 +1,18 @@
-import os
 import unittest
 from collections import namedtuple, Counter
 
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import CONANFILE, SimplePaths
+from conans.paths import SimplePaths
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
 from conans.model.requires import Requirements
-from conans.test.utils.test_files import temp_folder
 from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
 from conans.model.profile import Profile
 from conans.errors import ConanException
-from conans.util.files import save
+from conans.test.model.fake_retriever import Retriever
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -86,29 +84,6 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, None)
         result = satisfying(["2.1.1"], ">2.1.0", output)
         self.assertEqual(result, "2.1.1")
-
-
-class Retriever(object):
-    def __init__(self, loader, output):
-        self.loader = loader
-        self.output = output
-        self.folder = temp_folder()
-
-    def root(self, content):
-        conan_path = os.path.join(self.folder, "root")
-        save(conan_path, content)
-        conanfile = self.loader.load_conan(conan_path, self.output, consumer=True)
-        return conanfile
-
-    def conan(self, conan_ref, content):
-        if isinstance(conan_ref, str):
-            conan_ref = ConanFileReference.loads(conan_ref)
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        save(conan_path, content)
-
-    def get_recipe(self, conan_ref, check_updates, update, remote_name, recorder):  # @UnusedVariables
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None, None, conan_ref
 
 
 hello_content = """
