@@ -111,6 +111,15 @@ class HelloConan(ConanFile):
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
 
+    def custom_properties_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("project_file.sln", properties={"MyProp1": "MyValue1", "MyProp2": "MyValue2"})
+        self.assertIn(' /p:MyProp1="MyValue1" /p:MyProp2="MyValue2"', command)
+
     def reuse_msbuild_object_test(self):
         # https://github.com/conan-io/conan/issues/2865
         if platform.system() != "Windows":
