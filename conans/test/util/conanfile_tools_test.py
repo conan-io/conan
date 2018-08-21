@@ -161,7 +161,8 @@ class Pkg(ConanFile):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Settings(), Profile())
+        loader = ConanFileLoader(None)
+        loader.define_settings_profile(Settings(), Profile(), None)
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)

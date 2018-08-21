@@ -111,7 +111,7 @@ class ConanFile(object):
         # something that can run commands, as os.sytem
         self._runner = runner
         self._user = user
-        self._channel = channel      
+        self._channel = channel
 
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):
