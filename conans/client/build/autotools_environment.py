@@ -7,7 +7,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 format_library_paths, format_defines,
                                                 sysroot_flag, format_include_paths,
                                                 build_type_flags, libcxx_flag, build_type_define,
-                                                libcxx_define, pic_flag, rpath_flags, parallel_compiler_flag)
+                                                libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
@@ -168,8 +168,7 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            parallel_flag = parallel_compiler_flag(self._compiler)
-            cpu_count_option = parallel_flag if "-j" not in str_args else None
+            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)

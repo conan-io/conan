@@ -194,8 +194,6 @@ def format_libraries(libraries, compiler=None):
     return [pattern % library for library in libraries if library]
 
 
-def parallel_compiler_flag(compiler):
+def parallel_compiler_cl_flag():
     cpu_count = tools.cpu_count()
-    if str(compiler) == "Visual Studio":
-        return "/MP%s" % cpu_count
-    return "-j%i" % cpu_count
+    return "/MP%s" % cpu_count

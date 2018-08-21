@@ -46,6 +46,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycflag',
                    '-mycflag2',
                    '-Zi',
+                   '-Ob0',
                    '-Od',
                    '-mycppflag',
                    '-mycppflag2',
