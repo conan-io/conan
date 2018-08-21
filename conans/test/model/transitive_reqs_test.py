@@ -1,45 +1,18 @@
 import unittest
-import os
-
 from collections import namedtuple
 
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import CONANFILE
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
-from conans.util.files import save
 from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
-from conans.test.utils.test_files import temp_folder
 from conans.model.profile import Profile
-
-
-class Retriever(object):
-    def __init__(self, loader, output):
-        self.loader = loader
-        self.output = output
-        self.folder = temp_folder()
-
-    def root(self, content):
-        conan_path = os.path.join(self.folder, "root")
-        save(conan_path, content)
-        conanfile = self.loader.load_conan(conan_path, self.output, consumer=True)
-        return conanfile
-
-    def conan(self, conan_ref, content):
-        if isinstance(conan_ref, str):
-            conan_ref = ConanFileReference.loads(conan_ref)
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        save(conan_path, content)
-
-    def get_recipe(self, conan_ref, check_updates, update, remote_name, recorder):  # @UnusedVariable
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None, None, conan_ref
+from conans.test.model.fake_retriever import Retriever
 
 
 say_content = """
@@ -1685,10 +1658,10 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=1", "os=Linux")
 
     def test_errors(self):
-        with self.assertRaisesRegexp(ConanException, "root: No subclass of ConanFile"):
+        with self.assertRaisesRegexp(ConanException, "root.py: No subclass of ConanFile"):
             self.root("")
 
-        with self.assertRaisesRegexp(ConanException, "root: More than 1 conanfile in the file"):
+        with self.assertRaisesRegexp(ConanException, "root.py: More than 1 conanfile in the file"):
             self.root("""from conans import ConanFile
 class HelloConan(ConanFile):pass
 class ByeConan(ConanFile):pass""")
