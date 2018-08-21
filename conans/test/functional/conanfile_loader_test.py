@@ -1,5 +1,6 @@
 import unittest
-from conans.client.loader import ConanFileTextLoader, ConanFileLoader
+from conans.client.loader import ConanFileTextLoader, ConanFileLoader,\
+    ProcessedProfile
 from conans.errors import ConanException
 from conans.util.files import save
 import os
@@ -18,7 +19,6 @@ class ConanLoaderTest(unittest.TestCase):
 
     def inherit_short_paths_test(self):
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from base_recipe import BasePackage
@@ -34,12 +34,12 @@ class BasePackage(ConanFile):
         conan_file = load_conanfile_class(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
-        result = loader.load_conan(conanfile_path, output=None, consumer=True)
+        result = loader.load_conan(conanfile_path, output=None, consumer=True,
+                                   processed_profile=ProcessedProfile())
         self.assertEqual(result.short_paths, True)
 
     def requires_init_test(self):
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from conans import ConanFile
@@ -50,7 +50,8 @@ class MyTest(ConanFile):
 """
         for requires in ("''", "[]", "()", "None"):
             save(conanfile_path, conanfile.format(requires))
-            result = loader.load_conan(conanfile_path, output=None, consumer=True)
+            result = loader.load_conan(conanfile_path, output=None, consumer=True,
+                                       processed_profile=ProcessedProfile())
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 
@@ -117,8 +118,7 @@ OpenCV2:other_option=Cosa
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
-        ret = loader.load_conan_txt(file_path, None)
+        ret = loader.load_conan_txt(file_path, None, ProcessedProfile())
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
@@ -148,9 +148,8 @@ OpenCV/2.4.104phil/stable
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
         with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
-            loader.load_conan_txt(file_path, None)
+            loader.load_conan_txt(file_path, None, ProcessedProfile())
 
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
@@ -161,9 +160,8 @@ OpenCV/bin/* - ./bin
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
-            loader.load_conan_txt(file_path, None)
+            loader.load_conan_txt(file_path, None, ProcessedProfile())
 
     def load_imports_arguments_test(self):
         file_content = '''
@@ -178,8 +176,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, exc
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
-        ret = loader.load_conan_txt(file_path, None)
+        ret = loader.load_conan_txt(file_path, None, ProcessedProfile())
 
         ret.copy = Mock()
         ret.imports()
@@ -208,21 +205,19 @@ class MyTest(ConanFile):
         profile = Profile()
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings({"os": ["Windows", "Linux"]}), profile, None)
 
-        recipe = loader.load_conan(conanfile_path, None)
+        recipe = loader.load_conan(conanfile_path, None,
+                                   ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
         self.assertEquals(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        loader.define_settings_profile(Settings({"os": ["Windows", "Linux"]}), profile, None)
-
-        recipe = loader.load_conan(conanfile_path, None)
+        recipe = loader.load_conan(conanfile_path, None,
+                                   ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
         self.assertEquals(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        loader.define_settings_profile(Settings({"os": ["Windows", "Linux"]}), profile, None)
-
-        recipe = loader.load_conan(conanfile_path, None)
+        recipe = loader.load_conan(conanfile_path, None,
+                                   ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
         self.assertIsNone(recipe.settings.os.value)

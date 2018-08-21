@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 import shutil
 from conans.paths import CONANINFO
 from conans.client.packager import create_package
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.settings import Settings
 from conans.client.output import ScopedOutput
 from conans.model.profile import Profile
@@ -82,8 +82,7 @@ class ExporterTest(unittest.TestCase):
 
         output = ScopedOutput("", TestBufferConanOutput())
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
-        conanfile = loader.load_conan(conanfile_path, None)
+        conanfile = loader.load_conan(conanfile_path, None, ProcessedProfile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
                        output, copy_info=True)

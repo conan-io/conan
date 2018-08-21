@@ -9,6 +9,23 @@ from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
 from conans.client.output import ScopedOutput
+from conans.model.profile import Profile
+
+
+class ProcessedProfile(object):
+    def __init__(self, settings=None, profile=None, create_reference=None):
+        settings = settings or Settings()
+        profile = profile or Profile()
+        assert isinstance(settings, Settings)
+        # assert package_settings is None or isinstance(package_settings, dict)
+        self._settings = settings
+        self._user_options = profile.options.copy()
+
+        self._package_settings = profile.package_settings_values
+        self._env_values = profile.env_values
+        # Make sure the paths are normalized first, so env_values can be just a copy
+        self._env_values.normalize_paths()
+        self._dev_reference = create_reference
 
 
 class ConanFileLoader(object):
@@ -67,61 +84,50 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def define_settings_profile(self, settings, profile, create_reference):
-        assert isinstance(settings, Settings)
-        # assert package_settings is None or isinstance(package_settings, dict)
-        self._settings = settings
-        self._user_options = profile.options.copy()
-
-        self._package_settings = profile.package_settings_values
-        self._env_values = profile.env_values
-        # Make sure the paths are normalized first, so env_values can be just a copy
-        self._env_values.normalize_paths()
-        self._dev_reference = create_reference
-
-    def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
+    def load_conan(self, conanfile_path, output, processed_profile,
+                   consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
-        if self._dev_reference and self._dev_reference == reference:
+        if processed_profile._dev_reference and processed_profile._dev_reference == reference:
             conanfile.develop = True
         try:
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
-            tmp_settings = self._settings.copy()
-            if self._package_settings and conanfile.name in self._package_settings:
+            tmp_settings = processed_profile._settings.copy()
+            if processed_profile._package_settings and conanfile.name in processed_profile._package_settings:
                 # Update the values, keeping old ones (confusing assign)
-                values_tuple = self._package_settings[conanfile.name]
+                values_tuple = processed_profile._package_settings[conanfile.name]
                 tmp_settings.values = Values.from_list(values_tuple)
 
-            conanfile.initialize(tmp_settings, self._env_values, local)
+            conanfile.initialize(tmp_settings, processed_profile._env_values, local)
 
             if consumer:
-                self._user_options.descope_options(conanfile.name)
-                conanfile.options.initialize_upstream(self._user_options, local=local)
-                self._user_options.clear_unscoped_options()
+                processed_profile._user_options.descope_options(conanfile.name)
+                conanfile.options.initialize_upstream(processed_profile._user_options, local=local)
+                processed_profile._user_options.clear_unscoped_options()
 
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan_txt(self, conan_txt_path, output):
+    def load_conan_txt(self, conan_txt_path, output, processed_profile):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path = os.path.dirname(conan_txt_path)
 
-        conanfile = self._parse_conan_txt(contents, path, output)
+        conanfile = self._parse_conan_txt(contents, path, output, processed_profile)
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, output):
+    def _parse_conan_txt(self, contents, path, output, processed_profile):
         conanfile = ConanFile(output, self._runner)
-        conanfile.initialize(Settings(), self._env_values)
+        conanfile.initialize(Settings(), processed_profile._env_values)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
-        conanfile.settings = self._settings.copy_values()
+        conanfile.settings = processed_profile._settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -140,20 +146,20 @@ class ConanFileLoader(object):
 
         options = OptionsValues.loads(parser.options)
         conanfile.options.values = options
-        conanfile.options.initialize_upstream(self._user_options)
+        conanfile.options.initialize_upstream(processed_profile._user_options)
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        conanfile._env_values.update(self._env_values)
+        conanfile._env_values.update(processed_profile._env_values)
         return conanfile
 
-    def load_virtual(self, references, scope_options=True,
+    def load_virtual(self, references, processed_profile, scope_options=True,
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy())
-        conanfile.initialize(self._settings.copy(), self._env_values)
-        conanfile.settings = self._settings.copy_values()
+        conanfile = ConanFile(None, self._runner, processed_profile._settings.copy())
+        conanfile.initialize(processed_profile._settings.copy(), processed_profile._env_values)
+        conanfile.settings = processed_profile._settings.copy_values()
 
         for reference in references:
             conanfile.requires.add(str(reference))  # Convert to string necessary
@@ -161,11 +167,11 @@ class ConanFileLoader(object):
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
         if scope_options:
             assert len(references) == 1
-            self._user_options.scope_options(references[0].name)
+            processed_profile._user_options.scope_options(references[0].name)
         if build_requires_options:
             conanfile.options.initialize_upstream(build_requires_options)
         else:
-            conanfile.options.initialize_upstream(self._user_options)
+            conanfile.options.initialize_upstream(processed_profile._user_options)
 
         conanfile.generators = []  # remove the default txt generator
 

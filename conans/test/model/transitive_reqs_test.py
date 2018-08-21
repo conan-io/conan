@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
@@ -102,14 +102,15 @@ class ConanRequirementsTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, None, None)
-        self.loader.define_settings_profile(Settings.loads(""), Profile(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver(), None, None)
 
     def root(self, content):
-        root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None)
+        processed_profile = ProcessedProfile()
+        root_conan = self.retriever.root(content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None,
+                                             processed_profile)
         return deps_graph
 
     def test_basic(self):
@@ -1477,7 +1478,6 @@ class ConsumerConan(ConanFile):
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, None, None)
-        self.loader.define_settings_profile(Settings.loads(""), Profile(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver(), None, None)
@@ -1491,8 +1491,9 @@ class ConsumerConan(ConanFile):
         self.retriever.conan(libd_ref, self.libd_content)
 
     def root(self, content):
-        root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None)
+        processed_profile = ProcessedProfile()
+        root_conan = self.retriever.root(content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1604,11 +1605,12 @@ class CoreSettingsTest(unittest.TestCase):
         profile = Profile()
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(full_settings, profile, None)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
-        root_conan = retriever.root(content)
-        deps_graph = builder.load_graph(root_conan, False, False, None)
+        processed_profile = ProcessedProfile(settings=full_settings,
+                                             profile=profile)
+        root_conan = retriever.root(content, processed_profile)
+        deps_graph = builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
 
     def test_basic(self):
@@ -1890,14 +1892,15 @@ class ChatConan(ConanFile):
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings.loads(""), profile, None)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
-        root_conan = retriever.root(chat_content)
-        deps_graph = builder.load_graph(root_conan, False, False, None)
+        processed_profile = ProcessedProfile(profile=profile)
+        root_conan = retriever.root(chat_content, processed_profile)
+        deps_graph = builder.load_graph(root_conan, False, False, None,
+                                        processed_profile=processed_profile)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

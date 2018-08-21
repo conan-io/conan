@@ -1,7 +1,7 @@
 import unittest
 import os
 from conans.util.files import save, load
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans import tools
@@ -162,8 +162,7 @@ class Pkg(ConanFile):
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None, None, None)
-        loader.define_settings_profile(Settings(), Profile(), None)
-        ret = loader.load_conan(file_path, None)
+        ret = loader.load_conan(file_path, None, ProcessedProfile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

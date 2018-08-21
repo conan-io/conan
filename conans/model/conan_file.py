@@ -5,7 +5,7 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
