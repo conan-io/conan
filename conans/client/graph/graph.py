@@ -275,6 +275,15 @@ class DepsGraph(object):
             if new_level:
                 result.append(new_level)
         return result
+    
+    def nodes_to_build(self):
+        ret = []
+        for level in self.by_levels():
+            for node in level:
+                if node.binary == BINARY_BUILD:
+                    if node.conan_ref not in ret:
+                        ret.append(node.conan_ref)
+        return ret
 
     def by_levels(self):
         return self._order_levels(True)

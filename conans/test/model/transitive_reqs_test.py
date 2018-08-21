@@ -1,5 +1,4 @@
 import unittest
-
 from collections import namedtuple
 
 from conans.test.utils.tools import TestBufferConanOutput
@@ -105,7 +104,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None)
+                                        MockRequireResolver(), None, None)
 
     def root(self, content):
         root_conan = self.retriever.root(content)
@@ -439,7 +438,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content2)
         deps_graph = self.root(chat_content)
 
-        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overriden by "
+        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overridden by "
                       "your conanfile to Say/0.2@user/testing", self.output)
         self.assertNotIn("Conflict", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -1479,7 +1478,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None)
+                                        MockRequireResolver(), None, None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1513,7 +1512,7 @@ class LibDConan(ConanFile):
 
         with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
             self.root(self.consumer_content)
-        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overriden by "
+        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
@@ -1604,7 +1603,7 @@ class CoreSettingsTest(unittest.TestCase):
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, full_settings, profile)
         retriever = Retriever(loader, self.output)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None)
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
         root_conan = retriever.root(content)
         deps_graph = builder.load_graph(root_conan, False, False, None)
         return deps_graph
@@ -1889,7 +1888,7 @@ class ChatConan(ConanFile):
                                               "myoption_chat=on")
         loader = ConanFileLoader(None, Settings.loads(""), profile)
         retriever = Retriever(loader, output)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None)
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 

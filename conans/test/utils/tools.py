@@ -69,6 +69,9 @@ class TestingResponse(object):
     def __init__(self, test_response):
         self.test_response = test_response
 
+    def close(self):
+        pass  # Compatibility with close() method of a requests when stream=True
+
     @property
     def headers(self):
         return self.test_response.headers
@@ -277,17 +280,20 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files, branch=None, submodules=None):
-    tmp = temp_folder()
-    save_files(tmp, files)
+def create_local_git_repo(files=None, branch=None, submodules=None, folder=None):
+    tmp = folder or temp_folder()
+    if files:
+        save_files(tmp, files)
     git = Git(tmp)
     git.run("init .")
-    if branch:
-        git.run("checkout -b %s" % branch)
-    git.run("add .")
     git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
-    git.run('commit -m "message"')
+
+    if branch:
+        git.run("checkout -b %s" % branch)
+
+    git.run("add .")
+    git.run('commit -m  "commiting"')
 
     if submodules:
         for submodule in submodules:
@@ -398,6 +404,10 @@ class TestClient(object):
         for name, server in self.servers.items():
             if name != "default":
                 add_server_to_registry(name, server)
+
+    @property
+    def remote_registry(self):
+        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
     @property
     def paths(self):

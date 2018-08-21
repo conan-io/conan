@@ -553,7 +553,7 @@ class HelloConan(ConanFile):
         settings.compiler.version = "14"
         # test build_type and arch override, for multi-config packages
         cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
-        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
@@ -566,7 +566,7 @@ class HelloConan(ConanFile):
         # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
-        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
@@ -817,7 +817,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
-        http_server = StoppableThreadBottle(port=8267)
+        http_server = StoppableThreadBottle()
 
         with tools.chdir(tools.mkdir_tmp()):
             with open("manual.html", "w") as fmanual:
@@ -1125,7 +1125,7 @@ class GitToolTest(unittest.TestCase):
     def test_clone_submodule_git(self):
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
         submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
-        path, _ = create_local_git_repo({"myfile": "contents"}, submodules=[submodule])
+        path, commit = create_local_git_repo({"myfile": "contents"}, submodules=[submodule])
 
         def _create_paths():
             tmp = temp_folder()
@@ -1147,13 +1147,15 @@ class GitToolTest(unittest.TestCase):
         # Check invalid value
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
+        git.clone(path)
         with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
-            git.clone(path, submodule="invalid")
+            git.checkout(commit, submodule="invalid")
 
         # Check shallow
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
-        git.clone(path, submodule="shallow")
+        git.clone(path)
+        git.checkout(commit, submodule="shallow")
         self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertFalse(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
@@ -1161,7 +1163,8 @@ class GitToolTest(unittest.TestCase):
         # Check recursive
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
-        git.clone(path, submodule="recursive")
+        git.clone(path)
+        git.checkout(commit, submodule="recursive")
         self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))

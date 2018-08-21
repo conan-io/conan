@@ -24,6 +24,6 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_recipe(self, conan_ref, check_updates, update, remote_name):  # @UnusedVariable
+    def get_recipe(self, conan_ref, check_updates, update, remote_name, recorder):  # @UnusedVariable
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path, None, None, conan_ref
