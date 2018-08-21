@@ -102,6 +102,8 @@ class ConanFile(object):
     should_build = True
     should_install = True
     should_test = True
+    in_local_cache = True
+    develop = False
 
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -109,10 +111,7 @@ class ConanFile(object):
         # something that can run commands, as os.sytem
         self._runner = runner
         self._user = user
-        self._channel = channel
-
-        self.in_local_cache = True
-        self.develop = False
+        self._channel = channel      
 
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):

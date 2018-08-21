@@ -72,11 +72,6 @@ def _load_export_conanfile(conanfile_path, output, name, version):
             output.warn("Conanfile doesn't have '%s'.\n"
                         "It is recommended to add it as attribute" % field)
 
-    if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
-    if isinstance(conanfile.exports_sources, str):
-        conanfile.exports_sources = (conanfile.exports_sources, )
-
     # check name and version were specified
     if not conanfile.name:
         if name:
@@ -195,6 +190,11 @@ def _init_export_folder(destination_folder, destination_src_folder):
 
 def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
                     output):
+
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+    if isinstance(conanfile.exports_sources, str):
+        conanfile.exports_sources = (conanfile.exports_sources, )
 
     origin_folder = os.path.dirname(conanfile_path)
 
