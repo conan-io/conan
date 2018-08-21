@@ -553,7 +553,7 @@ class HelloConan(ConanFile):
         settings.compiler.version = "14"
         # test build_type and arch override, for multi-config packages
         cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
-        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
@@ -566,7 +566,7 @@ class HelloConan(ConanFile):
         # successful definition via settings
         settings.build_type = "Debug"
         cmd = tools.msvc_build_command(settings, "project.sln")
-        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
