@@ -8,10 +8,8 @@ from conans.model.conan_file import get_env_context_manager
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
-from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
 from conans.client import settings_preprocessor
-from conans.client.loader import ConanFileLoader
 from conans.client.output import ScopedOutput
 from conans.client.graph.build_mode import BuildMode
 from conans.client.profile_loader import read_conaninfo_profile
@@ -46,8 +44,8 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, loader):
-        self._proxy = ConanProxy(client_cache, output, remote_manager, registry=registry)
+    def __init__(self, output, client_cache, registry, remote_manager, loader, proxy):
+        self._proxy = proxy
         self._output = output
         self._resolver = RangeResolver(output, client_cache, self._proxy)
         self._client_cache = client_cache

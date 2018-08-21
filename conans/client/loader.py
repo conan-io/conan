@@ -1,6 +1,6 @@
 import os
 
-from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
+from conans.client.loader_parse import ConanFileTextLoader, _parse_file, _parse_module
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
@@ -8,14 +8,52 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
+from conans.client.output import ScopedOutput
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner):
+    def __init__(self, runner, output, proxy):
         self._runner = runner
+        self._output = output
+        # This is still unused here, but it makes sense to inject it, so we can do
+        # sys.modules["python_requires"] = PythonRequire(proxy)
+        # And to force every conanfile read will have it
+        self._proxy = proxy
+
+    def load_class(self, conanfile_path):
+        loaded, filename = _parse_file(conanfile_path)
+        try:
+            return _parse_module(loaded, filename)
+        except Exception as e:  # re-raise with file name
+            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+
+    def load_export(self, conanfile_path, name, version, user, channel):
+        conanfile = self.load_class(conanfile_path)
+
+        # check name and version were specified
+        if not conanfile.name:
+            if name:
+                conanfile.name = name
+            else:
+                raise ConanException("conanfile didn't specify name")
+        elif name and name != conanfile.name:
+            raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
+
+        if not conanfile.version:
+            if version:
+                conanfile.version = version
+            else:
+                raise ConanException("conanfile didn't specify version")
+        elif version and version != conanfile.version:
+            raise ConanException("Package recipe exported with version %s!=%s"
+                                 % (version, conanfile.version))
+
+        conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+        output = ScopedOutput(str(conan_ref), self._output)
+        return conan_ref, conanfile(output, self._runner, user, channel)
 
     def load_basic(self, conanfile_path, output, reference=None):
-        result = load_conanfile_class(conanfile_path)
+        result = self.load_class(conanfile_path)
         try:
             if reference:
                 result.name, result.version, user, channel = reference

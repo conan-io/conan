@@ -168,7 +168,7 @@ class MyPkg(ConanFile):
         # Create with only user will raise an error because of no name/version
         error = client.run("create conanfile.py lasote/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("conanfile.py doesn't declare package name or version", client.out)
+        self.assertIn("ERROR: conanfile didn't specify name", client.out)
         # Same with only user, (default testing)
         error = client.run("create . lasote", ignore_error=True)
         self.assertTrue(error)

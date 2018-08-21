@@ -11,7 +11,7 @@ from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput, ScopedOutput
+from conans.client.output import ConanOutput
 from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
 from conans.client.recorder.search_recorder import SearchRecorder
@@ -34,7 +34,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.client.loader_parse import load_conanfile_class
 from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
@@ -49,6 +48,7 @@ from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.loader import ConanFileLoader
+from conans.client.graph.proxy import ConanProxy
 
 
 default_manifest_folder = '.conan_manifests'
@@ -217,9 +217,10 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-        self._loader = ConanFileLoader(self._runner)
+        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager, registry=self._registry)
+        self._loader = ConanFileLoader(self._runner, self._user_io.out, self._proxy)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
-                                           self._remote_manager, self._loader)
+                                           self._remote_manager, self._loader, self._proxy)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
@@ -296,25 +297,17 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            if not name or not version:
-                conanfile = load_conanfile_class(conanfile_path)
-                name, version = conanfile.name, conanfile.version
-                if not name or not version:
-                    raise ConanException("conanfile.py doesn't declare package name or version")
+            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
 
-            reference = ConanFileReference(name, version, user, channel)
-            scoped_output = ScopedOutput(str(reference), self._user_io.out)
             # Make sure keep_source is set for keep_build
-            if keep_build:
-                keep_source = True
+            keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
-                scoped_output.highlight("Exporting package recipe")
-                cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                           self._user_io.out, self._client_cache)
+                cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
+                           self._client_cache)
 
             if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [name]
+                build_modes = [conanfile.name]
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -375,19 +368,9 @@ class ConanAPIV1(object):
         else:
             profile = read_conaninfo_profile(install_folder)
 
-        conanfile = load_conanfile_class(conanfile_path)
-        if (name and conanfile.name and conanfile.name != name) or \
-           (version and conanfile.version and conanfile.version != version):
-            raise ConanException("Specified name/version doesn't match with the "
-                                 "name/version in the conanfile")
-        cmd_export(conanfile_path, name, version, user, channel, False,
-                   self._user_io.out, self._client_cache)
+        reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+        cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out, self._client_cache)
 
-        if not (name and version):
-            name = conanfile.name
-            version = conanfile.version
-
-        reference = ConanFileReference(name, version, user, channel)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
@@ -636,8 +619,8 @@ class ConanAPIV1(object):
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                   self._user_io.out, self._client_cache)
+        reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+        cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out, self._client_cache)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
