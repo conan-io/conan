@@ -103,6 +103,7 @@ class ConanFileLoader(object):
             conanfile.initialize(tmp_settings, processed_profile._env_values, local)
 
             if consumer:
+                processed_profile._user_options[conanfile.name].update(processed_profile._user_options["*"])
                 processed_profile._user_options.descope_options(conanfile.name)
                 conanfile.options.initialize_upstream(processed_profile._user_options, local=local)
                 processed_profile._user_options.clear_unscoped_options()
