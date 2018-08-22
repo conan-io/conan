@@ -133,12 +133,6 @@ class ServerStore(SimplePaths):
         urls = self._relativize_keys(urls, relative_path)
         return urls
 
-    def update_recipe_reference(self, reference):
-        pass
-
-    def update_package_reference(self, p_reference):
-        pass
-
     @staticmethod
     def _relativize_keys(the_dict, basepath):
         """Relativize the keys in the dict relative to basepath"""

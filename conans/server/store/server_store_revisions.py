@@ -118,12 +118,6 @@ class ServerStoreRevisions(ServerStore):
 
         return ret.copy_with_revisions(reference.revision, latest)
 
-    def update_recipe_reference(self, reference):
-        self.update_last_revision(reference)
-
-    def update_package_reference(self, p_reference):
-        self.update_last_package_revision(p_reference)
-
     def _remove_revision(self, rev_file_path, revision):
         rev_file = self._storage_adapter.read_file(rev_file_path,
                                                    lock_file=rev_file_path + ".lock")

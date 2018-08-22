@@ -4,6 +4,7 @@ from bottle import static_file, FileUpload
 from conans.errors import NotFoundException
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
+from conans.server.store.server_store_revisions import ServerStoreRevisions
 from conans.util.files import mkdir
 
 
@@ -14,13 +15,20 @@ class ConanServiceV2(object):
         self._authorizer = authorizer
         self._server_store = server_store
 
+    @property
+    def with_revisions(self):
+        # FIXME: Hard to check if v2 but without revisions
+        return isinstance(self._server_store, ServerStoreRevisions)
+
     # RECIPE METHODS
     def get_conanfile_snapshot(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
         snap = self._server_store.get_conanfile_snapshot(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
-        reference = self._server_store.ref_with_rev(reference)
+        if self.with_revisions:
+            reference = self._server_store.ref_with_rev(reference)
+
         return {"files": snap, "reference": reference.full_repr()}
 
     def get_conanfile_file(self, reference, filename, auth_user):
@@ -36,7 +44,8 @@ class ConanServiceV2(object):
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_recipe_reference(reference)
+        if self.with_revisions:
+            self._server_store.update_last_revision(reference)
 
     # PACKAGE METHODS
     def get_package_snapshot(self, p_reference, auth_user):
@@ -67,7 +76,8 @@ class ConanServiceV2(object):
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_package_reference(p_reference)
+        if self.with_revisions:
+            self._server_store.update_last_package_revision(p_reference)
 
     # Misc
     @staticmethod
