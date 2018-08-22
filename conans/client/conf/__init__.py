@@ -137,6 +137,9 @@ path = ~/.conan/data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
+[plugins]
+linters = recipe_linter
+
 
 # Default settings now declared in the default profile
 
@@ -198,7 +201,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
-               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False")
+               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
+               "CONAN_PLUGINS_LINTERS": self._env_c("plugins.linters", "CONAN_PLUGINS_LINTERS", None)
                }
 
         # Filter None values

@@ -24,6 +24,7 @@ CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
+PLUGINS_FOLDER = "plugins"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -141,6 +142,10 @@ class ClientCache(SimplePaths):
         else:
             return join(self.conan_folder, PROFILES_FOLDER,
                         self.conan_config.default_profile)
+
+    @property
+    def plugins_path(self):
+        return join(self.conan_folder, PLUGINS_FOLDER)
 
     @property
     def default_profile(self):
