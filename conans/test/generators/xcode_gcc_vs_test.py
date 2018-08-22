@@ -78,7 +78,7 @@ xcode
         package_ref = PackageReference(conan_ref, package_id)
         package_path = client.paths.package(package_ref).replace("\\", "/")
 
-        replaced_path = re.sub(os.getenv("USERPROFILE", "").replace("\\", "/"),
+        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
                                "$(USERPROFILE)", package_path, flags=re.I)
         expected_lib_dirs = os.path.join(replaced_path, "lib").replace("\\", "/")
         expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
