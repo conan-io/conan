@@ -385,7 +385,7 @@ class ConanAPIV1(object):
         conan_ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
-                 self._client_cache, self._user_io.out, recorder)
+                 self._client_cache, self._user_io.out, recorder, self._loader)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
