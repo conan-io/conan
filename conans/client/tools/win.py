@@ -241,12 +241,13 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
-    if detected_architecture() == 'x86_64':
-        vcvars_arch = {'x86': 'x86',
+    arch_build = settings.get_safe("arch_build") or detected_architecture()
+    if arch_build == 'x86_64':
+        vcvars_arch = {'x86': 'amd64_x86' if int(compiler_version) >= 12 else 'x86',
                        'x86_64': 'amd64',
                        'armv7': 'amd64_arm',
                        'armv8': 'amd64_arm64'}.get(arch_setting)
-    elif detected_architecture() == 'x86':
+    elif arch_build == 'x86':
         vcvars_arch = {'x86': 'x86',
                        'x86_64': 'x86_amd64',
                        'armv7': 'x86_arm',
