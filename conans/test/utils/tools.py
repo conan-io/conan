@@ -241,7 +241,7 @@ class TestServer(object):
 
     @property
     def paths(self):
-        return self.test_server.file_manager.paths
+        return self.test_server.server_store
 
     def __repr__(self):
         return "TestServer @ " + self.fake_url
