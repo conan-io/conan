@@ -426,7 +426,9 @@ class ConanAPIV1(object):
                 generators = False
 
             mkdir(install_folder)
-            mkdir(deploy_folder)
+            if deploy_folder is not None:
+                mkdir(deploy_folder)
+
             manager = self._init_manager(recorder)
             manager.install(reference=reference, install_folder=install_folder,
                             deploy_folder=deploy_folder,
