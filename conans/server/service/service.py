@@ -101,7 +101,7 @@ class SearchService(object):
             # package remove (all revisions)
             path = self._server_store.conan(ref, resolve_latest=False)
             if self._server_store.path_exists(path):
-                return ref
+                return [ref]
 
         # Conan references in main storage
         if pattern:
