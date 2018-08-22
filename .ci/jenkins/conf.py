@@ -13,7 +13,8 @@ macpylocation = {"py27": "/usr/bin/python",  # /Users/jenkins_ci/.pyenv/versions
 
 linuxpylocation = {"py27": "/usr/bin/python2.7",
                    "py34": "/usr/bin/python3.4",
-                   "py36": "/usr/bin/python3.6"}
+                   "py36": "/usr/bin/python3.6",
+                   "py37": "/usr/bin/python3.7"}
 
 
 def get_environ(tmp_path):
