@@ -59,14 +59,15 @@ class QmakeGenerator(Generator):
         template_deps = template + 'CONAN{dep_name}_ROOT{build_type} = "{deps.rootpath}"\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = "_" + dep_name.upper().replace("-", "_").replace(".", "_")
             deps = DepsCppQmake(dep_cpp_info)
-            dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps,
+            dep_flags = template_deps.format(dep_name=dep_name, deps=deps,
                                              build_type="")
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
                 deps = DepsCppQmake(cpp_info)
-                dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps,
+                dep_flags = template_deps.format(dep_name=dep_name, deps=deps,
                                                  build_type="_" + str(config).upper())
                 sections.append(dep_flags)
 

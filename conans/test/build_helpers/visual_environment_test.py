@@ -39,6 +39,23 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mysharedlinkflag'],
             "LIB": ["/one/lib/path", "/two/lib/path"],
         })
+        tool.parallel = True
+        self.assertEquals(tool.vars_dict, {
+            "CL": ["-I/one/include/path", "-I/two/include/path",
+                   '-MDd',
+                   '-mycflag',
+                   '-mycflag2',
+                   '-Zi',
+                   '-Ob0',
+                   '-Od',
+                   '-mycppflag',
+                   '-mycppflag2',
+                   '-myexelinkflag',
+                   '-mysharedlinkflag',
+                   '/MP%s' % tools.cpu_count()],
+            "LIB": ["/one/lib/path", "/two/lib/path"],
+        })
+        tool.parallel = False
 
         # Now alter the paths before the vars_dict call
         tool.include_paths.append("/three/include/path")
