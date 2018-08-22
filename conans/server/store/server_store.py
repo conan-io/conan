@@ -9,7 +9,7 @@ class ServerStore(SimplePaths):
 
         self._storage_adapter = storage_adapter
 
-    def conan(self, reference, resolve_latest=True):  # Ignored in non-revisions
+    def conan(self, reference, resolve_latest=True):  # Ignored in non-revisions, but hard to remove
         return normpath(join(self.store, "/".join(reference)))
 
     def packages(self, reference):

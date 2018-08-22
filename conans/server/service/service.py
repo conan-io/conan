@@ -97,11 +97,11 @@ class SearchService(object):
         # Check directly if it is a reference
         ref = get_ref(pattern)
         if ref:
-            path = self._server_store.conan(ref)
+            # Avoid resolve latest revision if a version range is passed or we are performing a
+            # package remove (all revisions)
+            path = self._server_store.conan(ref, resolve_latest=False)
             if self._server_store.path_exists(path):
-                # Do not return the reference with revision if the search was without revision,
-                # otherwise when remove use the search will remove only the latest
-                return [ref.copy_without_revision() if not ref.revision else ref]
+                return ref
 
         # Conan references in main storage
         if pattern:
