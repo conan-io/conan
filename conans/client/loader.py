@@ -54,6 +54,7 @@ class ConanFileLoader(object):
             result._env_values.update(self._env_values)
 
             if consumer:
+                self._user_options[result.name].update(self._user_options["*"])
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options, local=local)
                 self._user_options.clear_unscoped_options()

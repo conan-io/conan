@@ -7,7 +7,7 @@ from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
-from conans.search.search import search_recipes
+from conans.search.search import search_recipes, search_packages
 
 
 def _is_a_reference(ref):
@@ -29,7 +29,8 @@ class CmdUpload(object):
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False, no_overwrite=None, remote_name=None):
+               integrity_check=False, no_overwrite=None, remote_name=None,
+               query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         if package_id and not _is_a_reference(reference_or_pattern):
@@ -60,6 +61,9 @@ class CmdUpload(object):
                                              str(conan_ref)))
                 if all_packages:
                     packages_ids = self._client_cache.conan_packages(conan_ref)
+                elif query:
+                    packages = search_packages(self._client_cache, conan_ref, query)
+                    packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
                 else:

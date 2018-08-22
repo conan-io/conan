@@ -3,7 +3,8 @@ import os
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.server.store.server_store import REVISIONS_FILE
+
+from conans.server.store.server_store_revisions import REVISIONS_FILE
 from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
 from conans.util.files import path_exists
 from conans.paths import SimplePaths

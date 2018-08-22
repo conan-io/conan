@@ -36,7 +36,7 @@ class ConanServiceV2(object):
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_recipe_revision(reference)
+        self._server_store.update_recipe_reference(reference)
 
     # PACKAGE METHODS
     def get_package_snapshot(self, p_reference, auth_user):
@@ -67,7 +67,7 @@ class ConanServiceV2(object):
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_package_revision(p_reference)
+        self._server_store.update_package_reference(p_reference)
 
     # Misc
     @staticmethod

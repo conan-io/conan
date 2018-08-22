@@ -214,14 +214,6 @@ class RestCommonMethods(object):
         url = self._recipe_url(conan_reference) + "/remove_files"
         return self._post_json(url, payload)
 
-    @handle_return_deserializer()
-    def _remove_package_files(self, package_reference, files):
-        """ Remove package files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "/%s/remove_files" % self._package_url(package_reference)
-        return self._post_json(url, payload)
-
     def _post_json(self, url, payload):
         response = self.requester.post(url,
                                        auth=self.auth,

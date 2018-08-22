@@ -47,7 +47,7 @@ class Git(object):
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None, submodule=None):
+    def clone(self, url, branch=None):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -67,6 +67,12 @@ class Git(object):
             output = self.run('clone "%s" . %s' % (url, branch_cmd))
             output += self._configure_ssl_verify()
 
+        return output
+
+    def checkout(self, element, submodule=None):
+        self._check_git_repo()
+        output = self.run('checkout "%s"' % element)
+
         if submodule:
             if submodule == "shallow":
                 output += self.run("submodule sync")
@@ -77,26 +83,22 @@ class Git(object):
             else:
                 raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
                                      "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
-
-        return output
-
-    def checkout(self, element):
-        self._check_git_repo()
         # Element can be a tag, branch or commit
-        return self.run('checkout "%s"' % element)
+        return output
 
     def excluded_files(self):
         try:
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), f))
-                          for folder, _, fs in os.walk(self.folder) for f in fs]
+
+            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+                          for folder, dirpaths, fs in os.walk(self.folder)
+                          for el in fs + dirpaths]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes('\n'.join(file_paths))
+            paths = to_file_bytes("\n".join(file_paths))
             grep_stdout = decode_text(p.communicate(input=paths)[0])
             tmp = grep_stdout.splitlines()
         except CalledProcessError:
             tmp = []
-        tmp.append(".git")
         return tmp
 
     def get_remote_url(self, remote_name=None):

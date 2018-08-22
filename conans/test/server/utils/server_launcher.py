@@ -4,6 +4,7 @@ import os
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+from conans.util.env_reader import get_env
 from conans.util.log import logger
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
@@ -42,9 +43,10 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
-            if os.getenv("CONAN_TESTING_SERVER_V2_ENABLED") or os.getenv("CONAN_TESTING_SERVER_REVISIONS_ENABLED"):
+            if get_env("CONAN_TESTING_SERVER_V2_ENABLED", False) or \
+               get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False):
                 server_capabilities.add(API_V2)
-            if server_config.revisions_enabled or os.getenv("CONAN_TESTING_SERVER_REVISIONS_ENABLED"):
+            if server_config.revisions_enabled or get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False):
                 server_capabilities.add(REVISIONS)
 
         if TestServerLauncher.port == 0:
