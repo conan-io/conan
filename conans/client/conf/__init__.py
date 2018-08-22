@@ -138,7 +138,7 @@ path = ~/.conan/data
 # no_proxy_match = *bintray.com*, https://myserver.*
 
 [plugins]
-linters = recipe_linter
+linters = default_recipe_linter
 
 
 # Default settings now declared in the default profile

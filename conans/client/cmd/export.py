@@ -16,9 +16,11 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.env_reader import get_env
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
+from conans.client import plugin_loader
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -51,6 +53,13 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
 
     conan_linter(conanfile_path, output)
     conanfile = _load_export_conanfile(conanfile_path, output, name, version)
+
+    for plugin_name in get_env("CONAN_PLUGINS_LINTERS", list()):
+        plugin = plugin_loader.load_plugin(client_cache.plugins_path, plugin_name, conanfile,
+                                           load(conanfile_path), output)
+        if hasattr(plugin, "export"):
+            plugin.export()
+
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition

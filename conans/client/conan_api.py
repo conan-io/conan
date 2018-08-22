@@ -308,8 +308,7 @@ class ConanAPIV1(object):
             # Forcing an export!
             if not not_export:
                 scoped_output.highlight("Exporting package recipe")
-                cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                           self._user_io.out, self._client_cache)
+                self.export(conanfile_path, name, version, user, channel, keep_source)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [name]
