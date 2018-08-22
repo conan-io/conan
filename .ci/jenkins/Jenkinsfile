@@ -12,7 +12,7 @@ def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
 
 if (full_test){
-    pyvers = ['py36', 'py34', 'py27']
+    pyvers = ['py36', 'py27']
     flavors = ["revisions", "no_revisions"]
     api_confs = ["v1", "v2"]
 }

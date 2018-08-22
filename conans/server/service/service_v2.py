@@ -28,6 +28,8 @@ class ConanServiceV2(object):
             raise NotFoundException("conanfile not found")
         if self.with_revisions:
             reference = self._server_store.ref_with_rev(reference)
+        else:
+            reference = reference.copy_without_revision()
 
         return {"files": snap, "reference": reference.full_repr()}
 
