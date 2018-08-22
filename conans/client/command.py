@@ -55,6 +55,9 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+_QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
+_PATTERN_EXAMPLE = ("boost/*")
+_REFERENCE_EXAMPLE =  ("MyPackage/1.2@user/channel")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -62,12 +65,12 @@ _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildin
                         "(from previous 'conan install'). Defaulted to --build-folder")
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
                      "Use this for testing purposes only")
-_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., 'boost/*', "
-                              "'MyPackage/1.2@user/channel'")
+_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
+                              "'%s'" % (_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
-_QUERY_HELP = ("Packages query: 'os=Windows AND (arch=x86 OR compiler=gcc)'. The "
-               "'pattern_or_reference' parameter has to be a reference: MyPackage/1.2@user/channel")
+_QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
+               "to be a reference: %s" % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
                        " relative path to current directory can also be specified")
 
@@ -733,6 +736,9 @@ class Command(object):
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
         args = parser.parse_args(*args)
+
+        # NOTE: returns the expanded pattern (if a pattern was given), and checks
+        # that the query parameter wasn't abused
         reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
                                                                   args.query)
 
@@ -934,6 +940,8 @@ class Command(object):
         parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument("-p", "--package", default=None, action=OnceArgument,
                             help='package ID to upload')
+        parser.add_argument('-q', '--query', default=None, action=OnceArgument,
+                            help="Only upload packages matching a specific query. " + _QUERY_HELP)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='upload to this specific remote')
         parser.add_argument("--all", action='store_true', default=False,
@@ -959,11 +967,15 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
+        if args.query and args.package:
+            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+
         cwd = os.getcwd()
         info = None
 
         try:
             info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
+                                      query=args.query,
                                       remote_name=args.remote, all_packages=args.all,
                                       force=args.force,
                                       confirm=args.confirm, retry=args.retry,
