@@ -87,7 +87,6 @@ class ConanServiceTest(unittest.TestCase):
         updown_auth_manager = JWTUpDownAuthManager("secret",
                                                    timedelta(seconds=200))
         adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
-
         self.server_store = ServerStore(storage_adapter=adapter)
         self.service = ConanService(authorizer, self.server_store, "lasote")
         self.search_service = SearchService(authorizer, self.server_store, "lasote")

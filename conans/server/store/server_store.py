@@ -4,9 +4,9 @@ from conans.paths import SimplePaths, EXPORT_FOLDER, PACKAGES_FOLDER
 
 
 class ServerStore(SimplePaths):
+
     def __init__(self, storage_adapter):
         super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
-
         self._storage_adapter = storage_adapter
 
     def conan(self, reference, resolve_latest=True):  # Ignored in non-revisions, but hard to remove

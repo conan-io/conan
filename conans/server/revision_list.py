@@ -13,7 +13,6 @@ class RevisionList(object):
     @staticmethod
     def loads(contents):
         ret = RevisionList()
-
         ret._data = json.loads(contents)["revisions"]
         return ret
 

@@ -234,4 +234,3 @@ def get_server_store(disk_storage_path, revisions_enabled, public_url, updown_au
         return ServerStoreRevisions(adapter)
     else:
         return ServerStore(adapter)
-
