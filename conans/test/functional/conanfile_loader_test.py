@@ -12,7 +12,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.profile import Profile
 from collections import OrderedDict
 from mock.mock import call
-from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanLoaderTest(unittest.TestCase):
@@ -31,7 +30,7 @@ class BasePackage(ConanFile):
 """
         save(conanfile_path, conanfile)
         save(os.path.join(tmp_dir, "base_recipe.py"), base_recipe)
-        conan_file = load_conanfile_class(conanfile_path)
+        conan_file = loader.load_class(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
         result = loader.load_conan(conanfile_path, output=None, consumer=True,

@@ -12,14 +12,6 @@ from conans.client.generators import registered_generators
 from conans.model import Generator
 
 
-def load_conanfile_class(conanfile_path):
-    loaded, filename = _parse_file(conanfile_path)
-    try:
-        return _parse_module(loaded, filename)
-    except Exception as e:  # re-raise with file name
-        raise ConanException("%s: %s" % (conanfile_path, str(e)))
-
-
 def _parse_module(conanfile_module, filename):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators

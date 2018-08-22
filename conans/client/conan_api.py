@@ -638,7 +638,7 @@ class ConanAPIV1(object):
         # FIXME: conan copy does not support short-paths in Windows
         reference = ConanFileReference.loads(str(reference))
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, self._registry, force=force)
+                 self._user_io, self._remote_manager, self._registry, self._loader, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name):
@@ -728,7 +728,7 @@ class ConanAPIV1(object):
             raise exc
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             self._registry)
+                             self._registry, self._loader)
         try:
             uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
                             retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,
