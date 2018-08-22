@@ -113,6 +113,13 @@ class SystemPackageTool(object):
                 pass
         raise ConanException("Could not install any of %s" % packages)
 
+    @property
+    def dev_package_extension(self):
+        if hasattr(self._tool, "dev_package_extension"):
+            return self._tool.dev_package_extension()
+        else:
+            return ""
+
 
 class NullTool(object):
     def update(self):
@@ -138,6 +145,9 @@ class AptTool(object):
         exit_code = self._runner("dpkg -s %s" % package_name, None)
         return exit_code == 0
 
+    def dev_package_extension(self):
+        return "-dev"
+
 
 class YumTool(object):
     def update(self):
@@ -149,6 +159,9 @@ class YumTool(object):
     def installed(self, package_name):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
+
+    def dev_package_extension(self):
+        return "-devel"
 
 
 class BrewTool(object):
@@ -174,6 +187,9 @@ class PkgTool(object):
         exit_code = self._runner("pkg info %s" % package_name, None)
         return exit_code == 0
 
+    def dev_package_extension(self):
+        return "-devel"
+
 
 class PkgUtilTool(object):
     def update(self):
@@ -185,6 +201,9 @@ class PkgUtilTool(object):
     def installed(self, package_name):
         exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
         return exit_code == 0
+
+    def dev_package_extension(self):
+        return "-dev"
 
 
 class ChocolateyTool(object):
@@ -199,6 +218,9 @@ class ChocolateyTool(object):
                                  'findstr /c:"1 packages installed."' % package_name, None)
         return exit_code == 0
 
+    def dev_package_extension(self):
+        return ""
+
 
 class PacManTool(object):
     def update(self):
@@ -211,6 +233,9 @@ class PacManTool(object):
         exit_code = self._runner("pacman -Qi %s" % package_name, None)
         return exit_code == 0
 
+    def dev_package_extension(self):
+        return ""
+
 
 class ZypperTool(object):
     def update(self):
@@ -222,6 +247,9 @@ class ZypperTool(object):
     def installed(self, package_name):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
+
+    def dev_package_extension(self):
+        return "-devel"
 
 
 def _run(runner, command, accepted_returns=None):
