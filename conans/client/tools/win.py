@@ -303,7 +303,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
                 vcvars_ver=None, winsdk_version=None, only_diff=True):
-
+    known_path_lists = ("INCLUDE", "LIB", "LIBPATH", "PATH")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
@@ -321,8 +321,17 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             continue
         try:
             name_var, value = line.split("=", 1)
-            if not only_diff or os.environ.get(name_var) != value:
-                new_env[name_var] = value
+            # Return only new vars & changed ones, but only with the changed elements if the var is a list
+            if only_diff:
+                old_value = os.environ.get(name_var)
+                if old_value and value.endswith(os.pathsep + old_value):  # List of paths, do the diff
+                    new_env[name_var] = value[:-(len(old_value) + 1)].split(os.pathsep)
+                elif value != old_value:
+                    # Only if the vcvars changed something, we return the variable, otherwise is not vcvars related
+                    new_env[name_var] = value.split(os.pathsep) if name_var in known_path_lists else value
+            else:
+                new_env[name_var] = value.split(os.pathsep) if name_var in known_path_lists else value
+
         except ValueError:
             pass
 

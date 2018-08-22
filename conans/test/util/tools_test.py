@@ -759,6 +759,20 @@ compiler:
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
+        my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
+        with tools.environment_append({"LIBPATH": "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"}):
+            ret = vcvars_dict(settings, only_diff=False)
+            str_var_value = os.pathsep.join(ret["LIBPATH"])
+            self.assertTrue(str_var_value.endswith(my_lib_paths))
+
+            # Now only a diff, it should return the values as a list, but without the old values
+            ret = vcvars_dict(settings, only_diff=True)
+            self.assertEquals(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
+
+            # But if we apply both environments, they are composed correctly
+            with tools.environment_append(ret):
+                self.assertEquals(os.environ["LIBPATH"], str_var_value)
+
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
         output_with_newline_and_spaces = """__BEGINS__
