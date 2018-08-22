@@ -8,7 +8,7 @@ import jwt
 from conans.util.files import mkdir, list_folder_subdirs
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.search.search import search_packages, search_recipes, _partial_match
+from conans.search.search import search_packages, _partial_match
 
 
 class FileUploadDownloadService(object):
@@ -82,22 +82,22 @@ class SearchService(object):
         def get_ref(_pattern):
             if not isinstance(_pattern, ConanFileReference):
                 try:
-                    ref = ConanFileReference.loads(_pattern)
+                    r = ConanFileReference.loads(_pattern)
                 except (ConanException, TypeError):
-                    ref = None
+                    r = None
             else:
-                ref = _pattern
-            return ref
+                r = _pattern
+            return r
 
         def get_folders_levels(_pattern):
             """If a reference with revisions is detected compare with 5 levels of subdirs"""
-            ref = get_ref(_pattern)
-            return 5 if ref and ref.revision else 4
+            r = get_ref(_pattern)
+            return 5 if r and r.revision else 4
 
         # Check directly if it is a reference
         ref = get_ref(pattern)
         if ref:
-            path = self._server_store.conan(ref, resolve_latest=False)
+            path = self._server_store.conan(ref)
             if self._server_store.path_exists(path):
                 return [ref]
 

@@ -5,6 +5,7 @@ import six
 
 from conans import tools
 from conans.server.store.server_store import ServerStore
+from conans.server.store.server_store_revisions import ServerStoreRevisions
 from conans.util.env_reader import get_env
 from datetime import timedelta
 import os
@@ -229,4 +230,7 @@ def get_server_store(disk_storage_path, revisions_enabled, public_url, updown_au
     if not updown_auth_manager:
         raise Exception("Updown auth manager needed for disk controller (not s3)")
     adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
-    return ServerStore(revisions_enabled, adapter)
+    if revisions_enabled:
+        return ServerStoreRevisions(adapter)
+    else:
+        return ServerStore(adapter)
