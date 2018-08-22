@@ -11,33 +11,36 @@ REVISIONS_FILE = "revisions.txt"
 
 class ServerStoreRevisions(ServerStore):
 
+    def __init__(self, storage_adapter):
+        super(ServerStoreRevisions, self).__init__(storage_adapter)
+
     # Methods to override some basics from paths to allow revisions paths (reading latest)
     def conan(self, reference, resolve_latest=True):
         reference = self.ref_with_rev(reference) if resolve_latest else reference
-        tmp = super(ServerStore, self).conan(reference)
+        tmp = super(ServerStoreRevisions, self).conan(reference)
         return join(tmp, reference.revision) if reference.revision else tmp
 
     def packages(self, reference):
         reference = self.ref_with_rev(reference)
-        return super(ServerStore, self).packages(reference)
+        return super(ServerStoreRevisions, self).packages(reference)
 
     def package(self, p_reference, short_paths=None):
         p_reference = self._p_ref_with_rev(p_reference)
-        tmp = super(ServerStore, self).package(p_reference, short_paths)
+        tmp = super(ServerStoreRevisions, self).package(p_reference, short_paths)
         return join(tmp, p_reference.revision) if p_reference.revision else tmp
 
     def get_conanfile_file_path(self, reference, filename):
         reference = self.ref_with_rev(reference)
-        return super(ServerStore, self).get_conanfile_file_path(reference, filename)
+        return super(ServerStoreRevisions, self).get_conanfile_file_path(reference, filename)
 
     def get_package_file_path(self, p_reference, filename):
         p_reference = self._p_ref_with_rev(p_reference)
-        return super(ServerStore, self).get_package_file_path(p_reference, filename)
+        return super(ServerStoreRevisions, self).get_package_file_path(p_reference, filename)
 
     def get_package_snapshot(self, p_reference):
         """Returns a {filepath: md5} """
         p_reference = self._p_ref_with_rev(p_reference)
-        return super(ServerStore, self).get_package_snapshot(p_reference)
+        return super(ServerStoreRevisions, self).get_package_snapshot(p_reference)
 
     # Methods to manage revisions
     def get_last_revision(self, reference):
@@ -100,8 +103,7 @@ class ServerStoreRevisions(ServerStore):
         if not latest:
             raise NotFoundException("Recipe not found: '%s'" % reference.full_repr())
 
-        reference.revision = latest
-        return reference
+        return reference.copy_with_revision(latest)
 
     def _p_ref_with_rev(self, p_reference):
         if p_reference.revision:
@@ -114,14 +116,7 @@ class ServerStoreRevisions(ServerStore):
         if not latest:
             raise NotFoundException("Package not found: '%s'" % str(p_reference))
 
-        ret.revision = latest
-        return ret
-
-    def update_recipe_reference(self, reference):
-        self.update_last_revision(reference)
-
-    def update_package_reference(self, p_reference):
-        self.update_last_package_revision(p_reference)
+        return ret.copy_with_revisions(reference.revision, latest)
 
     def _remove_revision(self, rev_file_path, revision):
         rev_file = self._storage_adapter.read_file(rev_file_path,

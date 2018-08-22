@@ -9,7 +9,7 @@ class ServerStore(SimplePaths):
         super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
         self._storage_adapter = storage_adapter
 
-    def conan(self, reference):
+    def conan(self, reference, resolve_latest=True):  # Ignored in non-revisions, but hard to remove
         return normpath(join(self.store, "/".join(reference)))
 
     def packages(self, reference):
@@ -132,12 +132,6 @@ class ServerStore(SimplePaths):
         urls = self._storage_adapter.get_upload_urls(abs_paths, user)
         urls = self._relativize_keys(urls, relative_path)
         return urls
-
-    def update_recipe_reference(self, reference):
-        pass
-
-    def update_package_reference(self, p_reference):
-        pass
 
     @staticmethod
     def _relativize_keys(the_dict, basepath):
