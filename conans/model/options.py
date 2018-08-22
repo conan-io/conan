@@ -483,9 +483,8 @@ class PackageOptions(object):
 
 
 class Options(object):
-    """ all options of a package, both its own options and the upstream
-    ones.
-    Owned by conanfile
+    """ All options of a package, both its own options and the upstream ones.
+    Owned by ConanFile.
     """
     def __init__(self, options):
         assert isinstance(options, PackageOptions)

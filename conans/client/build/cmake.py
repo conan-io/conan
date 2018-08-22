@@ -17,7 +17,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-from conans.client.build.compiler_flags import architecture_flag
+from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 
 
 def _get_env_cmake_system_name():
@@ -325,9 +325,9 @@ class CMake(object):
 
         if str(self._os) in ["Windows", "WindowsStore"] and self._compiler == "Visual Studio":
             if self.parallel:
-                cpus = tools.cpu_count()
-                ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
-                ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
+                flag = parallel_compiler_cl_flag()
+                ret["CONAN_CXX_FLAGS"] = flag
+                ret["CONAN_C_FLAGS"] = flag
 
         # fpic
         if str(self._os) not in ["Windows", "WindowsStore"]:
@@ -431,6 +431,7 @@ class CMake(object):
                     self._compiler_version and Version(self._compiler_version) >= "10":
                 if "--" not in args:
                     args.append("--")
+                # Parallel for building projects in the solution
                 args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([

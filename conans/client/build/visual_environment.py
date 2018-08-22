@@ -2,7 +2,7 @@ import copy
 import os
 
 from conans.client.build.compiler_flags import build_type_define, build_type_flags, visual_runtime, format_defines, \
-    include_path_option
+    include_path_option, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag
 
 
@@ -33,6 +33,7 @@ class VisualStudioBuildEnvironment(object):
         self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
         self.link_flags = self._configure_link_flags()
         self.std = self._std_cpp()
+        self.parallel = False
 
     def _configure_link_flags(self):
         ret = copy.copy(self._deps_cpp_info.exelinkflags)
@@ -60,6 +61,9 @@ class VisualStudioBuildEnvironment(object):
         ret.extend(self.flags)
         ret.extend(self.cxx_flags)
         ret.extend(self.link_flags)
+
+        if self.parallel:  # Build source in parallel
+            ret.append(parallel_compiler_cl_flag())
 
         if self.std:
             ret.append(self.std)
