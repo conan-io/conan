@@ -7,7 +7,6 @@ from nose.plugins.attrib import attr
 from conans.util.files import load
 from conans.model.info import ConanInfo
 import platform
-from conans.util.log import logger
 
 
 @attr("slow")

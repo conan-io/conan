@@ -15,27 +15,26 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
 
 
 class ConanProxy(object):
-    def __init__(self, client_cache, output, remote_manager, recorder, registry):
+    def __init__(self, client_cache, output, remote_manager, registry):
         # collaborators
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = registry
-        self._recorder = recorder
 
-    def get_recipe(self, conan_reference, check_updates, update, remote_name):
+    def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
         with self._client_cache.conanfile_write_lock(conan_reference):
-            result = self._get_recipe(conan_reference, check_updates, update, remote_name)
+            result = self._get_recipe(conan_reference, check_updates, update, remote_name, recorder)
         return result
 
-    def _get_recipe(self, reference, check_updates, update, remote_name):
+    def _get_recipe(self, reference, check_updates, update, remote_name, recorder):
         output = ScopedOutput(str(reference), self._out)
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(reference)
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(reference, output, remote_name)
+            remote, new_ref = self._download_recipe(reference, output, remote_name, recorder)
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
@@ -45,7 +44,7 @@ class ConanProxy(object):
         if not check_updates:
             status = RECIPE_INCACHE
             log_recipe_got_from_local_cache(reference)
-            self._recorder.recipe_fetched_from_cache(reference)
+            recorder.recipe_fetched_from_cache(reference)
             return conanfile_path, status, remote, reference
 
         named_remote = self._registry.remote(remote_name) if remote_name else None
@@ -53,7 +52,7 @@ class ConanProxy(object):
         if not update_remote:
             status = RECIPE_NO_REMOTE
             log_recipe_got_from_local_cache(reference)
-            self._recorder.recipe_fetched_from_cache(reference)
+            recorder.recipe_fetched_from_cache(reference)
             return conanfile_path, status, None, reference
 
         try:  # get_conan_manifest can fail, not in server
@@ -61,7 +60,7 @@ class ConanProxy(object):
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
             log_recipe_got_from_local_cache(reference)
-            self._recorder.recipe_fetched_from_cache(reference)
+            recorder.recipe_fetched_from_cache(reference)
             return conanfile_path, status, update_remote, reference
 
         export = self._client_cache.export(reference)
@@ -72,7 +71,7 @@ class ConanProxy(object):
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     reference = self._remote_manager.get_recipe(reference, update_remote)
-                    self._registry.set_ref(reference, update_remote)
+                    self._registry.set_ref(reference, update_remote.name)
                     status = RECIPE_UPDATED
                 else:
                     status = RECIPE_UPDATEABLE
@@ -82,15 +81,15 @@ class ConanProxy(object):
             status = RECIPE_INCACHE
 
         log_recipe_got_from_local_cache(reference)
-        self._recorder.recipe_fetched_from_cache(reference)
+        recorder.recipe_fetched_from_cache(reference)
         return conanfile_path, status, update_remote, reference
 
-    def _download_recipe(self, conan_reference, output, remote_name):
+    def _download_recipe(self, conan_reference, output, remote_name, recorder):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             new_reference = self._remote_manager.get_recipe(conan_reference, the_remote)
-            self._registry.set_ref(new_reference, the_remote)
-            self._recorder.recipe_downloaded(conan_reference, the_remote.url)
+            self._registry.set_ref(new_reference, the_remote.name)
+            recorder.recipe_downloaded(conan_reference, the_remote.url)
             return new_reference
 
         if remote_name:
@@ -107,12 +106,12 @@ class ConanProxy(object):
                 return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(conan_reference), remote.name)
-                self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
-                                                    msg, remote.url)
+                recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
+                                              msg, remote.url)
                 raise NotFoundException(msg)
             except RequestException as exc:
-                self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_NETWORK,
-                                                    str(exc), remote.url)
+                recorder.recipe_install_error(conan_reference, INSTALL_ERROR_NETWORK,
+                                              str(exc), remote.url)
                 raise exc
 
         output.info("Not found in local cache, looking in remotes...")
@@ -130,8 +129,8 @@ class ConanProxy(object):
         else:
             msg = "Unable to find '%s' in remotes" % str(conan_reference)
             logger.debug("Not found in any remote")
-            self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
-                                                msg, None)
+            recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
+                                          msg, None)
             raise NotFoundException(msg)
 
     def search_remotes(self, pattern, remote_name):
