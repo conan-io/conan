@@ -5,12 +5,10 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import SimplePaths
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.client.loader import ConanFileLoader
-from conans.model.settings import Settings
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.requires import Requirements
 from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
-from conans.model.profile import Profile
 from conans.errors import ConanException
 from conans.test.model.fake_retriever import Retriever
 
@@ -127,7 +125,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.loader = ConanFileLoader(None, None, None)
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
@@ -146,8 +144,9 @@ class SayConan(ConanFile):
             self.retriever.conan(say_ref, say_content)
 
     def root(self, content, update=False):
-        root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, update, update, None)
+        processed_profile = ProcessedProfile()
+        root_conan = self.retriever.root(content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
         return deps_graph
 
     def test_local_basic(self):
