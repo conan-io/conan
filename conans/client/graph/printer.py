@@ -10,9 +10,7 @@ def print_graph(deps_graph, out):
     build_requires = OrderedDict()
     python_requires = set()
     for node in sorted(deps_graph.nodes):
-        pr = getattr(node.conanfile, "python_requires", [])
-        print "PR ", pr
-        python_requires.update(pr)
+        python_requires.update(getattr(node.conanfile, "python_requires", []))
         if not node.conan_ref:
             continue
         package_id = PackageReference(node.conan_ref, node.conanfile.info.package_id())
