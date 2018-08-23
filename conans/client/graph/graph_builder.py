@@ -217,8 +217,8 @@ class DepsGraphBuilder(object):
             conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
-        dep_conanfile = self._loader.load_conan(conanfile_path, output, processed_profile,
-                                                reference=requirement.conan_reference)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
+                                                    reference=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile

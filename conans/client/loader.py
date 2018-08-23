@@ -1,6 +1,10 @@
 import os
+import sys
+import imp
+import inspect
+import uuid
 
-from conans.client.loader_parse import ConanFileTextLoader, _parse_file, _parse_module
+from conans.client.loader_txt import ConanFileTextLoader
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
@@ -10,6 +14,9 @@ from conans.model.values import Values
 from conans.util.files import load
 from conans.client.output import ScopedOutput
 from conans.model.profile import Profile
+from conans.client.generators import registered_generators
+from conans.model.conan_generator import Generator
+from conans.client.tools.files import chdir
 
 
 class ProcessedProfile(object):
@@ -84,8 +91,8 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan(self, conanfile_path, output, processed_profile,
-                   consumer=False, reference=None, local=False):
+    def load_conanfile(self, conanfile_path, output, processed_profile,
+                       consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
@@ -103,6 +110,7 @@ class ConanFileLoader(object):
             conanfile.initialize(tmp_settings, processed_profile._env_values, local)
 
             if consumer:
+                conanfile.develop = True
                 processed_profile._user_options[conanfile.name].update(processed_profile._user_options["*"])
                 processed_profile._user_options.descope_options(conanfile.name)
                 conanfile.options.initialize_upstream(processed_profile._user_options, local=local)
@@ -112,7 +120,7 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan_txt(self, conan_txt_path, output, processed_profile):
+    def load_conanfile_txt(self, conan_txt_path, output, processed_profile):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
@@ -177,3 +185,72 @@ class ConanFileLoader(object):
         conanfile.generators = []  # remove the default txt generator
 
         return conanfile
+
+
+def _parse_module(conanfile_module, filename):
+    """ Parses a python in-memory module, to extract the classes, mainly the main
+    class defining the Recipe, but also process possible existing generators
+    @param conanfile_module: the module to be processed
+    @param consumer: if this is a root node in the hierarchy, the consumer project
+    @return: the main ConanFile class from the module
+    """
+    result = None
+    for name, attr in conanfile_module.__dict__.items():
+        if name[0] == "_":
+            continue
+        if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
+                attr.__dict__["__module__"] == filename):
+            if result is None:
+                result = attr
+            else:
+                raise ConanException("More than 1 conanfile in the file")
+        if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
+                attr.__dict__["__module__"] == filename):
+            registered_generators.add(attr.__name__, attr)
+
+    if result is None:
+        raise ConanException("No subclass of ConanFile")
+
+    return result
+
+
+def _parse_file(conan_file_path):
+    """ From a given path, obtain the in memory python import module
+    """
+
+    if not os.path.exists(conan_file_path):
+        raise NotFoundException("%s not found!" % conan_file_path)
+
+    filename = os.path.splitext(os.path.basename(conan_file_path))[0]
+
+    try:
+        current_dir = os.path.dirname(conan_file_path)
+        sys.path.append(current_dir)
+        old_modules = list(sys.modules.keys())
+        with chdir(current_dir):
+            sys.dont_write_bytecode = True
+            loaded = imp.load_source(filename, conan_file_path)
+            sys.dont_write_bytecode = False
+        # Put all imported files under a new package name
+        module_id = uuid.uuid1()
+        added_modules = set(sys.modules).difference(old_modules)
+        for added in added_modules:
+            module = sys.modules[added]
+            if module:
+                try:
+                    folder = os.path.dirname(module.__file__)
+                except AttributeError:  # some module doesn't have __file__
+                    pass
+                else:
+                    if folder.startswith(current_dir):
+                        module = sys.modules.pop(added)
+                        sys.modules["%s.%s" % (module_id, added)] = module
+    except Exception:
+        import traceback
+        trace = traceback.format_exc().split('\n')
+        raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
+                                                                     '\n'.join(trace[3:])))
+    finally:
+        sys.path.pop()
+
+    return loaded, filename

@@ -65,11 +65,10 @@ class GraphManager(object):
         cache_settings.remove_undefined()
         processed_profile = ProcessedProfile(cache_settings, profile, None)
         if conanfile_path.endswith(".py"):
-            conanfile = self._loader.load_conan(conanfile_path, output, consumer=True, local=True,
-                                                processed_profile=processed_profile)
-            conanfile.develop = True
+            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
+                                                    processed_profile=processed_profile)
         else:
-            conanfile = self._loader.load_conan_txt(conanfile_path, output, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -103,12 +102,11 @@ class GraphManager(object):
         else:
             output = ScopedOutput("PROJECT", self._output)
             if reference.endswith(".py"):
-                conanfile = self._loader.load_conan(reference, output, processed_profile, consumer=True)
-                conanfile.develop = True
+                conanfile = self._loader.load_conanfile(reference, output, processed_profile, consumer=True)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
-                conanfile = self._loader.load_conan_txt(reference, output, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(conanfile, check_updates, update,

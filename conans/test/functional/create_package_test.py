@@ -82,7 +82,7 @@ class ExporterTest(unittest.TestCase):
 
         output = ScopedOutput("", TestBufferConanOutput())
         loader = ConanFileLoader(None, None, None)
-        conanfile = loader.load_conan(conanfile_path, None, ProcessedProfile())
+        conanfile = loader.load_conanfile(conanfile_path, None, ProcessedProfile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
                        output, copy_info=True)
