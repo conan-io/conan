@@ -128,8 +128,9 @@ virtualenv
             self.assertIn('unset SPECIAL_VAR', deactivate)
         else:
             self.assertIn('OLD_PS1="%s"' % env.setdefault('OLD_PS1', ''), deactivate)
+            self.assertIn('PS1=$OLD_PS1', deactivate)
             self.assertIn('export OLD_PS1', deactivate)
-            self.assertIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
+            self.assertNotIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
             self.assertIn('export PS1', deactivate)
             self.assertIn('BASE_LIST="%s"' % env.setdefault('BASE_LIST', ''), deactivate)
             self.assertIn('export BASE_LIST', deactivate)
