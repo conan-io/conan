@@ -6,13 +6,13 @@ from itertools import chain
 
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cppstd_flags import cppstd_flag
-from conans.client.tools import cross_building
+from conans.client.tools import cross_building, replace_in_file
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, get_abs_path
+from conans.util.files import mkdir, get_abs_path, save_files, save
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
@@ -556,3 +556,11 @@ class CMake(object):
         ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._compiler, self._compiler_version,
                                                 self._cppstd)
         return ret
+
+    @staticmethod
+    def insert_conan_build_info(source_subfolder):
+        wrapper = """project(cmake_wrapper)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+add_subdirectory("%s")"""
+        save("CMakeLists.txt", wrapper % source_subfolder)
