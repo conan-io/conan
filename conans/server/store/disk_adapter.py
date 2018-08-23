@@ -1,37 +1,15 @@
-'''Adapter for access to S3 filesystem.'''
+import fasteners
 import os
-from abc import ABCMeta, abstractmethod
+
+from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
+from conans.server.store.server_store_revisions import REVISIONS_FILE
 from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
 from conans.util.files import path_exists
 from conans.paths import SimplePaths
 
 
-class ServerStorageAdapter(object):
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def get_download_urls(self, paths, user=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_upload_urls(self, paths_sizes, user=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_snapshot(self, absolute_path="", files_subset=None):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def delete_folder(self, path):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def delete_empty_dirs(self, deleted_refs):
-        raise NotImplementedError()
-
-
-class ServerDiskAdapter(ServerStorageAdapter):
+class ServerDiskAdapter(object):
     '''Manage access to disk files with common methods required
     for conan operations'''
     def __init__(self, base_url, base_storage_path, updown_auth_manager):
@@ -43,6 +21,7 @@ class ServerDiskAdapter(ServerStorageAdapter):
         self.updown_auth_manager = updown_auth_manager
         self._store_folder = base_storage_path
 
+    # ONLY USED BY APIV1
     def get_download_urls(self, paths, user=None):
         '''Get the urls for download the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}
@@ -61,6 +40,7 @@ class ServerDiskAdapter(ServerStorageAdapter):
 
         return ret
 
+    # ONLY USED BY APIV1
     def get_upload_urls(self, paths_sizes, user=None):
         '''Get the urls for upload the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}
@@ -102,12 +82,32 @@ class ServerDiskAdapter(ServerStorageAdapter):
 
     def delete_empty_dirs(self, deleted_refs):
         paths = SimplePaths(self._store_folder)
+        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
         for ref in deleted_refs:
             ref_path = paths.conan(ref)
-            for _ in range(4):
+            for _ in range(4 if not ref.revision else 5):
                 if os.path.exists(ref_path):
+                    if set(os.listdir(ref_path)) == lock_files:
+                        for lock_file in lock_files:
+                            os.unlink(os.path.join(ref_path, lock_file))
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
                         os.rmdir(ref_path)
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def path_exists(self, path):
+        return os.path.exists(path)
+
+    def read_file(self, path, lock_file):
+        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
+            with open(path) as f:
+                return f.read()
+
+    def write_file(self, path, contents, lock_file):
+        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
+            with open(path, "w") as f:
+                f.write(contents)
+
+    def base_storage_folder(self):
+        return self._store_folder
