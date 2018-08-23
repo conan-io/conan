@@ -69,6 +69,9 @@ class TestingResponse(object):
     def __init__(self, test_response):
         self.test_response = test_response
 
+    def close(self):
+        pass  # Compatibility with close() method of a requests when stream=True
+
     @property
     def headers(self):
         return self.test_response.headers
@@ -238,7 +241,7 @@ class TestServer(object):
 
     @property
     def paths(self):
-        return self.test_server.file_manager.paths
+        return self.test_server.server_store
 
     def __repr__(self):
         return "TestServer @ " + self.fake_url

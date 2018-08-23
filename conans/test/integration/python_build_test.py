@@ -121,6 +121,41 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
+    def transitive_multiple_reuse_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class SourceBuild(ConanFile):
+    def source(self):
+        self.output.info("My cool source!")
+    def build(self):
+        self.output.info("My cool build!")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . SourceBuild/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile
+class PackageInfo(ConanFile):
+    def package(self):
+        self.output.info("My cool package!")
+    def package_info(self):
+        self.output.info("My cool package_info!")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . PackageInfo/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+source = python_requires("SourceBuild/1.0@user/channel")
+package = python_requires("PackageInfo/1.0@user/channel")
+class MyConanfileBase(source.SourceBuild, package.PackageInfo):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
+
 
 class PythonBuildTest(unittest.TestCase):
 

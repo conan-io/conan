@@ -127,9 +127,8 @@ class VirtualEnvGenerator(Generator):
             result["activate.ps1"] = os.linesep.join(activate)
             result["deactivate.ps1"] = os.linesep.join(deactivate)
 
-        if os_info.is_posix:
-            activate, deactivate = self._sh_lines()
-            result["activate.sh"] = os.linesep.join(activate)
-            result["deactivate.sh"] = os.linesep.join(deactivate)
+        activate, deactivate = self._sh_lines()
+        result["activate.sh"] = os.linesep.join(activate)
+        result["deactivate.sh"] = os.linesep.join(deactivate)
 
         return result

@@ -40,7 +40,8 @@ ycm
 
         virtualenvFiles = ["activate.sh", "deactivate.sh"]
         if platform.system() == "Windows":
-            virtualenvFiles = ["activate.bat", "deactivate.bat", "activate.ps1", "deactivate.ps1"]
+            virtualenvFiles.extend(["activate.bat", "deactivate.bat", "activate.ps1",
+                                    "deactivate.ps1"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',

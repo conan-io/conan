@@ -21,7 +21,7 @@ class DepsGraphBuilder(object):
         self._workspace = workspace
         self._recorder = recorder
 
-    def load_graph(self, conanfile, check_updates, update, remote_name):
+    def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -33,7 +33,7 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         loop_ancestors = []
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
-                        loop_ancestors, aliased, check_updates, update, remote_name)
+                        loop_ancestors, aliased, check_updates, update, remote_name, processed_profile)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.compute_package_ids()
@@ -50,7 +50,7 @@ class DepsGraphBuilder(object):
 
         # After resolving ranges,
         for req in conanfile.requires.values():
-            alias = aliased.get(req.conan_reference, None)
+            alias = aliased.get(req.conan_reference)
             if alias:
                 req.conan_reference = alias
 
@@ -65,7 +65,7 @@ class DepsGraphBuilder(object):
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
-                   loop_ancestors, aliased, check_updates, update, remote_name):
+                   loop_ancestors, aliased, check_updates, update, remote_name, processed_profile):
         """ loads a Conan object from the given file
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
@@ -94,11 +94,12 @@ class DepsGraphBuilder(object):
                 if require.private:  # Make sure the subgraph is truly private
                     public_deps = {}
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
-                                                 aliased, check_updates, update, remote_name)
+                                                 aliased, check_updates, update, remote_name,
+                                                 processed_profile)
                 # RECURSION!
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, node.conan_ref,
                                 new_options, new_loop_ancestors, aliased, check_updates, update,
-                                remote_name)
+                                remote_name, processed_profile)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
@@ -119,7 +120,7 @@ class DepsGraphBuilder(object):
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
                                     new_options, new_loop_ancestors, aliased, check_updates, update,
-                                    remote_name)
+                                    remote_name, processed_profile)
 
     def _recurse(self, closure, new_reqs, new_options):
         """ For a given closure, if some requirements or options coming from downstream
@@ -140,7 +141,7 @@ class DepsGraphBuilder(object):
 
     def _config_node(self, node, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
-        requirement values, cause they can be overriden by downstream requires
+        requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
@@ -196,7 +197,7 @@ class DepsGraphBuilder(object):
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req, aliased,
-                         check_updates, update, remote_name, alias_ref=None):
+                         check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
@@ -216,8 +217,8 @@ class DepsGraphBuilder(object):
             conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
-        dep_conanfile = self._loader.load_conan(conanfile_path, output,
-                                                reference=requirement.conan_reference)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
+                                                    reference=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
@@ -227,7 +228,7 @@ class DepsGraphBuilder(object):
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
-                                         remote_name, alias_ref=alias_reference)
+                                         remote_name, processed_profile, alias_ref=alias_reference)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
         new_node.recipe = recipe_status
