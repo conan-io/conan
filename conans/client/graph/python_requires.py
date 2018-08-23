@@ -1,5 +1,3 @@
-import os
-import sys
 import imp
 
 from conans.model.ref import ConanFileReference
@@ -26,11 +24,6 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            try:
-                current_dir = os.path.dirname(path)
-                #sys.path.append(current_dir)
-                module = imp.load_source("python_require", path)
-            finally:
-                sys.path.pop()
+            module = imp.load_source("python_require", path)
             self._modules[require] = module, reference
         return module

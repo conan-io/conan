@@ -222,7 +222,6 @@ def _parse_file(conan_file_path):
 
     try:
         current_dir = os.path.dirname(conan_file_path)
-        sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
@@ -247,7 +246,5 @@ def _parse_file(conan_file_path):
         trace = traceback.format_exc().split('\n')
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))
-    finally:
-        sys.path.pop()
 
     return loaded, filename
