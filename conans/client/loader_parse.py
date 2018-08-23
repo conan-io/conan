@@ -1,4 +1,3 @@
-import imp
 import inspect
 import os
 import sys
@@ -62,7 +61,8 @@ def _parse_file(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(filename, conan_file_path)
+            # loaded = imp.load_source(filename, conan_file_path)
+            loaded = __import__(filename)
             sys.dont_write_bytecode = False
         # Put all imported files under a new package name
         module_id = uuid.uuid1()
