@@ -12,7 +12,6 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
-from conans.client.run_environment import RunEnvironment
 from conans.client.tools.oss import os_info
 
 
@@ -264,7 +263,7 @@ class ConanFile(object):
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw)
         if run_environment:
-            with tools.environment_append(RunEnvironment(self).vars):
+            with tools.run_environment(self):
                 if os_info.is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), command)
                 retcode = _run()

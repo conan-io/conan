@@ -26,7 +26,10 @@ class MSBuild(object):
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
-              vcvars_ver=None, winsdk_version=None):
+              vcvars_ver=None, winsdk_version=None, properties=None):
+
+        self.build_env.parallel = parallel
+
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents()
@@ -37,19 +40,20 @@ class MSBuild(object):
                                            targets=targets, upgrade_project=upgrade_project,
                                            build_type=build_type, arch=arch, parallel=parallel,
                                            toolset=toolset, platforms=platforms,
-                                           use_env=use_env)
+                                           use_env=use_env, properties=properties)
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False):
+                    use_env=False, properties=None):
 
         targets = targets or []
+        properties = properties or {}
         command = []
 
         if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-            command.append("devenv %s /upgrade &&" % project_file)
+            command.append('devenv "%s" /upgrade &&' % project_file)
         else:
             self._output.info("Skipped sln project upgrade")
 
@@ -60,7 +64,7 @@ class MSBuild(object):
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
 
-        command.append("msbuild %s /p:Configuration=%s" % (project_file, build_type))
+        command.append('msbuild "%s" /p:Configuration="%s"' % (project_file, build_type))
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
                      'armv7': 'ARM',
@@ -96,10 +100,13 @@ class MSBuild(object):
             command.append("/target:%s" % ";".join(targets))
 
         if toolset:
-            command.append("/p:PlatformToolset=%s" % toolset)
+            command.append('/p:PlatformToolset="%s"' % toolset)
 
         if props_file_path:
             command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
+
+        for name, value in properties.items():
+            command.append('/p:%s="%s"' % (name, value))
 
         return " ".join(command)
 

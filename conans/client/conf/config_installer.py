@@ -100,11 +100,14 @@ def _process_folder(folder, client_cache, output):
 def _process_download(item, client_cache, output, tmp_folder, verify_ssl):
     output.info("Trying to download  %s" % _hide_password(item))
     zippath = os.path.join(tmp_folder, "config.zip")
-    tools.download(item, zippath, out=output, verify=verify_ssl)
-    _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
+    try:
+        tools.download(item, zippath, out=output, verify=verify_ssl)
+        _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
+    except Exception as e:
+        raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(item, client_cache, output, verify_ssl):
+def configuration_install(item, client_cache, output, verify_ssl, config_type=None):
     tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
@@ -117,7 +120,7 @@ def configuration_install(item, client_cache, output, verify_ssl):
                 raise ConanException("Called config install without arguments and "
                                      "'general.config_install' not defined in conan.conf")
 
-        if item.endswith(".git"):
+        if item.endswith(".git") or config_type == "git":
             _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl)
         elif os.path.exists(item):
             # is a local file

@@ -134,14 +134,11 @@ class MyPkg(ConanFile):
 
     def create_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """
-import os
-from conans import ConanFile
+        client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-
     def configure(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
@@ -157,9 +154,14 @@ class MyPkg(ConanFile):
     def package_info(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+    def system_requirements(self):
+        assert(self.version=="0.1")
+        assert(self.name=="Pkg")
+        self.output.info("Running system requirements!!")
 """})
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        self.assertIn("Running system requirements!!", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 

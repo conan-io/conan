@@ -2,13 +2,13 @@ import unittest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.service.service import ConanService, FileUploadDownloadService,\
     SearchService
-from conans.paths import CONAN_MANIFEST, CONANINFO, SimplePaths
+from conans.paths import CONAN_MANIFEST, CONANINFO
+from conans.server.store.server_store import ServerStore
 from conans.util.files import save_files, save, mkdir, load, md5sum
 from conans.server.service.authorize import BasicAuthorizer
 import os
 from conans.errors import NotFoundException, RequestErrorException
 from conans.test.utils.test_files import hello_source_files
-from conans.server.store.file_manager import FileManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from datetime import timedelta
 from time import sleep
@@ -87,23 +87,22 @@ class ConanServiceTest(unittest.TestCase):
         updown_auth_manager = JWTUpDownAuthManager("secret",
                                                    timedelta(seconds=200))
         adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
-        self.paths = SimplePaths(self.tmp_dir)
-        self.file_manager = FileManager(self.paths, adapter)
-        self.service = ConanService(authorizer, self.file_manager, "lasote")
-        self.search_service = SearchService(authorizer, self.paths, "lasote")
+        self.server_store = ServerStore(storage_adapter=adapter)
+        self.service = ConanService(authorizer, self.server_store, "lasote")
+        self.search_service = SearchService(authorizer, self.server_store, "lasote")
 
         files = hello_source_files("test")
-        save_files(self.paths.export(self.conan_reference), files)
-        self.conan_digest = FileTreeManifest.create(self.paths.export(self.conan_reference))
-        conan_digest_path = os.path.join(self.paths.export(self.conan_reference), CONAN_MANIFEST)
+        save_files(self.server_store.export(self.conan_reference), files)
+        self.conan_digest = FileTreeManifest.create(self.server_store.export(self.conan_reference))
+        conan_digest_path = os.path.join(self.server_store.export(self.conan_reference), CONAN_MANIFEST)
         save(conan_digest_path, str(self.conan_digest))
 
         files = hello_source_files("package")
-        save_files(self.paths.package(self.package_reference), files)
+        save_files(self.server_store.package(self.package_reference), files)
 
     def test_get_conanfile_snapshot(self):
         snap = self.service.get_conanfile_snapshot(self.conan_reference)
-        base_path = self.paths.export(self.conan_reference)
+        base_path = self.server_store.export(self.conan_reference)
 
         snap_expected = {'hello.cpp': md5sum(os.path.join(base_path, "hello.cpp")),
                          'conanmanifest.txt': md5sum(os.path.join(base_path, "conanmanifest.txt")),
@@ -193,10 +192,10 @@ class ConanServiceTest(unittest.TestCase):
         conan_vars2 = conan_vars % "False"
         conan_vars3 = conan_vars % "True"
 
-        save_files(self.paths.package(self.package_reference), {CONANINFO: conan_vars1})
-        save_files(self.paths.package(package_ref2), {CONANINFO: conan_vars2})
-        save_files(self.paths.package(package_ref3), {CONANINFO: conan_vars3})
-        save_files(self.paths.export(conan_ref4), {"dummy.txt": "//"})
+        save_files(self.server_store.package(self.package_reference), {CONANINFO: conan_vars1})
+        save_files(self.server_store.package(package_ref2), {CONANINFO: conan_vars2})
+        save_files(self.server_store.package(package_ref3), {CONANINFO: conan_vars3})
+        save_files(self.server_store.export(conan_ref4), {"dummy.txt": "//"})
 
         info = self.search_service.search()
         expected = [conan_ref3, conan_ref4, self.conan_reference, conan_ref2]
@@ -224,18 +223,18 @@ class ConanServiceTest(unittest.TestCase):
         package_ref2 = PackageReference(conan_ref2, "12345587754")
         package_ref3 = PackageReference(conan_ref3, "77777777777")
 
-        save_files(self.paths.export(conan_ref2), {"fake.txt": "//fake"})
-        save_files(self.paths.package(package_ref2), {"fake.txt": "//fake"})
-        save_files(self.paths.package(package_ref3), {"fake.txt": "//fake"})
+        save_files(self.server_store.export(conan_ref2), {"fake.txt": "//fake"})
+        save_files(self.server_store.package(package_ref2), {"fake.txt": "//fake"})
+        save_files(self.server_store.package(package_ref3), {"fake.txt": "//fake"})
 
         # Delete all the conans folder
         self.service.remove_conanfile(self.conan_reference)
-        conan_path = self.paths.conan(self.conan_reference)
+        conan_path = self.server_store.conan(self.conan_reference)
         self.assertFalse(os.path.exists(conan_path))
 
         # Delete one package
         self.service.remove_packages(conan_ref3, ["77777777777"])
-        package_folder_3 = self.paths.package(PackageReference(conan_ref3, '077777777777'))
+        package_folder_3 = self.server_store.package(PackageReference(conan_ref3, '077777777777'))
         self.assertFalse(os.path.exists(package_folder_3))
 
         # Raise an exception

@@ -2,15 +2,16 @@ import os
 import platform
 import unittest
 
+from nose.plugins.attrib import attr
+
+from conans import tools
 from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, CONANENV, BUILD_INFO
-from conans.test.utils.tools import TestClient
+from conans.paths import CONANFILE, CONANINFO, BUILD_INFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans import tools
-from nose.plugins.attrib import attr
 
 
 class ConanEnvTest(unittest.TestCase):
@@ -28,7 +29,6 @@ class ConanEnvTest(unittest.TestCase):
           PATH and DYLD_LIBRARY_PATH to run the executable, and.. magic!
           it's running agains the shared in the local cache.
         """
-
 
         conanfile = """
 from conans import ConanFile, CMake, tools
@@ -57,10 +57,10 @@ class LibConan(ConanFile):
         self.copy("*main*", dst="bin", keep_path=False)
 
 """
-        cmakelists =  """
-project(mytest)
+        cmakelists = """
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
+project(mytest)
 
 SET(CMAKE_SKIP_RPATH 1)
 ADD_LIBRARY(hello SHARED hello.c)
@@ -172,25 +172,25 @@ import os
 class MyLib(ConanFile):
     apply_env = False
     requires = "Pkg/0.1@lasote/testing"
-    
+
     def _test(self):
         assert("SOME_VAR" not in os.environ)
         assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
-    
+
     def build(self):
         self._test()
-        
+
     def package(self):
         self._test()
-        
+
     def package_info(self):
         self._test()
-    
+
     def build(self):
         self._test()
-              
+
     def imports(self):
-        self._test()     
+        self._test()
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . MyLib/0.1@lasote/testing")

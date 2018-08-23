@@ -1,19 +1,19 @@
 #!/usr/bin/python
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 import os
-from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+from conans.util.env_reader import get_env
 from conans.util.log import logger
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
 import time
 import shutil
-from conans import SERVER_CAPABILITIES
+from conans import SERVER_CAPABILITIES, API_V2, REVISIONS
 from conans.paths import SimplePaths
-
+from conans.server.conf import get_server_store
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
 TESTING_REMOTE_PRIVATE_PASS = "private_pass"
@@ -32,26 +32,33 @@ class TestServerLauncher(object):
         if not base_path:
             base_path = temp_folder()
 
-        if server_capabilities is None:
-            server_capabilities = SERVER_CAPABILITIES  # Default enabled
-
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
 
-        # Define storage_folder, if not, it will be readed from conf file and pointed to real user home
+        # Define storage_folder, if not, it will be read from conf file and
+        # pointed to real user home
         self.storage_folder = os.path.join(base_path, ".conan_server", "data")
         mkdir(self.storage_folder)
 
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
+        if server_capabilities is None:
+            server_capabilities = set(SERVER_CAPABILITIES) - set([API_V2])  # Default enabled
+            if get_env("CONAN_TESTING_SERVER_V2_ENABLED", False) or \
+               get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False):
+                server_capabilities.add(API_V2)
+            if server_config.revisions_enabled or get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False):
+                server_capabilities.add(REVISIONS)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port
 
+        revisions_enabled = server_config.revisions_enabled or REVISIONS in server_capabilities
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
-        self.file_manager = get_file_manager(server_config, public_url=base_url,
-                                             updown_auth_manager=updown_auth_manager)
+        base_url = base_url or server_config.public_url
+        self.server_store = get_server_store(server_config.disk_storage_path, revisions_enabled,
+                                             base_url, updown_auth_manager)
 
         # Prepare some test users
         if not read_permissions:
@@ -76,11 +83,12 @@ class TestServerLauncher(object):
         self.port = TestServerLauncher.port
         self.paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.file_manager, self.paths,
+                              authorizer, authenticator, self.server_store,
                               server_version, min_client_compatible_version,
                               server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
+            self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):
         """from multiprocessing import Process

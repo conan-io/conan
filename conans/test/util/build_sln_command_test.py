@@ -37,7 +37,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         tools.set_global_instances(ConanOutput(new_out), None)
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
                                     build_type='Debug', arch="x86", parallel=False)
-        self.assertIn('/p:Configuration=Debug /p:Platform="x86"', command)
+        self.assertIn('/p:Configuration="Debug" /p:Platform="x86"', command)
         self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
                       new_out.getvalue())
         # use platforms
@@ -45,7 +45,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         tools.set_global_instances(ConanOutput(new_out), None)
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
                                     build_type='Debug', arch="x86", parallel=False, platforms={"x86": "Win32"})
-        self.assertIn('/p:Configuration=Debug /p:Platform="Win32"', command)
+        self.assertIn('/p:Configuration="Debug" /p:Platform="Win32"', command)
         self.assertNotIn("WARN", new_out.getvalue())
         self.assertNotIn("ERROR", new_out.getvalue())
 
@@ -62,18 +62,18 @@ class BuildSLNCommandTest(unittest.TestCase):
     def positive_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=False,
                                     build_type='Debug', arch='x86', parallel=False)
-        self.assertIn('msbuild dummy.sln', command)
+        self.assertIn('msbuild "dummy.sln"', command)
         self.assertIn('/p:Platform="x86"', command)
-        self.assertNotIn('devenv dummy.sln /upgrade', command)
+        self.assertNotIn('devenv "dummy.sln" /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertNotIn('/target:teapot', command)
 
     def upgrade_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=True,
                                     build_type='Debug', arch='x86_64', parallel=False)
-        self.assertIn('msbuild dummy.sln', command)
+        self.assertIn('msbuild "dummy.sln"', command)
         self.assertIn('/p:Platform="x64"', command)
-        self.assertIn('devenv dummy.sln /upgrade', command)
+        self.assertIn('devenv "dummy.sln" /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertNotIn('/target:teapot', command)
 
@@ -81,9 +81,9 @@ class BuildSLNCommandTest(unittest.TestCase):
             command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None,
                                         upgrade_project=True,
                                         build_type='Debug', arch='x86_64', parallel=False)
-            self.assertIn('msbuild dummy.sln', command)
+            self.assertIn('msbuild "dummy.sln"', command)
             self.assertIn('/p:Platform="x64"', command)
-            self.assertNotIn('devenv dummy.sln /upgrade', command)
+            self.assertNotIn('devenv "dummy.sln" /upgrade', command)
             self.assertNotIn('/m:%s' % cpu_count(), command)
             self.assertNotIn('/target:teapot', command)
 
@@ -91,23 +91,23 @@ class BuildSLNCommandTest(unittest.TestCase):
             command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None,
                                         upgrade_project=True,
                                         build_type='Debug', arch='x86_64', parallel=False)
-            self.assertIn('devenv dummy.sln /upgrade', command)
+            self.assertIn('devenv "dummy.sln" /upgrade', command)
 
     def parallel_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=True,
                                     build_type='Debug', arch='armv7', parallel=False)
-        self.assertIn('msbuild dummy.sln', command)
+        self.assertIn('msbuild "dummy.sln"', command)
         self.assertIn('/p:Platform="ARM"', command)
-        self.assertIn('devenv dummy.sln /upgrade', command)
+        self.assertIn('devenv "dummy.sln" /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertNotIn('/target:teapot', command)
 
     def target_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=['teapot'], upgrade_project=False,
                                     build_type='Debug', arch='armv8', parallel=False)
-        self.assertIn('msbuild dummy.sln', command)
+        self.assertIn('msbuild "dummy.sln"', command)
         self.assertIn('/p:Platform="ARM64"', command)
-        self.assertNotIn('devenv dummy.sln /upgrade', command)
+        self.assertNotIn('devenv "dummy.sln" /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertIn('/target:teapot', command)
 
@@ -120,9 +120,10 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     sln_path='dummy.sln', targets=None,
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False, toolset="v110")
-        self.assertTrue(command.startswith('msbuild dummy.sln /p:Configuration=Debug '
+        print(command)
+        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
-                                           '/p:PlatformToolset=v110 '
+                                           '/p:PlatformToolset="v110" '
                                            '/p:ForceImportBeforeCppTargets='), command)
 
     def properties_file_test(self):
@@ -134,7 +135,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     sln_path='dummy.sln', targets=None,
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False)
-        self.assertTrue(command.startswith('msbuild dummy.sln /p:Configuration=Debug '
+        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
                                            '/p:ForceImportBeforeCppTargets='), command)
         path_tmp = command.split("/p:ForceImportBeforeCppTargets=")[1][1:-1]  # remove quotes

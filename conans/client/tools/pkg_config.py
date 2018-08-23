@@ -10,19 +10,22 @@ class PkgConfig(object):
     def _cmd_output(command):
         return subprocess.check_output(command).decode().strip()
 
-    def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None):
+    def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None,
+                 print_errors=True):
         """
         :param library: library (package) name, such as libastral
         :param pkg_config_executable: specify custom pkg-config executable (e.g. for cross-compilation)
         :param static: output libraries suitable for static linking (adds --static to pkg-config command line)
         :param msvc_syntax: MSVC compatibility (adds --msvc-syntax to pkg-config command line)
         :param variables: dictionary of pkg-config variables (passed as --define-variable=VARIABLENAME=VARIABLEVALUE)
+        :param print_errors: output error messages (adds --print-errors)
         """
         self.library = library
         self.pkg_config_executable = pkg_config_executable
         self.static = static
         self.msvc_syntax = msvc_syntax
         self.define_variables = variables
+        self.print_errors = print_errors
 
         self._variables = dict()
         self.info = dict()
@@ -33,6 +36,8 @@ class PkgConfig(object):
             command.append('--static')
         if self.msvc_syntax:
             command.append('--msvc-syntax')
+        if self.print_errors:
+            command.append('--print-errors')
         if self.define_variables:
             for name, value in self.define_variables.items():
                 command.append('--define-variable=%s=%s' % (name, value))
