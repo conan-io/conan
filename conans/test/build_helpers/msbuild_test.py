@@ -116,8 +116,10 @@ class HelloConan(ConanFile):
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("project_file.sln", properties={"MyProp1": "MyValue1", "MyProp2": "MyValue2"})
-        self.assertIn(' /p:MyProp1="MyValue1" /p:MyProp2="MyValue2"', command)
+        command = msbuild.get_command("project_file.sln", properties={"MyProp1": "MyValue1",
+                                                                      "MyProp2": "MyValue2"})
+        self.assertIn('/p:MyProp1="MyValue1"', command)
+        self.assertIn('/p:MyProp2="MyValue2"', command)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def reuse_msbuild_object_test(self):
