@@ -1,7 +1,6 @@
 """Pylint plugin for ConanFile"""
-
 import astroid
-from astroid import MANAGER, scoped_nodes
+from astroid import MANAGER
 
 
 def register(linter):
@@ -16,7 +15,7 @@ def register(linter):
 def transform_conanfile(node):
     """Transform definition of ConanFile class so dynamic fields are visible to pylint"""
 
-    str_class = scoped_nodes.builtin_lookup("str")
+    str_class = astroid.builtin_lookup("str")
     info_class = MANAGER.ast_from_module_name("conans.model.info").lookup(
         "ConanInfo")
     build_requires_class = MANAGER.ast_from_module_name(
@@ -42,5 +41,5 @@ def transform_conanfile(node):
 
 
 MANAGER.register_transform(
-    scoped_nodes.Class, transform_conanfile,
+    astroid.ClassDef, transform_conanfile,
     lambda node: node.qname() == "conans.model.conan_file.ConanFile")

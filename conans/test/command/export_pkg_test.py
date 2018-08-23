@@ -370,13 +370,11 @@ class TestConan(ConanFile):
         # Specify different name or version is not working
         error = client.run("export-pkg . lib/1.0@conan/stable -f", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Specified name/version doesn't match with the name/version "
-                      "in the conanfile", client.out)
+        self.assertIn("ERROR: Package recipe exported with name lib!=Hello", client.out)
 
         error = client.run("export-pkg . Hello/1.1@conan/stable -f", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Specified name/version doesn't match with the name/version "
-                      "in the conanfile", client.out)
+        self.assertIn("ERROR: Package recipe exported with version 1.1!=0.1", client.out)
 
         conanfile = """
 from conans import ConanFile
