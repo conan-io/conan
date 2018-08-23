@@ -128,6 +128,12 @@ class EnvValues(object):
             package_name, key = None, key
         self._data[package_name][key] = value
 
+    def normalize_paths(self):
+        for package_name, env_vars in self._data.items():
+            for name, value in env_vars.items():
+                if not isinstance(value, list):
+                    self._data[package_name][name] = value.replace("\\", "/")
+
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
            it prioritize the values that are already at self._data

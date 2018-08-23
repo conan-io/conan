@@ -1,8 +1,10 @@
 import copy
 import os
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestClient
-from conans.tools import os_info, get_env
+from conans.tools import os_info
 from conans.util.files import load
 
 
@@ -113,12 +115,10 @@ virtualenv
             self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH', activate)
         self.assertIn('export LD_LIBRARY_PATH', activate)
         self.assertIn('export PATH', activate)
-
         deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
         if posix_empty_vars:
+            self.assertNotIn('unset PS1', deactivate)
             self.assertIn('unset OLD_PS1', deactivate)
-            if not get_env("PS1"):
-                self.assertIn('unset PS1', deactivate)
             self.assertIn('unset BASE_LIST', deactivate)
             self.assertIn('unset BASE_VAR', deactivate)
             self.assertIn('unset CPPFLAGS', deactivate)
@@ -128,8 +128,9 @@ virtualenv
             self.assertIn('unset SPECIAL_VAR', deactivate)
         else:
             self.assertIn('OLD_PS1="%s"' % env.setdefault('OLD_PS1', ''), deactivate)
+            self.assertIn('PS1=$OLD_PS1', deactivate)
             self.assertIn('export OLD_PS1', deactivate)
-            self.assertIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
+            self.assertNotIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
             self.assertIn('export PS1', deactivate)
             self.assertIn('BASE_LIST="%s"' % env.setdefault('BASE_LIST', ''), deactivate)
             self.assertIn('export BASE_LIST', deactivate)
@@ -145,12 +146,13 @@ virtualenv
             self.assertIn('export SPECIAL_VAR', deactivate)
 
     def environment_test(self):
-        os.environ["PROMPT"] = "old_PROMPT"
-        os.environ["OLD_PS1"] = "old_OLD_PS1"
-        os.environ["PS1"] = "old_PS1"
-        os.environ["BASE_LIST"] = "old_BASE_LIST"
-        os.environ["BASE_VAR"] = "old_BASE_VAR"
-        os.environ["CPPFLAGS"] = "old_CPPFLAGS"
-        os.environ["LD_LIBRARY_PATH"] = "old_LD_LIBRARY_PATH"
-        os.environ["SPECIAL_VAR"] = "old_SPECIAL_VAR"
-        self.basic_test(posix_empty_vars=False)
+        env = {"PROMPT": "old_PROMPT",
+               "OLD_PS1": "old_OLD_PS1",
+               "PS1": "old_PS1",
+               "BASE_LIST": "old_BASE_LIST",
+               "BASE_VAR": "old_BASE_VAR",
+               "CPPFLAGS": "old_CPPFLAGS",
+               "LD_LIBRARY_PATH": "old_LD_LIBRARY_PATH",
+               "SPECIAL_VAR": "old_SPECIAL_VAR"}
+        with tools.environment_append(env):
+            self.basic_test(posix_empty_vars=False)
