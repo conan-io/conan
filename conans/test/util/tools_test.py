@@ -760,7 +760,7 @@ compiler:
             self.assertIn("VCINSTALLDIR", ret)
 
         my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
-        with tools.environment_append({"LIBPATH": "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"}):
+        with tools.environment_append({"LIBPATH": my_lib_paths}):
             ret = vcvars_dict(settings, only_diff=False)
             str_var_value = os.pathsep.join(ret["LIBPATH"])
             self.assertTrue(str_var_value.endswith(my_lib_paths))
