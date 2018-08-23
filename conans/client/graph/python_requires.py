@@ -1,4 +1,6 @@
 import imp
+import sys
+import os
 
 from conans.model.ref import ConanFileReference
 from conans.client.recorder.action_recorder import ActionRecorder
@@ -10,11 +12,19 @@ class ConanPythonRequire(object):
         self._modules = {}
         self._proxy = proxy
         self._range_resolver = range_resolver
+        self._references = []
+
+    @property
+    def references(self):
+        result = self._references
+        self._references = []
+        return result
 
     def __call__(self, require):
         try:
-            module, _ = self._modules[require]
-            return module
+            m, reference = self._modules[require]
+            self._references.append(reference)
+            return m
         except KeyError:
             r = ConanFileReference.loads(require)
             requirement = Requirement(r)
@@ -24,6 +34,11 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            module = imp.load_source("python_require", path)
+            self._references.append(reference)
+            try:
+                sys.path.append(os.path.dirname(path))
+                module = imp.load_source("python_require", path)
+            finally:
+                sys.path.pop()
             self._modules[require] = module, reference
         return module
