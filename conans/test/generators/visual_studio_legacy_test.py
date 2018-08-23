@@ -9,12 +9,14 @@ from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 import os
+from conans.model.env_info import EnvValues
 
 
 class VisualStudioLegacyGeneratorTest(unittest.TestCase):
 
     def valid_xml_test(self):
-        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile = ConanFile(None, None)
+        conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         folder1 = temp_folder()
         folder1 = folder1.replace("\\", "/")
