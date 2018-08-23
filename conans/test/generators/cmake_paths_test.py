@@ -8,6 +8,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.model.env_info import EnvValues
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
@@ -15,7 +16,8 @@ class CMakePathsGeneratorTest(unittest.TestCase):
     def cmake_vars_unit_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         settings = settings_mock("Release", None, None, lambda x, raise_undefined_field: x)
-        conanfile = ConanFile(None, None, settings, None)
+        conanfile = ConanFile(None, None)
+        conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo(tmp)
         custom_dir = os.path.join(tmp, "custom_build_dir")
