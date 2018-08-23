@@ -15,7 +15,8 @@ class ConanPythonRequire(object):
 
     def __call__(self, require):
         try:
-            return self._modules[require]
+            module, _ = self._modules[require]
+            return module
         except KeyError:
             r = ConanFileReference.loads(require)
             requirement = Requirement(r)
@@ -24,12 +25,12 @@ class ConanPythonRequire(object):
             r = requirement.conan_reference
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
-            path, _, _, _ = result
+            path, _, _, reference = result
             try:
                 current_dir = os.path.dirname(path)
-                sys.path.append(current_dir)
+                #sys.path.append(current_dir)
                 module = imp.load_source("python_require", path)
             finally:
                 sys.path.pop()
-            self._modules[require] = module
+            self._modules[require] = module, reference
         return module
