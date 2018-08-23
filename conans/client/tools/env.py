@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from conans.client.tools.files import which, _path_equals
 from conans.errors import ConanException
+from conans.client.run_environment import RunEnvironment
 
 
 @contextmanager
@@ -19,6 +20,12 @@ def pythonpath(conanfile):
         yield
         sys.path = old_path
     else:
+        yield
+
+
+@contextmanager
+def run_environment(conanfile):
+    with environment_append(RunEnvironment(conanfile).vars):
         yield
 
 

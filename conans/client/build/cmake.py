@@ -17,7 +17,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-from conans.client.build.compiler_flags import architecture_flag
+from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 
 
 def _get_env_cmake_system_name():
@@ -178,17 +178,16 @@ class CMake(object):
         # System name and system version
         if self._cmake_system_name is not True:  # String not empty
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
-            ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
                 if self._os != self._os_build:
                     if self._os:  # the_os is the host (regular setting)
                         ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
                                                                             "watchOS"] else self._os
-                        if os_ver:
-                            ret["CMAKE_SYSTEM_VERSION"] = os_ver
                     else:
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
+        if os_ver:
+            ret["CMAKE_SYSTEM_VERSION"] = os_ver
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR", None)
@@ -325,9 +324,9 @@ class CMake(object):
 
         if str(self._os) in ["Windows", "WindowsStore"] and self._compiler == "Visual Studio":
             if self.parallel:
-                cpus = tools.cpu_count()
-                ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
-                ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
+                flag = parallel_compiler_cl_flag()
+                ret["CONAN_CXX_FLAGS"] = flag
+                ret["CONAN_C_FLAGS"] = flag
 
         # fpic
         if str(self._os) not in ["Windows", "WindowsStore"]:
@@ -395,7 +394,6 @@ class CMake(object):
             args_to_string([source_dir])
         ])
 
-
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
                        os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
@@ -432,6 +430,7 @@ class CMake(object):
                     self._compiler_version and Version(self._compiler_version) >= "10":
                 if "--" not in args:
                     args.append("--")
+                # Parallel for building projects in the solution
                 args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([
@@ -472,7 +471,7 @@ class CMake(object):
 
     def patch_config_paths(self):
         """
-        changes references to the absolute path of the installed package in
+        changes references to the absolute path of the installed package and its dependencies in
         exported cmake config files to the appropriate conan variable. This makes
         most (sensible) cmake config files portable.
 
@@ -492,6 +491,21 @@ class CMake(object):
 
         which is a variable that is set by conanbuildinfo.cmake, so that find_package()
         now correctly works on this conan package.
+
+        For dependent packages, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method and if it depends to a package bar,
+        normally this file will contain absolute paths to the bar package folder,
+        for example it will contain a line such as:
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
+
+        This function will replace such mentions to
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "${CONAN_BAR_ROOT}/include")
 
         If the install() method of the CMake object in the conan file is used, this
         function should be called _after_ that invocation. For example:
@@ -514,7 +528,18 @@ class CMake(object):
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
-                    tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
+                    path = os.path.join(root, f)
+                    tools.replace_in_file(path, pf, replstr, strict=False)
+
+                    # patch paths of dependent packages that are found in any cmake files of the current package
+                    path_content = tools.load(path)
+                    for dep in self._conanfile.deps_cpp_info.deps:
+                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
+                        # try to replace only if from str is found
+                        if path_content.find(from_str) != -1:
+                            dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
+                            tools.replace_in_file(path, from_str, dep_str, strict=False)
 
     def _get_cpp_standard_vars(self):
         if not self._cppstd:

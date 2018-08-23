@@ -9,7 +9,8 @@ from conans.errors import ConanException
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256='', destination=".", filename=""):
+def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
+        pattern=None):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
     if not filename and ("?" in url or "=" in url):
@@ -25,7 +26,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename=""):
     if sha256:
         check_sha256(filename, sha256)
 
-    unzip(filename, destination=destination)
+    unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern)
     os.unlink(filename)
 
 

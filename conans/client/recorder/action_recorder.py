@@ -41,11 +41,13 @@ class ActionRecorder(object):
         self._inst_recipes_develop.add(reference)
 
     def _add_recipe_action(self, reference, action):
+        assert(isinstance(reference, ConanFileReference))
         if reference not in self._inst_recipes_actions:
             self._inst_recipes_actions[reference] = []
         self._inst_recipes_actions[reference].append(action)
 
     def _add_package_action(self, reference, action):
+        assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
         self._inst_packages_actions[reference].append(action)
@@ -54,11 +56,11 @@ class ActionRecorder(object):
     def recipe_fetched_from_cache(self, reference):
         self._add_recipe_action(reference, Action(INSTALL_CACHE))
 
-    def recipe_downloaded(self, reference, remote):
-        self._add_recipe_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote}))
+    def recipe_downloaded(self, reference, remote_name):
+        self._add_recipe_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
 
-    def recipe_install_error(self, reference, error_type, description, remote):
-        doc = {"type": error_type, "description": description, "remote": remote}
+    def recipe_install_error(self, reference, error_type, description, remote_name):
+        doc = {"type": error_type, "description": description, "remote": remote_name}
         self._add_recipe_action(reference, Action(INSTALL_ERROR, doc))
 
     # PACKAGE METHODS
@@ -68,13 +70,14 @@ class ActionRecorder(object):
     def package_fetched_from_cache(self, reference):
         self._add_package_action(reference, Action(INSTALL_CACHE))
 
-    def package_downloaded(self, reference, remote):
-        self._add_package_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote}))
+    def package_downloaded(self, reference, remote_name):
+        self._add_package_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
 
-    def package_install_error(self, reference, error_type, description, remote=None):
+    def package_install_error(self, reference, error_type, description, remote_name=None):
+        assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
-        doc = {"type": error_type, "description": description, "remote": remote}
+        doc = {"type": error_type, "description": description, "remote": remote_name}
         self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
 
     @property
@@ -87,6 +90,7 @@ class ActionRecorder(object):
         return False
 
     def _get_installed_packages(self, reference):
+        assert(isinstance(reference, ConanFileReference))
         ret = []
         for _package_ref, _package_actions in self._inst_packages_actions.items():
             # Could be a download and then an access to cache, we want the first one

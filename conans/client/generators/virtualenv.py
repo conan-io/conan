@@ -37,21 +37,22 @@ class VirtualEnvGenerator(Generator):
         :return:
         """
         variables = variables or self.env.items()
-        path_sep, quote_elements, quote_full_value, enable_space_path_sep = ":", True, False, True
-        if flavor in ["cmd", "ps1"]:
-            path_sep, quote_elements, enable_space_path_sep = ";", False, False
-        if flavor in ["ps1"]:
-            quote_full_value = True
+        if flavor == "cmd":
+            path_sep, quote_elements, quote_full_value = ";", False, False
+        elif flavor == "ps1":
+            path_sep, quote_elements, quote_full_value = ";", False, True
+        elif flavor == "sh":
+            path_sep, quote_elements, quote_full_value = ":", True, False
 
         ret = []
         for name, value in variables:
             # activate values
             if isinstance(value, list):
                 placeholder = self._variable_placeholder(flavor, name)
-                if enable_space_path_sep and name in self.append_with_spaces:
+                if name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
-                    value = "\"%s\"" % value if value else ""
+                    value = "\"%s\"" % value if quote_elements else value
                 else:
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
@@ -104,12 +105,13 @@ class VirtualEnvGenerator(Generator):
     def _ps1_lines(self):
         activate_lines = ['function global:_old_conan_prompt {""}']
         activate_lines.append('$function:_old_conan_prompt = $function:prompt')
-        activate_lines.append('function global:prompt { write-host "(%s) " -nonewline; & $function:_old_conan_prompt }' % self.venv_name)
+        activate_lines.append('function global:prompt { write-host "(%s) " -nonewline; '
+                              '& $function:_old_conan_prompt }' % self.venv_name)
         deactivate_lines = ['$function:prompt = $function:_old_conan_prompt']
         deactivate_lines.append('remove-item function:_old_conan_prompt')
         for name, activate, deactivate in self.format_values("ps1", self.env.items()):
-            activate_lines.append('$env:%s = %s' % (name,activate))
-            deactivate_lines.append('$env:%s = %s' % (name,deactivate))
+            activate_lines.append('$env:%s = %s' % (name, activate))
+            deactivate_lines.append('$env:%s = %s' % (name, deactivate))
         activate_lines.append('')
         return activate_lines, deactivate_lines
 
@@ -125,9 +127,8 @@ class VirtualEnvGenerator(Generator):
             result["activate.ps1"] = os.linesep.join(activate)
             result["deactivate.ps1"] = os.linesep.join(deactivate)
 
-        if os_info.is_posix:
-            activate, deactivate = self._sh_lines()
-            result["activate.sh"] = os.linesep.join(activate)
-            result["deactivate.sh"] = os.linesep.join(deactivate)
+        activate, deactivate = self._sh_lines()
+        result["activate.sh"] = os.linesep.join(activate)
+        result["deactivate.sh"] = os.linesep.join(deactivate)
 
         return result

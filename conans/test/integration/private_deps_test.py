@@ -12,6 +12,24 @@ from nose.plugins.attrib import attr
 
 class PrivateBinariesTest(unittest.TestCase):
 
+    def test_private_regression_skip(self):
+        # https://github.com/conan-io/conan/issues/3166
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.replace("pass", "requires=('Pkg/0.1@user/channel', 'private'),")})
+        client.run("create . Pkg2/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.replace("pass", "requires=('Pkg2/0.1@user/channel', 'private'),")})
+        client.run("create . Pkg3/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.replace("pass", "requires=('Pkg3/0.1@user/channel', 'private'),")})
+        client.run("create . Pkg4/0.1@user/channel")
+        client.run("info Pkg4/0.1@user/channel")
+        self.assertEqual(3, str(client.out).count("Binary: Skip"))
+
     def test_private_skip(self):
         client = TestClient()
         conanfile = """from conans import ConanFile

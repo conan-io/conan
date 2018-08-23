@@ -1,9 +1,12 @@
-from conans.server.rest.controllers.controller import Controller
-from bottle import request, static_file, FileUpload, cached_property
-from conans.server.service.service import FileUploadDownloadService
 import os
 from unicodedata import normalize
+
 import six
+from bottle import request, static_file, FileUpload, cached_property
+
+from conans.server.rest.controllers.controller import Controller
+from conans.server.service.mime import get_mime_type
+from conans.server.service.service import FileUploadDownloadService
 
 
 class FileUploadDownloadController(Controller):
@@ -12,7 +15,7 @@ class FileUploadDownloadController(Controller):
     """
     def attach_to(self, app):
 
-        storage_path = app.file_manager.paths.store
+        storage_path = app.server_store.store
         service = FileUploadDownloadService(app.updown_auth_manager, storage_path)
 
         @app.route(self.route + '/<filepath:path>', method=["GET"])
@@ -20,15 +23,9 @@ class FileUploadDownloadController(Controller):
             token = request.query.get("signature", None)
             file_path = service.get_file_path(filepath, token)
             # https://github.com/kennethreitz/requests/issues/1586
-            if filepath.endswith(".tgz"):
-                mimetype = "x-gzip"
-            elif filepath.endswith(".txz"):
-                mimetype = "x-xz"
-            else:
-                mimetype = "auto"
             return static_file(os.path.basename(file_path),
                                root=os.path.dirname(file_path),
-                               mimetype=mimetype)
+                               mimetype=get_mime_type(file_path))
 
         @app.route(self.route + '/<filepath:path>', method=["PUT"])
         def put(filepath):

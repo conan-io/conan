@@ -58,12 +58,12 @@ class RegistryTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
 
         remotes = registry.remotes
-        registry.set_ref(ref, remotes[0])
-        remote = registry.get_ref(ref)
+        registry.set_ref(ref, remotes[0].name)
+        remote = registry.get_recipe_remote(ref)
         self.assertEqual(remote, remotes[0])
 
-        registry.set_ref(ref, remotes[0])
-        remote = registry.get_ref(ref)
+        registry.set_ref(ref, remotes[0].name)
+        remote = registry.get_recipe_remote(ref)
         self.assertEqual(remote, remotes[0])
 
     def insert_test(self):

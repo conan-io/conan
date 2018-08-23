@@ -1,5 +1,6 @@
 import os
 
+from conans.client.remote_registry import Remote
 from conans.errors import ConanException
 from conans.util.log import logger
 from conans.model.ref import PackageReference
@@ -91,9 +92,10 @@ class ConanRemover(object):
         self._registry = remote_registry
 
     def _remote_remove(self, reference, package_ids, remote):
+        assert(isinstance(remote, Remote))
         if package_ids is None:
             result = self._remote_manager.remove(reference, remote)
-            current_remote = self._registry.get_ref(reference)
+            current_remote = self._registry.get_recipe_remote(reference)
             if current_remote == remote:
                 self._registry.remove_ref(reference)
             return result
@@ -114,7 +116,7 @@ class ConanRemover(object):
             remover.remove(reference)
             self._registry.remove_ref(reference, quiet=True)
 
-    def remove(self, pattern, remote, src=None, build_ids=None, package_ids_filter=None, force=False,
+    def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None, force=False,
                packages_query=None, outdated=False):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
@@ -125,11 +127,11 @@ class ConanRemover(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
 
-        if remote and (build_ids is not None or src):
+        if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        if remote:
-            remote = self._registry.remote(remote)
+        if remote_name:
+            remote = self._registry.remote(remote_name)
             references = self._remote_manager.search_recipes(remote, pattern)
         else:
             references = search_recipes(self._client_cache, pattern)
@@ -143,12 +145,12 @@ class ConanRemover(object):
             package_ids = package_ids_filter
             if packages_query or outdated:
                 # search packages
-                if remote:
+                if remote_name:
                     packages = self._remote_manager.search_packages(remote, reference, packages_query)
                 else:
                     packages = search_packages(self._client_cache, reference, packages_query)
                 if outdated:
-                    if remote:
+                    if remote_name:
                         recipe_hash = self._remote_manager.get_conan_manifest(reference, remote).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
@@ -164,13 +166,13 @@ class ConanRemover(object):
 
             if self._ask_permission(reference, src, build_ids, package_ids, force):
                 deleted_refs.append(reference)
-                if remote:
+                if remote_name:
                     self._remote_remove(reference, package_ids, remote)
                 else:
                     deleted_refs.append(reference)
                     self._local_remove(reference, src, build_ids, package_ids)
 
-        if not remote:
+        if not remote_name:
             self._client_cache.delete_empty_dirs(deleted_refs)
 
     def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):
