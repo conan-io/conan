@@ -1,26 +1,9 @@
 import unittest
-import six
 
 from conans.test.utils.tools import TestClient
 
 
 class PreExportTest(unittest.TestCase):
-
-    def classmethod_test(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    @classmethod
-    def preexport(self):
-        self.name = "MyPkg"
-        self.version = "1.2.3"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . user/channel")
-        self.assertIn("MyPkg/1.2.3@user/channel: A new conanfile.py version was exported",
-                      client.out)
-        client.run("create . user/channel")
-        self.assertIn("MyPkg/1.2.3@user/channel: Calling package()", client.out)
 
     def load_from_file_test(self):
         client = TestClient()
