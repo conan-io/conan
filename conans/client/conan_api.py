@@ -270,9 +270,11 @@ class ConanAPIV1(object):
             reference = ConanFileReference.loads(path)
             conanfile_path = self._client_cache.conanfile(reference)
         except ConanException:
+            reference = None
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
-        if hasattr(conanfile, "preexport") and callable(conanfile.preexport):
+        # To make sure it captures the name and version of local
+        if reference is None and hasattr(conanfile, "preexport") and callable(conanfile.preexport):
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
             conanfile.preexport()
         try:
