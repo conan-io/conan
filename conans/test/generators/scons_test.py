@@ -4,11 +4,13 @@ from conans.model.conan_file import ConanFile
 from conans.client.generators.scons import SConsGenerator
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
+from conans.model.env_info import EnvValues
 
 
 class SConsGeneratorTest(unittest.TestCase):
     def variables_setup_test(self):
-        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile = ConanFile(None, None)
+        conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE1"]

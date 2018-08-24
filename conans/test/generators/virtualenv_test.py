@@ -1,8 +1,10 @@
 import copy
 import os
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestClient
-from conans.tools import os_info, get_env
+from conans.tools import os_info
 from conans.util.files import load
 
 
@@ -76,61 +78,81 @@ virtualenv
             self.assertIn('$env:SPECIAL_VAR = "dummyValue"', activate)
 
             deactivate = load(os.path.join(client.current_folder, "deactivate.bat"))
-            self.assertIn('SET PROMPT=%s' % env.setdefault('PROMPT',''), deactivate)
-            self.assertIn('SET BASE_LIST=%s' % env.setdefault('BASE_LIST',''), deactivate)
-            self.assertIn('SET BASE_VAR=%s' % env.setdefault('BASE_VAR',''), deactivate)
-            self.assertIn('SET CPPFLAGS=%s' % env.setdefault('CPPFLAGS',''), deactivate)
-            self.assertIn('SET LD_LIBRARY_PATH=%s' % env.setdefault('LD_LIBRARY_PATH',''), deactivate)
-            self.assertIn('SET PATH=%s' % env.setdefault('PATH',''), deactivate)
-            self.assertIn('SET SPECIAL_VAR=%s' % env.setdefault('SPECIAL_VAR',''), deactivate)
+            self.assertIn('SET PROMPT=%s' % env.setdefault('PROMPT', ''), deactivate)
+            self.assertIn('SET BASE_LIST=%s' % env.setdefault('BASE_LIST', ''), deactivate)
+            self.assertIn('SET BASE_VAR=%s' % env.setdefault('BASE_VAR', ''), deactivate)
+            self.assertIn('SET CPPFLAGS=%s' % env.setdefault('CPPFLAGS', ''), deactivate)
+            self.assertIn('SET LD_LIBRARY_PATH=%s' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
+            self.assertIn('SET PATH=%s' % env.setdefault('PATH', ''), deactivate)
+            self.assertIn('SET SPECIAL_VAR=%s' % env.setdefault('SPECIAL_VAR', ''), deactivate)
 
             deactivate = load(os.path.join(client.current_folder, "deactivate.ps1"))
-            self.assertIn('$env:BASE_LIST = "%s"' % env.setdefault('BASE_LIST',''), deactivate)
-            self.assertIn('$env:BASE_VAR = "%s"' % env.setdefault('BASE_VAR',''), deactivate)
-            self.assertIn('$env:CPPFLAGS = "%s"' % env.setdefault('CPPFLAGS',''), deactivate)
-            self.assertIn('$env:LD_LIBRARY_PATH = "%s"' % env.setdefault('LD_LIBRARY_PATH',''), deactivate)
-            self.assertIn('$env:PATH = "%s"' % env.setdefault('PATH',''), deactivate)
-            self.assertIn('$env:SPECIAL_VAR = "%s"' % env.setdefault('SPECIAL_VAR',''), deactivate)
+            self.assertIn('$env:BASE_LIST = "%s"' % env.setdefault('BASE_LIST', ''), deactivate)
+            self.assertIn('$env:BASE_VAR = "%s"' % env.setdefault('BASE_VAR', ''), deactivate)
+            self.assertIn('$env:CPPFLAGS = "%s"' % env.setdefault('CPPFLAGS', ''), deactivate)
+            self.assertIn('$env:LD_LIBRARY_PATH = "%s"' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
+            self.assertIn('$env:PATH = "%s"' % env.setdefault('PATH', ''), deactivate)
+            self.assertIn('$env:SPECIAL_VAR = "%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
 
-        if os_info.is_posix:
-            activate = load(os.path.join(client.current_folder, "activate.sh"))
-            self.assertIn('OLD_PS1="$PS1"\nexport OLD_PS1', activate)
-            self.assertIn('PS1="(conanenv) $PS1"\nexport PS1', activate)
-            self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2":$BASE_LIST\nexport BASE_LIST', activate)
-            self.assertIn('BASE_VAR="baseValue"\nexport BASE_VAR', activate)
-            self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 $CPPFLAGS"\nexport CPPFLAGS', activate)
-            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib":$LD_LIBRARY_PATH\nexport LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH\nexport PATH', activate)
-            self.assertIn('SPECIAL_VAR="dummyValue"\nexport SPECIAL_VAR', activate)
-
-            deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
-            if posix_empty_vars:
-                self.assertIn('unset OLD_PS1', deactivate)
-                if not get_env("PS1"):
-                    self.assertIn('unset PS1', deactivate)
-                self.assertIn('unset BASE_LIST', deactivate)
-                self.assertIn('unset BASE_VAR', deactivate)
-                self.assertIn('unset CPPFLAGS', deactivate)
-                self.assertIn('unset LD_LIBRARY_PATH', deactivate)
-                self.assertIn('PATH="%s"\nexport PATH' % env.setdefault('PATH',''), deactivate)
-                self.assertIn('unset SPECIAL_VAR', deactivate)
-            else:
-                self.assertIn('OLD_PS1="%s"\nexport OLD_PS1' % env.setdefault('OLD_PS1', ''), deactivate)
-                self.assertIn('PS1="%s"\nexport PS1' % env.setdefault('PS1', ''), deactivate)
-                self.assertIn('BASE_LIST="%s"\nexport BASE_LIST' % env.setdefault('BASE_LIST', ''), deactivate)
-                self.assertIn('BASE_VAR="%s"\nexport BASE_VAR' % env.setdefault('BASE_VAR', ''), deactivate)
-                self.assertIn('CPPFLAGS="%s"\nexport CPPFLAGS' % env.setdefault('CPPFLAGS', ''), deactivate)
-                self.assertIn('LD_LIBRARY_PATH="%s"\nexport LD_LIBRARY_PATH' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
-                self.assertIn('PATH="%s"\nexport PATH' % env.setdefault('PATH', ''), deactivate)
-                self.assertIn('SPECIAL_VAR="%s"\nexport SPECIAL_VAR' % env.setdefault('SPECIAL_VAR', ''), deactivate)
+        activate = load(os.path.join(client.current_folder, "activate.sh"))
+        self.assertIn('OLD_PS1="$PS1"', activate)
+        self.assertIn('export OLD_PS1', activate)
+        self.assertIn('PS1="(conanenv) $PS1"', activate)
+        self.assertIn('export PS1', activate)
+        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2":$BASE_LIST', activate)
+        self.assertIn('export BASE_LIST', activate)
+        self.assertIn('BASE_VAR="baseValue"', activate)
+        self.assertIn('export BASE_VAR', activate)
+        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 $CPPFLAGS"', activate)
+        self.assertIn('export CPPFLAGS', activate)
+        self.assertIn('SPECIAL_VAR="dummyValue"', activate)
+        self.assertIn('export SPECIAL_VAR', activate)
+        if os_info.is_windows:
+            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib":$LD_LIBRARY_PATH', activate)
+            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin":$PATH', activate)
+        else:
+            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib":$LD_LIBRARY_PATH', activate)
+            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH', activate)
+        self.assertIn('export LD_LIBRARY_PATH', activate)
+        self.assertIn('export PATH', activate)
+        deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
+        if posix_empty_vars:
+            self.assertNotIn('unset PS1', deactivate)
+            self.assertIn('unset OLD_PS1', deactivate)
+            self.assertIn('unset BASE_LIST', deactivate)
+            self.assertIn('unset BASE_VAR', deactivate)
+            self.assertIn('unset CPPFLAGS', deactivate)
+            self.assertIn('unset LD_LIBRARY_PATH', deactivate)
+            self.assertIn('PATH="%s"' % env.setdefault('PATH', ''), deactivate)
+            self.assertIn('export PATH', deactivate)
+            self.assertIn('unset SPECIAL_VAR', deactivate)
+        else:
+            self.assertIn('OLD_PS1="%s"' % env.setdefault('OLD_PS1', ''), deactivate)
+            self.assertIn('PS1=$OLD_PS1', deactivate)
+            self.assertIn('export OLD_PS1', deactivate)
+            self.assertNotIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
+            self.assertIn('export PS1', deactivate)
+            self.assertIn('BASE_LIST="%s"' % env.setdefault('BASE_LIST', ''), deactivate)
+            self.assertIn('export BASE_LIST', deactivate)
+            self.assertIn('BASE_VAR="%s"' % env.setdefault('BASE_VAR', ''), deactivate)
+            self.assertIn('export BASE_VAR', deactivate)
+            self.assertIn('CPPFLAGS="%s"' % env.setdefault('CPPFLAGS', ''), deactivate)
+            self.assertIn('export CPPFLAGS', deactivate)
+            self.assertIn('LD_LIBRARY_PATH="%s"' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
+            self.assertIn('export LD_LIBRARY_PATH', deactivate)
+            self.assertIn('PATH="%s"' % env.setdefault('PATH', ''), deactivate)
+            self.assertIn('export PATH', deactivate)
+            self.assertIn('SPECIAL_VAR="%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
+            self.assertIn('export SPECIAL_VAR', deactivate)
 
     def environment_test(self):
-        os.environ["PROMPT"] = "old_PROMPT"
-        os.environ["OLD_PS1"] = "old_OLD_PS1"
-        os.environ["PS1"] = "old_PS1"
-        os.environ["BASE_LIST"] = "old_BASE_LIST"
-        os.environ["BASE_VAR"] = "old_BASE_VAR"
-        os.environ["CPPFLAGS"] = "old_CPPFLAGS"
-        os.environ["LD_LIBRARY_PATH"] = "old_LD_LIBRARY_PATH"
-        os.environ["SPECIAL_VAR"] = "old_SPECIAL_VAR"
-        self.basic_test(posix_empty_vars=False)
+        env = {"PROMPT": "old_PROMPT",
+               "OLD_PS1": "old_OLD_PS1",
+               "PS1": "old_PS1",
+               "BASE_LIST": "old_BASE_LIST",
+               "BASE_VAR": "old_BASE_VAR",
+               "CPPFLAGS": "old_CPPFLAGS",
+               "LD_LIBRARY_PATH": "old_LD_LIBRARY_PATH",
+               "SPECIAL_VAR": "old_SPECIAL_VAR"}
+        with tools.environment_append(env):
+            self.basic_test(posix_empty_vars=False)

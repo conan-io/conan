@@ -28,7 +28,7 @@ class Pkg(ConanFile):
 import os
 class Pkg(ConanFile):
     name = "MyPkg"
-    @classmethod
+
     def preexport(self):
         self.version = load(os.path.join(self.recipe_folder, "version.txt"))
 """
@@ -50,14 +50,8 @@ class Pkg(ConanFile):
         self.version = "1.2.3"
 """
         client.save({"conanfile.py": conanfile})
-        if six.PY2:
-            error = client.run("export . user/channel", ignore_error=True)
-            self.assertTrue(error)
-            self.assertIn("preexport(self) not supported in python 2",
-                          client.out)
-        else:
-            client.run("export . user/channel")
-            self.assertIn("MyPkg/1.2.3@user/channel: A new conanfile.py version was exported",
-                          client.out)
-            client.run("create . user/channel")
-            self.assertIn("MyPkg/1.2.3@user/channel: Calling package()", client.out)
+        client.run("export . user/channel")
+        self.assertIn("MyPkg/1.2.3@user/channel: A new conanfile.py version was exported",
+                      client.out)
+        client.run("create . user/channel")
+        self.assertIn("MyPkg/1.2.3@user/channel: Calling package()", client.out)

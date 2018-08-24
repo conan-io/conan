@@ -5,13 +5,15 @@ from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
+from conans.model.env_info import EnvValues
 
 
 class BoostJamGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
 
-        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile = ConanFile(None, None)
+        conanfile.initialize(Settings({}), EnvValues())
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")

@@ -77,14 +77,17 @@ class FileTreeManifest(object):
         text = load(os.path.join(folder, CONAN_MANIFEST))
         return FileTreeManifest.loads(text)
 
-    def save(self, folder, filename=CONAN_MANIFEST):
+    def __repr__(self):
         ret = ["%s" % (self.time)]
         for filepath, file_md5 in sorted(self.file_sums.items()):
             ret.append("%s: %s" % (filepath, file_md5))
         ret.append("")
         content = "\n".join(ret)
+        return content
+
+    def save(self, folder, filename=CONAN_MANIFEST):
         path = os.path.join(folder, filename)
-        save(path, content)
+        save(path, str(self))
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):

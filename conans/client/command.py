@@ -55,19 +55,22 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+_QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
+_PATTERN_EXAMPLE = ("boost/*")
+_REFERENCE_EXAMPLE =  ("MyPackage/1.2@user/channel")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache. Use this for testing purposes"
-                     " only")
-_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., 'boost/*', "
-                              "'MyPackage/1.2@user/channel'")
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
+                     "Use this for testing purposes only")
+_PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
+                              "'%s'" % (_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
-_QUERY_HELP = ("Packages query: 'os=Windows AND (arch=x86 OR compiler=gcc)'. The "
-               "'pattern_or_reference' parameter has to be a reference: MyPackage/1.2@user/channel")
+_QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
+               "to be a reference: %s" % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
                        " relative path to current directory can also be specified")
 
@@ -226,8 +229,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Use this for '
-                                 'testing purposes only')
+                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                                 'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -486,7 +489,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
-            deps_graph, project_reference = data
+            deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -499,10 +502,9 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference, get_cwd())
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
-                self._outputer.info(deps_graph, only, args.package_filter, args.paths,
-                                    project_reference)
+                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method. e.g., Downloads and unzip the package
@@ -737,7 +739,8 @@ class Command(object):
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
-                            help="Remove only outdated from recipe packages")
+                            help="Remove only outdated from recipe packages. " \
+                                 "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Select package to remove specifying the package ID")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
@@ -748,6 +751,9 @@ class Command(object):
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
         args = parser.parse_args(*args)
+
+        # NOTE: returns the expanded pattern (if a pattern was given), and checks
+        # that the query parameter wasn't abused
         reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
                                                                   args.query)
 
@@ -756,6 +762,9 @@ class Command(object):
 
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+
+        if args.outdated and not args.pattern_or_reference:
+            raise ConanException("'--outdated' argument can only be used with a reference")
 
         if args.locks:
             if args.pattern_or_reference:
@@ -869,7 +878,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
-                            help='Show only outdated from recipe packages')
+                            help="Show only outdated from recipe packages. " \
+                                 "This flag can only be used with a reference")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help="Remote to search in. '-r all' searches all remotes")
@@ -907,10 +917,12 @@ class Command(object):
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], reference, args.query,
-                                                     args.table)
+                                                     args.table, outdated=args.outdated)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
+                elif args.outdated:
+                    raise ConanException("'--outdated' argument can only be used with a reference")
 
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 
@@ -943,6 +955,8 @@ class Command(object):
         parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument("-p", "--package", default=None, action=OnceArgument,
                             help='package ID to upload')
+        parser.add_argument('-q', '--query', default=None, action=OnceArgument,
+                            help="Only upload packages matching a specific query. " + _QUERY_HELP)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='upload to this specific remote')
         parser.add_argument("--all", action='store_true', default=False,
@@ -968,11 +982,15 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
+        if args.query and args.package:
+            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+
         cwd = os.getcwd()
         info = None
 
         try:
             info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
+                                      query=args.query,
                                       remote_name=args.remote, all_packages=args.all,
                                       force=args.force,
                                       confirm=args.confirm, retry=args.retry,
