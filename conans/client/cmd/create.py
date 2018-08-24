@@ -40,6 +40,7 @@ def create(reference, manager, user_io, profile, remote_name, update, build_mode
                                   test_build_folder=test_build_folder)
     else:
         manager.install(reference=reference,
+                        create_reference=reference,
                         install_folder=None,  # Not output anything
                         manifest_folder=manifest_folder,
                         manifest_verify=manifest_verify,

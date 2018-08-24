@@ -50,7 +50,7 @@ class Pkg(ConanFile):
 
         error = client.run("display . unexisting_attr", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: type object 'Pkg' has no attribute 'unexisting_attr'", client.out)
+        self.assertIn("ERROR: 'Pkg' object has no attribute 'unexisting_attr'", client.out)
 
     def options_test(self):
         client = TestClient()
@@ -71,7 +71,6 @@ option3: ANY, default=randomANY""")
 import os
 class Pkg(ConanFile):
     name = "MyPkg"
-    @classmethod
     def preexport(self):
         self.version = load(os.path.join(self.recipe_folder, "version.txt"))
 """

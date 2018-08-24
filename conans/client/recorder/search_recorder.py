@@ -32,16 +32,15 @@ class SearchRecorder(object):
         self._info[remote_name][reference] = {"recipe": recipe, "packages": []}
 
     def add_package(self, remote_name, reference, package_id, options, settings, requires, outdated):
-        self._info[remote_name][reference]["packages"].append(_SearchPackage(package_id, options,
-                                                                             settings, requires,
-                                                                             outdated))
+        sp = _SearchPackage(package_id, options, settings, requires, outdated)
+        self._info[remote_name][reference]["packages"].append(sp)
 
     def get_info(self):
         info = {"error": self.error, self.keyword: []}
 
         for remote_name, recipe_packages in sorted(self._info.items()):
             remote_info = {"remote": remote_name, "items": []}
-            for reference, item in recipe_packages.items():
+            for item in recipe_packages.values():
                 recipe_info = item["recipe"].to_dict()
                 if item["recipe"].with_packages:
                     packages_info = [package.to_dict() for package in item["packages"]]
