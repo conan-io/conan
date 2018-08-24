@@ -1,3 +1,4 @@
+import traceback
 from importlib.machinery import SourceFileLoader
 import inspect
 import os
@@ -6,6 +7,21 @@ import uuid
 
 from conans.errors import ConanException, NotFoundException
 from conans.tools import chdir
+
+
+def execute_plugins_method(method_name, plugins_folder, plugin_names, conanfile, conanfile_content,
+                           output):
+    for plugin_name in plugin_names:
+        plugin = load_plugin(plugins_folder, plugin_name, conanfile, conanfile_content, output)
+        try:
+            method = getattr(plugin, method_name)
+            method()
+        except AttributeError:
+            print("KK")
+            pass
+        except Exception as e:
+            raise ConanException("[PLUGIN: %s.%s()] %s\n%s" % (plugin_name, method_name, e,
+                                                               traceback.format_exc()))
 
 
 def load_plugin(plugins_folder, plugin_name, conanfile, conanfile_content, output):
