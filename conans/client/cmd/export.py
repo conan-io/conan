@@ -41,7 +41,6 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
-
     for field in ["url", "license", "description"]:
         field_value = getattr(conanfile, field, None)
         if not field_value:

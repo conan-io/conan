@@ -53,7 +53,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
 
 
-
 default_manifest_folder = '.conan_manifests'
 
 
@@ -330,7 +329,6 @@ class ConanAPIV1(object):
             cwd = cwd or os.getcwd()
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-
 
             reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
 
