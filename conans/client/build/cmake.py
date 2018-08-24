@@ -178,7 +178,6 @@ class CMake(object):
 
         with tools.environment_append(pkg_env):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
-            print(command)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._conanfile.run(command)
