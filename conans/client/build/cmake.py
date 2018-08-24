@@ -5,8 +5,8 @@ from itertools import chain
 from conans import tools
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
-    get_generator, is_multiconfiguration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset
+    get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -42,19 +42,19 @@ class CMake(object):
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.parallel = parallel
-        self._set_cmake_flags = set_cmake_flags
 
+        self._set_cmake_flags = set_cmake_flags
         self._cmake_system_name = cmake_system_name
         self._make_program = make_program
 
-        self.definitions = self.def_builder.get_definitions()
+        self.definitions = self._def_builder.get_definitions()
         self._build_type = self._settings.get_safe("build_type")
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
 
     @property
-    def def_builder(self):
+    def _def_builder(self):
         return CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
                                        make_program=self._make_program, parallel=self.parallel,
                                        generator=self.generator,
@@ -80,7 +80,7 @@ class CMake(object):
                 'Set CMake build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(self.def_builder.build_type_definition(build_type))
+        self.definitions.update(build_type_definition(build_type, self.generator))
 
     @property
     def flags(self):
@@ -88,14 +88,13 @@ class CMake(object):
 
     @property
     def is_multi_configuration(self):
-        return is_multiconfiguration(self.generator)
+        return is_multi_configuration(self.generator)
 
     @property
     def command_line(self):
         args = ['-G "%s"' % self.generator] if self.generator else []
         args.append(self.flags)
         args.append('-Wno-dev')
-        # args.append(defs_to_string({"CMAKE_TOOLCHAIN_FILE": "build.cmake"}))
 
         if self.toolset:
             args.append('-T "%s"' % self.toolset)
@@ -103,7 +102,7 @@ class CMake(object):
 
     @property
     def runtime(self):
-        return defs_to_string(self.definitions.get("CONAN_LINK_RUNTIME"))
+        return defs_to_string(self.definitions.get(runtime_definition_var_name))
 
     @property
     def build_config(self):

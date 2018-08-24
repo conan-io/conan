@@ -11,6 +11,11 @@ from conans.util.env_reader import get_env
 from conans.util.log import logger
 
 
+verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
+cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"
+runtime_definition_var_name = "CONAN_LINK_RUNTIME"
+
+
 def get_toolset(settings):
     if settings.get_safe("compiler") == "Visual Studio":
         subs_toolset = settings.get_safe("compiler.toolset")
@@ -70,18 +75,22 @@ def add_cmake_flag(cmake_flags, name, flag):
     return cmake_flags
 
 
-def is_multiconfiguration(generator):
+def is_multi_configuration(generator):
     return "Visual" in generator or "Xcode" in generator
-
-
-verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
 
 
 def verbose_definition(value):
     return {verbose_definition_name: "ON" if value else "OFF"}
 
 
-cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"
+def runtime_definition(runtime):
+    return {runtime_definition_var_name: "/%s" % runtime} if runtime else {}
+
+
+def build_type_definition(build_type, generator):
+    if build_type and not is_multi_configuration(generator):
+        return {"CMAKE_BUILD_TYPE": build_type}
+    return {}
 
 
 class CMakeDefinitionsBuilder(object):
@@ -102,16 +111,6 @@ class CMakeDefinitionsBuilder(object):
     def _ss(self, setname):
         """safe setting"""
         return self._conanfile.settings.get_safe(setname)
-
-    def build_type_definition(self, build_type=None):
-        build_type = build_type or self._ss("build_type")
-        if build_type and not is_multiconfiguration(self.generator):
-            return {'CMAKE_BUILD_TYPE': build_type}
-        return {}
-
-    def _runtime_definition(self):
-        runtime = self._ss("runtime")
-        return {"CONAN_LINK_RUNTIME": "/%s" % runtime} if runtime else {}
 
     def _get_cpp_standard_vars(self):
         cppstd = self._ss("cppstd")
@@ -228,11 +227,13 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
         arch = self._ss("arch")
         os_ = self._ss("os")
-        libcxx = self._ss("libcxx")
+        libcxx = self._ss("compiler.libcxx")
+        runtime = self._ss("compiler.runtime")
+        build_type = self._ss("build_type")
 
         ret = OrderedDict()
-        ret.update(self.build_type_definition())
-        ret.update(self._runtime_definition())
+        ret.update(build_type_definition(build_type, self.generator))
+        ret.update(runtime_definition(runtime))
 
         if str(os_).lower() == "macos":
             if arch == "x86":
@@ -272,8 +273,8 @@ class CMakeDefinitionsBuilder(object):
         if str(os_) in ["Windows", "WindowsStore"] and compiler == "Visual Studio":
             if self._parallel:
                 flag = parallel_compiler_cl_flag()
-                ret["CONAN_CXX_FLAGS"] = flag
-                ret["CONAN_C_FLAGS"] = flag
+                ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', flag)
+                ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', flag)
 
         # fpic
         if str(os_) not in ["Windows", "WindowsStore"]:
@@ -286,7 +287,6 @@ class CMakeDefinitionsBuilder(object):
         if "cmake_find_package" in self._conanfile.generators:
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
-        ret.update(self.build_type_definition())
         ret.update(self._get_make_program_definition())
 
         if self._set_cmake_flags:
