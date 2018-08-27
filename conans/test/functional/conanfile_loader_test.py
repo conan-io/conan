@@ -12,12 +12,13 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.profile import Profile
 from collections import OrderedDict
 from mock.mock import call
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 class ConanLoaderTest(unittest.TestCase):
 
     def inherit_short_paths_test(self):
-        loader = ConanFileLoader(None, None, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from base_recipe import BasePackage
@@ -38,7 +39,7 @@ class BasePackage(ConanFile):
         self.assertEqual(result.short_paths, True)
 
     def requires_init_test(self):
-        loader = ConanFileLoader(None, None, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from conans import ConanFile
@@ -203,7 +204,7 @@ class MyTest(ConanFile):
         # Apply windows for MyPackage
         profile = Profile()
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, None, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
 
         recipe = loader.load_conanfile(conanfile_path, None,
                                        ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))

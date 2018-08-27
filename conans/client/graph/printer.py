@@ -8,7 +8,9 @@ from conans.client.graph.graph import BINARY_SKIP
 def print_graph(deps_graph, out):
     requires = OrderedDict()
     build_requires = OrderedDict()
+    python_requires = set()
     for node in sorted(deps_graph.nodes):
+        python_requires.update(getattr(node.conanfile, "python_requires", []))
         if not node.conan_ref:
             continue
         package_id = PackageReference(node.conan_ref, node.conanfile.info.package_id())
@@ -29,6 +31,10 @@ def print_graph(deps_graph, out):
             out.writeln("    %s %s - %s" % (repr(node.conan_ref), from_text, node.recipe), Color.BRIGHT_CYAN)
 
     _recipes(requires)
+    if python_requires:
+        out.writeln("Python requires", Color.BRIGHT_YELLOW)
+        for p in python_requires:
+            out.writeln("    %s" % repr(p), Color.BRIGHT_CYAN)
     out.writeln("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):
