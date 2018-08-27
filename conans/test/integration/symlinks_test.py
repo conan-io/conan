@@ -3,7 +3,7 @@ import platform
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import load, save, mkdir
 from conans.model.ref import PackageReference, ConanFileReference
 
 conanfile = """
@@ -57,13 +57,12 @@ class SymLinksTest(unittest.TestCase):
             # Save any different string, random, or the base path
             save(filepath, base)
             self.assertEqual(load(link), base)
-            filepath = os.path.join(base, "version1")
             link = os.path.join(base, "latest")
             self.assertEqual(os.readlink(link), "version1")
-            filepath = os.path.join(base, "latest/file2.txt")
+            filepath = os.path.join(base, "latest", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
-            filepath = os.path.join(base, "edge/file2.txt")
+            filepath = os.path.join(base, "edge", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
 
@@ -71,15 +70,10 @@ class SymLinksTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-
-        self._check(client, ref)
-
-        client.run("install conanfile.txt --build")
         self._check(client, ref)
 
     def package_files_test(self):
@@ -163,3 +157,62 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")
         self._check(client, ref, build=False)
+
+
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+class ExportSymLinksTest(unittest.TestCase):
+
+    def _initialize_client(self, conanfile):
+        self.client = TestClient()
+        self.client.save({"conanfile.py": conanfile,
+                          "src/main.cpp": "cpp fake content",
+                          "CMakeLists.txt": "cmake fake content",
+                          "another_directory/not_to_copy.txt": ""})
+        self.other_dir = os.path.join(self.client.current_folder, "another_other_directory")
+        mkdir(self.other_dir)
+
+    def export_pattern_test(self):
+        conanfile = """
+from conans import ConanFile, CMake
+
+class ConanSymlink(ConanFile):
+    name = "ConanSymlink"
+    version = "3.0.0"
+    exports_sources = ["src/*", "CMakeLists.txt"]
+"""
+        self._initialize_client(conanfile)
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
+        self.client.run("export . danimtb/testing")
+        ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
+        export_sources = self.client.paths.export_sources(ref)
+        cache_other_dir = os.path.join(export_sources, "another_other_directory")
+        cache_src = os.path.join(export_sources, "src")
+        cache_main = os.path.join(cache_src, "main.cpp")
+        cache_cmake = os.path.join(export_sources, "CMakeLists.txt")
+        self.assertFalse(os.path.exists(cache_other_dir))
+        self.assertTrue(os.path.exists(cache_src))
+        self.assertTrue(os.path.exists(cache_main))
+        self.assertTrue(os.path.exists(cache_cmake))
+
+    def export_exclude_test(self):
+        conanfile = """
+from conans import ConanFile, CMake
+
+class ConanSymlink(ConanFile):
+    name = "ConanSymlink"
+    version = "3.0.0"
+    exports_sources = ["*", "!*another_directory*"]
+"""
+        self._initialize_client(conanfile)
+        os.symlink("another_directory", os.path.join(self.other_dir, "another_directory"))
+        self.client.run("export . danimtb/testing")
+        ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
+        export_sources = self.client.paths.export_sources(ref)
+        cache_other_dir = os.path.join(export_sources, "another_other_directory")
+        cache_src = os.path.join(export_sources, "src")
+        cache_main = os.path.join(cache_src, "main.cpp")
+        cache_cmake = os.path.join(export_sources, "CMakeLists.txt")
+        self.assertFalse(os.path.exists(cache_other_dir))
+        self.assertTrue(os.path.exists(cache_src))
+        self.assertTrue(os.path.exists(cache_main))
+        self.assertTrue(os.path.exists(cache_cmake))
