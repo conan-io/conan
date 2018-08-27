@@ -166,7 +166,7 @@ class TestConan(ConanFile):
         self._check(client, ref, build=False)
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class ExportSymLinksTest(unittest.TestCase):
 
     def _initialize_client(self, conanfile):
@@ -188,10 +188,10 @@ class ConanSymlink(ConanFile):
     exports_sources = ["src/*", "CMakeLists.txt"]
 """
         self._initialize_client(conanfile)
-        with tools.chdir(self.client.current_folder):
-            os.symlink(os.path.join("another_other_directory", "another_directory"),
-                       "another_directory")
-        self.assertTrue(os.path.exists(os.path.join(self.other_dir, "another_directory")))
+        self.assertFalse(os.path.exists(os.path.join(self.other_dir, "another_directory")))
+        with tools.chdir(self.other_dir):
+            os.symlink("another_directory", os.path.join("..", "another_directory"))
+        self.assertTrue(os.path.lexists(os.path.join(self.other_dir, "another_directory")))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         export_sources = self.client.paths.export_sources(ref)
@@ -214,10 +214,10 @@ class ConanSymlink(ConanFile):
     exports_sources = ["*", "!*another_directory*"]
 """
         self._initialize_client(conanfile)
-        with tools.chdir(self.client.current_folder):
-            os.symlink(os.path.join("another_other_directory", "another_directory"),
-                       "another_directory")
-        self.assertTrue(os.path.exists(os.path.join(self.other_dir, "another_directory")))
+        self.assertFalse(os.path.exists(os.path.join(self.other_dir, "another_directory")))
+        with tools.chdir(self.other_dir):
+            os.symlink("another_directory", os.path.join("..", "another_directory"))
+        self.assertTrue(os.path.lexists(os.path.join(self.other_dir, "another_directory")))
         self.client.run("export . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
         export_sources = self.client.paths.export_sources(ref)
