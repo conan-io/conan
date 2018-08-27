@@ -172,7 +172,7 @@ class B2Generator(Generator):
         map of key-values.
         '''
         result = []
-        for k, v in m.items():
+        for k, v in sorted(m.items()):
             if v:
                 result += ['<%s>%s' % (k, v)]
         return result

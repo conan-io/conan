@@ -47,12 +47,16 @@ class B2GeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = B2Generator(conanfile)
 
-        # print("        content = {")
-        # for k,v in generator.content.items():
-        #    print("'",k,"':\n")
-        #    print("'''",v)
-        #    print("''',")
-        # print("'''")
+        #print("        content = {")
+        #for k,v in generator.content.items():
+        #    print("\'"+k+"\':")
+        #    print("\'\'\'"+v+"\'\'\',")
+        #print("        }")
+        #print "        content = {"
+        #for k,v in generator.content.items():
+        #    print "\'"+k+"\':"
+        #    print "\'\'\'"+v+"\'\'\',"
+        #print "        }"
         content = {
 'conanbuildinfo.jam':
 '''#|
@@ -199,13 +203,13 @@ constant-if exelinkflags(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if requirements(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    <toolset>gcc-6.3
-    <architecture>x86
     <address-model>32
-    <target-os>linux
-    <variant>release
+    <architecture>x86
     <cxxstd>17
     <cxxstd:dialect>gnu
+    <target-os>linux
+    <toolset>gcc-6.3
+    <variant>release
     ;
 
 constant-if usage-requirements(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -230,13 +234,13 @@ constant-if cflags(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
-    <toolset>gcc-6.3
-    <architecture>x86
     <address-model>32
-    <target-os>linux
-    <variant>release
+    <architecture>x86
     <cxxstd>17
     <cxxstd:dialect>gnu
+    <target-os>linux
+    <toolset>gcc-6.3
+    <variant>release
     ;
 
 constant-if usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -279,13 +283,13 @@ constant-if exelinkflags(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    <toolset>gcc-6.3
-    <architecture>x86
     <address-model>32
-    <target-os>linux
-    <variant>release
+    <architecture>x86
     <cxxstd>17
     <cxxstd:dialect>gnu
+    <target-os>linux
+    <toolset>gcc-6.3
+    <variant>release
     ;
 
 constant-if usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -329,7 +333,8 @@ if $(__define_targets__) {
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
     call-in-project $(mypkg2-mod) : explicit libs ; }
-'''}
+''',
+        }
 
         for ck, cv in generator.content.items():
             self.assertEquals(cv, content[ck])
