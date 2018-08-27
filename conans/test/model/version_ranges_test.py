@@ -11,6 +11,7 @@ from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
 from conans.errors import ConanException
 from conans.test.model.fake_retriever import Retriever
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -125,7 +126,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, None, None)
+        self.loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
