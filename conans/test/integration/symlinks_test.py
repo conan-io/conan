@@ -40,7 +40,7 @@ Hello/0.1@lasote/stable
 """
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -58,13 +58,12 @@ class SymLinksTest(unittest.TestCase):
             # Save any different string, random, or the base path
             save(filepath, base)
             self.assertEqual(load(link), base)
-            filepath = os.path.join(base, "version1")
             link = os.path.join(base, "latest")
             self.assertEqual(os.readlink(link), "version1")
-            filepath = os.path.join(base, "latest/file2.txt")
+            filepath = os.path.join(base, "latest", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
-            filepath = os.path.join(base, "edge/file2.txt")
+            filepath = os.path.join(base, "edge", "file2.txt")
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
 
@@ -72,15 +71,10 @@ class SymLinksTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-
-        self._check(client, ref)
-
-        client.run("install conanfile.txt --build")
         self._check(client, ref)
 
     def package_files_test(self):
@@ -174,8 +168,8 @@ class ConanSymlink(ConanFile):
     version = "3.0.0"
     exports_sources = %s
 """
-        client = TestClient()
         for export_sources in ["['src/*', 'CMakeLists.txt']", "['*', '!*another_directory*']"]:
+            client = TestClient()
             client.save({"conanfile.py": conanfile % export_sources,
                          "src/main.cpp": "cpp fake content",
                          "CMakeLists.txt": "cmake fake content",
