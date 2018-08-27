@@ -130,8 +130,10 @@ class Git(object):
     get_revision = get_commit
 
     def _check_git_repo(self):
-        if not os.path.exists(os.path.join(self.folder, ".git")):
-            raise ConanException("Not a git repository")
+        try:
+            self.run("status")
+        except Exception:
+            raise ConanException("Not a valid git repository")
 
     def get_branch(self):
         self._check_git_repo()
