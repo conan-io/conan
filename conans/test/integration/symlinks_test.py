@@ -2,7 +2,6 @@ import os
 import platform
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save, mkdir
 from conans.model.ref import PackageReference, ConanFileReference
@@ -174,8 +173,8 @@ class ConanSymlink(ConanFile):
     version = "3.0.0"
     exports_sources = %s
 """
-        client = TestClient()
         for export_sources in ["['src/*', 'CMakeLists.txt']", "['*', '!*another_directory*']"]:
+            client = TestClient()
             client.save({"conanfile.py": conanfile % export_sources,
                          "src/main.cpp": "cpp fake content",
                          "CMakeLists.txt": "cmake fake content",
