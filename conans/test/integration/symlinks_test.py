@@ -2,7 +2,6 @@ import os
 import platform
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save, mkdir
 from conans.model.ref import PackageReference, ConanFileReference
@@ -40,7 +39,7 @@ Hello/0.1@lasote/stable
 """
 
 
-# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
