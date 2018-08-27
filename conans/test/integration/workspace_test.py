@@ -94,6 +94,12 @@ add_library(hello{name} hello.cpp)
 target_link_libraries(hello{name} {dep})
 """
 
+root_cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+project(Hello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${CMAKE_CURRENT_BINARY_DIR}/conanws.cmake)
+"""
+
 
 class WorkspaceTest(unittest.TestCase):
 
@@ -134,6 +140,7 @@ HelloA:
 root: HelloA
 """
         client.save({WORKSPACE_FILE: project})
+        client.save({"CMakeLists.txt": root_cmake})
         client.run("install . -if=build")
         self.assertIn("Workspace HelloC: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
@@ -185,6 +192,7 @@ generator: cmake
 name: MyProject
 """
         client.save({WORKSPACE_FILE: project})
+        client.save({"CMakeLists.txt": root_cmake})
         client.run("install . -if=build")
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         base_folder = os.path.join(client.current_folder, "build")
@@ -278,6 +286,7 @@ HelloA:
 root: HelloA
 """
         client.save({WORKSPACE_FILE: project})
+        client.save({"CMakeLists.txt": root_cmake})
 
         release = "build" if platform.system() == "Windows" else "build_release"
         debug = "build" if platform.system() == "Windows" else "build_debug"

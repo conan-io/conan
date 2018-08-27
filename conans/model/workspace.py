@@ -106,7 +106,6 @@ class Workspace(object):
         if self._generator == "cmake":
             template = """# conanws
 cmake_minimum_required(VERSION 3.3)
-project({name} CXX)
 
 """
             cmake = template.format(name=self._name)
@@ -114,9 +113,7 @@ project({name} CXX)
                 build_folder = workspace_package.build_folder
                 build_folder = build_folder.replace("\\", "/")
                 cmake += 'add_subdirectory(%s "%s")\n' % (workspace_package.local_cmakedir, build_folder)
-            cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
-            if os.path.exists(cmake_path) and not load(cmake_path).startswith("# conanws"):
-                raise ConanException("Can't generate CMakeLists.txt, will overwrite existing one")
+            cmake_path = os.path.join(self._install_folder, "conanws.cmake")
             save(cmake_path, cmake)
 
     def __init__(self, path, install_folder):
