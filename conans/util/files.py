@@ -166,7 +166,7 @@ def to_file_bytes(content):
     return content
 
 
-def save_files(path, files, only_if_modified):
+def save_files(path, files, only_if_modified=False):
     for name, content in list(files.items()):
         save(os.path.join(path, name), content, only_if_modified=only_if_modified)
 
