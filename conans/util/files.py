@@ -112,20 +112,28 @@ def save_append(path, content):
         handle.write(to_file_bytes(content))
 
 
-def save(path, content):
+def save(path, content, only_if_modified=False):
     """
     Saves a file with given content
     Params:
         path: path to write file to
-        load: contents to save in the file
+        content: contents to save in the file
+        only_if_modified: file won't be modified if the content hasn't changed
     """
     try:
         os.makedirs(os.path.dirname(path))
     except:
         pass
 
+    new_content = to_file_bytes(content)
+
+    if only_if_modified:
+        old_content = load(path, binary=True)
+        if old_content == new_content:
+            return
+
     with open(path, "wb") as handle:
-        handle.write(to_file_bytes(content))
+        handle.write(new_content)
 
 
 def mkdir_tmp():
