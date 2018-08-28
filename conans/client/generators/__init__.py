@@ -22,10 +22,10 @@ from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
-from .boostbuild import BoostBuildGenerator
 from .json_generator import JsonGenerator
 import traceback
 from conans.util.env_reader import get_env
+from .b2 import B2Generator
 
 
 class _GeneratorManager(object):
@@ -67,9 +67,9 @@ registered_generators.add("ycm", YouCompleteMeGenerator)
 registered_generators.add("virtualenv", VirtualEnvGenerator)
 registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
-registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
 registered_generators.add("json", JsonGenerator)
+registered_generators.add("b2", B2Generator)
 
 
 def write_generators(conanfile, path, output):
