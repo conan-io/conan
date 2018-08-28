@@ -1009,6 +1009,8 @@ class Command(object):
                                 help="Force addition, will update if existing")
         parser_rm = subparsers.add_parser('remove', help='Remove a remote')
         parser_rm.add_argument('remote', help='Name of the remote')
+        parser_rm.add_argument("-f", "--force", default=False, action='store_true',
+                               help="Ignore nonexistent remotes")
         parser_upd = subparsers.add_parser('update', help='Update the remote url')
         parser_upd.add_argument('remote', help='Name of the remote')
 
@@ -1050,7 +1052,7 @@ class Command(object):
         elif args.subcommand == "add":
             return self._conan.remote_add(remote_name, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
-            return self._conan.remote_remove(remote_name)
+            return self._conan.remote_remove(remote_name, args.force)
         elif args.subcommand == "rename":
             return self._conan.remote_rename(remote_name, new_remote)
         elif args.subcommand == "update":

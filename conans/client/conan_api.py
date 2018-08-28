@@ -752,8 +752,8 @@ class ConanAPIV1(object):
         return self._registry.add(remote_name, url, verify_ssl, insert, force)
 
     @api_method
-    def remote_remove(self, remote_name):
-        return self._registry.remove(remote_name)
+    def remote_remove(self, remote_name, force=None):
+        return self._registry.remove(remote_name, force)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
