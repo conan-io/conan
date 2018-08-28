@@ -127,7 +127,7 @@ def save(path, content, only_if_modified=False):
 
     new_content = to_file_bytes(content)
 
-    if only_if_modified:
+    if only_if_modified and os.path.exists(path):
         old_content = load(path, binary=True)
         if old_content == new_content:
             return
