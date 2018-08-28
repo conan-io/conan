@@ -40,9 +40,8 @@ class B2Generator(Generator):
         cbi += [self.conanbuildinfo_prefix_text]
         # The sub-project definitions, i.e. 3.
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            if dep_name != 'b2gen':
-                cbi += ["", "# %s" % (dep_name.lower())]
-                cbi += self.b2_project_for_dep(dep_name, dep_cpp_info)
+            cbi += ["", "# %s" % (dep_name.lower())]
+            cbi += self.b2_project_for_dep(dep_name, dep_cpp_info)
         # The postfix which does 4.
         cbi += [self.conanbuildinfo_postfix_text]
         # The combined text.
@@ -60,15 +59,13 @@ class B2Generator(Generator):
         cbiv += self.b2_constants_for_dep('conan', self.deps_build_info)
         # Now the constants for individual packages, 1b.
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            if dep_name != 'b2gen':
-                cbiv += ["# %s" % (dep_name.lower())]
-                cbiv += self.b2_constants_for_dep(
-                    dep_name, dep_cpp_info, self.deps_user_info[dep_name])
+            cbiv += ["# %s" % (dep_name.lower())]
+            cbiv += self.b2_constants_for_dep(
+                dep_name, dep_cpp_info, self.deps_user_info[dep_name])
         # Second, 2, part are the targets for the packages.
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            if dep_name != 'b2gen':
-                cbiv += ["# %s" % (dep_name.lower())]
-                cbiv += self.b2_targets_for_dep(dep_name, dep_cpp_info)
+            cbiv += ["# %s" % (dep_name.lower())]
+            cbiv += self.b2_targets_for_dep(dep_name, dep_cpp_info)
         result[self.conanbuildinfo_variation_jam] = "\n".join(cbiv)
 
         return result
