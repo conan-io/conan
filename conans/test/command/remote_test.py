@@ -81,6 +81,17 @@ class RemoteTest(unittest.TestCase):
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
+    def remove_remote_force_test(self):
+        self.client.run("remote remove --force remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
+
+    def remove_remote_with_force_the_second_time_test(self):
+        self.client.run("remote remove remote0")
+        self.client.run("remote remove --force remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
+
     def add_force_test(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
