@@ -1,4 +1,5 @@
 import os
+from six import string_types
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -53,6 +54,20 @@ class SystemPackageTool(object):
             return ZypperTool()
         else:
             return NullTool()
+
+    def add_repositories(self, repositories, repo_keys=None, update=True):
+        """
+            Add repositories from list, using provided keys (if any) and update afterwards if requested
+        """
+        repositories = [repositories, ] if isinstance(repositories, string_types) else repositories
+        assert (repo_keys is None or len(repo_keys) == len(repositories)), "If keys are provided, both lists should have the same size (fill with None)"
+
+        for i, repository in enumerate(repositories):
+            repo_key = repo_keys[i] if repo_keys else None
+            self._tool.add_repository(repository, repo_key=repo_key)
+
+        if update:
+            self.update()
 
     def update(self):
         """
@@ -115,6 +130,9 @@ class SystemPackageTool(object):
 
 
 class NullTool(object):
+    def add_repository(self, repository, repo_key=None):
+        pass
+
     def update(self):
         pass
 
@@ -127,6 +145,11 @@ class NullTool(object):
 
 
 class AptTool(object):
+    def add_repository(self, repository, repo_key=None):
+        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository))
+        if repo_key:
+            _run(self._runner, "wget -qO - %s | sudo apt-key add -" % repo_key)
+
     def update(self):
         _run(self._runner, "%sapt-get update" % self._sudo_str)
 
@@ -140,6 +163,10 @@ class AptTool(object):
 
 
 class YumTool(object):
+    def add_repository(self, repository, repo_key=None):
+        _run(self._runner, "%syum-config-manager --add-repo %s" % (self._sudo_str, repository))
+        # TODO: Add GPG key (although it is not needed): https://codingbee.net/tutorials/rhcsa/rhcsa-yum-repository-gpg-keys
+
     def update(self):
         _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
 
@@ -152,6 +179,10 @@ class YumTool(object):
 
 
 class BrewTool(object):
+    def add_repository(self, repository, repo_key=None):
+        _run(self._runner, "brew tap user/repo %s" % repository)  # TODO: Which name?
+        # TODO: Anything to do with key?
+
     def update(self):
         _run(self._runner, "brew update")
 
@@ -164,6 +195,9 @@ class BrewTool(object):
 
 
 class PkgTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise NotImplementedError  # TODO: Does it have something related to this?
+
     def update(self):
         _run(self._runner, "%spkg update" % self._sudo_str)
 
@@ -176,6 +210,10 @@ class PkgTool(object):
 
 
 class PkgUtilTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise NotImplementedError
+        # Instead of adding a repository, it may be better 'pkgutil -t <url> -i <package>'
+
     def update(self):
         _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
 
@@ -188,6 +226,13 @@ class PkgUtilTool(object):
 
 
 class ChocolateyTool(object):
+    def add_repository(self, repository, repo_key=None):
+        # https://github.com/chocolatey/choco/wiki/CommandsSources
+        command = 'choco source add -n=bob -s="%s"' % repository
+        if repo_key:
+            command += ' --cert=%s' % repo_key  # TODO: Always a file? can be a http?
+        _run(self._runner, command)
+
     def update(self):
         _run(self._runner, "choco outdated")
 
@@ -201,6 +246,11 @@ class ChocolateyTool(object):
 
 
 class PacManTool(object):
+    def add_repository(self, repository, repo_key=None):
+        # TODO: https://wiki.archlinux.org/index.php/Pacman#Repositories_and_mirrors
+        # Repos, mirrors,... are handled in a configuration file
+        raise NotImplementedError
+
     def update(self):
         _run(self._runner, "%spacman -Syyu --noconfirm" % self._sudo_str)
 
@@ -213,6 +263,10 @@ class PacManTool(object):
 
 
 class ZypperTool(object):
+    def add_repository(self, repository, repo_key=None):
+        _run(self._runner, "%szypper ar %s repo-name" % (self._sudo_str, repository))
+        # TODO: something with repo_key
+
     def update(self):
         _run(self._runner, "%szypper --non-interactive ref" % self._sudo_str)
 
