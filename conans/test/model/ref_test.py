@@ -1,5 +1,5 @@
 import unittest
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException
 from conans.errors import ConanException
 
 
@@ -42,3 +42,27 @@ class RefTest(unittest.TestCase):
                           "opencv/2.4.10@laso%s/testing" % "A" * 40)
         self.assertRaises(ConanException, ConanFileReference.loads,
                           "opencv/2.4.10@laso/testing%s" % "A" * 40)
+
+
+class ConanNameTestCase(unittest.TestCase):
+    def validate_name_test(self):
+        self.assertIsNone(ConanName.validate_name("string.dot.under-score.123"))
+        self.assertIsNone(ConanName.validate_name("_underscore+123"))
+        self.assertIsNone(ConanName.validate_name("*"))
+        self.assertIsNone(ConanName.validate_name("a" * ConanName._min_chars))
+        self.assertIsNone(ConanName.validate_name("a" * ConanName._max_chars))
+
+    def validate_name_test_invalid(self):
+        self.assertRaises(InvalidNameException, ConanName.validate_name, "-no.dash.start")
+        self.assertRaises(InvalidNameException, ConanName.validate_name, "a" * (ConanName._min_chars - 1))
+        self.assertRaises(InvalidNameException, ConanName.validate_name, "a" * (ConanName._max_chars + 1))
+        # Invalid types
+        self.assertRaises(InvalidNameException, ConanName.validate_name, 123.34)
+        self.assertRaises(InvalidNameException, ConanName.validate_name, ("item1", "item2",))
+
+    def validate_name_version_test(self):
+        self.assertIsNone(ConanName.validate_name("[vvvv]", version=True))
+
+    def validate_name_version_test_invalid(self):
+        self.assertRaises(InvalidNameException, ConanName.validate_name, "[no.close.bracket", True)
+        self.assertRaises(InvalidNameException, ConanName.validate_name, "no.open.bracket]", True)
