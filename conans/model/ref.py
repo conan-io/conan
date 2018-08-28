@@ -1,19 +1,8 @@
 from collections import namedtuple
 import re
+from six import string_types
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
-
-
-# TODO: Move to some tools module
-# TODO: Use Conan way to skip coverage for py2/3 version
-try:  # pragma: no py3 cover
-    basestring  # attempt to evaluate basestring
-
-    def isstr(s):
-        return isinstance(s, basestring)
-except NameError:  # pragma: no py2 cover
-    def isstr(s):
-        return isinstance(s, (str, bytes))
 
 
 class ConanName(object):
@@ -40,7 +29,7 @@ class ConanName(object):
     @staticmethod
     def validate_string(value, message=None):
         """Check for string"""
-        if not isstr(value):
+        if not isinstance(value, string_types):
             message = message or "'{value}' {reason}"
             raise InvalidNameException(message.format(value=value, reason="is not an string"))
 
