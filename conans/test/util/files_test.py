@@ -3,6 +3,7 @@ import os
 
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
+from time import sleep
 
 
 class SaveTestCase(unittest.TestCase):
@@ -15,6 +16,7 @@ class SaveTestCase(unittest.TestCase):
         self.content = "my content"
         save(self.filepath, self.content)
         self.timestamp = os.path.getmtime(self.filepath)
+        sleep(1)  # precission is seconds, so we need to sleep
 
     def only_if_modified_true_test(self):
         save(self.filepath, self.content, only_if_modified=True)
