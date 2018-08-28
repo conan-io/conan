@@ -4,11 +4,23 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
+# TODO: Move to some tools module
+# TODO: Use Conan way to skip coverage for py2/3 version
+try:  # pragma: no py3 cover
+    basestring  # attempt to evaluate basestring
+
+    def isstr(s):
+        return isinstance(s, basestring)
+except NameError:  # pragma: no py2 cover
+    def isstr(s):
+        return isinstance(s, (str, bytes))
+
+
 class ConanName(object):
     _max_chars = 50
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
-                                     % (_min_chars - 1, _max_chars))
+                                     % (_min_chars - 1, _max_chars - 1))
 
     @staticmethod
     def invalid_name_message(name):
@@ -20,23 +32,33 @@ class ConanName(object):
                        % (name, ConanName._min_chars))
         else:
             message = ("'%s' is an invalid name. Valid names MUST begin with a "
-                       "letter or number, have between %s-%s chars, including "
+                       "letter, number or underscore, have between %s-%s chars, including "
                        "letters, numbers, underscore, dot and dash"
                        % (name, ConanName._min_chars, ConanName._max_chars))
         raise InvalidNameException(message)
 
     @staticmethod
+    def validate_string(value, message=None):
+        """Check for string"""
+        if not isstr(value):
+            message = message or "'{value}' {reason}"
+            raise InvalidNameException(message.format(value=value, reason="is not an string"))
+
+    @staticmethod
     def validate_user(username):
+        ConanName.validate_string(username)
         if ConanName._validation_pattern.match(username) is None:
             ConanName.invalid_name_message(username)
 
     @staticmethod
     def validate_name(name, version=False):
         """Check for name compliance with pattern rules"""
+        ConanName.validate_string(name)
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and name.startswith("[") and name.endswith("]"):
+                # TODO: Check value between brackets
                 return
             ConanName.invalid_name_message(name)
 
