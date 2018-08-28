@@ -3,6 +3,8 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
+from conans.util.files import mkdir
+
 
 def report_copied_files(copied, output):
     ext_files = defaultdict(list)
@@ -134,9 +136,9 @@ class FileCopier(object):
         # Filter fnmatch
         filtered_filepaths = []
         for item in filepaths:
-            result = fnmatch.filter([item[0]], pattern)
+            result = fnmatch.fnmatchcase(item[0], pattern)
             if result:
-                filtered_filepaths.append((result[0], item[1]))
+                filtered_filepaths.append(item)
 
         if not links:
             withtout_links = []
@@ -188,6 +190,9 @@ class FileCopier(object):
                 os.remove(dst_link)
             except OSError:
                 pass
+            # Create parent directories
+            if not os.path.exists(os.path.dirname(dst_link)):
+                mkdir(os.path.dirname(dst_link))
             # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             os.symlink(linked_to_element, dst_link)

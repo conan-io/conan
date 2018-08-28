@@ -2,6 +2,7 @@ import os
 import platform
 import unittest
 
+from conans.client.tools import chdir
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save, mkdir
 from conans.model.ref import PackageReference, ConanFileReference
@@ -39,7 +40,7 @@ Hello/0.1@lasote/stable
 """
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+# @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -191,3 +192,47 @@ class ConanSymlink(ConanFile):
             self.assertTrue(os.path.exists(cache_src))
             self.assertTrue(os.path.exists(cache_main))
             self.assertTrue(os.path.exists(cache_cmake))
+
+    def export_ignore_case_test(self):
+        conanfile = """
+from conans import ConanFile, CMake
+
+class ConanSymlink(ConanFile):
+    name = "ConanSymlink"
+    version = "3.0.0"
+    exports_sources = ["*"]
+
+    def package(self):
+        self.copy("*NOT_TO_COPY.TXT", ignore_case=%s)
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile % "False",
+                     "src/main.cpp": "cpp fake content",
+                     "CMakeLists.txt": "cmake fake content",
+                     "another_directory/not_to_copy.txt": ""})
+        mkdir(os.path.join(client.current_folder, "another_other_directory"))
+        symlink_path = os.path.join(client.current_folder, "another_other_directory",
+                                    "another_directory")
+        symlinked_path = os.path.join(client.current_folder, "another_directory")
+        self.assertFalse(os.path.exists(symlink_path))
+        self.assertTrue(os.path.exists(symlinked_path))
+        os.symlink(symlinked_path, symlink_path)
+        client.run("create . danimtb/testing")
+        ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
+        cache_file = os.path.join(client.paths.export_sources(ref), "another_directory",
+                                  "not_to_copy.txt")
+        self.assertTrue(os.path.exists(cache_file))
+        cache_other_dir = os.path.join(client.paths.export_sources(ref),
+                                       "another_other_directory")
+        self.assertTrue(os.path.exists(cache_other_dir))
+        pkg_ref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_file = os.path.join(client.paths.package(pkg_ref), "another_directory",
+                                    "not_to_copy.txt")
+        self.assertFalse(os.path.exists(package_file))
+        package_other_dir = os.path.join(client.paths.package(pkg_ref),
+                                         "another_other_directory")
+        self.assertFalse(os.path.exists(package_other_dir))
+        client.save({"conanfile.py": conanfile % "True"})
+        client.run("create . danimtb/testing")
+        self.assertTrue(os.path.exists(package_file))
+        self.assertTrue(os.path.exists(package_other_dir))
