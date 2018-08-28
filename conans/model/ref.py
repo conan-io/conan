@@ -74,7 +74,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def __new__(cls, name, version, user, channel, revision=None):
         """Simple name creation.
         @param name:        string containing the desired name
-        @param validate:    checks for valid complex name. default True
+        @param version:     string containing the desired version
+        @param user:        string containing the user name
+        @param channel:     string containing the user channel
+        @param revision:    string containing the revision (optional)
         """
         ConanName.validate_name(name)
         ConanName.validate_name(version, True)
