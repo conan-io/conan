@@ -1,10 +1,12 @@
 import platform
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from conans.test.utils.tools import TestClient
 
 
-class SymlinkPackageTest(unittest.TestCase):
+class SymlinkPackageTest(ConanTestCase):
 
     @unittest.skipUnless(platform.system() in ("Linux", "Darwin"), "Requires Symlinks")
     def test_symlink_created(self):

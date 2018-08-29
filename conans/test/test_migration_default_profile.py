@@ -1,4 +1,6 @@
 import unittest
+
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.client.migrations import migrate_to_default_profile
@@ -6,7 +8,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 
 
-class TestMigrationToDefaultProfile(unittest.TestCase):
+class TestMigrationToDefaultProfile(ConanTestCase):
 
     def test_something(self):
         tmp = temp_folder()

@@ -1,9 +1,9 @@
 import os
 import stat
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
-class DeployImportFilePermissionTest(unittest.TestCase):
+class DeployImportFilePermissionTest(ConanTestCase):
 
     def setUp(self):
         self.file_name = 'myheader.h'

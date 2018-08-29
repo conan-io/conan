@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.util.files import save, load, md5
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 
 
-class ManifestTest(unittest.TestCase):
+class ManifestTest(ConanTestCase):
 
     def test_tree_manifest(self):
         tmp_dir = temp_folder()

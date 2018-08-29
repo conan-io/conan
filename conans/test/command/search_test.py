@@ -1,7 +1,7 @@
 import json
 import os
 import shutil
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
@@ -81,7 +81,7 @@ conan_vars4 = """[settings]
 """
 
 
-class SearchTest(unittest.TestCase):
+class SearchTest(ConanTestCase):
 
     def setUp(self):
         self.servers = {"local": TestServer(server_capabilities=[]),
@@ -981,7 +981,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
-class SearchOutdatedTest(unittest.TestCase):
+class SearchOutdatedTest(ConanTestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}

@@ -1,5 +1,5 @@
 from conans.test.utils.tools import TestClient
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 test_conanfile = """from conans import ConanFile
 
 class test_packageConan(ConanFile):
@@ -56,7 +56,7 @@ class PkgConan(ConanFile):
 """
 
 
-class TestPackageConfigTest(unittest.TestCase):
+class TestPackageConfigTest(ConanTestCase):
 
     def test_package_test(self):
         client = TestClient()

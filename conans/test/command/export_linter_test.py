@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 import six
@@ -19,7 +19,7 @@ class TestConan(ConanFile):
 """
 
 
-class ExportLinterTest(unittest.TestCase):
+class ExportLinterTest(ConanTestCase):
 
     def setUp(self):
         self.old_env = dict(os.environ)

@@ -1,8 +1,8 @@
 from conans.client import conan_api
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 
-class ConfigTest(unittest.TestCase):
+class ConfigTest(ConanTestCase):
 
     def config_rm_test(self):
         conan, _, _ = conan_api.ConanAPIV1.factory()

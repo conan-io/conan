@@ -1,12 +1,12 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.server.plugin_loader import load_authentication_plugin
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-class AuthenticatorPluginTest(unittest.TestCase):
+class AuthenticatorPluginTest(ConanTestCase):
 
     def instance_authenticator_test(self):
         folder = temp_folder()

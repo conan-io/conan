@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -29,7 +29,7 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
-class DevInSourceFlowTest(unittest.TestCase):
+class DevInSourceFlowTest(ConanTestCase):
 
     def _assert_pkg(self, folder):
         self.assertEqual(sorted(['file.h', 'myartifact.lib', 'subdir', 'conaninfo.txt',
@@ -144,7 +144,7 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
-class DevOutSourceFlowTest(unittest.TestCase):
+class DevOutSourceFlowTest(ConanTestCase):
 
     def _assert_pkg(self, folder):
         self.assertEqual(sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']),

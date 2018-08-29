@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
@@ -209,7 +209,7 @@ BuildRequire:activate_foo=True
 """
 
 
-class ProfileRequiresTest(unittest.TestCase):
+class ProfileRequiresTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

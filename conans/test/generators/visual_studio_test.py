@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import xml.etree.ElementTree
 
 from conans.client.generators import VisualStudioGenerator
@@ -14,7 +14,7 @@ from conans import tools
 from conans.model.env_info import EnvValues
 
 
-class VisualStudioGeneratorTest(unittest.TestCase):
+class VisualStudioGeneratorTest(ConanTestCase):
 
     def valid_xml_test(self):
         conanfile = ConanFile(None, None)

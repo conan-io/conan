@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient
 
 
-class LoadRequirementsTextFileTest(unittest.TestCase):
+class LoadRequirementsTextFileTest(ConanTestCase):
 
     def load_reqs_from_text_file_test(self):
         client = TestClient()

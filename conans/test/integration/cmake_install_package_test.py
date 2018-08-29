@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
 
-class CMakeInstallPackageTest(unittest.TestCase):
+class CMakeInstallPackageTest(ConanTestCase):
 
     def patch_config_test(self):
         client = TestClient()

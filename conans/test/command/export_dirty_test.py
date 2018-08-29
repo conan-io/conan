@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference
@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 import platform
 
 
-class ExportDirtyTest(unittest.TestCase):
+class ExportDirtyTest(ConanTestCase):
     """ Make sure than when the source folder becomes dirty, due to a export of
     a new recipe with a rmdir failure, or to an uncomplete execution of source(),
     it is marked as dirty and removed when necessary

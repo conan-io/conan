@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from requests.models import Response
 
@@ -28,7 +28,7 @@ class RequesterMockFalse(object):
         return resp
 
 
-class VerifySSLTest(unittest.TestCase):
+class VerifySSLTest(ConanTestCase):
 
     def verify_ssl_test(self):
 

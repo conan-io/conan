@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient
 
@@ -25,7 +25,7 @@ class ChatConan(ConanFile):
 """
 
 
-class RequireOverrideTest(unittest.TestCase):
+class RequireOverrideTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

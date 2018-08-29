@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans import __version__
 import sys
 from six import StringIO
 
 
-class BasicClientTest(unittest.TestCase):
+class BasicClientTest(ConanTestCase):
 
     def help_test(self):
         client = TestClient()

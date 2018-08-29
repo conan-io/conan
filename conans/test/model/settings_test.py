@@ -1,9 +1,9 @@
 from conans.errors import ConanException
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.settings import Settings, bad_value_msg, undefined_value, undefined_field
 
 
-class SettingsLoadsTest(unittest.TestCase):
+class SettingsLoadsTest(ConanTestCase):
 
     def test_none_value(self):
         yml = "os: [None, Windows]"
@@ -56,7 +56,7 @@ class SettingsLoadsTest(unittest.TestCase):
             Settings.loads(yml)
 
 
-class SettingsTest(unittest.TestCase):
+class SettingsTest(ConanTestCase):
 
     def setUp(self):
         data = {"compiler": {

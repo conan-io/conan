@@ -1,5 +1,5 @@
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import subprocess
 
@@ -29,7 +29,7 @@ int main() {
 
 
 
-class PkgConfigTest(unittest.TestCase):
+class PkgConfigTest(ConanTestCase):
 
     def test_reuse_pc_approach1(self):
 

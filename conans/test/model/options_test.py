@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 
 
-class OptionsTest(unittest.TestCase):
+class OptionsTest(ConanTestCase):
 
     def setUp(self):
         package_options = PackageOptions.loads("""{static: [True, False],
@@ -224,7 +224,7 @@ Poco:deps_bundled=True""")
                                                      ])
 
 
-class OptionsValuesTest(unittest.TestCase):
+class OptionsValuesTest(ConanTestCase):
 
     def setUp(self):
         self.sut = OptionsValues.loads("""static=True

@@ -2,12 +2,14 @@ import os
 import platform
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from conans.client.file_copier import FileCopier
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 
 
-class FileCopierTest(unittest.TestCase):
+class FileCopierTest(ConanTestCase):
 
     def basic_test(self):
         folder1 = temp_folder()

@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 import os
 
 
-class RemoveSubsettingTest(unittest.TestCase):
+class RemoveSubsettingTest(ConanTestCase):
 
     def remove_options_test(self):
         # https://github.com/conan-io/conan/issues/2327

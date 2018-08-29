@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.util.files import load, save
@@ -63,7 +63,7 @@ class ToolsTest(ConanFile):
 """
 
 
-class PythonExtendTest(unittest.TestCase):
+class PythonExtendTest(ConanTestCase):
     def _define_base(self, client):
         conanfile = """from conans import ConanFile
 class MyConanfileBase(ConanFile):
@@ -220,7 +220,7 @@ class PkgTest(base.MyConanfileBase):
                       client.out)
 
 
-class PythonBuildTest(unittest.TestCase):
+class PythonBuildTest(ConanTestCase):
 
     def reuse_package_info_test(self):
         # https://github.com/conan-io/conan/issues/2644

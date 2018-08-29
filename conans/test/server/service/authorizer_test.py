@@ -1,13 +1,13 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.server.service.authorize import BasicAuthorizer
 from conans.errors import ForbiddenException, InternalErrorException, AuthenticationException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class AuthorizerTest(unittest.TestCase):
+class AuthorizerTest(ConanTestCase):
 
     def setUp(self):
-        unittest.TestCase.setUp(self)
+        ConanTestCase.setUp(self)
         self.openssl_ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
         self.package_reference = PackageReference(self.openssl_ref, "123123123")
         self.openssl_ref2 = ConanFileReference.loads("openssl/2.0.2@lasote/testing")

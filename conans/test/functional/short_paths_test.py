@@ -2,11 +2,13 @@ import os
 import platform
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
-class ShortPathsTest(unittest.TestCase):
+class ShortPathsTest(ConanTestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def inconsistent_cache_test(self):

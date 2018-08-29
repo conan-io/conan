@@ -1,11 +1,11 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient
 
 
-class InstallCWDTest(unittest.TestCase):
+class InstallCWDTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient(users={"myremote": [("lasote", "mypass")]})

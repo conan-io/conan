@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from parameterized import parameterized
 
@@ -26,7 +26,7 @@ class Pkg(ConanFile):
 """
 
 
-class DevelopTest(unittest.TestCase):
+class DevelopTest(ConanTestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def develop_test(self, with_test):

@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
 
-class LoopDectectionTest(unittest.TestCase):
+class LoopDectectionTest(ConanTestCase):
 
     def copy_error_test(self):
         client = TestClient()

@@ -1,13 +1,13 @@
 import os
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, conan_expand_user,
                           SimplePaths)
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 
 
-class PathsTest(unittest.TestCase):
+class PathsTest(ConanTestCase):
 
     def expand_user_test(self):
         if platform.system() == "Windows":

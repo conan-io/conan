@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -6,7 +6,7 @@ import os
 from conans.test.utils.test_files import uncompress_packaged_files
 
 
-class CompleteFlowTest(unittest.TestCase):
+class CompleteFlowTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

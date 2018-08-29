@@ -1,13 +1,13 @@
 import json
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save, load
 
 
-class JsonOutputTest(unittest.TestCase):
+class JsonOutputTest(ConanTestCase):
 
     def setUp(self):
         self.servers = {"default": TestServer()}

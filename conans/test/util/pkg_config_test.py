@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import os
 from nose.plugins.attrib import attr
@@ -26,7 +26,7 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @attr("unix")
-class PkgConfigTest(unittest.TestCase):
+class PkgConfigTest(ConanTestCase):
     def test_negative(self):
         if platform.system() == "Windows":
             return

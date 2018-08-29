@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import os
 
@@ -10,7 +10,7 @@ from conans.test.utils.conanfile import TestConanFile
 from parameterized import parameterized
 
 
-class ExportPkgTest(unittest.TestCase):
+class ExportPkgTest(ConanTestCase):
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350

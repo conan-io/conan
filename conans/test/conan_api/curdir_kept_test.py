@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans import tools
@@ -6,7 +6,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.test.utils.test_files import temp_folder
 
 
-class CurdirKeptTest(unittest.TestCase):
+class CurdirKeptTest(ConanTestCase):
 
     def curdir_test(self):
         tmp_folder = temp_folder()

@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 
 
-class ExitWithCodeTest(unittest.TestCase):
+class ExitWithCodeTest(ConanTestCase):
 
     def raise_an_error_test(self):
 

@@ -1,5 +1,5 @@
 import json
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
@@ -55,7 +55,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-class UploadTest(unittest.TestCase):
+class UploadTest(ConanTestCase):
 
     def _get_client(self, requester=None):
         servers = {}

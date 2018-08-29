@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import unittest
+
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans import tools
 from conans.client.tools.win import get_cased_path
 from conans.test.utils.test_files import temp_folder
@@ -10,7 +11,7 @@ import platform
 from conans.util.files import mkdir
 
 
-class GetCasedPath(unittest.TestCase):
+class GetCasedPath(ConanTestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def test_case(self):
         folder = temp_folder()
@@ -24,7 +25,7 @@ class GetCasedPath(unittest.TestCase):
         self.assertEqual(p1, p4)
 
 
-class UnixPathTest(unittest.TestCase):
+class UnixPathTest(ConanTestCase):
 
     def test_msys_path(self):
         self.assertEqual('/c/windows/system32', tools.unix_path('C:\\Windows\\System32',

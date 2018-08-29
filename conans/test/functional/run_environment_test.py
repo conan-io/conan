@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.run_environment import RunEnvironment
 
@@ -27,7 +27,7 @@ class MockConanfile(object):
         self.deps_cpp_info = MockDepsCppInfo()
 
 
-class RunEnvironmentTest(unittest.TestCase):
+class RunEnvironmentTest(ConanTestCase):
 
     def run_vars_test(self):
         conanfile = MockConanfile()

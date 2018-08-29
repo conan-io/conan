@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.generators.boostbuild import BoostBuildGenerator
 from conans.model.settings import Settings
@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.env_info import EnvValues
 
 
-class BoostJamGeneratorTest(unittest.TestCase):
+class BoostJamGeneratorTest(ConanTestCase):
 
     def variables_setup_test(self):
 

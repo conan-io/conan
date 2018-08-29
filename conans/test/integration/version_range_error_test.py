@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
 
 
-class VersionRangesErrorTest(unittest.TestCase):
+class VersionRangesErrorTest(ConanTestCase):
     def verbose_version_test(self):
         client = TestClient()
         conanfile = TestConanFile("MyPkg", "0.1", requires=["MyOtherPkg/[~0.1]@user/testing"])

@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 import re
 from conans.test.utils.tools import TestClient
@@ -9,7 +9,7 @@ import textwrap
 from conans.util.files import load
 
 
-class InfoTest(unittest.TestCase):
+class InfoTest(ConanTestCase):
 
     def failed_info_test(self):
         client = TestClient()

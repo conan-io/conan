@@ -1,6 +1,6 @@
 import os
 import time
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, md5sum
@@ -8,7 +8,7 @@ from conans.paths import PACKAGE_TGZ_NAME
 from conans.client.remote_manager import compress_files
 
 
-class TgzMd5Test(unittest.TestCase):
+class TgzMd5Test(ConanTestCase):
     """The md5 of a tgz should be the same if the files inside are the same"""
 
     def test_md5_compress(self):

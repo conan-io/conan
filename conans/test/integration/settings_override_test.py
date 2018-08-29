@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE, CONANINFO
@@ -8,7 +8,7 @@ import os
 from conans import tools
 
 
-class SettingsOverrideTest(unittest.TestCase):
+class SettingsOverrideTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

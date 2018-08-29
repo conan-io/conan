@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.util.files import save, load
@@ -10,7 +10,7 @@ import stat
 from parameterized import parameterized
 
 
-class ExportSettingsTest(unittest.TestCase):
+class ExportSettingsTest(ConanTestCase):
 
     def test_basic(self):
         client = TestClient()
@@ -253,7 +253,7 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(export_path, "other/sub/file2.txt")))
 
 
-class ExportTest(unittest.TestCase):
+class ExportTest(ConanTestCase):
 
     def setUp(self):
         self.conan = TestClient()

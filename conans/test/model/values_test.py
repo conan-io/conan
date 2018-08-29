@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.values import Values
 
 
-class ValuesTest(unittest.TestCase):
+class ValuesTest(ConanTestCase):
 
     def simple_test(self):
         v = Values()

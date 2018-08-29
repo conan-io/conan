@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.model.ref import PackageReference, ConanFileReference
@@ -21,7 +21,7 @@ class TestSystemReqs(ConanFile):
 '''
 
 
-class SystemReqsTest(unittest.TestCase):
+class SystemReqsTest(ConanTestCase):
 
     def local_system_requirements_test(self):
         client = TestClient()

@@ -1,5 +1,5 @@
 from conans.test.utils.tools import TestClient
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.model.ref import PackageReference
 import os
@@ -32,7 +32,7 @@ class AConan(ConanFile):
 """
 
 
-class ConanBuildTest(unittest.TestCase):
+class ConanBuildTest(ConanTestCase):
 
     def partial_build_test(self):
         client = TestClient()

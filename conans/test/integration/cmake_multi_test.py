@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -129,7 +129,7 @@ int main(){{
 
 
 @attr("slow")
-class CMakeMultiTest(unittest.TestCase):
+class CMakeMultiTest(ConanTestCase):
 
     @attr("mingw")
     def cmake_multi_find_test(self):

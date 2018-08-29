@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_default
 
 
-class CompilerFlagsTest(unittest.TestCase):
+class CompilerFlagsTest(ConanTestCase):
 
     def test_gcc_cppstd_flags(self):
         self.assertEquals(cppstd_flag("gcc", "4.2", "98"), "-std=c++98")

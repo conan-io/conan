@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client import tools
 from conans.test.utils.tools import TestClient
@@ -38,7 +38,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
     save(os.path.join(folder, name), content)
 
 
-class ProfileTest(unittest.TestCase):
+class ProfileTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

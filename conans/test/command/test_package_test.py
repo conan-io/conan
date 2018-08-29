@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans import tools
 from conans.paths import CONANFILE
@@ -13,7 +13,7 @@ class ConanLib(ConanFile):
 '''
 
 
-class TestPackageTest(unittest.TestCase):
+class TestPackageTest(ConanTestCase):
 
     def basic_test(self):
         test_conanfile = '''

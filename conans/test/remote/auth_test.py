@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestServer, TestClient
@@ -17,7 +17,7 @@ class OpenSSLConan(ConanFile):
 """
 
 
-class AuthorizeTest(unittest.TestCase):
+class AuthorizeTest(ConanTestCase):
 
     def setUp(self):
         self.servers = {}

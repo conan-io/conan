@@ -4,6 +4,7 @@ import mock
 import os
 import platform
 import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from collections import namedtuple
 
@@ -37,7 +38,7 @@ import requests
 from nose.plugins.attrib import attr
 
 
-class SystemPackageToolTest(unittest.TestCase):
+class SystemPackageToolTest(ConanTestCase):
     def setUp(self):
         out = TestBufferConanOutput()
         set_global_instances(out, requests)
@@ -373,7 +374,7 @@ class RunnerMock(object):
         return 0 if self.return_ok else 1
 
 
-class ReplaceInFileTest(unittest.TestCase):
+class ReplaceInFileTest(ConanTestCase):
     def setUp(self):
         text = u'J\xe2nis\xa7'
         self.tmp_folder = temp_folder()
@@ -400,7 +401,7 @@ class ReplaceInFileTest(unittest.TestCase):
         self.assertIn("nus", content)
 
 
-class ToolsTest(unittest.TestCase):
+class ToolsTest(ConanTestCase):
 
     def load_save_test(self):
         folder = temp_folder()
@@ -1096,7 +1097,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         thread.stop()
 
 
-class GitToolTest(unittest.TestCase):
+class GitToolTest(ConanTestCase):
 
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})

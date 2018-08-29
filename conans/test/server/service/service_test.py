@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.service.service import ConanService, FileUploadDownloadService,\
     SearchService
@@ -27,7 +27,7 @@ class MockFileSaver(object):
         save(os.path.join(abspath, self.filename), self.content)
 
 
-class FileUploadDownloadServiceTest(unittest.TestCase):
+class FileUploadDownloadServiceTest(ConanTestCase):
 
     def setUp(self):
         self.updown_auth_manager = JWTUpDownAuthManager("secret",
@@ -72,7 +72,7 @@ class FileUploadDownloadServiceTest(unittest.TestCase):
                           self.absolute_file_path, token, len(self.content) + 1)
 
 
-class ConanServiceTest(unittest.TestCase):
+class ConanServiceTest(ConanTestCase):
 
     def setUp(self):
         self.conan_reference = ConanFileReference.loads("openssl/2.0.3@lasote/testing")

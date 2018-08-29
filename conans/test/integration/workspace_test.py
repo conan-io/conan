@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 import platform
 import shutil
@@ -95,7 +95,7 @@ target_link_libraries(hello{name} {dep})
 """
 
 
-class WorkspaceTest(unittest.TestCase):
+class WorkspaceTest(ConanTestCase):
 
     def build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3075

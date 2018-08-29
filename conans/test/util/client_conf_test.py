@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.client_cache import CONAN_CONF
 from conans.client.conf import ConanClientConfigParser
@@ -30,7 +30,7 @@ os=Linux
 '''
 
 
-class ClientConfTest(unittest.TestCase):
+class ClientConfTest(ConanTestCase):
 
     def test_quotes(self):
         tmp_dir = temp_folder()

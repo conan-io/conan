@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 import platform
@@ -9,7 +9,7 @@ from nose.plugins.attrib import attr
 
 
 @attr('golang')
-class GoDiamondTest(unittest.TestCase):
+class GoDiamondTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

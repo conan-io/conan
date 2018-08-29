@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.test.utils.python_test_files import py_hello_conan_files
 import platform
 
 
-class PythonDiamondTest(unittest.TestCase):
+class PythonDiamondTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

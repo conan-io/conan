@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import load
 
 
-class NewTest(unittest.TestCase):
+class NewTest(ConanTestCase):
 
     def new_test(self):
         client = TestClient()

@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.client.graph.graph_builder import DepsGraph, Node
 from conans.model.ref import ConanFileReference
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 
 
-class DepsGraphTest(unittest.TestCase):
+class DepsGraphTest(ConanTestCase):
 
     def test_node(self):
         """ nodes are different even if contain same values,

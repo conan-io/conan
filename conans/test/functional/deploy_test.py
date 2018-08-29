@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
@@ -8,7 +8,7 @@ from conans.util.files import load, mkdir
 from parameterized.parameterized import parameterized
 
 
-class DeployTest(unittest.TestCase):
+class DeployTest(ConanTestCase):
     @parameterized.expand([(True, ), (False, )])
     def deploy_test(self, deploy_to_abs):
         client = TestClient()

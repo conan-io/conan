@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.paths import CONANINFO
@@ -10,7 +10,7 @@ import platform
 
 
 @attr("slow")
-class BasicBuildTest(unittest.TestCase):
+class BasicBuildTest(ConanTestCase):
 
     def build_cmake_test(self):
         for cmd, lang, static, pure_c in [("install .", 0, True, True),

@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.client.store.localdb import LocalDB
 import os
 from conans.test.utils.test_files import temp_folder
 
 
-class LocalStoreTest(unittest.TestCase):
+class LocalStoreTest(ConanTestCase):
 
     def localdb_test(self):
         tmp_dir = temp_folder()

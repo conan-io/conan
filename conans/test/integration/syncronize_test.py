@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -12,7 +12,7 @@ from conans.model.manifest import FileTreeManifest
 
 
 @attr("slow")
-class SynchronizeTest(unittest.TestCase):
+class SynchronizeTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

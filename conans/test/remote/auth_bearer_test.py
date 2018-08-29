@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from bottle import request
 
@@ -47,7 +47,7 @@ class ReturnHandlerPlugin(object):
         return wrapper
 
 
-class AuthorizeBearerTest(unittest.TestCase):
+class AuthorizeBearerTest(ConanTestCase):
 
     def basic_test(self):
         auth = AuthorizationHeaderSpy()

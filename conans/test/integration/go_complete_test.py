@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -78,7 +78,7 @@ func main() {
 
 
 @attr('golang')
-class GoCompleteTest(unittest.TestCase):
+class GoCompleteTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

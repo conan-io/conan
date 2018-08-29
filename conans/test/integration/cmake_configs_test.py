@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 import os
@@ -6,7 +6,7 @@ from conans.test.utils.multi_config import multi_config_files
 
 
 @attr("slow")
-class CMakeConfigsTest(unittest.TestCase):
+class CMakeConfigsTest(ConanTestCase):
 
     def test_package_configs_test(self):
         client = TestClient()

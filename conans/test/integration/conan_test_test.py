@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
@@ -9,7 +9,7 @@ from conans.paths import CONANFILE
 
 
 @attr("slow")
-class ConanTestTest(unittest.TestCase):
+class ConanTestTest(ConanTestCase):
 
     def test_partial_reference(self):
         # Create two packages to test with the same test

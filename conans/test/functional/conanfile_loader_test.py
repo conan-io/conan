@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.client.loader import ConanFileTextLoader, ConanFileLoader,\
     ProcessedProfile
 from conans.errors import ConanException
@@ -15,7 +15,7 @@ from mock.mock import call
 from conans.client.graph.python_requires import ConanPythonRequire
 
 
-class ConanLoaderTest(unittest.TestCase):
+class ConanLoaderTest(ConanTestCase):
 
     def inherit_short_paths_test(self):
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))

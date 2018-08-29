@@ -1,6 +1,6 @@
 import os
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
@@ -12,7 +12,7 @@ from conans.util.files import load
 from conans.model.env_info import EnvValues
 
 
-class PkgGeneratorTest(unittest.TestCase):
+class PkgGeneratorTest(ConanTestCase):
 
     def variables_setup_test(self):
         conanfile = ConanFile(None, None)

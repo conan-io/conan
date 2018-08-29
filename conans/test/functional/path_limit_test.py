@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 import os
@@ -38,7 +38,7 @@ class ConanLib(ConanFile):
 '''
 
 
-class PathLengthLimitTest(unittest.TestCase):
+class PathLengthLimitTest(ConanTestCase):
 
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)

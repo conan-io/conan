@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 
 
 @attr('slow')
-class CMakeFindPathGeneratorTest(unittest.TestCase):
+class CMakeFindPathGeneratorTest(ConanTestCase):
 
     def cmake_find_package_system_libs_test(self):
         conanfile = """from conans import ConanFile, tools

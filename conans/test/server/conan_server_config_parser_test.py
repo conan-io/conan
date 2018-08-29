@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.test.utils.test_files import temp_folder
@@ -8,7 +8,7 @@ from conans.server.conf import ConanServerConfigParser
 from conans.errors import ConanException
 
 
-class ServerConfigParseTest(unittest.TestCase):
+class ServerConfigParseTest(ConanTestCase):
 
     def test_not_allowed_encoding_password(self):
         tmp_dir = temp_folder()

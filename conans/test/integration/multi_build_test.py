@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference
 import os
@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 
 
 @attr("slow")
-class CollectLibsTest(unittest.TestCase):
+class CollectLibsTest(ConanTestCase):
 
     def collect_libs_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")

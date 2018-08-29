@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient
 
 
-class TestPackageInfo(unittest.TestCase):
+class TestPackageInfo(ConanTestCase):
 
     def package_info_called_in_local_cache_test(self):
         client = TestClient()

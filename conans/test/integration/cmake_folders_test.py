@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 import os
 from parameterized import parameterized
 
 
-class CMakeFoldersTest(unittest.TestCase):
+class CMakeFoldersTest(ConanTestCase):
 
     @parameterized.expand([(True, True), (False, True), (True, False), (False, False)])
     def basic_test(self, no_copy_source, cmake_install):

@@ -1,6 +1,6 @@
 import copy
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import OrderedDict
 
 from conans import tools
@@ -21,7 +21,7 @@ class MockOut(object):
         pass
 
 
-class ConfDefaultSettingsTest(unittest.TestCase):
+class ConfDefaultSettingsTest(ConanTestCase):
 
     def test_update_settings(self):
         default_profile = """[settings]

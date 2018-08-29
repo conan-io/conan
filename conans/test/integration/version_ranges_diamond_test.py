@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from parameterized import parameterized
 
@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient, TestServer, \
 from conans.util.files import load
 
 
-class VersionRangesUpdatingTest(unittest.TestCase):
+class VersionRangesUpdatingTest(ConanTestCase):
 
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},
@@ -96,7 +96,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO *1.2*", client.out)
 
 
-class VersionRangesMultiRemoteTest(unittest.TestCase):
+class VersionRangesMultiRemoteTest(ConanTestCase):
 
     def setUp(self):
         self.servers = {"default": TestServer(),
@@ -140,7 +140,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
 
-class VersionRangesDiamondTest(unittest.TestCase):
+class VersionRangesDiamondTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

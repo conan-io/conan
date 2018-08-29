@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
@@ -9,7 +9,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-class ProfileTest(unittest.TestCase):
+class ProfileTest(ConanTestCase):
 
     def profile_settings_update_test(self):
         prof = '''[settings]

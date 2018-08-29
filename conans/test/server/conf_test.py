@@ -1,6 +1,6 @@
 from conans.errors import ConanException
 from conans.util.config_parser import ConfigParser
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.util.files import save
 import os
 from conans.server.conf import ConanServerConfigParser
@@ -33,7 +33,7 @@ pepe: pepepass
 '''
 
 
-class ServerConfTest(unittest.TestCase):
+class ServerConfTest(ConanTestCase):
 
     def setUp(self):
         self.file_path = temp_folder()

@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
-class ConditionalReqsTest(unittest.TestCase):
+class ConditionalReqsTest(ConanTestCase):
 
     def conditional_requirements_test(self):
         conanfile = """from conans import ConanFile

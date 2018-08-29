@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans import tools
 from conans.test.utils.test_files import temp_folder
 import os
@@ -11,7 +11,7 @@ from conans.paths import CONANFILE, RUN_LOG_NAME
 from conans.client.runner import ConanRunner
 
 
-class ConanTraceTest(unittest.TestCase):
+class ConanTraceTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

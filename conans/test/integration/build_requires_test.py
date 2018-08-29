@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
@@ -49,7 +49,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 """
 
 
-class BuildRequiresTest(unittest.TestCase):
+class BuildRequiresTest(ConanTestCase):
 
     def test_dependents_txt(self):
         client = TestClient()

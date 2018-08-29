@@ -1,6 +1,8 @@
 import platform
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from nose.plugins.attrib import attr
 
 from conans import tools
@@ -11,7 +13,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
 
 
-class MSBuildTest(unittest.TestCase):
+class MSBuildTest(ConanTestCase):
 
     def dont_mess_with_build_type_test(self):
         settings = MockSettings({"build_type": "Debug",

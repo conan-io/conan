@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference
@@ -10,7 +10,7 @@ from conans.model.info import ConanInfo
 from nose.plugins.attrib import attr
 
 
-class PrivateBinariesTest(unittest.TestCase):
+class PrivateBinariesTest(ConanTestCase):
 
     def test_private_regression_skip(self):
         # https://github.com/conan-io/conan/issues/3166
@@ -143,7 +143,7 @@ class V3D(ConanFile):
 
 
 @attr("slow")
-class PrivateDepsTest(unittest.TestCase):
+class PrivateDepsTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

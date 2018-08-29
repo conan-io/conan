@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, SimplePaths, CONANINFO)
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
@@ -8,7 +8,7 @@ from conans.model.info import ConanInfo
 from conans.search.search import search_recipes, search_packages
 
 
-class SearchTest(unittest.TestCase):
+class SearchTest(ConanTestCase):
 
     def setUp(self):
         folder = temp_folder()

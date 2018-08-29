@@ -1,10 +1,10 @@
 from conans.client.conan_api import _parse_manifests_arguments, ConanException, default_manifest_folder
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from parameterized.parameterized import parameterized
 import os
 
 
-class ArgumentsTest(unittest.TestCase):
+class ArgumentsTest(ConanTestCase):
     @parameterized.expand([
         (dict(verify=default_manifest_folder,
               manifests=default_manifest_folder,

@@ -1,5 +1,5 @@
 import json
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import os
 
@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
-class UserTest(unittest.TestCase):
+class UserTest(ConanTestCase):
 
     def test_command_user_no_remotes(self):
         """ Test that proper error is reported when no remotes are defined and conan user is executed

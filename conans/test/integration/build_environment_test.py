@@ -1,5 +1,5 @@
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
@@ -57,7 +57,7 @@ int main(){
     '''
 
 
-class BuildEnvironmenTest(unittest.TestCase):
+class BuildEnvironmenTest(ConanTestCase):
 
     def use_build_virtualenv_test(self):
         if platform.system() != "Linux":

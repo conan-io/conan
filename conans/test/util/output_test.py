@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import zipfile
 import os
@@ -14,7 +14,7 @@ from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
 
-class OutputTest(unittest.TestCase):
+class OutputTest(ConanTestCase):
 
     def simple_output_test(self):
         stream = StringIO()

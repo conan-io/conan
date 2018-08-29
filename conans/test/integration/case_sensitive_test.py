@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import is_case_insensitive_os, CONANFILE
@@ -16,7 +16,7 @@ class ConanLib(ConanFile):
 '''
 
 
-class CaseSensitiveTest(unittest.TestCase):
+class CaseSensitiveTest(ConanTestCase):
 
     def install_test(self):
         test_server = TestServer()

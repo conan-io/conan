@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import namedtuple, Counter
 
 from conans.test.utils.tools import TestBufferConanOutput
@@ -14,7 +14,7 @@ from conans.test.model.fake_retriever import Retriever
 from conans.client.graph.python_requires import ConanPythonRequire
 
 
-class BasicMaxVersionTest(unittest.TestCase):
+class BasicMaxVersionTest(ConanTestCase):
     def prereleases_versions_test(self):
         output = TestBufferConanOutput()
         result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
@@ -122,7 +122,7 @@ class MockSearchRemote(object):
         return self.packages
 
 
-class VersionRangesTest(unittest.TestCase):
+class VersionRangesTest(ConanTestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()

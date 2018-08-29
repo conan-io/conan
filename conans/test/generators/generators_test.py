@@ -1,11 +1,11 @@
 import os
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
-class GeneratorsTest(unittest.TestCase):
+class GeneratorsTest(ConanTestCase):
 
     def test_error(self):
         base = '''

@@ -3,6 +3,8 @@
 
 import platform
 import unittest
+
+from conans.test.utils.conan_test_case import ConanTestCase
 from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
@@ -12,7 +14,7 @@ from conans import tools
 
 @attr('visual_studio')
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-class VCVarsArchTest(unittest.TestCase):
+class VCVarsArchTest(ConanTestCase):
 
     def test_arch(self):
         settings = Settings.loads(default_settings_yml)

@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 import os
 
 
-class VCVarsTest(unittest.TestCase):
+class VCVarsTest(ConanTestCase):
 
     def basic(self):
         save("test1.bat", """@echo off

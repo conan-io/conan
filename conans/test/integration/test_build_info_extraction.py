@@ -1,6 +1,6 @@
 import json
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import sys
 
 from conans import tools
@@ -11,7 +11,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 
 
-class MyBuildInfo(unittest.TestCase):
+class MyBuildInfo(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer(users={"lasote": "lasote"})

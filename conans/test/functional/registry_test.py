@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.test.utils.test_files import temp_folder
 from conans.client.remote_registry import RemoteRegistry
@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
 
-class RegistryTest(unittest.TestCase):
+class RegistryTest(ConanTestCase):
 
     def retro_compatibility_test(self):
         f = os.path.join(temp_folder(), "aux_file")
