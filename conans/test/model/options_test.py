@@ -245,25 +245,27 @@ class OptionsValuesTest(unittest.TestCase):
         self.assertEqual(option_values.dumps(), self.sut.dumps())
 
     def test_consistency(self):
-        def _checkEqual(hs1, hs2, hs3):
+        def _checkEqual(hs1, hs2, hs3, hs4):
             opt_values1 = OptionsValues(hs1)
             opt_values2 = OptionsValues(hs2)
             opt_values3 = OptionsValues(hs3)
+            opt_values4 = OptionsValues(hs4)
 
             self.assertEqual(opt_values1.dumps(), opt_values2.dumps())
             self.assertEqual(opt_values1.dumps(), opt_values3.dumps())
+            self.assertEqual(opt_values1.dumps(), opt_values4.dumps())
 
         # Check that all possible input options give the same result
-        _checkEqual([('opt', 3)],       [('opt', '3'), ],       ('opt=3', ))
-        _checkEqual([('opt', True)],    [('opt', 'True'), ],    ('opt=True', ))
-        _checkEqual([('opt', False)],   [('opt', 'False'), ],   ('opt=False', ))
-        _checkEqual([('opt', None)],    [('opt', 'None'), ],    ('opt=None', ))
-        _checkEqual([('opt', 0)],       [('opt', '0'), ],       ('opt=0', ))
-        _checkEqual([('opt', '')],      [('opt', ''), ],        ('opt=', ))
+        _checkEqual([('opt', 3)], [('opt', '3'), ], ('opt=3', ), {'opt': 3})
+        _checkEqual([('opt', True)], [('opt', 'True'), ], ('opt=True', ), {'opt': True})
+        _checkEqual([('opt', False)], [('opt', 'False'), ], ('opt=False', ), {'opt': False})
+        _checkEqual([('opt', None)], [('opt', 'None'), ], ('opt=None', ), {'opt': None})
+        _checkEqual([('opt', 0)], [('opt', '0'), ], ('opt=0', ), {'opt': 0})
+        _checkEqual([('opt', '')], [('opt', ''), ], ('opt=', ), {'opt': ''})
 
         # Check for leading and trailing spaces
-        _checkEqual([('  opt  ', 3)],       [(' opt  ', '3'), ],        ('  opt =3', ))
-        _checkEqual([('opt', '  value  ')], [('opt', '  value '), ],    ('opt= value  ', ))
+        _checkEqual([('  opt  ', 3)], [(' opt  ', '3'), ], ('  opt =3', ), {' opt ': 3})
+        _checkEqual([('opt', '  value  ')], [('opt', '  value '), ], ('opt= value  ', ), {'opt': ' value '})
 
         # This is expected behaviour:
         self.assertNotEqual(OptionsValues([('opt', ''), ]).dumps(),
