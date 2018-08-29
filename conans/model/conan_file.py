@@ -22,13 +22,13 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, (list, tuple)):
+            if isinstance(default_options, (list, tuple, dict)):
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
-                raise ConanException("Please define your default_options as list or "
-                                     "multiline string")
+                raise ConanException("Please define your default_options as list, "
+                                     "multiline string or dictionary")
             options.values = default_values
         return options
     except Exception as e:
