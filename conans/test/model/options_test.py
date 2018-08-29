@@ -239,6 +239,11 @@ class OptionsValuesTest(unittest.TestCase):
         option_values = OptionsValues(self.sut.as_list())
         self.assertEqual(option_values.dumps(), self.sut.dumps())
 
+    def test_from_dict(self):
+        options_as_dict = dict([item.split('=') for item in self.sut.dumps().splitlines()])
+        option_values = OptionsValues(options_as_dict)
+        self.assertEqual(option_values.dumps(), self.sut.dumps())
+
     def test_dumps(self):
         self.assertEqual(self.sut.dumps(), "\n".join(["optimized=3",
                                                       "static=True",
