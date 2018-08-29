@@ -44,7 +44,7 @@ def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl):
 
     with tools.chdir(tmp_folder):
         try:
-            subprocess.check_output('git -c http.sslVerify=%s -c init.templateDir= clone "%s" config' % (verify_ssl, repo_url),
+            subprocess.check_output('git -c http.sslVerify=%s -c init.templateDir="" clone "%s" config' % (verify_ssl, repo_url),
                                     shell=True)
             output.info("Repo cloned")
         except Exception as e:
