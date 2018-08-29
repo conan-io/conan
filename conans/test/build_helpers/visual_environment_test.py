@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.conanfile import MockConanfile, MockSettings
@@ -6,7 +6,7 @@ from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.test.utils.tools import TestClient
 
 
-class VisualStudioBuildEnvironmentTest(unittest.TestCase):
+class VisualStudioBuildEnvironmentTest(ConanTestCase):
 
     def test_visual(self):
         settings = MockSettings({"build_type": "Debug",

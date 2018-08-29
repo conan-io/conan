@@ -1,12 +1,12 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
-class UserInfoTest(unittest.TestCase):
+class UserInfoTest(ConanTestCase):
 
     def test_user_info_propagation(self):
 

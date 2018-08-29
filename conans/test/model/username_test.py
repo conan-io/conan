@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.errors import ConanException
 from conans.model.username import Username
 
 
-class UsernameTest(unittest.TestCase):
+class UsernameTest(ConanTestCase):
 
     def username_test(self):
         Username("userwith-hypens")

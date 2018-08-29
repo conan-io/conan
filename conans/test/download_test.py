@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.graph.proxy import ConanProxy
@@ -18,7 +18,7 @@ class HelloConan(ConanFile):
 """
 
 
-class DownloadTest(unittest.TestCase):
+class DownloadTest(ConanTestCase):
 
     def test_returns_on_failures(self):
         test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])

@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class DownloadRetriesTest(unittest.TestCase):
+class DownloadRetriesTest(ConanTestCase):
 
     def test_recipe_download_retry(self):
         test_server = TestServer()

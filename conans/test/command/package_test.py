@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -9,7 +9,7 @@ from conans.test.utils.test_files import temp_folder
 from parameterized import parameterized
 
 
-class PackageLocalCommandTest(unittest.TestCase):
+class PackageLocalCommandTest(ConanTestCase):
 
     def package_with_destination_test(self):
         client = TestClient()

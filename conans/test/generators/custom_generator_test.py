@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 import os
@@ -66,7 +66,7 @@ MyCustomMultiGenerator
 """
 
 
-class CustomGeneratorTest(unittest.TestCase):
+class CustomGeneratorTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

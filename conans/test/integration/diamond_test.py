@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.generators.text import TXTGenerator
 from conans.test.utils.tools import TestServer, TestClient
@@ -13,7 +13,7 @@ from conans.test.utils.test_files import wait_until_removed
 
 
 @attr("slow")
-class DiamondTest(unittest.TestCase):
+class DiamondTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer(

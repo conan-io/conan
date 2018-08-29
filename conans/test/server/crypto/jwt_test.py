@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_manager import JWTManager
 from datetime import timedelta
@@ -7,10 +7,10 @@ import jwt
 from jwt import DecodeError
 
 
-class JwtTest(unittest.TestCase):
+class JwtTest(ConanTestCase):
 
     def setUp(self):
-        unittest.TestCase.setUp(self)
+        ConanTestCase.setUp(self)
         self.secret = "123123123qweqwe"
         self.expire_time = timedelta(seconds=1)  # No lower resolution available
 

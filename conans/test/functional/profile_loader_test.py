@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -19,7 +19,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
     save(os.path.join(folder, name), content)
 
 
-class ProfileParserTest(unittest.TestCase):
+class ProfileParserTest(ConanTestCase):
 
     def test_parser(self):
         txt = """
@@ -78,7 +78,7 @@ class AConan(ConanFile):
 """
 
 
-class ProfileTest(unittest.TestCase):
+class ProfileTest(ConanTestCase):
 
     def profile_loads_test(self):
 

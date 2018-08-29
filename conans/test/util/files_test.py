@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.test.utils.test_files import temp_folder
@@ -6,7 +6,7 @@ from conans.util.files import save
 from time import sleep
 
 
-class SaveTestCase(unittest.TestCase):
+class SaveTestCase(ConanTestCase):
 
     def setUp(self):
         folder = temp_folder()

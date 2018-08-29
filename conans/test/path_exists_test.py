@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.util.files import mkdir, path_exists
 import os
 from conans.test.utils.tools import TestServer, TestClient
@@ -7,7 +7,7 @@ from conans.util.files import load
 from conans.test.utils.test_files import temp_folder
 
 
-class PathExistsTest(unittest.TestCase):
+class PathExistsTest(ConanTestCase):
 
     def test_paths(self):
         """Unit test of path_exists"""

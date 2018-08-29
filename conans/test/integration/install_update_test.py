@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -9,7 +9,7 @@ import time
 from conans.paths import CONAN_MANIFEST
 
 
-class InstallUpdateTest(unittest.TestCase):
+class InstallUpdateTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

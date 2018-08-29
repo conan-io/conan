@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import os
 
@@ -12,7 +12,7 @@ from conans.client.conf.detect import detected_os
 from conans.util.files import load, mkdir, rmdir
 
 
-class InstallTest(unittest.TestCase):
+class InstallTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

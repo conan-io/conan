@@ -1,5 +1,5 @@
 import re
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import namedtuple
 
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
@@ -15,7 +15,7 @@ import os
 from conans.model.env_info import EnvValues
 
 
-class CMakeGeneratorTest(unittest.TestCase):
+class CMakeGeneratorTest(ConanTestCase):
 
     def _extract_macro(self, name, text):
         pattern = ".*(macro\(%s\).*?endmacro\(\)).*" % name

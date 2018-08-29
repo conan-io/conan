@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -6,7 +6,7 @@ import os
 from conans.util.files import save
 
 
-class BrokenDownloadTest(unittest.TestCase):
+class BrokenDownloadTest(ConanTestCase):
 
     def basic_test(self):
         server = TestServer()

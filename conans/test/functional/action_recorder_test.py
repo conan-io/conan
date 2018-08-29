@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.recorder.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING,
                                                     INSTALL_ERROR_NETWORK)
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class ActionRecorderTest(unittest.TestCase):
+class ActionRecorderTest(ConanTestCase):
 
     def setUp(self):
         self.ref1 = ConanFileReference.loads("lib1/1.0@conan/stable")

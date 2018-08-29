@@ -1,5 +1,5 @@
 import json
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.client.generators.json_generator import JsonGenerator
@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.model.env_info import EnvValues
 
 
-class JsonTest(unittest.TestCase):
+class JsonTest(ConanTestCase):
 
     def variables_setup_test(self):
         conanfile = ConanFile(None, None)

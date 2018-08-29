@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.conf import default_settings_yml
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -10,7 +10,7 @@ from conans.model.user_info import DepsUserInfo
 from conans.test.build_helpers.cmake_test import ConanFileMock
 
 
-class CompilerArgsTest(unittest.TestCase):
+class CompilerArgsTest(ConanTestCase):
 
     def _get_conanfile(self, settings):
         conan_file = ConanFileMock()

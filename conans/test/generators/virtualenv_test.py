@@ -1,6 +1,6 @@
 import copy
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -8,7 +8,7 @@ from conans.tools import os_info
 from conans.util.files import load
 
 
-class VirtualEnvGeneratorTest(unittest.TestCase):
+class VirtualEnvGeneratorTest(ConanTestCase):
 
     def basic_test(self, posix_empty_vars=True):
         env = copy.deepcopy(os.environ)

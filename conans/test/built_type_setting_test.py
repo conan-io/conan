@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
 
-class BuildTypeSettingTest(unittest.TestCase):
+class BuildTypeSettingTest(ConanTestCase):
 
     def test_build_type(self):
         # https://github.com/conan-io/conan/issues/2500

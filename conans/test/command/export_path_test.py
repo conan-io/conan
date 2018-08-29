@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.model.ref import ConanFileReference
@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 
 
-class ExportPathTest(unittest.TestCase):
+class ExportPathTest(ConanTestCase):
 
     def test_basic(self):
         current_folder = temp_folder()

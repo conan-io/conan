@@ -1,12 +1,12 @@
 from conans import tools
 from conans.test.utils.tools import TestClient
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from parameterized.parameterized import parameterized
 from conans.util.files import load
 
 
-class CreateTest(unittest.TestCase):
+class CreateTest(ConanTestCase):
 
     def dependencies_order_matches_requires_test(self):
         client = TestClient()

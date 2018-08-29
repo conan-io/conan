@@ -1,9 +1,9 @@
 import os
-from unittest import TestCase
-import six
 import unittest
+import six
 import tarfile
 
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.test_files import temp_folder
 from conans.tools import unzip, save
 from conans.util.files import load, save_files
@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class XZTest(TestCase):
+class XZTest(ConanTestCase):
     def test_error_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")

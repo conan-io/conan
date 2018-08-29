@@ -1,9 +1,8 @@
-import unittest
-
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 
 
-class ConanGetTest(unittest.TestCase):
+class ConanGetTest(ConanTestCase):
 
     def setUp(self):
         self.conanfile = '''
@@ -15,7 +14,6 @@ class HelloConan(ConanFile):
     exports_sources = "path*"
     exports = "other*"
         '''
-
         test_server = TestServer([],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}

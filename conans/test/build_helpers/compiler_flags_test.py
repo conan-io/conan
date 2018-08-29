@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 from nose.plugins.attrib import attr
 
@@ -10,7 +10,7 @@ from conans.client.build.compiler_flags import architecture_flag, libcxx_flag, l
     format_include_paths, format_library_paths, format_libraries
 
 
-class CompilerFlagsTest(unittest.TestCase):
+class CompilerFlagsTest(ConanTestCase):
 
     def test_arch_flag(self):
         for compiler in ("gcc", "clang", "sun-cc"):

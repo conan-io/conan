@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference
 import os
 
 
-class NoCopySourceTest(unittest.TestCase):
+class NoCopySourceTest(ConanTestCase):
 
     def test_basic(self):
         conanfile = '''

@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from parameterized.parameterized import parameterized
 
@@ -57,7 +57,7 @@ class MyTest(ConanFile):
 """
 
 
-class BuildIdTest(unittest.TestCase):
+class BuildIdTest(ConanTestCase):
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
         ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"

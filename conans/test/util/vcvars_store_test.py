@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
@@ -11,7 +11,7 @@ from conans import tools
 
 
 @attr('visual_studio')
-class VCVarsStoreTest(unittest.TestCase):
+class VCVarsStoreTest(ConanTestCase):
     def test_81(self):
         if platform.system() != "Windows":
             return

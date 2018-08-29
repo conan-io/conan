@@ -1,13 +1,13 @@
 import platform
 import subprocess
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestBufferConanOutput
 
 
-class DetectTest(unittest.TestCase):
+class DetectTest(ConanTestCase):
 
     def detect_default_compilers_test(self):
         platform_default_compilers = {

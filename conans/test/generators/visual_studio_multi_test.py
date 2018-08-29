@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from nose.plugins.attrib import attr
@@ -16,7 +16,7 @@ from conans.model.env_info import EnvValues
 
 
 @attr('visual_studio')
-class VisualStudioMultiGeneratorTest(unittest.TestCase):
+class VisualStudioMultiGeneratorTest(ConanTestCase):
 
     @parameterized.expand([(False, ), (True, )])
     def valid_xml_test(self, use_toolset):

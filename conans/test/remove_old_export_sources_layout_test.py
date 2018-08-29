@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.paths import EXPORT_SOURCES_DIR_OLD
@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 
 
-class DoNotKeepOldExportSourcesLayoutTest(unittest.TestCase):
+class DoNotKeepOldExportSourcesLayoutTest(ConanTestCase):
 
     def test_basic(self):
         """ check that we do not generate anymore tgz with .c_src.

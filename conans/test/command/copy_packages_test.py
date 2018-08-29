@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.model.ref import ConanFileReference
 
 
-class CopyPackagesTest(unittest.TestCase):
+class CopyPackagesTest(ConanTestCase):
 
     def test_copy_command(self):
         client = TestClient()

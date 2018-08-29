@@ -1,6 +1,6 @@
 import os
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import requests
 from nose.plugins.attrib import attr
@@ -20,7 +20,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import md5, save
 
 
-class RestApiUnitTest(unittest.TestCase):
+class RestApiUnitTest(ConanTestCase):
 
     def relative_url_completion_test(self):
 
@@ -50,7 +50,7 @@ class RestApiUnitTest(unittest.TestCase):
 
 @attr('slow')
 @attr('rest_api')
-class RestApiTest(unittest.TestCase):
+class RestApiTest(ConanTestCase):
     '''Open a real server (sockets) to test rest_api function.'''
 
     server = None

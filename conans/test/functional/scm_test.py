@@ -1,6 +1,6 @@
 import json
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import namedtuple
 
 from conans.client.tools.scm import Git
@@ -31,7 +31,7 @@ class ConanLib(ConanFile):
 '''
 
 
-class SCMTest(unittest.TestCase):
+class SCMTest(ConanTestCase):
 
     def setUp(self):
         self.reference = ConanFileReference.loads("lib/0.1@user/channel")

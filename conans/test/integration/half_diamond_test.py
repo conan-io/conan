@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 from conans.util.files import load
@@ -6,7 +6,7 @@ import os
 from conans.test.utils.conanfile import TestConanFile
 
 
-class HalfDiamondTest(unittest.TestCase):
+class HalfDiamondTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.client.importer import IMPORTS_MANIFESTS
@@ -55,7 +55,7 @@ class HelloReuseConan(ConanFile):
 """
 
 
-class ImportsTest(unittest.TestCase):
+class ImportsTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
@@ -9,7 +9,7 @@ import os
 from conans.test.utils.conanfile import TestConanFile
 
 
-class PackageIDTest(unittest.TestCase):
+class PackageIDTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

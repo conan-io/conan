@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestServer, TestClient
@@ -11,7 +11,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.manifest import FileTreeManifest
 
 
-class ManifestValidationTest(unittest.TestCase):
+class ManifestValidationTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

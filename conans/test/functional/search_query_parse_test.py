@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.search.query_parse import infix_to_postfix, evaluate_postfix
 
 
-class QueryParseTest(unittest.TestCase):
+class QueryParseTest(ConanTestCase):
 
     def test_get_postfix(self):
         r = infix_to_postfix("")

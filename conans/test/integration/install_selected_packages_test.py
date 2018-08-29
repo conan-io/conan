@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 
 
-class InstallSelectedPackagesTest(unittest.TestCase):
+class InstallSelectedPackagesTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

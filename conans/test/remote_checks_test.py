@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer,\
     inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from collections import OrderedDict
 
 
-class RemoteChecksTest(unittest.TestCase):
+class RemoteChecksTest(ConanTestCase):
 
     def test_recipe_updates(self):
         servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}

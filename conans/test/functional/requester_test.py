@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -14,7 +14,7 @@ class MyRequester(object):
         return kwargs.get("timeout", "NOT SPECIFIED")
 
 
-class RequesterTest(unittest.TestCase):
+class RequesterTest(ConanTestCase):
 
     def requester_timeout_test(self):
 

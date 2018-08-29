@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.ref import ConanFileReference, PackageReference
 
 from conans.paths import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONANINFO,
@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 import re
 
 
-class VSXCodeGeneratorsTest(unittest.TestCase):
+class VSXCodeGeneratorsTest(ConanTestCase):
 
     def generators_test(self):
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")

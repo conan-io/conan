@@ -1,11 +1,11 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient
 
 
-class ClientCertsTest(unittest.TestCase):
+class ClientCertsTest(ConanTestCase):
 
     def pic_client_certs_test(self):
 

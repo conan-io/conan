@@ -1,5 +1,5 @@
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
 
@@ -30,7 +30,7 @@ ENDIF()
 """
 
 
-class CMakeSkipRpathTest(unittest.TestCase):
+class CMakeSkipRpathTest(ConanTestCase):
 
     def test_skip_flag(self):
         for way_to_skip in ("SKIP_RPATH", "KEEP_RPATHS"):

@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference
 import os
 import platform
 
 
-class RMdirFailTest(unittest.TestCase):
+class RMdirFailTest(ConanTestCase):
 
     def fail_rmdir_test(self):
         if platform.system() != "Windows":

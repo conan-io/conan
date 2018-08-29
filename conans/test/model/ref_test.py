@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 
 
-class RefTest(unittest.TestCase):
+class RefTest(ConanTestCase):
     def basic_test(self):
         ref = ConanFileReference.loads("opencv/2.4.10 @ lasote/testing")
         self.assertEqual(ref.name, "opencv")

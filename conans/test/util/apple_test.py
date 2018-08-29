@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import unittest
+
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import os
 from conans import tools
@@ -19,7 +20,7 @@ class FakeSettings(object):
             return self._arch
 
 
-class AppleTest(unittest.TestCase):
+class AppleTest(ConanTestCase):
     def test_is_apple_os(self):
         self.assertTrue(tools.is_apple_os('iOS'))
         self.assertTrue(tools.is_apple_os('tvOS'))

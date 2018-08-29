@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import random
 import string
 
 
-class ConanfileHelpersTest(unittest.TestCase):
+class ConanfileHelpersTest(ConanTestCase):
 
     def test_replace_in_file(self):
         for libname in [''.join(random.choice(string.ascii_lowercase) for _ in range(5))

@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.version import Version
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict
 
 
-class VersionCheckTest(unittest.TestCase):
+class VersionCheckTest(ConanTestCase):
 
     def check_versions_test(self):
         # Client deprecated

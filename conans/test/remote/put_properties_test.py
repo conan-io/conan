@@ -1,11 +1,11 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save
 
 
-class PutPropertiesTest(unittest.TestCase):
+class PutPropertiesTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

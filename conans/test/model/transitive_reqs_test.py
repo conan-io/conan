@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import namedtuple
 
 from conans.test.utils.tools import TestBufferConanOutput
@@ -98,7 +98,7 @@ class MockRequireResolver(object):
         return
 
 
-class ConanRequirementsTest(unittest.TestCase):
+class ConanRequirementsTest(ConanTestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
@@ -1431,7 +1431,7 @@ class ChatConan(ConanFile):
                          "shared=True\nHello:shared=False\nSay:shared=False")
 
 
-class ConanRequirementsOptimizerTest(unittest.TestCase):
+class ConanRequirementsOptimizerTest(ConanTestCase):
     liba_content = """
 from conans import ConanFile
 
@@ -1595,7 +1595,7 @@ class LibDConan(ConanFile):
         self.assertEqual(1, str(self.output).count("LibA configure()"))
 
 
-class CoreSettingsTest(unittest.TestCase):
+class CoreSettingsTest(ConanTestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()

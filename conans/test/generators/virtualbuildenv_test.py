@@ -1,13 +1,15 @@
 import os
 import platform
-import subprocess
 import unittest
+
+import subprocess
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import load
 from conans.test.utils.tools import TestClient
 
 
-class VirtualBuildEnvTest(unittest.TestCase):
+class VirtualBuildEnvTest(ConanTestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
     def test_delimiter_error(self):

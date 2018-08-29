@@ -1,5 +1,5 @@
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.test.utils.tools import TestClient
@@ -56,7 +56,7 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 
 
 @attr("slow")
-class CMakeFlagsTest(unittest.TestCase):
+class CMakeFlagsTest(ConanTestCase):
 
     def _get_line(self, text, begin):
         lines = str(text).splitlines()

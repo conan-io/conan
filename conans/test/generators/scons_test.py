@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.client.generators.scons import SConsGenerator
@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.env_info import EnvValues
 
 
-class SConsGeneratorTest(unittest.TestCase):
+class SConsGeneratorTest(ConanTestCase):
     def variables_setup_test(self):
         conanfile = ConanFile(None, None)
         conanfile.initialize(Settings({}), EnvValues())

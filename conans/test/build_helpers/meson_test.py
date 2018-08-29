@@ -1,6 +1,6 @@
 import os
 import shutil
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.build.meson import Meson
 from conans.client.conf import default_settings_yml
@@ -10,7 +10,7 @@ from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
 
-class MesonTest(unittest.TestCase):
+class MesonTest(ConanTestCase):
 
     def setUp(self):
         self.tempdir = temp_folder(path_with_spaces=False)

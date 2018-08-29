@@ -1,11 +1,13 @@
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from conans import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
 
-class ExceptionPrintingTest(unittest.TestCase):
+class ExceptionPrintingTest(ConanTestCase):
     conanfile = """
 import os
 from conans import ConanFile

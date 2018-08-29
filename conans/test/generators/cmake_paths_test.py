@@ -1,5 +1,5 @@
 import shutil
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from collections import namedtuple
 
@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.model.env_info import EnvValues
 
 
-class CMakePathsGeneratorTest(unittest.TestCase):
+class CMakePathsGeneratorTest(ConanTestCase):
 
     def cmake_vars_unit_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")

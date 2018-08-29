@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
-class RemoveEmptyDirsTest(unittest.TestCase):
+class RemoveEmptyDirsTest(ConanTestCase):
 
     def basic_test(self):
         hello_files = cpp_hello_conan_files("Hello")

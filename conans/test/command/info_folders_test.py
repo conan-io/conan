@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 import platform
 import re
@@ -35,7 +35,7 @@ MyPackage2/0.2.0@myUser/testing
 """
 
 
-class InfoFoldersTest(unittest.TestCase):
+class InfoFoldersTest(ConanTestCase):
     def setUp(self):
         self.user_channel = "myUser/testing"
         self.conan_ref = "MyPackage/0.1.0@%s" % self.user_channel

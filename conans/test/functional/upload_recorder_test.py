@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from datetime import datetime
 from conans.client.recorder.upload_recoder import UploadRecorder
 
 
-class UploadRecorderTest(unittest.TestCase):
+class UploadRecorderTest(ConanTestCase):
 
     def setUp(self):
         self.recorder = UploadRecorder()

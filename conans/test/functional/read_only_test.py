@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save
 import os
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class ReadOnlyTest(unittest.TestCase):
+class ReadOnlyTest(ConanTestCase):
 
     def setUp(self):
         self.test_server = TestServer()

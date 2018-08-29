@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class PackageIdTest(unittest.TestCase):
+class PackageIdTest(ConanTestCase):
 
     def double_package_id_call_test(self):
         # https://github.com/conan-io/conan/issues/3085

@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+from conans.test.utils.conan_test_case import ConanTestCase
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
@@ -40,7 +42,7 @@ Hello/0.1@lasote/stable
 
 
 @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
-class SymLinksTest(unittest.TestCase):
+class SymLinksTest(ConanTestCase):
 
     def _check(self, client, ref, build=True):
         folders = [client.paths.package(ref), client.current_folder]

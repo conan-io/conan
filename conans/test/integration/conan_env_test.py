@@ -1,6 +1,6 @@
 import os
 import platform
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from nose.plugins.attrib import attr
 
@@ -14,7 +14,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
-class ConanEnvTest(unittest.TestCase):
+class ConanEnvTest(ConanTestCase):
 
     @attr('slow')
     def shared_in_current_directory_test(self):

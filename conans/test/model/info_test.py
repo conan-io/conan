@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.info import ConanInfo
 
 info_text = '''[settings]
@@ -49,7 +49,7 @@ info_text = '''[settings]
 '''
 
 
-class ConanInfoTest(unittest.TestCase):
+class ConanInfoTest(ConanTestCase):
 
     def test_serialize(self):
         info = ConanInfo.loads(info_text)

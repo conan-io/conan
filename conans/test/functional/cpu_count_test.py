@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 
@@ -16,7 +16,7 @@ class AConan(ConanFile):
 """
 
 
-class CPUCountTest(unittest.TestCase):
+class CPUCountTest(ConanTestCase):
 
     def cpu_count_override_test(self):
         self.client = TestClient()

@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import six
 from mock import Mock
@@ -14,7 +14,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
-class RemoveOutdatedTest(unittest.TestCase):
+class RemoveOutdatedTest(ConanTestCase):
 
     def remove_query_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
@@ -86,7 +86,7 @@ conaninfo = '''
 '''
 
 
-class RemoveTest(unittest.TestCase):
+class RemoveTest(ConanTestCase):
 
     def setUp(self):
         hello_files = cpp_hello_conan_files("Hello")

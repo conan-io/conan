@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE, CONANINFO, BUILD_INFO_CMAKE
 import os
@@ -7,7 +7,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import mkdir, load
 
 
-class InstallSubfolderTest(unittest.TestCase):
+class InstallSubfolderTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

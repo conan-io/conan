@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
@@ -7,7 +7,7 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.util.files import save, set_dirty
 
 
-class PackageIngrityTest(unittest.TestCase):
+class PackageIngrityTest(ConanTestCase):
 
     def remove_locks_test(self):
         client = TestClient()

@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.test_files import hello_source_files
@@ -38,7 +38,7 @@ class HelloConan(ConanFile):
 """
 
 
-class ExporterTest(unittest.TestCase):
+class ExporterTest(ConanTestCase):
 
     def complete_test(self):
         """ basic installation of a new conans

@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.model.env_info import DepsEnvInfo
 from conans.model.profile import Profile
@@ -141,7 +141,7 @@ class AConan(ConanFile):
 """
 
 
-class ProfilesEnvironmentTest(unittest.TestCase):
+class ProfilesEnvironmentTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

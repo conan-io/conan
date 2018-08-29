@@ -1,5 +1,5 @@
 # coding=utf-8
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from os.path import join
@@ -11,7 +11,7 @@ from conans.test.utils.test_files import temp_folder
 import shutil
 
 
-class MergeDirectoriesTest(unittest.TestCase):
+class MergeDirectoriesTest(ConanTestCase):
 
     def setUp(self):
         self.source = temp_folder()

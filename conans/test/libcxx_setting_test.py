@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import platform
 from conans.util.files import load
@@ -45,7 +45,7 @@ def nowintest(func):
     return func
 
 
-class LibcxxSettingTest(unittest.TestCase):
+class LibcxxSettingTest(ConanTestCase):
 
     @nowintest
     def test_declared_stdlib_and_passed(self):

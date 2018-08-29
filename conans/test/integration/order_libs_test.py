@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 from conans.util.files import load
 import os
 
 
-class OrderLibsTest(unittest.TestCase):
+class OrderLibsTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

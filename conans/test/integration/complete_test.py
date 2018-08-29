@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from parameterized import parameterized
 
@@ -12,7 +12,7 @@ from conans.test.utils.test_files import uncompress_packaged_files
 
 
 @attr("slow")
-class CompleteFlowTest(unittest.TestCase):
+class CompleteFlowTest(ConanTestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def reuse_test(self, complete_urls):

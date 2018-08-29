@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 import os
@@ -73,7 +73,7 @@ def zipdir(path, zipfilename):
                 z.write(file_path, relpath)
 
 
-class ConfigInstallTest(unittest.TestCase):
+class ConfigInstallTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()

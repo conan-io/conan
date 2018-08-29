@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
 from conans.util.files import rmdir
 
 
-class InstallOutdatedPackagesTest(unittest.TestCase):
+class InstallOutdatedPackagesTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

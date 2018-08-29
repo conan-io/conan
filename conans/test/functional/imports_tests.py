@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import os
@@ -21,7 +21,7 @@ conanfile_txt = """
 """
 
 
-class ImportTest(unittest.TestCase):
+class ImportTest(ConanTestCase):
     def _set_up(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "LibA",

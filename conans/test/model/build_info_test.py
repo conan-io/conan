@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.model.build_info import DepsCppInfo, CppInfo
 from conans.client.generators import TXTGenerator
@@ -10,7 +10,7 @@ import platform
 from conans.util.files import mkdir
 
 
-class BuildInfoTest(unittest.TestCase):
+class BuildInfoTest(ConanTestCase):
 
     def parse_test(self):
         text = """[includedirs]

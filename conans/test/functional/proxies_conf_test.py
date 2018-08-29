@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans import tools
@@ -7,7 +7,7 @@ from conans.util.files import save
 from conans.client.conan_api import get_basic_requester
 
 
-class ProxiesConfTest(unittest.TestCase):
+class ProxiesConfTest(ConanTestCase):
     def setUp(self):
         self.old_env = dict(os.environ)
 

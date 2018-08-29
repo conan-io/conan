@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 import os
 
@@ -68,7 +68,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 """
 
 
-class BuildRequiresTest(unittest.TestCase):
+class BuildRequiresTest(ConanTestCase):
 
     def duplicated_build_requires_test(self):
         client = TestClient()

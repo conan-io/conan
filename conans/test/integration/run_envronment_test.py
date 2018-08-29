@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
@@ -9,7 +9,7 @@ import subprocess
 from conans import tools
 
 
-class RunEnvironmentTest(unittest.TestCase):
+class RunEnvironmentTest(ConanTestCase):
 
     def test_run_environment(self):
         client = TestClient()

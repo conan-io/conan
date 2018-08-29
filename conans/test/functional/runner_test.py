@@ -1,12 +1,12 @@
 import os
 import six
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.runner import ConanRunner
 from conans.test.utils.tools import TestClient
 
 
-class RunnerTest(unittest.TestCase):
+class RunnerTest(ConanTestCase):
 
     def _install_and_build(self, conanfile_text, runner=None):
         client = TestClient(runner=runner)

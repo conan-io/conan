@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict
 
 
-class MultiRemoteTest(unittest.TestCase):
+class MultiRemoteTest(ConanTestCase):
 
     def setUp(self):
         self.servers = OrderedDict()

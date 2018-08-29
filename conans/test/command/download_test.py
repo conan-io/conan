@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference
 from conans.util.files import load
 
 
-class DownloadTest(unittest.TestCase):
+class DownloadTest(ConanTestCase):
 
     def download_recipe_test(self):
         server = TestServer()

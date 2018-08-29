@@ -1,6 +1,8 @@
 import os
 import platform
-import unittest
+
+from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.conan_test_case import ConanTestCase
 from collections import namedtuple
 
 from conans import tools
@@ -10,12 +12,11 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
-from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.utils.tools import TestClient
 
 
-class AutoToolsConfigureTest(unittest.TestCase):
+class AutoToolsConfigureTest(ConanTestCase):
 
     def _set_deps_info(self, conanfile):
         conanfile.deps_cpp_info.include_paths.append("path/includes")

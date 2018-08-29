@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 import platform
@@ -48,7 +48,7 @@ int main(){
 
 
 @attr("slow")
-class CMakeTargetsTest(unittest.TestCase):
+class CMakeTargetsTest(ConanTestCase):
 
     def header_only_test(self):
         client = TestClient()

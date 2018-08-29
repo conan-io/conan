@@ -1,8 +1,8 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 
 
-class InfoOptionsTest(unittest.TestCase):
+class InfoOptionsTest(ConanTestCase):
 
     def info_options_test(self):
         """ packages with dash

@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.client.recorder.search_recorder import SearchRecorder
 
 
-class SearchRecorderTest(unittest.TestCase):
+class SearchRecorderTest(ConanTestCase):
 
     def setUp(self):
         self.recorder = SearchRecorder()

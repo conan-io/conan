@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 import os
 
 
-class UserChannelTestPackage(unittest.TestCase):
+class UserChannelTestPackage(ConanTestCase):
 
     def test(self):
         # https://github.com/conan-io/conan/issues/2501
@@ -30,7 +30,7 @@ class SayConan(ConanFile):
 
 
 
-class SameUserChannelTest(unittest.TestCase):
+class SameUserChannelTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()
@@ -120,7 +120,7 @@ class HelloReuseConan(ConanFile):
         del os.environ["CONAN_CHANNEL"]
 
 
-class BuildRequireUserChannelTest(unittest.TestCase):
+class BuildRequireUserChannelTest(ConanTestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/2254
         client = TestClient()

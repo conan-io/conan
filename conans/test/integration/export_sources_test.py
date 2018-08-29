@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
@@ -66,7 +66,7 @@ class HelloConan(ConanFile):
 """
 
 
-class ExportsSourcesTest(unittest.TestCase):
+class ExportsSourcesTest(ConanTestCase):
 
     def setUp(self):
         self.server = TestServer()

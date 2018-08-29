@@ -2,7 +2,7 @@ import os
 import shutil
 import stat
 import sys
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import platform
 
 from collections import namedtuple
@@ -22,7 +22,7 @@ from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
 
 
-class CMakeTest(unittest.TestCase):
+class CMakeTest(ConanTestCase):
     def setUp(self):
         self.tempdir = temp_folder(path_with_spaces=False)
         self.tempdir2 = temp_folder(path_with_spaces=False)

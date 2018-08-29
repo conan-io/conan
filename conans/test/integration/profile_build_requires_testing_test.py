@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -56,7 +56,7 @@ int main(){
 
 
 @attr("slow")
-class BuildRequiresTest(unittest.TestCase):
+class BuildRequiresTest(ConanTestCase):
 
     def test_test_framework(self):
         client = TestClient()

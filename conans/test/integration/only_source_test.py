@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 import os
 
 from conans.test.utils.tools import TestServer, TestClient
@@ -8,7 +8,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 
 
-class OnlySourceTest(unittest.TestCase):
+class OnlySourceTest(ConanTestCase):
 
     def setUp(self):
         test_server = TestServer()

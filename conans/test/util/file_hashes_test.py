@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.tools import check_md5, check_sha256, check_sha1
 from conans.test.utils.test_files import temp_folder
@@ -7,7 +7,7 @@ import os
 from conans.errors import ConanException
 
 
-class HashesTest(unittest.TestCase):
+class HashesTest(ConanTestCase):
 
     def md5_test(self):
         folder = temp_folder()

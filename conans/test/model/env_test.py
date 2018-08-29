@@ -1,9 +1,9 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.model.env_info import DepsEnvInfo, EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 
 
-class EnvValuesTest(unittest.TestCase):
+class EnvValuesTest(ConanTestCase):
 
     def test_model(self):
         env = EnvValues()
@@ -76,7 +76,7 @@ class EnvValuesTest(unittest.TestCase):
         self.assertEquals(env.env_dicts(None), ({'VAR': '1'}, {}))
 
 
-class EnvInfoTest(unittest.TestCase):
+class EnvInfoTest(ConanTestCase):
 
     def assign_test(self):
         env = DepsEnvInfo()

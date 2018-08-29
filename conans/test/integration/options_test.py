@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANINFO
 from conans.util.files import load
 import os
 
 
-class OptionsTest(unittest.TestCase):
+class OptionsTest(ConanTestCase):
 
     def parsing_test(self):
         client = TestClient()

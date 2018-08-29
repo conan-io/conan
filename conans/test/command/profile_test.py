@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import os
 
@@ -7,7 +7,7 @@ from conans.test.utils.profiles import create_profile
 from conans.util.files import load
 
 
-class ProfileTest(unittest.TestCase):
+class ProfileTest(ConanTestCase):
 
     def reuse_output_test(self):
         client = TestClient()

@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 import os
 
 
-class SourceTest(unittest.TestCase):
+class SourceTest(ConanTestCase):
 
     def local_flow_patch_test(self):
         # https://github.com/conan-io/conan/issues/2327

@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -9,7 +9,7 @@ import os
 
 
 @attr("slow")
-class SharedChainTest(unittest.TestCase):
+class SharedChainTest(ConanTestCase):
 
     def setUp(self):
         self.static = False

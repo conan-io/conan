@@ -1,10 +1,10 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
 
-class StdCppTest(unittest.TestCase):
+class StdCppTest(ConanTestCase):
 
     def use_wrong_setting_for_compiler_test(self):
         client = TestClient()

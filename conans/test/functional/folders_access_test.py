@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 import os
 
@@ -126,7 +126,7 @@ class AConan(ConanFile):
 """
 
 
-class TestFoldersAccess(unittest.TestCase):
+class TestFoldersAccess(ConanTestCase):
     """"Tests the presence of self.source_folder, self.build_folder, self.package_folder
     in the conanfile methods. Also the availability of the self.deps_cpp_info, self.deps_user_info
     and self.deps_env_info. Also the 'in_local_cache' variable. """

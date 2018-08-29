@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 
 from conans import tools
@@ -18,7 +18,7 @@ import os
 
 
 @attr('visual_studio')
-class BuildSLNCommandTest(unittest.TestCase):
+class BuildSLNCommandTest(ConanTestCase):
 
     def no_configuration_test(self):
         dummy = """GlobalSection

@@ -1,11 +1,11 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
 from conans.util.files import load
 import re
 
 
-class RemoteTest(unittest.TestCase):
+class RemoteTest(ConanTestCase):
 
     def setUp(self):
         self.servers = OrderedDict()

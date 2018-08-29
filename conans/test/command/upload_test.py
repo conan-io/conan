@@ -1,4 +1,4 @@
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 from conans.tools import environment_append
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -32,7 +32,7 @@ class MyPkg(ConanFile):
         self.copy("*")
 """
 
-class UploadTest(unittest.TestCase):
+class UploadTest(ConanTestCase):
 
     def not_existing_error_test(self):
         """ Trying to upload with pattern not matched must raise an Error

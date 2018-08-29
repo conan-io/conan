@@ -1,5 +1,5 @@
 import os
-import unittest
+from conans.test.utils.conan_test_case import ConanTestCase
 
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
@@ -9,7 +9,7 @@ from conans.model.settings import undefined_value, bad_value_msg
 from conans.model.ref import PackageReference
 
 
-class SettingsTest(unittest.TestCase):
+class SettingsTest(ConanTestCase):
 
     def setUp(self):
         self.client = TestClient()
