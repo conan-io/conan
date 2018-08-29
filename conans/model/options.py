@@ -160,9 +160,20 @@ class OptionsValues(object):
         if not values:
             return
 
+        if isinstance(values, six.string_types):
+            raise ConanException("String type not expected in OptionValues constructor, "
+                                 "did you mean to call OptionValues.loads(<string>)")
+
         # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
         if isinstance(values, tuple):
             values = [item.split("=", 1) for item in values]
+
+        # Check that we have a list of tuples
+        offenders = list(filter(lambda u: not isinstance(u, (tuple, list)) or len(u) <= 1, values))
+        if offenders:
+            offender_str = lambda u: str(u) if not isinstance(u, (tuple, list)) else u[0]
+            raise ConanException("Please define a default value for '%s' in "
+                                 "'default_options'" % "', '".join(map(offender_str, offenders)))
 
         # handle list of tuples (name, value)
         for (k, v) in values:
@@ -261,7 +272,7 @@ class OptionsValues(object):
         other_option=3
         OtherPack:opt3=12.1
         """
-        options = tuple(text.splitlines())
+        options = tuple(line.strip() for line in text.splitlines() if len(line.strip()))
         return OptionsValues(options)
 
     @property
