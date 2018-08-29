@@ -290,3 +290,29 @@ class OptionsValuesTest(unittest.TestCase):
                                                       "Poco:new_option=0"]))
         self.assertEqual(self.sut.sha,
                          "2442d43f1d558621069a15ff5968535f818939b5")
+
+    def test_loads_exceptions(self):
+        with self.assertRaisesRegexp(
+                ConanException,
+                "Please define a default value for 'config' in 'default_options'"):
+            OptionsValues.loads("a=2\nconfig\nb=3")
+
+        with self.assertRaisesRegexp(
+                ConanException,
+                "Please define a default value for 'config', 'commit' in 'default_options'"):
+            OptionsValues.loads("config\na=2\ncommit\nb=3")
+
+    def test_exceptions(self):
+        with self.assertRaisesRegexp(ConanException, "String type not expected"):
+            OptionsValues("a=2\nconfig\nb=3")
+
+        with self.assertRaisesRegexp(
+                ConanException,
+                "Please define a default value for 'config' in 'default_options'"):
+            OptionsValues(("a=2", "config"))
+
+        with self.assertRaisesRegexp(
+                ConanException,
+                "Please define a default value for 'config' in 'default_options'"):
+            OptionsValues([('a', 2), ('config'), ])
+

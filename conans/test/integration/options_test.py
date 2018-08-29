@@ -74,7 +74,7 @@ class MyConanFile(ConanFile):
     name = "MyConanFile"
     version = "1.0"
     options = {"config": %s}
-    default_options = "config=%s"
+    default_options = "config%s"
 
     def configure(self):
         if self.options.config:
@@ -89,7 +89,7 @@ class MyConanFile(ConanFile):
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Please define a default value for 'config' in'default_options'", client.out)
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "None")})
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
@@ -100,7 +100,7 @@ class MyConanFile(ConanFile):
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Please define a default value for 'config' in'default_options'", client.out)
-        client.save({"conanfile.py": conanfile % ("[None]", "None")})
+        client.save({"conanfile.py": conanfile % ("[None]", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
@@ -111,12 +111,12 @@ class MyConanFile(ConanFile):
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Please define a default value for 'config' in'default_options'", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "None")})
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "\\\"None\\\"")})
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=\\\"None\\\"")})
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("'\"None\"' is not a valid 'options.config' value", client.out)
