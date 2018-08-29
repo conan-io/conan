@@ -172,6 +172,10 @@ class OptionsValues(object):
                 new_values.append((option, value))
             values = new_values
 
+        # convert dict {"Pkg:option": "value", "..": "..", ...} to list of tuples (name, value)
+        if isinstance(values, dict):
+            values = [(k, v) for k, v in values.items()]
+
         # handle list of tuples (name, value)
         for (k, v) in values:
             tokens = k.split(":")
