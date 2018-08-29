@@ -194,13 +194,14 @@ class RemoteRegistry(object):
                                      % remote_name)
         self._add_update(remote_name, url, verify_ssl, exists_function, insert)
 
-    def remove(self, remote_name):
+    def remove(self, remote_name, force=False):
         self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
-            if remote_name not in remotes:
+
+            if not remotes.pop(remote_name, force):
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
-            del remotes[remote_name]
+
             refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
