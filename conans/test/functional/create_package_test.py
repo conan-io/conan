@@ -7,10 +7,11 @@ from conans.model.ref import ConanFileReference, PackageReference
 import shutil
 from conans.paths import CONANINFO
 from conans.client.packager import create_package
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.settings import Settings
 from conans.client.output import ScopedOutput
 from conans.model.profile import Profile
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 myconan1 = """
@@ -81,8 +82,8 @@ class ExporterTest(unittest.TestCase):
         shutil.copytree(reg_folder, build_folder)
 
         output = ScopedOutput("", TestBufferConanOutput())
-        loader = ConanFileLoader(None, Settings(), Profile())
-        conanfile = loader.load_conan(conanfile_path, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
+        conanfile = loader.load_conanfile(conanfile_path, None, ProcessedProfile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
                        output, copy_info=True)

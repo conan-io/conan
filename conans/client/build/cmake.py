@@ -1,28 +1,18 @@
 import os
 import platform
-
-from collections import OrderedDict
 from itertools import chain
 
+from conans import tools
 from conans.client import defs_to_string, join_arguments
-from conans.client.build.cppstd_flags import cppstd_flag
-from conans.client.tools import cross_building
-from conans.client.tools.oss import get_cross_building_settings
+from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
+    get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.util.env_reader import get_env
-from conans.util.files import mkdir, get_abs_path
 from conans.tools import cpu_count, args_to_string
-from conans import tools
-from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-from conans.client.build.compiler_flags import architecture_flag
-
-
-def _get_env_cmake_system_name():
-    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
-    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
+from conans.util.files import mkdir, get_abs_path
 
 
 class CMake(object):
@@ -48,42 +38,27 @@ class CMake(object):
         self._settings = conanfile.settings
         self._conanfile = conanfile
 
-        self._os = self._settings.get_safe("os")
-        self._os_build, _, self._os_host, _ = get_cross_building_settings(self._settings)
-
-        self._compiler = self._settings.get_safe("compiler")
-        self._compiler_version = self._settings.get_safe("compiler.version")
-        self._arch = self._settings.get_safe("arch")
-
-        os_ver_str = "os.api_level" if self._os == "Android" else "os.version"
-        self._op_system_version = self._settings.get_safe(os_ver_str)
-
-        self._libcxx = self._settings.get_safe("compiler.libcxx")
-        self._runtime = self._settings.get_safe("compiler.runtime")
-        self._build_type = self._settings.get_safe("build_type")
-        self._cppstd = self._settings.get_safe("cppstd")
-
-        self.generator = generator or self._generator()
-        self.toolset = self._toolset(toolset)
+        self.generator = generator or get_generator(self._settings)
+        self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
-        self._cmake_system_name = _get_env_cmake_system_name()
-        if self._cmake_system_name is None:  # Not overwritten using environment
-            self._cmake_system_name = cmake_system_name
         self.parallel = parallel
+
         self._set_cmake_flags = set_cmake_flags
-        self.definitions = self._get_cmake_definitions()
+        self._cmake_system_name = cmake_system_name
+        self._make_program = make_program
+
+        self.definitions = self._def_builder.get_definitions()
+        self._build_type = self._settings.get_safe("build_type")
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
 
-        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program
-        if make_program:
-            if not tools.which(make_program):
-                self._conanfile.output.warn("The specified make program '%s' cannot be found"
-                                            "and will be ignored" % make_program)
-            else:
-                self._conanfile.output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
-                self.definitions["CMAKE_MAKE_PROGRAM"] = make_program
+    @property
+    def _def_builder(self):
+        return CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
+                                       make_program=self._make_program, parallel=self.parallel,
+                                       generator=self.generator,
+                                       set_cmake_flags=self._set_cmake_flags)
 
     @property
     def build_folder(self):
@@ -105,140 +80,15 @@ class CMake(object):
                 'Set CMake build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(self._build_type_definition())
+        self.definitions.update(build_type_definition(build_type, self.generator))
 
     @property
     def flags(self):
         return defs_to_string(self.definitions)
 
-    def _generator(self):
-        if "CONAN_CMAKE_GENERATOR" in os.environ:
-            return os.environ["CONAN_CMAKE_GENERATOR"]
-
-        if not self._compiler or not self._compiler_version or not self._arch:
-            if self._os_build == "Windows":
-                # Not enough settings to set a generator in Windows
-                return None
-            return "Unix Makefiles"
-
-        if self._compiler == "Visual Studio":
-            _visuals = {'8': '8 2005',
-                        '9': '9 2008',
-                        '10': '10 2010',
-                        '11': '11 2012',
-                        '12': '12 2013',
-                        '14': '14 2015',
-                        '15': '15 2017'}
-            base = "Visual Studio %s" % _visuals.get(self._compiler_version,
-                                                     "UnknownVersion %s" % self._compiler_version)
-            if self._arch == "x86_64":
-                return base + " Win64"
-            elif "arm" in self._arch:
-                return base + " ARM"
-            else:
-                return base
-
-        # The generator depends on the build machine, not the target
-        if self._os_build == "Windows":
-            return "MinGW Makefiles"  # it is valid only under Windows
-
-        return "Unix Makefiles"
-
-    def _toolset(self, toolset=None):
-        if toolset:
-            return toolset
-        elif self._settings.get_safe("compiler") == "Visual Studio":
-            subs_toolset = self._settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
-        return None
-
-    def _cmake_compiler_options(self):
-        cmake_definitions = OrderedDict()
-
-        if str(self._os).lower() == "macos":
-            if self._arch == "x86":
-                cmake_definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
-        return cmake_definitions
-
-    def _cmake_cross_build_defines(self):
-
-        ret = OrderedDict()
-        os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", self._op_system_version)
-        toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
-
-        if toolchain_file != "":
-            logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
-            ret["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
-            return ret
-
-        if self._cmake_system_name is False:
-            return ret
-
-        # System name and system version
-        if self._cmake_system_name is not True:  # String not empty
-            ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
-            ret["CMAKE_SYSTEM_VERSION"] = os_ver
-        else:  # detect if we are cross building and the system name and version
-            if cross_building(self._conanfile.settings):  # We are cross building
-                if self._os != self._os_build:
-                    if self._os:  # the_os is the host (regular setting)
-                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
-                                                                            "watchOS"] else self._os
-                        if os_ver:
-                            ret["CMAKE_SYSTEM_VERSION"] = os_ver
-                    else:
-                        ret["CMAKE_SYSTEM_NAME"] = "Generic"
-
-        # system processor
-        cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR", None)
-        if cmake_system_processor:
-            ret["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
-
-        if ret:  # If enabled cross compile
-            for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
-                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
-                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
-                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"]:
-
-                value = os.getenv(env_var, None)
-                if value:
-                    ret[env_var] = value
-
-            if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
-                sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
-
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                ret["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
-
-            # Adjust Android stuff
-            if self._os == "Android":
-                arch_abi_settings = {"armv8": "arm64-v8a",
-                                     "armv7": "armeabi-v7a",
-                                     "armv7hf": "armeabi-v7a",
-                                     "armv6": "armeabi-v6",
-                                     "armv5": "armeabi"
-                                     }.get(self._arch,
-                                           self._arch)
-                if arch_abi_settings:
-                    ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
-
-        logger.info("Setting Cross build flags: %s"
-                    % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
-        return ret
-
     @property
     def is_multi_configuration(self):
-        """ some IDEs are multi-configuration, as Visual. Makefiles or Ninja are single-conf
-        """
-        if "Visual" in self.generator or "Xcode" in self.generator:
-            return True
-        # TODO: complete logic
-        return False
+        return is_multi_configuration(self.generator)
 
     @property
     def command_line(self):
@@ -250,19 +100,9 @@ class CMake(object):
             args.append('-T "%s"' % self.toolset)
         return join_arguments(args)
 
-    def _build_type_definition(self):
-        if self._build_type and not self.is_multi_configuration:
-            return {'CMAKE_BUILD_TYPE': self._build_type}
-        return {}
-
     @property
     def runtime(self):
-        return defs_to_string(self._runtime_definition())
-
-    def _runtime_definition(self):
-        if self._runtime:
-            return {"CONAN_LINK_RUNTIME": "/%s" % self._runtime}
-        return {}
+        return defs_to_string(self.definitions.get(runtime_definition_var_name))
 
     @property
     def build_config(self):
@@ -271,79 +111,6 @@ class CMake(object):
         if self._build_type and self.is_multi_configuration:
             return "--config %s" % self._build_type
         return ""
-
-    def _get_cmake_definitions(self):
-        def add_cmake_flag(cmake_flags, name, flag):
-            """
-            appends compiler linker flags (if already present), or just sets
-            """
-            if flag:
-                if name not in cmake_flags:
-                    cmake_flags[name] = flag
-                else:
-                    cmake_flags[name] = ' ' + flag
-            return cmake_flags
-
-        ret = OrderedDict()
-        ret.update(self._build_type_definition())
-        ret.update(self._runtime_definition())
-        ret.update(self._cmake_compiler_options())
-        ret.update(self._cmake_cross_build_defines())
-        ret.update(self._get_cpp_standard_vars())
-
-        ret["CONAN_EXPORTED"] = "1"
-        if self._compiler:
-            ret["CONAN_COMPILER"] = self._compiler
-        if self._compiler_version:
-            ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
-
-        # Force compiler flags -- TODO: give as environment/setting parameter?
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
-        ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', arch_flag)
-        ret = add_cmake_flag(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flag)
-        ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', arch_flag)
-        if self._set_cmake_flags:
-            ret = add_cmake_flag(ret, 'CMAKE_CXX_FLAGS', arch_flag)
-            ret = add_cmake_flag(ret, 'CMAKE_SHARED_LINKER_FLAGS', arch_flag)
-            ret = add_cmake_flag(ret, 'CMAKE_C_FLAGS', arch_flag)
-
-        if self._libcxx:
-            ret["CONAN_LIBCXX"] = self._libcxx
-
-        # Shared library
-        try:
-            ret["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
-        except ConanException:
-            pass
-
-        # Install to package folder
-        try:
-            if self._conanfile.package_folder:
-                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
-        except AttributeError:
-            pass
-
-        if str(self._os) in ["Windows", "WindowsStore"] and self._compiler == "Visual Studio":
-            if self.parallel:
-                cpus = tools.cpu_count()
-                ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
-                ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
-
-        # fpic
-        if str(self._os) not in ["Windows", "WindowsStore"]:
-            fpic = self._conanfile.options.get_safe("fPIC")
-            if fpic is not None:
-                shared = self._conanfile.options.get_safe("shared")
-                ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
-
-        # Adjust automatically the module path in case the conanfile is using the cmake_find_package
-        if "cmake_find_package" in self._conanfile.generators:
-            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
-
-        # Disable CMake export registry #3070 (CMake installing modules in user home's)
-        ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
-
-        return ret
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
         if (source_folder or build_folder) and (source_dir or build_dir):
@@ -369,7 +136,9 @@ class CMake(object):
         return source_ret, build_ret
 
     def _run(self, command):
-        if self._compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
+        compiler = self._settings.get_safe("compiler")
+        if compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles',
+                                                              'NMake Makefiles JOM']:
             with tools.vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
@@ -423,14 +192,16 @@ class CMake(object):
             args = ["--target", target] + args
 
         if self.generator and self.parallel:
+            compiler_version = self._settings.get_safe("compiler.version")
             if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
             elif "Visual Studio" in self.generator and \
-                    self._compiler_version and Version(self._compiler_version) >= "10":
+                    compiler_version and Version(compiler_version) >= "10":
                 if "--" not in args:
                     args.append("--")
+                # Parallel for building projects in the solution
                 args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([
@@ -445,9 +216,10 @@ class CMake(object):
         if not self._conanfile.should_install:
             return
         mkdir(self._conanfile.package_folder)
-        if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
-            raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
-                                 "Make sure 'package_folder' is defined")
+        if not self.definitions.get(cmake_install_prefix_var_name):
+            raise ConanException("%s not defined for 'cmake.install()'\n"
+                                 "Make sure 'package_folder' is "
+                                 "defined" % cmake_install_prefix_var_name)
         self.build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
@@ -460,18 +232,18 @@ class CMake(object):
     @property
     def verbose(self):
         try:
-            verbose = self.definitions["CMAKE_VERBOSE_MAKEFILE"]
+            verbose = self.definitions[verbose_definition_name]
             return get_bool_from_text(str(verbose))
         except KeyError:
             return False
 
     @verbose.setter
     def verbose(self, value):
-        self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
+        self.definitions.update(verbose_definition(value))
 
     def patch_config_paths(self):
         """
-        changes references to the absolute path of the installed package in
+        changes references to the absolute path of the installed package and its dependencies in
         exported cmake config files to the appropriate conan variable. This makes
         most (sensible) cmake config files portable.
 
@@ -492,6 +264,21 @@ class CMake(object):
         which is a variable that is set by conanbuildinfo.cmake, so that find_package()
         now correctly works on this conan package.
 
+        For dependent packages, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method and if it depends to a package bar,
+        normally this file will contain absolute paths to the bar package folder,
+        for example it will contain a line such as:
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
+
+        This function will replace such mentions to
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "${CONAN_BAR_ROOT}/include")
+
         If the install() method of the CMake object in the conan file is used, this
         function should be called _after_ that invocation. For example:
 
@@ -507,26 +294,22 @@ class CMake(object):
         if not self._conanfile.name:
             raise ConanException("cmake.patch_config_paths() can't work without package name. "
                                  "Define name in your recipe")
-        pf = self.definitions.get("CMAKE_INSTALL_PREFIX")
+        pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
         allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
-                    tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
+                    path = os.path.join(root, f)
+                    tools.replace_in_file(path, pf, replstr, strict=False)
 
-    def _get_cpp_standard_vars(self):
-        if not self._cppstd:
-            return {}
-
-        ret = {}
-        if self._cppstd.startswith("gnu"):
-            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[3:]
-            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
-        else:
-            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd
-            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
-
-        ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._compiler, self._compiler_version,
-                                                self._cppstd)
-        return ret
+                    # patch paths of dependent packages that are found in any cmake files of the
+                    # current package
+                    path_content = tools.load(path)
+                    for dep in self._conanfile.deps_cpp_info.deps:
+                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
+                        # try to replace only if from str is found
+                        if path_content.find(from_str) != -1:
+                            dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
+                            tools.replace_in_file(path, from_str, dep_str, strict=False)

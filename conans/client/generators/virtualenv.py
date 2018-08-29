@@ -71,20 +71,22 @@ class VirtualEnvGenerator(Generator):
         return ret
 
     def _sh_lines(self):
-        variables = [("OLD_PS1", "$PS1")]
-        variables.append(("PS1", "(%s) $PS1" % self.venv_name))
+        variables = [("OLD_PS1", "$PS1"),
+                     ("PS1", "(%s) $PS1" % self.venv_name)]
         variables.extend(self.env.items())
 
         activate_lines = []
-        deactivate_lines = []
+        deactivate_lines = ["%s=%s" % ("PS1", "$OLD_PS1"), "export PS1"]
+
         for name, activate, deactivate in self.format_values("sh", variables):
             activate_lines.append("%s=%s" % (name, activate))
             activate_lines.append("export %s" % name)
-            if deactivate == '""':
-                deactivate_lines.append("unset %s" % name)
-            else:
-                deactivate_lines.append("%s=%s" % (name, deactivate))
-                deactivate_lines.append("export %s" % name)
+            if name != "PS1":
+                if deactivate == '""':
+                    deactivate_lines.append("unset %s" % name)
+                else:
+                    deactivate_lines.append("%s=%s" % (name, deactivate))
+                    deactivate_lines.append("export %s" % name)
         activate_lines.append('')
         deactivate_lines.append('')
         return activate_lines, deactivate_lines
@@ -127,9 +129,8 @@ class VirtualEnvGenerator(Generator):
             result["activate.ps1"] = os.linesep.join(activate)
             result["deactivate.ps1"] = os.linesep.join(deactivate)
 
-        if os_info.is_posix:
-            activate, deactivate = self._sh_lines()
-            result["activate.sh"] = os.linesep.join(activate)
-            result["deactivate.sh"] = os.linesep.join(deactivate)
+        activate, deactivate = self._sh_lines()
+        result["activate.sh"] = os.linesep.join(activate)
+        result["deactivate.sh"] = os.linesep.join(deactivate)
 
         return result

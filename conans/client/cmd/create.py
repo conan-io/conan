@@ -23,7 +23,7 @@ def get_test_conanfile_path(tf, conanfile_path):
                                  % tf)
 
 
-def create(reference, manager, user_io, profile, remote, update, build_modes, manifest_folder,
+def create(reference, manager, user_io, profile, remote_name, update, build_modes, manifest_folder,
            manifest_verify, manifest_interactive, keep_build, test_build_folder, test_folder,
            conanfile_path):
 
@@ -31,7 +31,7 @@ def create(reference, manager, user_io, profile, remote, update, build_modes, ma
 
     if test_conanfile_path:
         pt = PackageTester(manager, user_io)
-        pt.install_build_and_test(test_conanfile_path, reference, profile, remote, update,
+        pt.install_build_and_test(test_conanfile_path, reference, profile, remote_name, update,
                                   build_modes=build_modes,
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
@@ -40,11 +40,12 @@ def create(reference, manager, user_io, profile, remote, update, build_modes, ma
                                   test_build_folder=test_build_folder)
     else:
         manager.install(reference=reference,
+                        create_reference=reference,
                         install_folder=None,  # Not output anything
                         manifest_folder=manifest_folder,
                         manifest_verify=manifest_verify,
                         manifest_interactive=manifest_interactive,
-                        remote_name=remote,
+                        remote_name=remote_name,
                         profile=profile,
                         build_modes=build_modes,
                         update=update,

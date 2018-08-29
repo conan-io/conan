@@ -9,7 +9,7 @@
     #   -LIBPATH, -D, -I, -ZI and so on.
 
 """
-
+from conans import tools
 from conans.tools import unix_path
 
 
@@ -192,3 +192,8 @@ def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler
 def format_libraries(libraries, compiler=None):
     pattern = "%s.lib" if str(compiler) == 'Visual Studio' else "-l%s"
     return [pattern % library for library in libraries if library]
+
+
+def parallel_compiler_cl_flag():
+    cpu_count = tools.cpu_count()
+    return "/MP%s" % cpu_count

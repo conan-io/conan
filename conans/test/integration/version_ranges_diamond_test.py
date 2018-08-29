@@ -1,11 +1,12 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer,\
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
-from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.util.files import load, save
 import os
+import unittest
+
 from parameterized import parameterized
-from conans.model.ref import ConanFileReference
+
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer, \
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
+from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):

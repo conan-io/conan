@@ -10,15 +10,15 @@ class Search(object):
         self._remote_manager = remote_manager
         self._registry = remote_registry
 
-    def search_recipes(self, pattern, remote=None, case_sensitive=False):
+    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         ignorecase = not case_sensitive
 
         references = OrderedDict()
-        if not remote:
+        if not remote_name:
             references[None] = search_recipes(self._client_cache, pattern, ignorecase)
             return references
 
-        if remote == 'all':
+        if remote_name == 'all':
             remotes = self._registry.remotes
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
@@ -29,7 +29,7 @@ class Search(object):
                         references[remote.name] = refs
                 return references
         # single remote
-        remote = self._registry.remote(remote)
+        remote = self._registry.remote(remote_name)
         refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
         references[remote.name] = refs
         return references

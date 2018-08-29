@@ -12,6 +12,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.generators import VisualStudioMultiGenerator
 from conans.tools import chdir
 from conans.test.utils.test_files import temp_folder
+from conans.model.env_info import EnvValues
 
 
 @attr('visual_studio')
@@ -28,7 +29,8 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             settings.compiler.runtime = "MD"
             if use_toolset:
                 settings.compiler.toolset = "v110"
-            conanfile = ConanFile(None, None, Settings({}), None)
+            conanfile = ConanFile(None, None)
+            conanfile.initialize(Settings({}), EnvValues())
 
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
             cpp_info = CppInfo("dummy_root_folder1")

@@ -600,7 +600,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             'error': False,
             'results': [
                 {
-                    'remote': 'None',
+                    'remote': None,
                     'items': [
                         {
                             'recipe': {
@@ -725,7 +725,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             'error': False,
             'results': [
                 {
-                    'remote': 'None',
+                    'remote': None,
                     'items': [
                         {
                             'recipe': {
