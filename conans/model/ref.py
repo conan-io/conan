@@ -12,44 +12,47 @@ class ConanName(object):
                                      % (_min_chars - 1, _max_chars - 1))
 
     @staticmethod
-    def invalid_name_message(name):
-        if len(name) > ConanName._max_chars:
-            message = ("'%s' is too long. Valid names must contain at most %s characters."
-                       % (name, ConanName._max_chars))
-        elif len(name) < ConanName._min_chars:
-            message = ("'%s' is too short. Valid names must contain at least %s characters."
-                       % (name, ConanName._min_chars))
+    def invalid_name_message(value, message=None):
+        message = message or "'{value}' {reason}"
+        if len(value) > ConanName._max_chars:
+            reason = "is too long. Valid names must contain at most %s characters."\
+                     % ConanName._max_chars
+        elif len(value) < ConanName._min_chars:
+            reason = "is too short. Valid names must contain at least %s characters."\
+                     % ConanName._min_chars
         else:
-            message = ("'%s' is an invalid name. Valid names MUST begin with a "
-                       "letter, number or underscore, have between %s-%s chars, including "
-                       "letters, numbers, underscore, dot and dash"
-                       % (name, ConanName._min_chars, ConanName._max_chars))
-        raise InvalidNameException(message)
+            reason = ("is an invalid name. Valid names MUST begin with a "
+                      "letter, number or underscore, have between %s-%s chars, including "
+                      "letters, numbers, underscore, dot and dash"
+                      % (ConanName._min_chars, ConanName._max_chars))
+        raise InvalidNameException(message.format(value=value, reason=reason,
+                                                  type=type(value).__name__))
 
     @staticmethod
     def validate_string(value, message=None):
         """Check for string"""
         if not isinstance(value, string_types):
-            message = message or "'{value}' {reason}"
-            raise InvalidNameException(message.format(value=value, reason="is not an string"))
+            message = message or "'{value}' (type {type}) {reason}"
+            raise InvalidNameException(message.format(value=value, reason="is not a string",
+                                                      type=type(value).__name__))
 
     @staticmethod
-    def validate_user(username):
-        ConanName.validate_string(username)
+    def validate_user(username, message=None):
+        ConanName.validate_string(username, message=message)
         if ConanName._validation_pattern.match(username) is None:
-            ConanName.invalid_name_message(username)
+            ConanName.invalid_name_message(username, message=message)
 
     @staticmethod
-    def validate_name(name, version=False):
+    def validate_name(name, version=False, message=None):
         """Check for name compliance with pattern rules"""
-        ConanName.validate_string(name)
+        ConanName.validate_string(name, message=message)
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and name.startswith("[") and name.endswith("]"):
                 # TODO: Check value between brackets
                 return
-            ConanName.invalid_name_message(name)
+            ConanName.invalid_name_message(name, message=message)
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
@@ -68,14 +71,15 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        ConanName.validate_name(name)
-        ConanName.validate_name(version, True)
-        ConanName.validate_name(user)
-        ConanName.validate_name(channel)
+        message = "Value provided for {item}, '{{value}}' (type {{type}}), {{reason}}"
+        ConanName.validate_name(name, message=message.format(item="package name"))
+        ConanName.validate_name(version, True, message=message.format(item="package version"))
+        ConanName.validate_name(user, message=message.format(item="package user name"))
+        ConanName.validate_name(channel, message=message.format(item="package user"))
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
         if revision:
-            ConanName.validate_name(revision)
+            ConanName.validate_name(revision, message=message.format(item="package revision"))
         obj.revision = revision
         return obj
 
@@ -137,7 +141,8 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         revision = None
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-            ConanName.validate_name(revision)
+            message = "Value provided for package revision, '{value}' (type {type}) {reason}"
+            ConanName.validate_name(revision, message=message)
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
         return obj
