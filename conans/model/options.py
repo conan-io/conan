@@ -162,15 +162,7 @@ class OptionsValues(object):
 
         # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
         if isinstance(values, tuple):
-            new_values = []
-            for v in values:
-                option, value = v.split("=", 1)
-                option, value = option.strip(), value.strip()
-                if not value:
-                    raise ConanException("Please define a default value for '%s' in"
-                                         "'default_options'" % option)
-                new_values.append((option, value))
-            values = new_values
+            values = [item.split("=", 1) for item in values]
 
         # convert dict {"Pkg:option": "value", "..": "..", ...} to list of tuples (name, value)
         if isinstance(values, dict):
@@ -178,11 +170,12 @@ class OptionsValues(object):
 
         # handle list of tuples (name, value)
         for (k, v) in values:
+            k = k.strip()
+            v = v.strip() if isinstance(v, six.string_types) else v
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                package_values = self._reqs_options.setdefault(package.strip(),
-                                                               PackageOptionValues())
+                package_values = self._reqs_options.setdefault(package, PackageOptionValues())
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
