@@ -20,7 +20,10 @@ def get_recipe_revision(conanfile, client_cache, reference):
     try:
         scm_data = SCMData(conanfile)
     except ConanException:
-        revision = client_cache.load_manifest(reference).summary_hash
+        try:
+            revision = client_cache.load_manifest(reference).summary_hash
+        except IOError:
+            return None
     else:
         revision = scm_data.recipe_revision
 
