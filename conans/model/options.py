@@ -261,18 +261,8 @@ class OptionsValues(object):
         other_option=3
         OtherPack:opt3=12.1
         """
-        result = []
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            name, value = line.split("=", 1)
-            name, value = name.strip(), value.strip()
-            if not value:
-                raise ConanException("Please define a default value for '%s' in"
-                                     "'default_options'" % name)
-            result.append((name, value))
-        return OptionsValues(result)
+        options = tuple(text.splitlines())
+        return OptionsValues(options)
 
     @property
     def sha(self):

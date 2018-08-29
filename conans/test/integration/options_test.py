@@ -131,6 +131,7 @@ class MyConanFile(ConanFile):
         self.assertIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertNotIn("String evaluation", client.out)
+
     def general_scope_options_test(self):
         # https://github.com/conan-io/conan/issues/2538
         client = TestClient()
