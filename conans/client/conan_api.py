@@ -49,6 +49,8 @@ from conans.model.workspace import Workspace
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.range_resolver import RangeResolver
 
 
 default_manifest_folder = '.conan_manifests'
@@ -218,9 +220,11 @@ class ConanAPIV1(object):
             self._user_io.disable_input()
 
         self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager, registry=self._registry)
-        self._loader = ConanFileLoader(self._runner, self._user_io.out, self._proxy)
+        resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
+        python_requires = ConanPythonRequire(self._proxy, resolver)
+        self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
-                                           self._remote_manager, self._loader, self._proxy)
+                                           self._remote_manager, self._loader, self._proxy, resolver)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
