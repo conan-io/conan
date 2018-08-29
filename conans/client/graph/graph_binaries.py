@@ -6,9 +6,9 @@ from conans.client.output import ScopedOutput
 from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.manifest import FileTreeManifest
 from conans.model.info import ConanInfo
-from conans.paths import CONANINFO
-from conans.client.graph.graph import BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,\
-    BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP, BINARY_WORKSPACE
+from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
+                                       BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
+                                       BINARY_WORKSPACE)
 
 
 class GraphBinariesAnalyzer(object):
@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remote(remote_name)
         else:
-            remote = self._registry.get_ref(conan_ref)
+            remote = self._registry.get_recipe_remote(conan_ref)
         remotes = self._registry.remotes
 
         if os.path.exists(package_folder):
@@ -96,7 +96,7 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
-                package_hash = ConanInfo.load_file(os.path.join(package_folder, CONANINFO)).recipe_hash
+                package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:

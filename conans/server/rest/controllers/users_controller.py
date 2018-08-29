@@ -1,7 +1,8 @@
-from conans.server.rest.controllers.controller import Controller
-from conans.errors import AuthenticationException
-from conans.server.service.user_service import UserService
 from bottle import response
+
+from conans.errors import AuthenticationException
+from conans.server.rest.controllers.controller import Controller
+from conans.server.service.user_service import UserService
 
 
 class UsersController(Controller):

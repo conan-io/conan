@@ -3,10 +3,9 @@ import time
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.client.loader_parse import load_conanfile_class
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
-from conans.search.search import search_recipes
+from conans.search.search import search_recipes, search_packages
 
 
 def _is_a_reference(ref):
@@ -20,15 +19,17 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry):
+    def __init__(self, client_cache, user_io, remote_manager, registry, loader):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
+        self._loader = loader
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False, no_overwrite=None, remote_name=None):
+               integrity_check=False, no_overwrite=None, remote_name=None,
+               query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         if package_id and not _is_a_reference(reference_or_pattern):
@@ -53,12 +54,15 @@ class CmdUpload(object):
             if upload:
                 try:
                     conanfile_path = self._client_cache.conanfile(conan_ref)
-                    conan_file = load_conanfile_class(conanfile_path)
+                    conan_file = self._loader.load_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(conan_ref)))
                 if all_packages:
                     packages_ids = self._client_cache.conan_packages(conan_ref)
+                elif query:
+                    packages = search_packages(self._client_cache, conan_ref, query)
+                    packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
                 else:
@@ -72,7 +76,7 @@ class CmdUpload(object):
                 integrity_check, no_overwrite, remote_name, recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
 
-        defined_remote = self._registry.get_ref(conan_ref)
+        defined_remote = self._registry.get_recipe_remote(conan_ref)
         if remote_name:  # If remote_name is given, use it
             upload_remote = self._registry.remote(remote_name)
         elif defined_remote:  # Else, if the package had defined a remote, use it
@@ -83,8 +87,7 @@ class CmdUpload(object):
         if not force:
             self._check_recipe_date(conan_ref, upload_remote)
 
-        self._user_io.out.info("Uploading %s to remote '%s'"
-                               % (str(conan_ref), upload_remote.name))
+        self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
         self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite, upload_remote)
 
         recorder.add_recipe(str(conan_ref), upload_remote.name, upload_remote.url)
@@ -104,13 +107,13 @@ class CmdUpload(object):
                     recorder.add_package(str(conan_ref), package_id)
 
         if not defined_remote and not skip_upload:
-            self._registry.set_ref(conan_ref, upload_remote)
+            self._registry.set_ref(conan_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)
-        current_remote = self._registry.get_ref(conan_reference)
+        current_remote = self._registry.get_recipe_remote(conan_reference)
         if remote != current_remote:
-            conanfile = load_conanfile_class(conan_file_path)
+            conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
             ignore_deleted_file = None

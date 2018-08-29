@@ -5,6 +5,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import save, is_dirty, gzopen_without_timestamps
 import os
+import itertools
 from mock import mock
 from conans.errors import ConanException
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
@@ -20,6 +21,16 @@ class MyPkg(ConanFile):
         self.copy("*")
 """
 
+conanfile_upload_query = """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Hello1"
+    version = "1.2.1"
+    exports_sources = "*"
+    settings = "os", "arch"
+
+    def package(self):
+        self.copy("*")
+"""
 
 class UploadTest(unittest.TestCase):
 
@@ -78,6 +89,38 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", client.user_io.out)
         self.assertIn("Uploading conanfile.py", client.user_io.out)
 
+    def query_upload_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile_upload_query})
+
+        for os, arch in itertools.product(["Macos", "Linux", "Windows"],
+                                          ["armv8", "x86_64"]):
+            client.run("create . user/testing -s os=%s -s arch=%s" % (os, arch))
+
+        # Check that the right number of packages are picked up by the queries
+        client.run("upload Hello1/*@user/testing --confirm -q 'os=Windows or os=Macos'")
+        for i in range(1, 5):
+            self.assertIn("Uploading package %d/4" % i, client.user_io.out)
+        self.assertNotIn("Package is up to date, upload skipped", client.user_io.out)
+
+        client.run("upload Hello1/*@user/testing --confirm -q 'os=Linux and arch=x86_64'")
+        self.assertIn("Uploading package 1/1", client.user_io.out)
+
+        client.run("upload Hello1/*@user/testing --confirm -q 'arch=armv8'")
+        for i in range(1, 4):
+            self.assertIn("Uploading package %d/3" % i, client.user_io.out)
+        self.assertIn("Package is up to date, upload skipped", client.user_io.out)
+
+        # Check that a query not matching any packages doesn't upload any packages
+        client.run("upload Hello1/*@user/testing --confirm -q 'arch=sparc'")
+        self.assertNotIn("Uploading package", client.user_io.out)
+
+        # Check that an invalid query fails
+        try:
+            client.run("upload Hello1/*@user/testing --confirm -q 'blah blah blah'")
+        except:
+            self.assertIn("Invalid package query", client.user_io.out)
+
     def broken_sources_tgz_test(self):
         # https://github.com/conan-io/conan/issues/2854
         client = self._client()
@@ -110,8 +153,9 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:"
-                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        CONAN_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
+                                             CONAN_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -128,8 +172,8 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm --all")
-        self.assertIn("WARN: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
-                      "Removing conan_package.tgz, marked as dirty",
+        self.assertIn("WARN: Hello0/1.2.1@user/testing:%s: "
+                      "Removing conan_package.tgz, marked as dirty" % CONAN_PACKAGE_ID,
                       client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))

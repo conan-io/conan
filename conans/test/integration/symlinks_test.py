@@ -38,6 +38,7 @@ Hello/0.1@lasote/stable
 ., * -> .
 """
 
+
 @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 

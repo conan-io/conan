@@ -18,13 +18,13 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
     if os.path.exists(sources_folder):
         return None
 
-    if not hasattr(conanfile, "exports_sources"):
+    if conanfile.exports_sources is None:
         mkdir(sources_folder)
         return None
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = registry.get_ref(conan_reference)
+    current_remote = registry.get_recipe_remote(conan_reference)
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(conan_reference))

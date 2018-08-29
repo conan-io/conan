@@ -165,7 +165,11 @@ class OptionsValues(object):
             new_values = []
             for v in values:
                 option, value = v.split("=", 1)
-                new_values.append((option.strip(), value.strip()))
+                option, value = option.strip(), value.strip()
+                if not value:
+                    raise ConanException("Please define a default value for '%s' in"
+                                         "'default_options'" % option)
+                new_values.append((option, value))
             values = new_values
 
         # handle list of tuples (name, value)
@@ -270,7 +274,11 @@ class OptionsValues(object):
             if not line:
                 continue
             name, value = line.split("=", 1)
-            result.append((name.strip(), value.strip()))
+            name, value = name.strip(), value.strip()
+            if not value:
+                raise ConanException("Please define a default value for '%s' in"
+                                     "'default_options'" % name)
+            result.append((name, value))
         return OptionsValues(result)
 
     @property
@@ -483,9 +491,8 @@ class PackageOptions(object):
 
 
 class Options(object):
-    """ all options of a package, both its own options and the upstream
-    ones.
-    Owned by conanfile
+    """ All options of a package, both its own options and the upstream ones.
+    Owned by ConanFile.
     """
     def __init__(self, options):
         assert isinstance(options, PackageOptions)
