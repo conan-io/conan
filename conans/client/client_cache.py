@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
@@ -15,10 +14,12 @@ from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case, \
-    CONAN_MANIFEST, CONANFILE
+    CONAN_MANIFEST
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 from conans.unicode import get_cwd
+from conans.client.loader import ConanFileLoader
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 CONAN_CONF = 'conan.conf'
@@ -266,18 +267,10 @@ class ClientCache(SimplePaths):
         self._default_profile = None
         self._no_lock = None
 
-    def recipe_revision(self, conan_reference):
-        conanfile = load_conanfile_class(self.conanfile(conan_reference))
-        try:
-            scm_data = SCMData(conanfile)
-        except ConanException:
-            revision = self.load_manifest(conan_reference).summary_hash
-        else:
-            revision = scm_data.recipe_revision
+    def recipe_summary_hash(self, conan_reference):
+        return self.load_manifest(conan_reference).summary_hash
 
-        return revision
-
-    def package_revision(self, package_ref):
+    def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
 
 

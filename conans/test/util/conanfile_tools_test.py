@@ -1,13 +1,12 @@
 import unittest
 import os
 from conans.util.files import save, load
-from conans.client.loader import ConanFileLoader
-from conans.model.settings import Settings
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.test.utils.test_files import temp_folder
 from conans import tools
 from parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
-from conans.model.profile import Profile
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 base_conanfile = '''
@@ -161,8 +160,8 @@ class Pkg(ConanFile):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Settings(), Profile())
-        ret = loader.load_conan(file_path, None)
+        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
+        ret = loader.load_conanfile(file_path, None, ProcessedProfile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

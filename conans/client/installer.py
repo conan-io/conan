@@ -6,7 +6,7 @@ import platform
 from conans.client import tools
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING,\
     INSTALL_ERROR_MISSING
-from conans.model.conan_file import get_env_context_manager
+from conans.model.conan_file import get_env_context_manager, get_recipe_revision
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
@@ -121,7 +121,8 @@ class _ConanPackageBuilder(object):
         # FIXME: Is weak to assign here the recipe_hash
         manifest = self._client_cache.load_manifest(self._conan_ref)
         self._conan_file.info.recipe_hash = manifest.summary_hash
-        self._conan_file.info.recipe_revision = self._client_cache.recipe_revision(self._conan_ref)
+        revision = get_recipe_revision(self._conan_file, self._client_cache, self._conan_ref)
+        self._conan_file.info.recipe_revision = revision
 
         # Creating ***info.txt files
         save(os.path.join(self.build_folder, CONANINFO), self._conan_file.info.dumps())

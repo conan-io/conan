@@ -1,10 +1,10 @@
 import time
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.conan_file import get_recipe_revision
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.client.loader_parse import load_conanfile_class
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
 from conans.search.search import search_recipes, search_packages
@@ -21,11 +21,12 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry):
+    def __init__(self, client_cache, user_io, remote_manager, registry, loader):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
+        self._loader = loader
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
@@ -55,7 +56,7 @@ class CmdUpload(object):
             if upload:
                 try:
                     conanfile_path = self._client_cache.conanfile(conan_ref)
-                    conan_file = load_conanfile_class(conanfile_path)
+                    conan_file = self._loader.load_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(conan_ref)))
@@ -89,8 +90,9 @@ class CmdUpload(object):
             self._check_recipe_date(conan_ref, upload_remote)
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
+        recipe_revision = get_recipe_revision(conan_file, self._client_cache, conan_ref)
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
-                                      upload_remote)
+                                      upload_remote, recipe_revision)
 
         if not skip_upload:
             recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
@@ -119,7 +121,8 @@ class CmdUpload(object):
                 ret_upload_package = self._upload_package(PackageReference(new_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
                                                           skip_upload, integrity_check,
-                                                          no_overwrite, upload_remote)
+                                                          no_overwrite, upload_remote,
+                                                          recipe_revision)
                 if ret_upload_package:
                     recorder.add_package(new_ref.full_repr(), package_id)
 
@@ -129,11 +132,12 @@ class CmdUpload(object):
         if not defined_remote or defined_remote == upload_remote:
             self._registry.set_ref(new_ref, upload_remote.name)
 
-    def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
+    def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite,
+                       remote, recipe_revision):
         conan_file_path = self._client_cache.conanfile(conan_reference)
         current_remote = self._registry.get_recipe_remote(conan_reference)
         if remote != current_remote:
-            conanfile = load_conanfile_class(conan_file_path)
+            conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
             ignore_deleted_file = None
@@ -142,19 +146,22 @@ class CmdUpload(object):
         new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                                      ignore_deleted_file=ignore_deleted_file,
                                                      skip_upload=skip_upload,
-                                                     no_overwrite=no_overwrite)
+                                                     no_overwrite=no_overwrite,
+                                                     recipe_revision=recipe_revision)
         return new_ref
 
     def _upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
-                        skip_upload=False, integrity_check=False, no_overwrite=None, remote=None):
+                        skip_upload=False, integrity_check=False, no_overwrite=None, remote=None,
+                        recipe_revision=None):
         """Uploads the package identified by package_id"""
 
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()
         self._user_io.out.info(msg)
 
-        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
-                                                     skip_upload, integrity_check, no_overwrite)
+        result = self._remote_manager.upload_package(package_ref, remote, retry,
+                                                     retry_wait, skip_upload, integrity_check,
+                                                     no_overwrite, recipe_revision)
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
         return result
 

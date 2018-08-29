@@ -413,17 +413,28 @@ class HelloConan(ConanFile):
         client.run("create . conan/testing")
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 
+        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
+        builds_folder = client.client_cache.builds(ref)
+        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
+
         client.save({CONANFILE: conanfile % ("'pkg_config'", "")})
         client.run("create . conan/testing")
-        self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
+        self.assertIn("PKG_CONFIG_PATH=%s" % bf, client.out)
+
+        # The previous values in the environment should be kept too
+        with tools.environment_append({"PKG_CONFIG_PATH": "Some/value"}):
+            client.run("create . conan/testing")
+            self.assertIn("PKG_CONFIG_PATH=%s:Some/value" % bf, client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'",
                                              "pkg_config_paths=['/tmp/hello', 'foo']")})
         client.run("create . conan/testing")
-        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
-        builds_folder = client.client_cache.builds(ref)
-        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
         self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo" % bf, client.out)
+
+        # The previous values in the environment should be kept too
+        with tools.environment_append({"PKG_CONFIG_PATH": "Some/value"}):
+            client.run("create . conan/testing")
+            self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo:Some/value" % bf, client.out)
 
     def cross_build_command_test(self):
         runner = RunnerMock()

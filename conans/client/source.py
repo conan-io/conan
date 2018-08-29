@@ -6,11 +6,10 @@ import six
 from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
-from conans.model.conan_file import get_env_context_manager
+from conans.model.conan_file import get_env_context_manager, get_scm_data
 from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
-from conans.model.scm import SCMData
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
@@ -18,7 +17,7 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
     if os.path.exists(sources_folder):
         return None
 
-    if not hasattr(conanfile, "exports_sources"):
+    if conanfile.exports_sources is None:
         mkdir(sources_folder)
         return None
 
@@ -75,13 +74,6 @@ def _clean_source_folder(folder):
             os.remove(os.path.join(folder, f))
         except OSError:
             pass
-
-
-def get_scm_data(conanfile):
-    try:
-        return SCMData(conanfile)
-    except ConanException:
-        return None
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,

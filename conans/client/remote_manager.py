@@ -39,7 +39,7 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
 
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
-                      skip_upload=False, no_overwrite=None):
+                      skip_upload=False, no_overwrite=None, recipe_revision=None):
         """Will upload the conans to the first remote"""
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
@@ -61,8 +61,7 @@ class RemoteManager(object):
         if skip_upload:
             return conan_reference
 
-        revision = self._client_cache.recipe_revision(conan_reference)
-        conan_reference.revision = revision
+        conan_reference.revision = recipe_revision
 
         ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
                                          retry_wait, ignore_deleted_file, no_overwrite)
@@ -104,8 +103,9 @@ class RemoteManager(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False,
-                       integrity_check=False, no_overwrite=None):
+    def upload_package(self, package_reference, remote, retry, retry_wait,
+                       skip_upload=False,
+                       integrity_check=False, no_overwrite=None, recipe_revision=None):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -140,14 +140,13 @@ class RemoteManager(object):
             return None
 
         # Read the hashes (revisions) and build a correct package reference for the server
-        revision = self._client_cache.recipe_revision(package_reference.conan)
-        package_revision = self._client_cache.package_revision(package_reference)
+        package_revision = self._client_cache.package_summary_hash(package_reference)
 
-        if not revision or not package_revision:
+        if not recipe_revision or not package_revision:
             raise ConanException("Invalid recipe or package without summary hash!")
 
         # Copy to not modify the original with the revisions
-        p_ref = package_reference.copy_with_revisions(revision, package_revision)
+        p_ref = package_reference.copy_with_revisions(recipe_revision, package_revision)
 
         tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
                                 no_overwrite)
