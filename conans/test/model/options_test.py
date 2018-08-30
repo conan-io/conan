@@ -314,9 +314,9 @@ class OptionsValuesTest(unittest.TestCase):
         with self.assertRaisesRegexp(
                 ConanException,
                 "Please define a default value for 'config' in 'default_options'"):
-            OptionsValues([('a', 2), ('config'), ])
+            OptionsValues([('a', 2), ('config', ), ])
 
-    def test_exceptions_repeatedd_value(self):
+    def test_exceptions_repeated_value(self):
         with self.assertRaisesRegexp(ConanException, "repeated element"):
             OptionsValues.loads("a=2\na=12\nb=3").dumps()
 
