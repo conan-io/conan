@@ -42,7 +42,7 @@ try{
                     def api_conf = z
                     def name = "${slave} - ${flavor} - ${pyver} - API${api_conf}"
 
-                    if (api_confs == "v2" && slave != "Linux"){
+                    if (api_conf == "v2" && slave != "Linux"){
                         continue;
                     }
 
