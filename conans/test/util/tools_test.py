@@ -59,6 +59,60 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           tools.system_pm._global_output)
 
+    def system_package_tool_add_repositories_test(self):
+        repositories = ["deb http://repo/url/ saucy universe multiverse",
+                        "deb http://other/repo/url/ saucy-updates universe multiverse"]
+        gpg_keys = ['http://one/key.gpg', None]
+
+        class RunnerOrderedMock:
+            commands = []  # Command + return value
+
+            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
+                if not len(runner_self.commands):
+                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
+                expected, ret = runner_self.commands.pop(0)
+                self.assertEqual(expected, command)
+                return ret
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerOrderedMock()
+            runner.commands.append(("sudo apt-add-repository {}".format(repositories[0]), 0))
+            runner.commands.append(("wget -qO - {} | sudo apt-key add -".format(gpg_keys[0]), 0))
+            runner.commands.append(("sudo apt-add-repository {}".format(repositories[1]), 0))
+
+            os_info = OSInfo()
+            os_info.is_macos = False
+            os_info.is_linux = True
+            os_info.is_windows = False
+            os_info.linux_distro = "debian"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys, update=False)
+            self.assertTrue(len(runner.commands) == 0)
+
+            with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+                os_info.linux_distro = "fedora"  # Will instantiate YumTool
+                spt = SystemPackageTool(runner=runner, os_info=os_info)
+                spt.add_repositories(repositories=repositories, repo_keys=gpg_keys)
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
+            runner = RunnerOrderedMock()
+            runner.commands.append(("apt-add-repository {}".format(repositories[0]), 0))
+            runner.commands.append(("wget -qO - {} | apt-key add -".format(gpg_keys[0]), 0))
+            runner.commands.append(("apt-add-repository {}".format(repositories[1]), 0))
+            runner.commands.append(("apt-get update", 0))
+
+            os_info = OSInfo()
+            os_info.is_macos = False
+            os_info.is_linux = True
+            os_info.is_windows = False
+            os_info.linux_distro = "debian"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys, update=True)
+            self.assertTrue(len(runner.commands) == 0)
+
+
     def system_package_tool_test(self):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):

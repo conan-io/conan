@@ -148,7 +148,7 @@ class AptTool(object):
     def add_repository(self, repository, repo_key=None):
         _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository))
         if repo_key:
-            _run(self._runner, "wget -qO - %s | sudo apt-key add -" % repo_key)
+            _run(self._runner, "wget -qO - %s | %sapt-key add -" % (repo_key, self._sudo_str))
 
     def update(self):
         _run(self._runner, "%sapt-get update" % self._sudo_str)
@@ -164,8 +164,7 @@ class AptTool(object):
 
 class YumTool(object):
     def add_repository(self, repository, repo_key=None):
-        _run(self._runner, "%syum-config-manager --add-repo %s" % (self._sudo_str, repository))
-        # TODO: Add GPG key (although it is not needed): https://codingbee.net/tutorials/rhcsa/rhcsa-yum-repository-gpg-keys
+        raise ConanException("YumTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
@@ -180,8 +179,7 @@ class YumTool(object):
 
 class BrewTool(object):
     def add_repository(self, repository, repo_key=None):
-        _run(self._runner, "brew tap user/repo %s" % repository)  # TODO: Which name?
-        # TODO: Anything to do with key?
+        raise ConanException("BrewTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "brew update")
@@ -196,7 +194,7 @@ class BrewTool(object):
 
 class PkgTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise NotImplementedError  # TODO: Does it have something related to this?
+        raise ConanException("PkgTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "%spkg update" % self._sudo_str)
@@ -211,8 +209,7 @@ class PkgTool(object):
 
 class PkgUtilTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise NotImplementedError
-        # Instead of adding a repository, it may be better 'pkgutil -t <url> -i <package>'
+        raise ConanException("PkgUtilTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
@@ -227,11 +224,7 @@ class PkgUtilTool(object):
 
 class ChocolateyTool(object):
     def add_repository(self, repository, repo_key=None):
-        # https://github.com/chocolatey/choco/wiki/CommandsSources
-        command = 'choco source add -n=bob -s="%s"' % repository
-        if repo_key:
-            command += ' --cert=%s' % repo_key  # TODO: Always a file? can be a http?
-        _run(self._runner, command)
+        raise ConanException("ChocolateyTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "choco outdated")
@@ -247,9 +240,7 @@ class ChocolateyTool(object):
 
 class PacManTool(object):
     def add_repository(self, repository, repo_key=None):
-        # TODO: https://wiki.archlinux.org/index.php/Pacman#Repositories_and_mirrors
-        # Repos, mirrors,... are handled in a configuration file
-        raise NotImplementedError
+        raise ConanException("PacManTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "%spacman -Syyu --noconfirm" % self._sudo_str)
@@ -264,8 +255,7 @@ class PacManTool(object):
 
 class ZypperTool(object):
     def add_repository(self, repository, repo_key=None):
-        _run(self._runner, "%szypper ar %s repo-name" % (self._sudo_str, repository))
-        # TODO: something with repo_key
+        raise ConanException("ZypperTool::add_repository not implemented (see #3385)")
 
     def update(self):
         _run(self._runner, "%szypper --non-interactive ref" % self._sudo_str)
