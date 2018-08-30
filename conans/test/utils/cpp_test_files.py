@@ -124,6 +124,8 @@ class {name}Conan(ConanFile):
     settings = {settings}
     generators = "cmake", "gcc"
     exports = '*'
+    
+    {scm_placeholder}
 
     def config(self):
         {libcxx_remove}
@@ -315,7 +317,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
                           use_cmake=True, cmake_targets=False, no_copy_source=False,
-                          use_additional_infos=0, settings=None):
+                          use_additional_infos=0, settings=None, scm_dict=None):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -360,6 +362,13 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     for i in range(use_additional_infos):
         res += info_tmp % ("EnvVar%d" % i, "UserVar%d" % i)
 
+    scm_placeholder = ""
+    if scm_dict:
+        scm_dict_as_text = ', '.join(["'{}': '{}'".format(k, v) for k,v in scm_dict.items()])
+        scm_placeholder = """
+    scm = {%s}
+        """ % scm_dict_as_text
+
     conanfile = conanfile_template.format(name=name,
                                           version=version,
                                           requires=requires,
@@ -368,7 +377,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           libcxx_remove=libcxx_remove,
                                           build=build_env,
                                           additional_info=res,
-                                          settings=settings)
+                                          settings=settings,
+                                          scm_placeholder=scm_placeholder)
 
     if no_copy_source:
         conanfile = conanfile.replace("exports = '*'", """exports = '*'
