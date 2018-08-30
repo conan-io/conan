@@ -60,7 +60,8 @@ class SystemPackageTool(object):
             Add repositories from list, using provided keys (if any) and update afterwards if requested
         """
         repositories = [repositories, ] if isinstance(repositories, string_types) else repositories
-        assert (repo_keys is None or len(repo_keys) == len(repositories)), "If keys are provided, both lists should have the same size (fill with None)"
+        assert (repo_keys is None or len(repo_keys) == len(repositories)), \
+            "If keys are provided, both lists should have the same size (fill with None)"
 
         for i, repository in enumerate(repositories):
             repo_key = repo_keys[i] if repo_keys else None

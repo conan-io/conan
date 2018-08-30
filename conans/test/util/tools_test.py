@@ -59,7 +59,26 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           tools.system_pm._global_output)
 
-    def system_package_tool_add_repositories_test(self):
+    def add_repositories_exception_cases_test(self):
+        repositories = ["deb http://repo/url/ saucy universe multiverse",
+                        "deb http://other/repo/url/ saucy-updates universe multiverse"]
+        gpg_keys = ['http://one/key.gpg', None]
+
+        os_info = OSInfo()
+        os_info.is_macos = False
+        os_info.is_linux = True
+        os_info.is_windows = False
+        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+
+        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+            spt = SystemPackageTool(os_info=os_info)
+            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys)
+
+        with self.assertRaisesRegexp(AssertionError, "both lists should have the same size"):
+            spt = SystemPackageTool(os_info=os_info)
+            spt.add_repositories(repositories=repositories, repo_keys=["only-one-key", ])
+
+    def add_repositories_test(self):
         repositories = ["deb http://repo/url/ saucy universe multiverse",
                         "deb http://other/repo/url/ saucy-updates universe multiverse"]
         gpg_keys = ['http://one/key.gpg', None]
