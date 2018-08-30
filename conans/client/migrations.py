@@ -128,6 +128,8 @@ def _add_build_cross_settings(client_cache, out):
         default_profile = client_cache.default_profile
         default_profile.settings["arch_build"] = default_profile.settings["arch"]
         default_profile.settings["os_build"] = default_profile.settings["os"]
+        # TODO: Should build 'default_profile_path' using os.path.join?
+        #       os.path.join(self.client_cache.conan_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
         save(client_cache.default_profile_path, default_profile.dumps())
     except Exception:
         out.error("Something went wrong adding 'os_build' and 'arch_build' to your default."
