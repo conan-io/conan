@@ -109,11 +109,6 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.add_repositories(repositories=repositories, repo_keys=gpg_keys, update=False)
             self.assertTrue(len(runner.commands) == 0)
 
-            with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
-                os_info.linux_distro = "fedora"  # Will instantiate YumTool
-                spt = SystemPackageTool(runner=runner, os_info=os_info)
-                spt.add_repositories(repositories=repositories, repo_keys=gpg_keys)
-
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
             runner = RunnerOrderedMock()
             runner.commands.append(("apt-add-repository {}".format(repositories[0]), 0))
