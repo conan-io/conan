@@ -364,10 +364,9 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
 
     scm_placeholder = ""
     if scm_dict:
-        scm_dict_as_text = ', '.join(["'{}': '{}'".format(k, v) for k,v in scm_dict.items()])
         scm_placeholder = """
     scm = {%s}
-        """ % scm_dict_as_text
+        """ % str(scm_dict)
 
     conanfile = conanfile_template.format(name=name,
                                           version=version,
