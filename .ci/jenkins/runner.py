@@ -29,7 +29,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
-                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
+                    "--process-restartworker --with-coverage" % num_cores)
 
     if num_cores <= 1:
         multiprocess = ""
@@ -65,7 +65,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
-    env["CONAN_RECIPE_LINTER"] = "False"
+    # env["CONAN_RECIPE_LINTER"] = "False"
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     with chdir(source_folder):
