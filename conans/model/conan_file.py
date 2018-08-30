@@ -151,19 +151,11 @@ class ConanFile(object):
 
     def serialize(self):
         result = {}
-        result["conan_ref"] = self.conan_ref.serialize() if self.conan_ref else None
-        result["conanfile"] = self.conanfile.serialize()
-        result["binary"] = self.binary
-        result["recipe"] = self.recipe
-        result["remote"] = self.remote.serialize() if self.remote else None
-        result["binary_remote"] = self.binary_remote.serialize() if self.binary_remote else None
-        result["build_require"] = self.build_require
         return result
 
     @staticmethod
     def deserialize(data):
-        conanfile = ConanFile.deserialize(data["conanfile"])
-        return result
+        return ConanFile()
 
     @property
     def env(self):

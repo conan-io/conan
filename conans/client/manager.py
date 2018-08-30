@@ -20,6 +20,7 @@ from conans.util.log import logger
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
 from conans.model.values import Values
+import json
 
 
 class ConanManager(object):
@@ -157,6 +158,12 @@ class ConanManager(object):
             manifest_manager.print_log()
 
         if install_folder:
+            # write serialized graph
+            serialized_graph = deps_graph.serialize()
+            serialized_graph_str = json.dumps(serialized_graph)
+            print serialized_graph_str
+            save(os.path.join(install_folder, "serial_graph.json"),
+                 serialized_graph_str)
             # Write generators
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators
@@ -164,9 +171,6 @@ class ConanManager(object):
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
             if not isinstance(reference, ConanFileReference):
-                # FIXME: This is a hack, for https://github.com/conan-io/conan/issues/3367, the full settings are
-                # required at "conan export-pkg", but only the current consumer settings are stored in full_settings
-                conanfile.info.full_settings = Values.from_list(profile.settings.items())
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
