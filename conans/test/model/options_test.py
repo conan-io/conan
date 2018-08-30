@@ -309,7 +309,7 @@ class OptionsValuesTest(unittest.TestCase):
                 "Please define a default value for 'config', 'commit' in 'default_options'"):
             OptionsValues.loads("config\na=2\ncommit\nb=3")
 
-    def test_exceptions(self):
+    def test_exceptions_empty_value(self):
         with self.assertRaisesRegexp(ConanException, "String type not expected"):
             OptionsValues("a=2\nconfig\nb=3")
 
@@ -323,3 +323,12 @@ class OptionsValuesTest(unittest.TestCase):
                 "Please define a default value for 'config' in 'default_options'"):
             OptionsValues([('a', 2), ('config'), ])
 
+    def test_exceptions_repeatedd_value(self):
+        with self.assertRaisesRegexp(ConanException, "repeated element"):
+            OptionsValues.loads("a=2\na=12\nb=3").dumps()
+
+        with self.assertRaisesRegexp(ConanException, "repeated element"):
+            OptionsValues(("a=2", "b=23", "a=12"))
+
+        with self.assertRaisesRegexp(ConanException, "repeated element"):
+            OptionsValues([('a', 2), ('b', True), ('a', '12')])
