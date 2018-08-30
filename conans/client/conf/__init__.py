@@ -279,10 +279,7 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def default_profile(self):
-        try:
-            return self.get_item("general.default_profile")
-        except ConanException:
-            return DEFAULT_PROFILE_NAME
+        return self._env_c("general.default_profile", "CONAN_ENV_DEFAULT_PROFILE", DEFAULT_PROFILE_NAME)
 
     @property
     def cache_no_locks(self):
