@@ -1,18 +1,27 @@
 def nightly = (env.JOB_NAME == "ConanNightly")
 
-def slaves = ['Linux', 'Windows', 'Macos']
+def full_test = true
+def test_v2 = true
 
-def pyvers 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
-    pyvers = ['py37', 'py36', 'py34', 'py27']
+    full_test = true
 }
-else{
-	pyvers = ['py37', 'py36', 'py27']
+
+def slaves = ['Linux', 'Windows', 'Macos']
+def pyvers  = ['py36', 'py27']
+def api_confs = ["v1"]
+
+if (full_test){
+    pyvers = ['py36', 'py34', 'py27']
+    api_confs = ["v1", "v2"]
 }
+else if(test_v2){
+    api_confs = ["v1", "v2"]
+}
+
 
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
-
 
 def win_tmp_base = "D:/J/t/"
 def rest_tmp_base = "/tmp/"
@@ -21,92 +30,93 @@ def runner = ".ci/jenkins/runner.py"
 def commit
 def branch
 
-
-def builders = [:]
 try{
+    def builders = [:]
     for (x in slaves) {
         def slave = x
         for (y in pyvers) {
-            def pyver = y
-            if(slave != "Linux" && pyver=="py37"){
-                continue;
-            }
+            for (z in api_confs){
+                def pyver = y
+                def api_conf = z
+                def name = "${slave} - ${pyver} - API${api_conf}"
 
-            builders["${slave} - ${pyver}"] = {
-                node(slave) {
-                    stage("${slave} - ${pyver}"){
-                        def workdir
-                        def sourcedir
-                        def base_source
-                        lock('source_code') { // Prepare a clean new directory with the sources
-                            try{
-                                step ([$class: 'WsCleanup'])
-                            }
-                            catch(e){
-                                echo "Cannot clean WS"
-                            }
+                if (api_confs == "v2" && slave != "Linux"){
+                    continue;
+                }
 
-                            def vars = checkout scm
-                            commit = vars["GIT_COMMIT"].substring(0, 4)
-                            branch = vars["GIT_BRANCH"]
-                            def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
-                            workdir = "${base_dir}${commit}/${pyver}"
-                            base_source = "${base_dir}source/${commit}"
-                            sourcedir = "${base_source}/${pyver}"
-                            while(fileExists(sourcedir)){
-                                sourcedir = sourcedir + "_"
-                            }
-
-                            dir(base_source){ // Trick to create the parent
-                                def escaped_ws = "${WORKSPACE}".replace("\\", "/")
-                                def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${sourcedir}')\""
-                                if (slave == "Windows"){
-                                    bat(script: cmd)
+                builders[name] = {
+                    node(slave) {
+                        stage(name){
+                            def workdir
+                            def sourcedir
+                            def base_source
+                            lock('source_code') { // Prepare a clean new directory with the sources
+                                try{
+                                    step ([$class: 'WsCleanup'])
                                 }
-                                else{
-                                    sh(script: cmd)
+                                catch(e){
+                                    echo "Cannot clean WS"
+                                }
+
+                                def vars = checkout scm
+                                commit = vars["GIT_COMMIT"].substring(0, 4)
+                                branch = vars["GIT_BRANCH"]
+                                def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
+                                workdir = "${base_dir}${commit}/${pyver}/${api_conf}"
+                                base_source = "${base_dir}source/${commit}"
+                                sourcedir = "${base_source}/${pyver}/${api_conf}"
+                                while(fileExists(sourcedir)){
+                                    sourcedir = sourcedir + "_"
+                                }
+
+                                dir(base_source){ // Trick to create the parent
+                                    def escaped_ws = "${WORKSPACE}".replace("\\", "/")
+                                    def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${sourcedir}')\""
+                                    if (slave == "Windows"){
+                                        bat(script: cmd)
+                                    }
+                                    else{
+                                        sh(script: cmd)
+                                    }
                                 }
                             }
-                        }
+                            if(slave == "Linux"){
+                                sh "docker pull lasote/conantests"
+                                docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}  --server_api=${api_conf} ")
+                                }
+                            }
+                            else if(slave == "Windows"){
+                                try{
 
-                        if(slave == "Linux"){
-                            sh "docker pull lasote/conantests"
-                            docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
+                                  withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
+                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} --server_api=${api_conf}")
+                                  }
+                                }
+                                finally{
+                                  bat(script: "rd /s /q \"${workdir}\"")
+                                  bat(script: "rd /s /q \"${sourcedir}\"")
+                                }
                             }
+                            else if(slave == "Macos"){
+                                try{
+                                  withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
+                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --server_api=${api_conf}")
+                                  }
+                                }
+                                finally{
+                                  sh(script: "rm -rf ${workdir}")
+                                  sh(script: "rm -rf ${sourcedir}")
+                                }
+                            }
+                            //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
                         }
-                        else if(slave == "Windows"){
-                            try{
-                              withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
-                              }
-                            }
-                            finally{
-                              bat(script: "rd /s /q \"${workdir}\"")
-                              bat(script: "rd /s /q \"${sourcedir}\"")
-                            }
-                        }
-                        else if(slave == "Macos"){
-                            try{
-                              withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                  sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
-                              }
-                            }
-                            finally{
-                              sh(script: "rm -rf ${workdir}")
-                              sh(script: "rm -rf ${sourcedir}")
-                            }
-                        }
-                        //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
                     }
                 }
             }
         }
     }
     parallel builders
-
-
-
 
 
     // Run rest_api_test without concurrency between same node
@@ -160,4 +170,12 @@ if(nightly){
     def subject = "SUCCESS ${env.JOB_NAME}! Another day with a green ${branch}!"
     def summary = "${subject} (${env.BUILD_URL})"
     slackSend (color: '#00FF00', message: summary)
+}
+
+
+def build_linux(){
+    sh "docker pull lasote/conantests"
+    docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}  --server_api=${api_conf}")
+    }
 }
