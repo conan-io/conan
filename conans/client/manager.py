@@ -1,5 +1,6 @@
 import os
 
+from conans import load
 from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
@@ -26,7 +27,7 @@ class ConanManager(object):
     business logic
     """
     def __init__(self, client_cache, user_io, runner, remote_manager,
-                 recorder, registry, graph_manager):
+                 recorder, registry, graph_manager, plugin_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -36,6 +37,7 @@ class ConanManager(object):
         self._recorder = recorder
         self._registry = registry
         self._graph_manager = graph_manager
+        self._plugin_manager = plugin_manager
 
     def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
 
@@ -70,12 +72,15 @@ class ConanManager(object):
         conanfile.info.recipe_hash = recipe_hash
         conanfile.develop = True
         package_output = ScopedOutput(str(reference), self._user_io.out)
+        self._plugin_manager.initialize_plugins(conanfile_content=load(conan_file_path),
+                                                output=package_output)
         if package_folder:
             packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
-                                package_output)
+                                package_output, self._plugin_manager)
         else:
             packager.create_package(conanfile, pkg_id, source_folder, build_folder,
-                                    dest_package_folder, install_folder, package_output, local=True)
+                                    dest_package_folder, install_folder, package_output,
+                                    self._plugin_manager, local=True)
 
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
@@ -193,7 +198,8 @@ class ConanManager(object):
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
             _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
-        config_source_local(source_folder, conanfile, conanfile_folder, output)
+        self._plugin_manager.initialize_plugins(conanfile_content=load(conanfile_path), output=output)
+        config_source_local(source_folder, conanfile, conanfile_folder, output, self._plugin_manager)
 
     def imports(self, conan_file_path, dest_folder, info_folder):
         """
@@ -216,8 +222,11 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder, output,
                                                                 deps_info_required=True)
+        self._plugin_manager.initialize_plugins(conanfile_content=load(conanfile_path),
+                                                output=output)
         packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                install_folder, output, local=True, copy_info=True)
+                                install_folder, output, self._plugin_manager, local=True,
+                                copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
               test=False, should_configure=True, should_build=True, should_install=True,
@@ -259,6 +268,8 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             conan_file.install_folder = install_folder
+            self._plugin_manager.execute_plugins_method("pre_build", conan_file,
+                                                        load(conanfile_path), output)
             with get_env_context_manager(conan_file):
                 output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):
@@ -267,6 +278,7 @@ class ConanManager(object):
                     output.highlight("Running test()")
                     with conanfile_exception_formatter(str(conan_file), "test"):
                         conan_file.test()
+            self._plugin_manager.execute_plugins_method("post_build")
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:

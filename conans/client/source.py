@@ -159,15 +159,16 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
             raise ConanException(e)
 
 
-def config_source_local(dest_dir, conanfile, conanfile_folder, output):
+def config_source_local(dest_dir, conanfile, conanfile_folder, output, plugin_manager):
     output.info('Configuring sources in %s' % dest_dir)
     conanfile.source_folder = dest_dir
+    conanfile.build_folder = None
+    conanfile.package_folder = None
+    plugin_manager.execute_plugins_method("pre_source", conanfile)
     with tools.chdir(dest_dir):
         try:
             with conanfile_exception_formatter(str(conanfile), "source"):
                 with get_env_context_manager(conanfile):
-                    conanfile.build_folder = None
-                    conanfile.package_folder = None
                     scm_data = get_scm_data(conanfile)
                     if scm_data:
                         dest_dir = os.path.join(dest_dir, scm_data.subfolder)
@@ -180,6 +181,7 @@ def config_source_local(dest_dir, conanfile, conanfile_folder, output):
             raise
         except Exception as e:
             raise ConanException(e)
+    plugin_manager.execute_plugins_method("post_source")
 
 
 def _fetch_scm(scm_data, dest_dir, local_sources_path, output):

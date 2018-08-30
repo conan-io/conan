@@ -137,6 +137,7 @@ class _ConanPackageBuilder(object):
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
             pkg_id = self._conan_file.info.package_id()
+
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
                            self.package_folder, install_folder, self._out)
 

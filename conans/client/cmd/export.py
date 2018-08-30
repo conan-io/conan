@@ -13,7 +13,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
-from conans.client.plugin_loader import execute_plugins_method
+from conans.client.plugin_loader import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -42,11 +42,10 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
-
     conan_linter(conanfile_path, output)
-    execute_plugins_method("pre_export", client_cache.plugins_path,
-                           get_env("CONAN_PLUGINS_LINTERS", list()), conanfile,
-                           load(conanfile_path), output)
+
+    # plugin_manager = PluginManager(client_cache.plugins_path, get_env("CONAN_PLUGINS_LINTERS", list()))
+    # plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path), output)
 
     conan_ref_str = str(reference)
     # Maybe a platform check could be added, but depends on disk partition
@@ -59,9 +58,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
-    execute_plugins_method("post_export", client_cache.plugins_path,
-                           get_env("CONAN_PLUGINS_LINTERS", list()), conanfile,
-                           load(conanfile_path), output)
+    # plugin_manager.execute_plugins_method("post_export", conanfile, load(conanfile_path), output)
 
 
 def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):

@@ -4,8 +4,9 @@ import sys
 import requests
 
 import conans
-from conans import __version__ as client_version, tools
+from conans import __version__ as client_version, tools, load
 from conans.client.cmd.create import create
+from conans.client.plugin_loader import PluginManager
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
@@ -225,12 +226,13 @@ class ConanAPIV1(object):
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
                                            self._remote_manager, self._loader, self._proxy, resolver)
+        self._plugin_manager = PluginManager(self._client_cache.plugins_path, get_env("CONAN_PLUGINS_LINTERS", list()))
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io, self._runner,
                             self._remote_manager, action_recorder, self._registry,
-                            self._graph_manager)
+                            self._graph_manager, self._plugin_manager)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -307,8 +309,14 @@ class ConanAPIV1(object):
             keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
+                self._plugin_manager.execute_plugins_method("pre_export", conanfile,
+                                                            load(conanfile_path),
+                                                            self._user_io.out)
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                            self._client_cache)
+                self._plugin_manager.execute_plugins_method("pre_export", conanfile,
+                                                            load(conanfile_path),
+                                                            self._user_io.out)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -373,7 +381,11 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
+                                                    self._user_io.out)
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out, self._client_cache)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
+                                                    self._user_io.out)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -624,7 +636,12 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out, self._client_cache)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
+                                                    self._user_io.out)
+        cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
+                   self._client_cache)
+        self._plugin_manager.execute_plugins_method("post_export", conanfile, load(conanfile_path),
+                                                    self._user_io.out)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

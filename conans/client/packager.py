@@ -11,9 +11,11 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output):
+def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, plugin_manager):
     mkdir(package_folder)
+    conanfile.package_folder = src_package_folder
 
+    plugin_manager.execute_plugins_method("pre_package", conanfile)
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
 
@@ -28,10 +30,12 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output):
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
     output.success("Package '%s' created" % pkg_id)
+    conanfile.package_folder = package_folder
+    plugin_manager.execute_plugins_method("post_package", conanfile)
 
 
 def create_package(conanfile, pkg_id, source_folder, build_folder, package_folder, install_folder,
-                   output, local=False, copy_info=False):
+                   output, plugin_manager, local=False, copy_info=False):
     """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
     """
@@ -48,6 +52,8 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         conanfile.source_folder = source_folder
         conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
+
+        plugin_manager.execute_plugins_method("pre_package", conanfile)
 
         def recipe_has(attribute):
             return attribute in conanfile.__class__.__dict__
@@ -84,6 +90,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
+    plugin_manager.execute_plugins_method("post_package", conanfile)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
