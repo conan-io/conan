@@ -36,18 +36,18 @@ class ProcessedProfile(object):
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, output, proxy):
+    def __init__(self, runner, output, python_requires):
         self._runner = runner
         self._output = output
-        # This is still unused here, but it makes sense to inject it, so we can do
-        # sys.modules["python_requires"] = PythonRequire(proxy)
-        # And to force every conanfile read will have it
-        self._proxy = proxy
+        self._python_requires = python_requires
+        sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
         loaded, filename = _parse_file(conanfile_path)
         try:
-            return _parse_module(loaded, filename)
+            conanfile = _parse_module(loaded, filename)
+            conanfile.python_requires = self._python_requires.references
+            return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
@@ -191,7 +191,6 @@ def _parse_module(conanfile_module, filename):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
-    @param consumer: if this is a root node in the hierarchy, the consumer project
     @return: the main ConanFile class from the module
     """
     result = None
@@ -214,6 +213,10 @@ def _parse_module(conanfile_module, filename):
     return result
 
 
+def _invalid_python_requires(require):
+    raise ConanException("Invalid use of python_requires(%s)" % require)
+
+
 def _parse_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
@@ -230,6 +233,7 @@ def _parse_file(conan_file_path):
         with chdir(current_dir):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(filename, conan_file_path)
+            loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
         # Put all imported files under a new package name
         module_id = uuid.uuid1()

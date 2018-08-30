@@ -410,7 +410,7 @@ class Command(object):
                             "specify both install-folder and any setting/option "
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
-                            help='Only with --build_order option, return the information in a json.'
+                            help='Only with --build-order option, return the information in a json.'
                                  ' e.g --json=/path/to/filename.json or --json to output the json')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
