@@ -48,9 +48,12 @@ class FooPkg(ConanFile):
         """
         self.client.save({"conanfile.py": foo_conanfile.format(dep1_version="1.0")},
                          clean_first=True)
-        self.client.run("create . lasote/testing")
+        error = self.client.run("create . lasote/testing")
+        self.assertFalse(error)
 
         self.client.save({"conanfile.py": foo_conanfile.format(dep1_version="2.0")},
                          clean_first=True)
-        self.client.run("create . lasote/testing")
+        self.client.run("create . lasote/testing", ignore_error=True)
+        self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", self.client.user_io.out)
+        self.assertIn("- Dependencies: dep1/2.0@lasote/testing", self.client.user_io.out)
 
