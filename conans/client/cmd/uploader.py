@@ -1,5 +1,6 @@
 import time
 
+from conans import load
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
@@ -19,12 +20,13 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry, loader):
+    def __init__(self, client_cache, user_io, remote_manager, registry, loader, plugin_manager):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
         self._loader = loader
+        self._plugin_manager = plugin_manager
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
@@ -67,9 +69,11 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
+                self._plugin_manager.execute_plugins_method("pre_upload", conan_file,
+                                                            conanfile_path)
                 self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
                              skip_upload, integrity_check, no_overwrite, remote_name, recorder)
-
+                self._plugin_manager.execute_plugins_method("post_upload")
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
     def _upload(self, conan_file, conan_ref, force, packages_ids, retry, retry_wait, skip_upload,

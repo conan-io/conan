@@ -226,7 +226,9 @@ class ConanAPIV1(object):
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
                                            self._remote_manager, self._loader, self._proxy, resolver)
-        self._plugin_manager = PluginManager(self._client_cache.plugins_path, get_env("CONAN_PLUGINS_LINTERS", list()))
+        self._plugin_manager = PluginManager(self._client_cache.plugins_path,
+                                             get_env("CONAN_PLUGINS_LINTERS", list()),
+                                             self._user_io.out)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
@@ -381,11 +383,9 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
-                                                    self._user_io.out)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out, self._client_cache)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
-                                                    self._user_io.out)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -636,12 +636,10 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, load(conanfile_path),
-                                                    self._user_io.out)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                    self._client_cache)
-        self._plugin_manager.execute_plugins_method("post_export", conanfile, load(conanfile_path),
-                                                    self._user_io.out)
+        self._plugin_manager.execute_plugins_method("post_export")
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -749,7 +747,7 @@ class ConanAPIV1(object):
             raise exc
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             self._registry, self._loader)
+                             self._registry, self._loader, self._plugin_manager)
         try:
             uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
                             retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,

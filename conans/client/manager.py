@@ -72,8 +72,7 @@ class ConanManager(object):
         conanfile.info.recipe_hash = recipe_hash
         conanfile.develop = True
         package_output = ScopedOutput(str(reference), self._user_io.out)
-        self._plugin_manager.initialize_plugins(conanfile_content=load(conan_file_path),
-                                                output=package_output)
+        self._plugin_manager.initialize_plugins(conanfile_path=conan_file_path)
         if package_folder:
             packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
                                 package_output, self._plugin_manager)
@@ -198,7 +197,7 @@ class ConanManager(object):
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
             _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
-        self._plugin_manager.initialize_plugins(conanfile_content=load(conanfile_path), output=output)
+        self._plugin_manager.initialize_plugins(conanfile_path=conanfile_path, output=output)
         config_source_local(source_folder, conanfile, conanfile_folder, output, self._plugin_manager)
 
     def imports(self, conan_file_path, dest_folder, info_folder):
@@ -222,8 +221,7 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder, output,
                                                                 deps_info_required=True)
-        self._plugin_manager.initialize_plugins(conanfile_content=load(conanfile_path),
-                                                output=output)
+        self._plugin_manager.initialize_plugins(conanfile_path=conanfile_path)
         packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                 install_folder, output, self._plugin_manager, local=True,
                                 copy_info=True)

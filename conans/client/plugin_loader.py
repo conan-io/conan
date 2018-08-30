@@ -11,11 +11,12 @@ from conans.tools import chdir
 
 class PluginManager(object):
 
-    def __init__(self, plugins_folder, plugin_names):
+    def __init__(self, plugins_folder, plugin_names, output):
         self._plugins_folder = plugins_folder
         self._plugin_names = plugin_names
         self.loaded_plugins = self.load_plugins()
         self.plugins = None
+        self.output = output
 
     def load_plugins(self):
         loaded_plugins = []
@@ -25,33 +26,30 @@ class PluginManager(object):
             loaded_plugins.append(plugin)
         return loaded_plugins
 
-    def initialize_plugins(self, conanfile=None, conanfile_content=None, output=None):
+    def initialize_plugins(self, conanfile=None, conanfile_path=None):
         if not self.plugins:
-            self.plugins = [plugin(conanfile, conanfile_content, output) for plugin in
+            self.plugins = [plugin(self.output, conanfile, conanfile_path) for plugin in
                             self.loaded_plugins]
         else:
             for plugin in self.plugins:
                 if conanfile:
                     plugin.conanfile = conanfile
-                if conanfile_content:
-                    plugin.conanfile_content = conanfile_content
-                if output:
-                    plugin.output = output
+                if conanfile_path:
+                    plugin.conanfile_path = conanfile_path
 
-    def execute_plugins_method(self, method_name, conanfile=None, conanfile_content=None,
-                               output=None):
-        self.initialize_plugins(conanfile, conanfile_content, output)
+    def execute_plugins_method(self, method_name, conanfile=None, conanfile_path=None):
+        self.initialize_plugins(conanfile, conanfile_path)
 
         for plugin in self.plugins:
             try:
                 method = getattr(plugin, method_name)
                 method()
-            # except AttributeError:
-            #     print("KK")
-            #     pass
+            except AttributeError:
+                print("KKKKKKKKKKKK")
+                pass
             except Exception as e:
-                print("exception")
-                raise ConanException("[PLUGIN: %s()] %s\n%s" % (method_name, e, traceback.format_exc()))
+                raise ConanException("[PLUGIN: %s()] %s\n%s" % (method_name, e,
+                                                                traceback.format_exc()))
 
     def load_plugin(self, plugin_name):
         filename = "%s.py" % plugin_name
@@ -129,7 +127,9 @@ class PluginManager(object):
 
 class ConanPlugin(object):
 
-    def __init__(self, conanfile=None, conanfile_content=None, output=None):
+    def __init__(self, output, conanfile=None, conanfile_path=None, reference=None, remote=None):
         self.conanfile = conanfile
-        self.conanfile_content = conanfile_content
+        self.conanfile_path = conanfile_path
         self.output = output
+        self.reference = None
+        self.remote = None
