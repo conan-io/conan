@@ -124,9 +124,7 @@ class {name}Conan(ConanFile):
     settings = {settings}
     generators = "cmake", "gcc"
     exports = '*'
-    
-    {scm_placeholder}
-
+{scm_placeholder}
     def config(self):
         {libcxx_remove}
         for name, req in self.requires.iteritems():
@@ -365,7 +363,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     scm_placeholder = ""
     if scm_dict:
         scm_placeholder = """
-    scm = {%s}
+    scm = %s
+
         """ % str(scm_dict)
 
     conanfile = conanfile_template.format(name=name,
