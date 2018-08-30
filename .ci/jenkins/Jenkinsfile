@@ -1,6 +1,6 @@
 def nightly = (env.JOB_NAME == "ConanNightly")
 
-def full_test = true
+def full_test = false
 def test_v2 = true
 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
