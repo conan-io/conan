@@ -55,18 +55,8 @@ class SystemPackageTool(object):
         else:
             return NullTool()
 
-    def add_repositories(self, repositories, repo_keys=None, update=True):
-        """
-            Add repositories from list, using provided keys (if any) and update afterwards if requested
-        """
-        repositories = [repositories, ] if isinstance(repositories, string_types) else repositories
-        assert (repo_keys is None or len(repo_keys) == len(repositories)), \
-            "If keys are provided, both lists should have the same size (fill with None)"
-
-        for i, repository in enumerate(repositories):
-            repo_key = repo_keys[i] if repo_keys else None
-            self._tool.add_repository(repository, repo_key=repo_key)
-
+    def add_repository(self, repository, repo_key=None, update=True):
+        self._tool.add_repository(repository, repo_key=repo_key)
         if update:
             self.update()
 
