@@ -45,6 +45,7 @@ class _CppInfo(object):
     def include_paths(self):
         if self._include_paths is None:
             self._include_paths = self._filter_paths(self.includedirs)
+            print "RETURNING ", self._include_paths
         return self._include_paths
 
     @property

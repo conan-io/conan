@@ -48,10 +48,13 @@ class PkgB(ConanFile):
         conanfile = """from conans import ConanFile
 class PkgA(ConanFile):
     requires = "PkgB/0.1@user/testing"
+    def build(self):
+        self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
+        print client.out
         client.run("export-pkg . PkgA/0.1@user/testing -bf=build")
         self.assertIn("PkgA/0.1@user/testing: Package "
                       "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",

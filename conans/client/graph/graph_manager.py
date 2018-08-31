@@ -17,6 +17,8 @@ from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
 import json
+from conans.client.installer import ConanInstaller
+from conans.client.recorder.action_recorder import ActionRecorder
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -58,23 +60,30 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
-        graph_str = load(os.path.join(info_folder, "serial_graph.json"))
-        graph_json = json.loads(graph_str)
-        graph = DepsGraph.deserialize(graph_json, self._output, self._loader._runner)
-        print "GRAPH ", graph
-        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        # We are recovering state from captured profile from conaninfo, remove not defined
-        cache_settings.remove_undefined()
-        processed_profile = ProcessedProfile(cache_settings, profile, None)
-        if conanfile_path.endswith(".py"):
-            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
-                                                    processed_profile=processed_profile)
-        else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
+        if False and deps_info_required:
+            graph_str = load(os.path.join(info_folder, "serial_graph.json"))
+            graph_json = json.loads(graph_str)
+            deps_graph = DepsGraph.deserialize(graph_json, self._output, self._proxy, self._loader)
+            print "GRAPH ", deps_graph
+            conanfile = deps_graph.root.conanfile
 
-        load_deps_info(info_folder, conanfile, required=deps_info_required)
+            installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+                                       self._registry, recorder=ActionRecorder(), workspace=None)
+            installer.install(deps_graph, keep_build=False)
+        else:
+            profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
+            cache_settings = self._client_cache.settings.copy()
+            cache_settings.values = profile.settings_values
+            # We are recovering state from captured profile from conaninfo, remove not defined
+            cache_settings.remove_undefined()
+            processed_profile = ProcessedProfile(cache_settings, profile, None)
+            if conanfile_path.endswith(".py"):
+                conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
+                                                        processed_profile=processed_profile)
+            else:
+                conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
+
+            load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
 
@@ -113,19 +122,21 @@ class GraphManager(object):
         cache_settings.values = profile.settings_values
         settings_preprocessor.preprocess(cache_settings)
         processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
+        root_path = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
+            root_path = reference
             output = ScopedOutput("PROJECT", self._output)
-            if reference.endswith(".py"):
-                conanfile = self._loader.load_conanfile(reference, output, processed_profile, consumer=True)
+            if root_path.endswith(".py"):
+                conanfile = self._loader.load_conanfile(root_path, output, processed_profile, consumer=True)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
-                conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(root_path, output, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(conanfile, check_updates, update,
@@ -133,6 +144,7 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
+        deps_graph.root.path = root_path
 
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
