@@ -60,10 +60,6 @@ class SystemPackageToolTest(unittest.TestCase):
                           tools.system_pm._global_output)
 
     def add_repositories_exception_cases_test(self):
-        repositories = ["deb http://repo/url/ saucy universe multiverse",
-                        "deb http://other/repo/url/ saucy-updates universe multiverse"]
-        gpg_keys = ['http://one/key.gpg', None]
-
         os_info = OSInfo()
         os_info.is_macos = False
         os_info.is_linux = True
@@ -72,17 +68,10 @@ class SystemPackageToolTest(unittest.TestCase):
 
         with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
             spt = SystemPackageTool(os_info=os_info)
-            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys)
-
-        with self.assertRaisesRegexp(AssertionError, "both lists should have the same size"):
-            spt = SystemPackageTool(os_info=os_info)
-            spt.add_repositories(repositories=repositories, repo_keys=["only-one-key", ])
+            spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
+                               repo_key=None)
 
     def add_repositories_test(self):
-        repositories = ["deb http://repo/url/ saucy universe multiverse",
-                        "deb http://other/repo/url/ saucy-updates universe multiverse"]
-        gpg_keys = ['http://one/key.gpg', None]
-
         class RunnerOrderedMock:
             commands = []  # Command + return value
 
@@ -94,10 +83,13 @@ class SystemPackageToolTest(unittest.TestCase):
                 return ret
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            repository = "deb http://repo/url/ saucy universe multiverse"
+            gpg_key = 'http://one/key.gpg'
+
+            # Add one repository giving a gpg key for it
             runner = RunnerOrderedMock()
-            runner.commands.append(("sudo apt-add-repository {}".format(repositories[0]), 0))
-            runner.commands.append(("wget -qO - {} | sudo apt-key add -".format(gpg_keys[0]), 0))
-            runner.commands.append(("sudo apt-add-repository {}".format(repositories[1]), 0))
+            runner.commands.append(("sudo apt-add-repository {}".format(repository), 0))
+            runner.commands.append(("wget -qO - {} | sudo apt-key add -".format(gpg_key), 0))
 
             os_info = OSInfo()
             os_info.is_macos = False
@@ -106,14 +98,22 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
 
-            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys, update=False)
+            spt.add_repository(repository=repository, repo_key=gpg_key, update=False)
+            self.assertTrue(len(runner.commands) == 0)
+
+            # Add one repository without gpg_key, but updating
+            runner.commands.append(("sudo apt-add-repository {}".format(repository), 0))
+            spt.add_repository(repository=repository, repo_key=None, update=False)
             self.assertTrue(len(runner.commands) == 0)
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
+            repository = "deb http://repo/url/ saucy universe multiverse"
+            gpg_key = 'http://one/key.gpg'
+
+            # Add one repository giving a gpg key for it
             runner = RunnerOrderedMock()
-            runner.commands.append(("apt-add-repository {}".format(repositories[0]), 0))
-            runner.commands.append(("wget -qO - {} | apt-key add -".format(gpg_keys[0]), 0))
-            runner.commands.append(("apt-add-repository {}".format(repositories[1]), 0))
+            runner.commands.append(("apt-add-repository {}".format(repository), 0))
+            runner.commands.append(("wget -qO - {} | apt-key add -".format(gpg_key), 0))
             runner.commands.append(("apt-get update", 0))
 
             os_info = OSInfo()
@@ -123,9 +123,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
 
-            spt.add_repositories(repositories=repositories, repo_keys=gpg_keys, update=True)
+            spt.add_repository(repository=repository, repo_key=gpg_key, update=True)
             self.assertTrue(len(runner.commands) == 0)
-
 
     def system_package_tool_test(self):
 
