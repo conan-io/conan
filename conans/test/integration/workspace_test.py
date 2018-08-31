@@ -34,6 +34,12 @@ class Pkg(ConanFile):
     generators = "cmake"
     exports_sources = "src/*"
 
+    def configure(self):
+        if self.in_local_cache:
+            raise Exception("self.in_local_cache == True, there must be a better way to test that...")
+        if not self.develop:
+            raise Exception("self.develop == False, there must be a better way to test that...")
+
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder="src")

@@ -229,6 +229,8 @@ class DepsGraphBuilder(object):
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
+            workspace_package.conanfile.develop = True
+            workspace_package.conanfile.in_local_cache = False
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or requirement.conan_reference
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
