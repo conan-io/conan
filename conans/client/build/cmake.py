@@ -6,7 +6,8 @@ from conans import tools
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name, \
+    cmake_in_local_cache_var_name, in_local_cache_definition
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -240,6 +241,19 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions.update(verbose_definition(value))
+
+    @property
+    def in_local_cache(self):
+        try:
+            in_local_cache = self.definitions[cmake_in_local_cache_var_name]
+            return get_bool_from_text(str(in_local_cache))
+        except KeyError:
+            return False
+
+    @in_local_cache.setter
+    def in_local_cache(self, value):
+        self._conanfile.in_local_cache = value  # Update value of conanfile too
+        self.definitions.update(in_local_cache_definition(value))
 
     def patch_config_paths(self):
         """
