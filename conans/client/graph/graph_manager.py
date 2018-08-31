@@ -7,7 +7,7 @@ from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, DepsGraph
 from conans.client import settings_preprocessor
 from conans.client.output import ScopedOutput
 from conans.client.graph.build_mode import BuildMode
@@ -16,6 +16,7 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
+import json
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -57,6 +58,10 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
+        graph_str = load(os.path.join(info_folder, "serial_graph.json"))
+        graph_json = json.loads(graph_str)
+        graph = DepsGraph.deserialize(graph_json, self._output, self._loader._runner)
+        print "GRAPH ", graph
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values

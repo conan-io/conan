@@ -154,8 +154,8 @@ class ConanFile(object):
         return result
 
     @staticmethod
-    def deserialize(data):
-        return ConanFile()
+    def deserialize(data, output, runner):
+        return ConanFile(output, runner)
 
     @property
     def env(self):

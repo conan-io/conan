@@ -48,9 +48,9 @@ class Node(object):
         return result
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, output, runner):
         conan_ref = ConanFileReference.deserialize(data["conan_ref"])
-        conanfile = ConanFile.deserialize(data["conanfile"])
+        conanfile = ConanFile.deserialize(data["conanfile"], output, runner)
         result = Node(conan_ref, conanfile)
         result.binary = data["binary"]
         result.recipe = data["recipe"]
@@ -147,8 +147,8 @@ class Edge(object):
 
     def serialize(self):
         result = {}
-        result["src"] = id(self.src)
-        result["dst"] = id(self.dst)
+        result["src"] = str(id(self.src))
+        result["dst"] = str(id(self.dst))
         result["private"] = self.private
         return result
 
@@ -160,15 +160,15 @@ class DepsGraph(object):
 
     def serialize(self):
         result = {}
-        result["nodes"] = {id(n): n.serialize() for n in self.nodes}
+        result["nodes"] = {str(id(n)): n.serialize() for n in self.nodes}
         result["edges"] = [e.serialize() for n in self.nodes for e in n.dependencies]
-        result["root"] = id(self.root)
+        result["root"] = str(id(self.root))
         return result
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, output, runner):
         result = DepsGraph()
-        nodes_dict = {id_: Node.deserialize(n) for id_, n in data["nodes"].items()}
+        nodes_dict = {id_: Node.deserialize(n, output, runner) for id_, n in data["nodes"].items()}
         result.nodes = set(nodes_dict.values())
         result.root = nodes_dict[data["root"]]
         for edge in data["edges"]:
