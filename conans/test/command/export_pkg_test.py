@@ -3,7 +3,7 @@ import platform
 import os
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load, mkdir
 from conans.test.utils.conanfile import TestConanFile
@@ -11,6 +11,23 @@ from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+    def test_dont_touch_server(self):
+        # https://github.com/conan-io/conan/issues/3432
+        class RequesterMock(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
+        # https://github.com/conan-io/conan/issues/3432
+        client = TestClient(servers={"default": TestServer()},
+                            requester_class=RequesterMock,
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        client.run("export-pkg . Pkg/0.1@user/testing")
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
