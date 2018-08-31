@@ -17,7 +17,7 @@ class Git(object):
                  runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
+            os.makedirs(self.folder)
         self._verify_ssl = verify_ssl
         self._force_eng = force_english
         self._username = username
