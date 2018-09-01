@@ -229,7 +229,7 @@ def find_windows_10_sdk():
                 pass
             finally:
                 winreg.CloseKey(hkey)
-        except OSError:  # Raised by OpenKey/Ex if the function fails.
+        except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2).
             pass
     return None
 
