@@ -6,6 +6,7 @@ from conans.paths import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONAN
 from conans.util.files import load
 import os
 from conans.test.utils.tools import TestClient
+import re
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
@@ -75,10 +76,12 @@ xcode
 
         package_id = os.listdir(client.paths.packages(conan_ref))[0]
         package_ref = PackageReference(conan_ref, package_id)
-        package_paths = client.paths.package(package_ref).replace("\\", "/")
+        package_path = client.paths.package(package_ref).replace("\\", "/")
 
-        expected_lib_dirs = os.path.join(package_paths, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(package_paths, "include").replace("\\", "/")
+        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
+                               "$(USERPROFILE)", package_path, flags=re.I)
+        expected_lib_dirs = os.path.join(replaced_path, "lib").replace("\\", "/")
+        expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEquals("hello.lib;%(AdditionalDependencies)", libs)
@@ -90,9 +93,12 @@ xcode
 
         expected_c_flags = '-some_c_compiler_flag'
         expected_cpp_flags = '-some_cpp_compiler_flag'
+        expected_lib_dirs = os.path.join(package_path, "lib").replace("\\", "/")
+        expected_include_dirs = os.path.join(package_path, "include").replace("\\", "/")
 
         self.assertIn('LIBRARY_SEARCH_PATHS = $(inherited) "%s"' % expected_lib_dirs, xcode)
         self.assertIn('HEADER_SEARCH_PATHS = $(inherited) "%s"' % expected_include_dirs, xcode)
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"), xcode)

@@ -387,8 +387,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
             q = 'compiler="gcc" OR compiler.libcxx=libstdc++11'
             # Should find Visual because of the OR, visual doesn't care about libcxx
-            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
-                                   "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA"], remote)
 
             q = '(compiler="gcc" AND compiler.libcxx=libstdc++11) OR compiler.version=4.5'
             self._assert_pkg_q(q, ["LinuxPackageSHA"], remote)
@@ -407,18 +406,25 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows)'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA", "LinuxPackageSHA",
-                                   "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "WindowsPackageSHA"], remote)
+
+            q = '(os="Linux" OR os=None)'
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA"], remote)
+
+            q = '(os=None)'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True'
+            self._assert_pkg_q(q, ["WindowsPackageSHA"], remote)
+
+            q = '(os=None OR os=Windows) AND use_Qt=True'
             self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True AND nonexistant_option=3'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
+            self._assert_pkg_q(q, [], remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
-            self._assert_pkg_q(q, ["PlatformIndependantSHA",
-                                   "WindowsPackageSHA", "LinuxPackageSHA"], remote)
+            self._assert_pkg_q(q, ["WindowsPackageSHA", "LinuxPackageSHA"], remote)
 
         # test in local
         test_cases()
@@ -474,8 +480,18 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q os=Windows')
         self.assertIn("WindowsPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertNotIn("LinuxPackageSHA", self.client.out)
+
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows or os=None"')
+        self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("LinuxPackageSHA", self.client.out)
+
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows or os=Linux"')
+        self.assertIn("WindowsPackageSHA", self.client.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.out)
+        self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows AND compiler.version=4.5"')
         self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' "
@@ -584,7 +600,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             'error': False,
             'results': [
                 {
-                    'remote': 'None',
+                    'remote': None,
                     'items': [
                         {
                             'recipe': {
@@ -709,7 +725,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             'error': False,
             'results': [
                 {
-                    'remote': 'None',
+                    'remote': None,
                     'items': [
                         {
                             'recipe': {

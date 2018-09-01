@@ -73,6 +73,7 @@ class Version(str):
 
     @property
     def build(self):
+        self.as_list
         if hasattr(self, "_build"):
             return self._build
         return ""

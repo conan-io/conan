@@ -174,8 +174,15 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace("short_paths = True", "short_paths = False")
         path, commit = create_local_git_repo({"myfile": "contents",
                                               "ignored.pyc": "bin",
-                                              ".gitignore": "*.pyc\n",
+                                              ".gitignore": """
+*.pyc
+my_excluded_folder
+other_folder/excluded_subfolder
+""",
                                               "myfile.txt": "My file!",
+                                              "my_excluded_folder/some_file": "hey Apple!",
+                                              "other_folder/excluded_subfolder/some_file": "hey Apple!",
+                                              "other_folder/valid_file": "!",
                                               "conanfile.py": conanfile}, branch="my_release")
         self.client.current_folder = path
         self._commit_contents()
@@ -187,8 +194,11 @@ class ConanLib(ConanFile):
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
-        self.assertFalse(os.path.exists(os.path.join(bf, ".git")))
+        self.assertTrue(os.path.exists(os.path.join(bf, ".git")))
         self.assertFalse(os.path.exists(os.path.join(bf, "ignored.pyc")))
+        self.assertFalse(os.path.exists(os.path.join(bf, "my_excluded_folder")))
+        self.assertTrue(os.path.exists(os.path.join(bf, "other_folder", "valid_file")))
+        self.assertFalse(os.path.exists(os.path.join(bf, "other_folder", "excluded_subfolder")))
 
     def test_local_source(self):
         curdir = self.client.current_folder
@@ -491,7 +501,7 @@ class ConanLib(ConanFile):
         # Export again but now with absolute reference, so no pointer file is created nor kept
         svn = SVN(curdir)
         self.client.save({"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
-        self.client.run("create . user/channel")
+        self.client.run("create . user/channel", ignore_error=False)
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertFalse(os.path.exists(sources_dir))
         self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)

@@ -1,20 +1,17 @@
-import os
 import unittest
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import CONANFILE, SimplePaths
+from conans.paths import SimplePaths
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.client.loader import ConanFileLoader
-from conans.model.settings import Settings
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.model.requires import Requirements
-from conans.test.utils.test_files import temp_folder
 from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
-from conans.model.profile import Profile
 from conans.errors import ConanException
-from conans.util.files import save
+from conans.test.model.fake_retriever import Retriever
+from conans.client.graph.python_requires import ConanPythonRequire
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -88,29 +85,6 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "2.1.1")
 
 
-class Retriever(object):
-    def __init__(self, loader, output):
-        self.loader = loader
-        self.output = output
-        self.folder = temp_folder()
-
-    def root(self, content):
-        conan_path = os.path.join(self.folder, "root")
-        save(conan_path, content)
-        conanfile = self.loader.load_conan(conan_path, self.output, consumer=True)
-        return conanfile
-
-    def conan(self, conan_ref, content):
-        if isinstance(conan_ref, str):
-            conan_ref = ConanFileReference.loads(conan_ref)
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        save(conan_path, content)
-
-    def get_recipe(self, conan_ref, check_updates, update, remote_name):  # @UnusedVariables
-        conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return conan_path, None, None
-
-
 hello_content = """
 from conans import ConanFile
 
@@ -141,8 +115,10 @@ def _get_edges(graph):
 class MockSearchRemote(object):
     def __init__(self, packages=None):
         self.packages = packages or []
+        self.count = Counter()
 
     def search_remotes(self, pattern, ignorecase):  # @UnusedVariable
+        self.count[pattern] += 1
         return self.packages
 
 
@@ -150,12 +126,12 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
         self.resolver = RangeResolver(self.output, paths, self.remote_search)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver, None)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver, None, None)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
@@ -168,9 +144,10 @@ class SayConan(ConanFile):
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
             self.retriever.conan(say_ref, say_content)
 
-    def root(self, content):
-        root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None)
+    def root(self, content, update=False):
+        processed_profile = ProcessedProfile()
+        root_conan = self.retriever.root(content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
         return deps_graph
 
     def test_local_basic(self):
@@ -205,7 +182,63 @@ class SayConan(ConanFile):
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
             remote_packages.append(say_ref)
         self.remote_search.packages = remote_packages
-        self.test_local_basic()
+        for expr, solution in [(">0.0", "2.2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
+                               ("", "2.2.1"),
+                               ("~0", "0.3"),
+                               ("~=1", "1.2.1"),
+                               ("~1.1", "1.1.2"),
+                               ("~=2", "2.2.1"),
+                               ("~=2.1", "2.1"),
+                               ]:
+            deps_graph = self.root(hello_content % expr, update=True)
+            self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
+            self.assertEqual(2, len(deps_graph.nodes))
+            hello = _get_nodes(deps_graph, "Hello")[0]
+            say = _get_nodes(deps_graph, "Say")[0]
+            self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
+
+            self.assertEqual(hello.conan_ref, None)
+            conanfile = hello.conanfile
+            self.assertEqual(conanfile.version, "1.2")
+            self.assertEqual(conanfile.name, "Hello")
+            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+
+    def test_remote_optimized(self):
+        self.resolver._local_search = None
+        remote_packages = []
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
+            remote_packages.append(say_ref)
+        self.remote_search.packages = remote_packages
+
+        dep_content = """from conans import ConanFile
+class Dep1Conan(ConanFile):
+    requires = "Say/[%s]@memsharded/testing"
+"""
+        dep_ref = ConanFileReference.loads("Dep1/0.1@memsharded/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        dep_ref = ConanFileReference.loads("Dep2/0.1@memsharded/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+
+        hello_content = """from conans import ConanFile
+class HelloConan(ConanFile):
+    name = "Hello"
+    requires = "Dep1/0.1@memsharded/testing", "Dep2/0.1@memsharded/testing"
+"""
+        deps_graph = self.root(hello_content, update=True)
+        self.assertEqual(4, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        dep1 = _get_nodes(deps_graph, "Dep1")[0]
+        dep2 = _get_nodes(deps_graph, "Dep2")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, dep1), Edge(hello, dep2),
+                                                  Edge(dep1, say), Edge(dep2, say)})
+
+        # Most important check: counter of calls to remote
+        self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
 
     @parameterized.expand([("", "0.3", None, None),
                            ('"Say/1.1@memsharded/testing"', "1.1", False, False),
@@ -242,9 +275,9 @@ class ChatConan(ConanFile):
         chat = _get_nodes(deps_graph, "Chat")[0]
         edges = {Edge(hello, say), Edge(chat, hello)}
         if override is not None:
-            self.assertIn("override", self.output)
+            self.assertIn("overridden", self.output)
         else:
-            self.assertNotIn("override", self.output)
+            self.assertNotIn("overridden", self.output)
         if override is False:
             edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
 

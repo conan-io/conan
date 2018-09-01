@@ -1,13 +1,13 @@
-from conans.client.loader_parse import load_conanfile_class
-from conans.model.ref import PackageReference, ConanFileReference
 import os
+
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.client.source import complete_recipe_sources
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
-             client_cache, out, recorder):
+             client_cache, out, recorder, loader):
 
     assert(isinstance(reference, ConanFileReference))
     output = ScopedOutput(str(reference), out)
@@ -18,20 +18,20 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
 
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
-    registry.set_ref(reference, remote)
+    registry.set_ref(reference, remote.name)
 
     if recipe:
         return
 
     # Download the sources too, don't be lazy
     conan_file_path = client_cache.conanfile(reference)
-    conanfile = load_conanfile_class(conan_file_path)
+    conanfile = loader.load_class(conan_file_path)
     complete_recipe_sources(remote_manager, client_cache, registry,
                             conanfile, reference)
 
     if package_ids:
         _download_binaries(reference, package_ids, client_cache, remote_manager,
-                           remote, output, recorder)
+                           remote, output, recorder, loader)
     else:
         output.info("Getting the complete package list "
                     "from '%s'..." % str(reference))
@@ -41,15 +41,15 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
             output.warn("No remote binary packages found in remote")
         else:
             _download_binaries(reference, list(packages_props.keys()), client_cache,
-                               remote_manager, remote, output, recorder)
+                               remote_manager, remote, output, recorder, loader)
 
 
 def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,
-                       recorder):
+                       recorder, loader):
     conanfile_path = client_cache.conanfile(reference)
     if not os.path.exists(conanfile_path):
         raise Exception("Download recipe first")
-    conanfile = load_conanfile_class(conanfile_path)
+    conanfile = loader.load_class(conanfile_path)
     short_paths = conanfile.short_paths
 
     for package_id in package_ids:

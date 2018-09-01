@@ -13,7 +13,7 @@ class PackageTester(object):
         self._user_io = user_io
 
     def install_build_and_test(self, conanfile_abs_path, reference, profile,
-                               remote, update, build_modes=None, manifest_folder=None,
+                               remote_name, update, build_modes=None, manifest_folder=None,
                                manifest_verify=False, manifest_interactive=False, keep_build=False,
                                test_build_folder=None):
         """
@@ -26,10 +26,10 @@ class PackageTester(object):
         if build_modes is None:
             build_modes = ["never"]
         try:
-            self._manager.install(inject_require=reference,
+            self._manager.install(create_reference=reference,
                                   reference=conanfile_abs_path,
                                   install_folder=test_build_folder,
-                                  remote_name=remote,
+                                  remote_name=remote_name,
                                   profile=profile,
                                   update=update,
                                   build_modes=build_modes,

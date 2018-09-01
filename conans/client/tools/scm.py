@@ -1,9 +1,10 @@
+
 import os
 import sys
+import re
 import subprocess
-from subprocess import CalledProcessError, PIPE, STDOUT
-
 from six.moves.urllib.parse import urlparse, quote_plus
+from subprocess import CalledProcessError, PIPE, STDOUT
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -19,7 +20,7 @@ class SCMBase(object):
                  runner=None, output=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
+            os.makedirs(self.folder)
         self._verify_ssl = verify_ssl
         self._force_eng = force_english
         self._username = username
@@ -54,7 +55,7 @@ class Git(SCMBase):
     def _configure_ssl_verify(self):
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None, submodule=None):
+    def clone(self, url, branch=None):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -74,6 +75,12 @@ class Git(SCMBase):
             output = self.run('clone "%s" . %s' % (url, branch_cmd))
             output += self._configure_ssl_verify()
 
+        return output
+
+    def checkout(self, element, submodule=None):
+        self._check_git_repo()
+        output = self.run('checkout "%s"' % element)
+
         if submodule:
             if submodule == "shallow":
                 output += self.run("submodule sync")
@@ -84,28 +91,26 @@ class Git(SCMBase):
             else:
                 raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
                                      "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
-
-        return output
-
-    def checkout(self, element):
         # Element can be a tag, branch or commit
-        return self.run('checkout "%s"' % element)
+        return output
 
     def excluded_files(self):
         try:
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), f))
-                          for folder, _, fs in os.walk(self.folder) for f in fs]
+
+            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+                          for folder, dirpaths, fs in os.walk(self.folder)
+                          for el in fs + dirpaths]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes('\n'.join(file_paths))
+            paths = to_file_bytes("\n".join(file_paths))
             grep_stdout = decode_text(p.communicate(input=paths)[0])
             tmp = grep_stdout.splitlines()
         except CalledProcessError:
             tmp = []
-        tmp.append(".git")
         return tmp
 
     def get_remote_url(self, remote_name=None):
+        self._check_git_repo()
         remote_name = remote_name or "origin"
         try:
             remotes = self.run("remote -v")
@@ -121,7 +126,8 @@ class Git(SCMBase):
             pass
         return None
 
-    def get_revision(self):
+    def get_commit(self):
+        self._check_git_repo()
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
@@ -131,6 +137,26 @@ class Git(SCMBase):
 
     def is_pristine(self):
         return True  # TODO: To be implemented
+
+    get_revision = get_commit
+
+    def _check_git_repo(self):
+        try:
+            self.run("status")
+        except Exception:
+            raise ConanException("Not a valid git repository")
+
+    def get_branch(self):
+        self._check_git_repo()
+        try:
+            status = self.run("status -bs --porcelain")
+            # ## feature/scm_branch...myorigin/feature/scm_branch
+            branch = status.splitlines()[0].split("...")[0].strip("#").strip()
+            # Replace non alphanumeric
+            branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+            return branch
+        except Exception as e:
+            raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
 
 
 class SVN(SCMBase):
@@ -161,7 +187,7 @@ class SVN(SCMBase):
 
         return output
 
-    def checkout(self, element):
+    def checkout(self, element, submodule=None):
         # Element can only be a revision number
         return self.run("update -r {rev}".format(rev=element))
 
@@ -193,3 +219,4 @@ class SVN(SCMBase):
 
     def get_revision(self):
         return self.run("info --show-item revision").strip()
+

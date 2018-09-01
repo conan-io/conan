@@ -23,12 +23,12 @@ def users_clean(localdb_file):
     localdb.init(clean=True)
 
 
-def user_set(localdb_file, user, remote=None):
+def user_set(localdb_file, user, remote_name=None):
     localdb = LocalDB(localdb_file)
 
     if user.lower() == "none":
         user = None
-    return update_localdb(localdb, user, None, remote)
+    return update_localdb(localdb, user, None, remote_name)
 
 
 def update_localdb(localdb, user, token, remote):
