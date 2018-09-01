@@ -311,7 +311,6 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
     return tmp.replace("\\", "/"), git.get_revision()
 
 
-
 def handleRemoveReadonly(func, path, exc):  # TODO: May promote to conan tools?
     # Credit: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
     excvalue = exc[1]
