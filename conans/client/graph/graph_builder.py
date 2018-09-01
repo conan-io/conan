@@ -3,7 +3,8 @@ import time
 from conans.model.conan_file import get_env_context_manager
 from conans.model.requires import Requirements
 from conans.model.ref import ConanFileReference
-from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
+from conans.errors import (ConanException, conanfile_exception_formatter,
+                           ConanExceptionInUserConanfileMethod)
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
@@ -33,7 +34,8 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         loop_ancestors = []
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
-                        loop_ancestors, aliased, check_updates, update, remote_name, processed_profile)
+                        loop_ancestors, aliased, check_updates, update, remote_name,
+                        processed_profile)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.compute_package_ids()
@@ -216,8 +218,8 @@ class DepsGraphBuilder(object):
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
                 base_ref = str(current_node.conan_ref or "PROJECT")
-                self._output.error("Failed requirement '%s' from '%s'" % (requirement.conan_reference,
-                                                                          base_ref))
+                self._output.error("Failed requirement '%s' from '%s'"
+                                   % (requirement.conan_reference, base_ref))
                 raise e
             conanfile_path, recipe_status, remote, _ = result
 
