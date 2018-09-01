@@ -19,6 +19,7 @@ class _CppInfo(object):
         self.resdirs = []  # Directories to find resources, data, etc
         self.bindirs = []  # Directories to find executables and shared libs
         self.builddirs = []
+        self.rootpaths = []
         self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
@@ -120,6 +121,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)

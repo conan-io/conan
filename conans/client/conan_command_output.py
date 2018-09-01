@@ -32,8 +32,8 @@ class CommandOutputer(object):
                 self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote))
+        for ref, remote_name in refs.items():
+            self.user_io.out.info("%s: %s" % (ref, remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
@@ -74,21 +74,21 @@ class CommandOutputer(object):
     def nodes_to_build(self, nodes_to_build):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def info(self, deps_graph, only, remote, package_filter, show_paths, project_reference):
+    def info(self, deps_graph, only, package_filter, show_paths):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
-        Printer(self.user_io.out).print_info(deps_graph, project_reference,
+        Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
-                                             remote=remote, node_times=self._read_dates(deps_graph),
+                                             node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache, package_filter=package_filter,
                                              show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
+    def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(project_reference, deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph)
         else:
             from conans.client.graph.grapher import ConanGrapher
-            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher = ConanGrapher(deps_graph)
 
         cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(graph_filename):
@@ -99,13 +99,15 @@ class CommandOutputer(object):
         printer = Printer(self.user_io.out)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, search_info, reference, packages_query, table):
+    def print_search_packages(self, search_info, reference, packages_query, table,
+                                outdated=False):
         if table:
             from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
-            printer.print_search_packages(search_info, reference, packages_query)
+            printer.print_search_packages(search_info, reference, packages_query,
+                                          outdated=outdated)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
@@ -140,7 +142,7 @@ class CommandOutputer(object):
                                   (remote["name"], str(remote["user_name"]), anonymous,
                                    authenticated))
 
-    def print_user_set(self, remote, prev_user, user):
+    def print_user_set(self, remote_name, prev_user, user):
         previous_username = prev_user or "None"
         previous_anonymous = " (anonymous)" if not prev_user else ""
         username = user or "None"
@@ -148,8 +150,8 @@ class CommandOutputer(object):
 
         if prev_user == user:
             self.user_io.out.info("User of remote '%s' is already '%s'%s" %
-                                  (remote, previous_username, previous_anonymous))
+                                  (remote_name, previous_username, previous_anonymous))
         else:
             self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
-                                  (remote, previous_username, previous_anonymous, username,
+                                  (remote_name, previous_username, previous_anonymous, username,
                                    anonymous))

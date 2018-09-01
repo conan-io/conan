@@ -61,7 +61,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     """
 
     def compatible_prop(setting_value, prop_value):
-        return setting_value is None or prop_value == setting_value
+        return (prop_value == setting_value) or (prop_value == "None" and setting_value is None)
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
@@ -118,7 +118,7 @@ def search_packages(paths, reference, query):
     param conan_ref: ConanFileReference object
     """
     if not os.path.exists(paths.conan(reference)):
-        raise ConanException("Recipe not found: %s" % str(reference))
+        raise NotFoundException("Recipe not found: %s" % str(reference))
     infos = _get_local_infos_min(paths, reference)
     return filter_packages(query, infos)
 

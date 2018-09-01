@@ -5,13 +5,14 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
+from conans.client.tools.oss import os_info
 
 
 def create_options(conanfile):
@@ -62,24 +63,6 @@ def create_settings(conanfile, settings, local):
         raise ConanException("Error while initializing settings. %s" % str(e))
 
 
-def create_exports(conanfile):
-    if not hasattr(conanfile, "exports"):
-        return None
-    else:
-        if isinstance(conanfile.exports, str):
-            return (conanfile.exports, )
-        return conanfile.exports
-
-
-def create_exports_sources(conanfile):
-    if not hasattr(conanfile, "exports_sources"):
-        return None
-    else:
-        if isinstance(conanfile.exports_sources, str):
-            return (conanfile.exports_sources, )
-        return conanfile.exports_sources
-
-
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
@@ -106,34 +89,50 @@ class ConanFile(object):
     # change the actual license of the source code
     license = None
     author = None  # Main maintainer/responsible for the package, any format
+    description = None
     build_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
+    exports = None
+    exports_sources = None
+    generators = ["txt"]
 
-    def __init__(self, output, runner, settings, user=None, channel=None, local=None):
-        # User defined generators
-        self.generators = self.generators if hasattr(self, "generators") else ["txt"]
+    # Vars to control the build steps (build(), package())
+    should_configure = True
+    should_build = True
+    should_install = True
+    should_test = True
+    in_local_cache = True
+    develop = False
+
+    def __init__(self, output, runner, user=None, channel=None):
+        # an output stream (writeln, info, warn error)
+        self.output = output
+        # something that can run commands, as os.sytem
+        self._runner = runner
+        self._user = user
+        self._channel = channel
+
+    def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
-
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings, local)
         try:
             if self.settings.os_build and self.settings.os:
-                output.writeln("*"*60, front=Color.BRIGHT_RED)
-                output.writeln("  This package defines both 'os' and 'os_build' ",
-                               front=Color.BRIGHT_RED)
-                output.writeln("  Please use 'os' for libraries and 'os_build'",
-                               front=Color.BRIGHT_RED)
-                output.writeln("  only for build-requires used for cross-building",
-                               front=Color.BRIGHT_RED)
-                output.writeln("*"*60, front=Color.BRIGHT_RED)
+                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
+                self.output.writeln("  This package defines both 'os' and 'os_build' ",
+                                    front=Color.BRIGHT_RED)
+                self.output.writeln("  Please use 'os' for libraries and 'os_build'",
+                                    front=Color.BRIGHT_RED)
+                self.output.writeln("  only for build-requires used for cross-building",
+                                    front=Color.BRIGHT_RED)
+                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
-        self.exports = create_exports(self)
-        self.exports_sources = create_exports_sources(self)
+
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
@@ -147,27 +146,8 @@ class ConanFile(object):
         # Keys are the package names, and the values a dict with the vars
         self.deps_user_info = DepsUserInfo()
 
-        self.copy = None  # initialized at runtime
-        self.copy_deps = None  # initialized at runtime
-
-        # an output stream (writeln, info, warn error)
-        self.output = output
-        # something that can run commands, as os.sytem
-        self._runner = runner
-
-        self.develop = False
-
         # user specified env variables
-        self._env_values = EnvValues()  # Updated at runtime, user specified -e
-        self._user = user
-        self._channel = channel
-
-        self.in_local_cache = False
-        self.description = None
-        # Vars to control the build steps (build(), package())
-        self.should_configure = True
-        self.should_build = True
-        self.should_install = True
+        self._env_values = env.copy()  # user specified -e
 
     @property
     def env(self):
@@ -255,15 +235,23 @@ class ConanFile(object):
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True):
-        if not win_bash:
-            retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
-        else:
+    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
+            ignore_errors=False, run_environment=False):
+        def _run():
+            if not win_bash:
+                return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
-            retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                                msys_mingw=msys_mingw)
+            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+                                             msys_mingw=msys_mingw)
+        if run_environment:
+            with tools.run_environment(self):
+                if os_info.is_macos:
+                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), command)
+                retcode = _run()
+        else:
+            retcode = _run()
 
-        if retcode != 0:
+        if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
         return retcode

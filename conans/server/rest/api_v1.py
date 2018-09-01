@@ -1,12 +1,16 @@
 from bottle import Bottle
+
+from conans.errors import EXCEPTION_CODE_MAPPING
 from conans.server.rest.bottle_plugins.http_basic_authentication import HttpBasicAuthentication
 from conans.server.rest.bottle_plugins.jwt_authentication import JWTAuthentication
 from conans.server.rest.bottle_plugins.return_handler import ReturnHandlerPlugin
-from conans.errors import EXCEPTION_CODE_MAPPING
-from conans.server.rest.controllers.conan_controller import ConanController
-from conans.server.rest.controllers.users_controller import UsersController
-from conans.server.rest.controllers.file_upload_download_controller import FileUploadDownloadController
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
+from conans.server.rest.controllers.delete_controller import DeleteController
+from conans.server.rest.controllers.ping_controller import PingController
+from conans.server.rest.controllers.search_controller import SearchController
+from conans.server.rest.controllers.users_controller import UsersController
+from conans.server.rest.controllers.v1.conan_controller import ConanController
+from conans.server.rest.controllers.v1.file_upload_download_controller import FileUploadDownloadController
 
 
 class ApiV1(Bottle):
@@ -24,10 +28,18 @@ class ApiV1(Bottle):
 
     def setup(self):
         self.install_plugins()
+
+        # Capabilities in a ping
+        PingController("").attach_to(self)
+
         # Install conans controller
         ConanController("/conans").attach_to(self)
+        SearchController("/conans").attach_to(self)
+        DeleteController("/conans").attach_to(self)
+
         # Install users controller
         UsersController("/users").attach_to(self)
+
         # Install updown controller
         if self.updown_auth_manager:
             FileUploadDownloadController("/files").attach_to(self)

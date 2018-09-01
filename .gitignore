@@ -99,6 +99,7 @@ cacert.pem
 .bash_history
 .conan_server/
 .sudo_as_admin_successful
+.noseids
 
 # add excluded
 !conans/client/build
