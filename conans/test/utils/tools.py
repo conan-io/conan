@@ -503,9 +503,14 @@ class TestClient(object):
                 sys.modules.pop(added, None)
 
         if not ignore_error and error:
-            logger.error(self.user_io.out)
-            print(self.user_io.out)
-            raise Exception("Command failed:\n%s" % command_line)
+            exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
+                command_header='{:-^80}'.format(" Command failed: "),
+                output_header='{:-^80}'.format(" Output: "),
+                output_footer='-'*80,
+                command=command_line,
+                output=self.user_io.out
+            )
+            raise Exception(exc_message)
 
         self.all_output += str(self.user_io.out)
         return error
