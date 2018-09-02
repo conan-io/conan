@@ -131,6 +131,7 @@ class _FileImporter(object):
     It can be also used for Golang projects, in which the packages are always
     source based and need to be copied to the user folder to be built
     """
+
     def __init__(self, conanfile, dst_folder):
         self._conanfile = conanfile
         self._dst_folder = dst_folder
