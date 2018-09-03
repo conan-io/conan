@@ -215,13 +215,12 @@ class CMakeTest(unittest.TestCase):
         settings.compiler.version = "6.3"
         settings.arch = "x86"
         settings.build_type = "Release"
+
         conan_file = ConanFileMock()
         conan_file.settings = settings
         conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
-            cmake = CMake(conan_file)
-            cmake.configure(source_dir="../subdir", build_dir="build")
             linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
                           '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
@@ -241,11 +240,14 @@ class CMakeTest(unittest.TestCase):
             build_expected = quote_var("build")
             source_expected = quote_var("../subdir")
 
+            cmake = CMake(conan_file)
+            cmake.configure(source_dir="../subdir", build_dir="build")
             self.assertEquals(conan_file.command,
                               full_cmd.format(build_expected=build_expected,
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
+            cmake = CMake(conan_file)
             cmake.configure(build_dir="build")
             build_expected = quote_var("build")
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -254,6 +256,7 @@ class CMakeTest(unittest.TestCase):
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
+            cmake = CMake(conan_file)
             cmake.configure()
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -263,6 +266,7 @@ class CMakeTest(unittest.TestCase):
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
 
+            cmake = CMake(conan_file)
             cmake.configure(source_folder="source", build_folder="build")
             build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
             source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
@@ -272,6 +276,7 @@ class CMakeTest(unittest.TestCase):
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
             conan_file.in_local_cache = True
+            cmake = CMake(conan_file)
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
@@ -282,6 +287,7 @@ class CMakeTest(unittest.TestCase):
                                               base_cmd=base_cmd.format(flags=flags_in_local_cache)))
 
             conan_file.in_local_cache = False
+            cmake = CMake(conan_file)
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
@@ -292,6 +298,7 @@ class CMakeTest(unittest.TestCase):
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
             conan_file.in_local_cache = True
+            cmake = CMake(conan_file)
             cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -302,6 +309,7 @@ class CMakeTest(unittest.TestCase):
 
             # Raise mixing
             with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+                cmake = CMake(conan_file)
                 cmake.configure(source_folder="source", build_dir="build")
 
     def build_type_ovewrite_test(self):
