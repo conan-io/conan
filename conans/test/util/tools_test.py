@@ -827,10 +827,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self._runner = MyRun()
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile._runner.command)
-        self.assertIn("--login -c", conanfile._runner.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn("bash", conanfile._runner.command)
+            self.assertIn("--login -c", conanfile._runner.command)
+            self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
@@ -842,10 +843,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # try to append more env vars
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
-                                                                                       "MYVAR": "34"})
-        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
+                                      env={"PATH": "/other/path", "MYVAR": "34"})
+            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -1044,7 +1046,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
     def detect_windows_subsystem_test(self):
         # Dont raise test
         result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path or platform.system() != "Windows":
+        if not tools.os_info.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
