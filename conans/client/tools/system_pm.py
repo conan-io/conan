@@ -155,7 +155,7 @@ class AptTool(object):
 
 class YumTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("YumTool::add_repository not implemented (see #3385)")
+        raise ConanException("YumTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
@@ -170,7 +170,7 @@ class YumTool(object):
 
 class BrewTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("BrewTool::add_repository not implemented (see #3385)")
+        raise ConanException("BrewTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "brew update")
@@ -185,7 +185,7 @@ class BrewTool(object):
 
 class PkgTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("PkgTool::add_repository not implemented (see #3385)")
+        raise ConanException("PkgTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "%spkg update" % self._sudo_str)
@@ -200,7 +200,7 @@ class PkgTool(object):
 
 class PkgUtilTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("PkgUtilTool::add_repository not implemented (see #3385)")
+        raise ConanException("PkgUtilTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
@@ -215,7 +215,7 @@ class PkgUtilTool(object):
 
 class ChocolateyTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("ChocolateyTool::add_repository not implemented (see #3385)")
+        raise ConanException("ChocolateyTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "choco outdated")
@@ -231,7 +231,7 @@ class ChocolateyTool(object):
 
 class PacManTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("PacManTool::add_repository not implemented (see #3385)")
+        raise ConanException("PacManTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "%spacman -Syyu --noconfirm" % self._sudo_str)
@@ -246,7 +246,7 @@ class PacManTool(object):
 
 class ZypperTool(object):
     def add_repository(self, repository, repo_key=None):
-        raise ConanException("ZypperTool::add_repository not implemented (see #3385)")
+        raise ConanException("ZypperTool::add_repository not implemented")
 
     def update(self):
         _run(self._runner, "%szypper --non-interactive ref" % self._sudo_str)
