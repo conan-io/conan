@@ -872,6 +872,15 @@ build_type: [ Release]
         cmake.verbose = False
         self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "OFF")
 
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = True
+        self.assertTrue(cmake.verbose)
+
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = False
+        self.assertFalse(cmake.verbose)
+
+        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]	
+        self.assertFalse(cmake.verbose)
+
     def set_toolset_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
