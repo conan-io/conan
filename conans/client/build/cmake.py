@@ -189,8 +189,6 @@ class CMake(object):
         self._build(args, build_dir, target)
 
     def _build(self, args=None, build_dir=None, target=None):
-        if not self._conanfile.should_build:
-            return
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
