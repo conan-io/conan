@@ -1,5 +1,6 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer,\
+    create_local_git_repo
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.util.files import load, save
 import os
@@ -218,6 +219,32 @@ class PkgTest(base.MyConanfileBase):
         client.run("download Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                       client.out)
+
+    def reuse_scm_test(self):
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile
+scm = {"type" : "git",
+       "url" : "somerepo",
+       "revision" : "auto"}
+
+class MyConanfileBase(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/1.1@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    scm = base.scm
+"""
+        create_local_git_repo({"conanfile.py": reuse}, branch="my_release",
+                              folder=client.current_folder)
+        client.run("export . Pkg/0.1@lasote/testing")
+        print client.out
+        client.run("get Pkg/0.1@lasote/testing")
+        print client.out
+        self.assertNotIn("scm = base.scm", client.out)
 
 
 class PythonBuildTest(unittest.TestCase):
