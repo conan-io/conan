@@ -26,10 +26,14 @@ class Meson(object):
 
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
         self.build_dir = None
-        self.definitions = {}
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
+
+    @property
+    def definitions(self):
+        definitions = {}
+        return definitions
 
     @property
     def build_type(self):
@@ -43,7 +47,6 @@ class Meson(object):
                 'Set build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(self._build_type_definition())
 
     @property
     def build_folder(self):
