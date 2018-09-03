@@ -70,7 +70,7 @@ class CmdUpload(object):
                 else:
                     packages_ids = []
                 self._plugin_manager.execute_plugins_method("pre_upload", conan_file,
-                                                            conanfile_path)
+                                                            conanfile_path, remote_name)
                 self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
                              skip_upload, integrity_check, no_overwrite, remote_name, recorder)
                 self._plugin_manager.execute_plugins_method("post_upload")

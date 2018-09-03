@@ -5,6 +5,7 @@ import os
 import sys
 import uuid
 
+from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
 from conans.tools import chdir
 
@@ -26,27 +27,30 @@ class PluginManager(object):
             loaded_plugins.append(plugin)
         return loaded_plugins
 
-    def initialize_plugins(self, conanfile=None, conanfile_path=None):
+    def initialize_plugins(self, conanfile=None, conanfile_path=None, remote_name=None):
         if not self.plugins:
-            self.plugins = [plugin(self.output, conanfile, conanfile_path) for plugin in
-                            self.loaded_plugins]
+            self.plugins = [plugin(self.output, conanfile, conanfile_path, remote_name)
+                            for plugin in self.loaded_plugins]
         else:
             for plugin in self.plugins:
                 if conanfile:
                     plugin.conanfile = conanfile
                 if conanfile_path:
                     plugin.conanfile_path = conanfile_path
+                # if reference:
+                #     plugin.reference = reference
+                if remote_name:
+                    plugin.remote_name = remote_name
 
-    def execute_plugins_method(self, method_name, conanfile=None, conanfile_path=None):
-        self.initialize_plugins(conanfile, conanfile_path)
+    def execute_plugins_method(self, method_name, conanfile=None, conanfile_path=None,
+                               remote_name=None):
+        self.initialize_plugins(conanfile, conanfile_path, remote_name)
 
         for plugin in self.plugins:
             try:
                 method = getattr(plugin, method_name)
-                method()
-            except AttributeError:
-                print("KKKKKKKKKKKK")
-                pass
+                if method:
+                    method()
             except Exception as e:
                 raise ConanException("[PLUGIN: %s()] %s\n%s" % (method_name, e,
                                                                 traceback.format_exc()))
@@ -127,9 +131,8 @@ class PluginManager(object):
 
 class ConanPlugin(object):
 
-    def __init__(self, output, conanfile=None, conanfile_path=None, reference=None, remote=None):
+    def __init__(self, output, conanfile=None, conanfile_path=None, remote_name=None):
         self.conanfile = conanfile
         self.conanfile_path = conanfile_path
-        self.output = output
-        self.reference = None
-        self.remote = None
+        self.output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
+        self.remote_name = remote_name
