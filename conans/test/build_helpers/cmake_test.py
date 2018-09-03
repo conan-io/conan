@@ -878,7 +878,7 @@ build_type: [ Release]
         cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = False
         self.assertFalse(cmake.verbose)
 
-        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]	
+        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]
         self.assertFalse(cmake.verbose)
 
     def set_toolset_test(self):
