@@ -114,6 +114,44 @@ class CMakeTest(unittest.TestCase):
         cmake.test()
         self.assertIsNone(conan_file.command)
 
+    def should_flags_test(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_configure = False
+        conanfile.should_build = True
+        conanfile.should_install = False
+        conanfile.should_test = True
+        conanfile.package_folder = "pkg_folder"
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.configure()
+        self.assertIsNone(conanfile.command)
+        cmake.build()
+        self.assertIn("cmake --build . -- -j8", conanfile.command)
+        cmake.install()
+        self.assertNotIn("--target install", conanfile.command)
+        cmake.test()
+        self.assertIn("--target test", conanfile.command)
+        conanfile.should_build = False
+        cmake.configure()
+        self.assertNotIn("cd . && cmake", conanfile.command)
+        cmake.build()
+        self.assertNotIn("cmake --build . -- -j8", conanfile.command)
+        cmake.install()
+        self.assertNotIn("--target install", conanfile.command)
+        cmake.test()
+        self.assertIn("--target test", conanfile.command)
+        conanfile.should_install = True
+        conanfile.should_test = False
+        cmake.configure()
+        self.assertNotIn("cd . && cmake", conanfile.command)
+        cmake.build()
+        self.assertNotIn("cmake --build . -- -j8", conanfile.command)
+        cmake.install()
+        self.assertIn("--target install", conanfile.command)
+        cmake.test()
+        self.assertNotIn("--target test", conanfile.command)
+
+
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
         conan_file.settings = Settings()
