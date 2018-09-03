@@ -271,7 +271,7 @@ class CMakeTest(unittest.TestCase):
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-            cmake.in_local_cache = True
+            conan_file.in_local_cache = True
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
@@ -281,7 +281,7 @@ class CMakeTest(unittest.TestCase):
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_in_local_cache)))
 
-            cmake.in_local_cache = False
+            conan_file.in_local_cache = False
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
@@ -291,7 +291,7 @@ class CMakeTest(unittest.TestCase):
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-            cmake.in_local_cache = True
+            conan_file.in_local_cache = True
             cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -863,15 +863,6 @@ build_type: [ Release]
 
         cmake.verbose = False
         self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "OFF")
-
-        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = True
-        self.assertTrue(cmake.verbose)
-
-        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = False
-        self.assertFalse(cmake.verbose)
-
-        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]
-        self.assertFalse(cmake.verbose)
 
     def set_toolset_test(self):
         settings = Settings.loads(default_settings_yml)
