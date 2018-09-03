@@ -493,7 +493,8 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertEquals(load(sources_dir), curdir)
-        self.assertIn("Repo origin deduced by 'auto': {}".format(project_url), self.client.out)
+        self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
+            self.client.out.lower())
         self.assertIn("Revision deduced by 'auto'", self.client.out)
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
@@ -506,7 +507,8 @@ class ConanLib(ConanFile):
         self.assertFalse(os.path.exists(sources_dir))
         self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)
         self.assertNotIn("Revision deduced by 'auto'", self.client.out)
-        self.assertIn("Getting sources from url: '{}'".format(project_url), self.client.out)
+        self.assertIn("Getting sources from url: '{}'".format(project_url).lower(),
+                      self.client.out.lower())
         self.assertIn("My file is copied", self.client.out)
 
     def test_auto_subfolder(self):
@@ -583,7 +585,8 @@ class ConanLib(ConanFile):
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source2", "myfile.txt")))
-        self.assertIn("Getting sources from url: '{}'".format(project_url), self.client.out)
+        self.assertIn("Getting sources from url: '{}'".format(project_url).lower(),
+                      self.client.out.lower())
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
     def test_local_source_subfolder(self):
