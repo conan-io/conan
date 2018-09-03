@@ -216,18 +216,21 @@ def find_windows_10_sdk():
     for key, subkey in hives:
         try:
             hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
-            installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
-            if os.path.isdir(installation_folder):
-                include_dir = os.path.join(installation_folder, 'include')
-                for sdk_version in os.listdir(include_dir):
-                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
-                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
-                        if os.path.isfile(windows_h):
-                            return sdk_version
-        except EnvironmentError:
+            try:
+                installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
+                if os.path.isdir(installation_folder):
+                    include_dir = os.path.join(installation_folder, 'include')
+                    for sdk_version in os.listdir(include_dir):
+                        if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                            windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                            if os.path.isfile(windows_h):
+                                return sdk_version
+            except EnvironmentError:
+                pass
+            finally:
+                winreg.CloseKey(hkey)
+        except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2).
             pass
-        finally:
-            winreg.CloseKey(hkey)
     return None
 
 
