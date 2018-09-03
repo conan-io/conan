@@ -1322,17 +1322,17 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp())
         svn.clone(url=self.repo_url)
         remote_url = svn.get_remote_url()
-        self.assertEqual(unquote(remote_url), self.repo_url)
+        self.assertEqual(unquote(remote_url).lower(), self.repo_url.lower())
 
         svn2 = SVN(folder=self.gimme_tmp(create=False))
         svn2.clone(url=remote_url)  # clone using quoted url
-        self.assertEqual(unquote(svn2.get_remote_url()), self.repo_url)
+        self.assertEqual(unquote(svn2.get_remote_url()).lower(), self.repo_url.lower())
 
     def test_repo_project_url(self):
         project_url, _ = self.create_project(files={"myfile": "content"})
         svn = SVN(folder=self.gimme_tmp())
         svn.clone(url=project_url)
-        self.assertEqual(unquote(svn.get_remote_url()), project_url)
+        self.assertEqual(unquote(svn.get_remote_url()).lower(), project_url.lower())
 
     def test_checkout(self):
         # Ensure we have several revisions in the repository
