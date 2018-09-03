@@ -48,18 +48,23 @@ class CMake(object):
         self._cmake_system_name = cmake_system_name
         self._make_program = make_program
 
-        self.definitions = self._def_builder.get_definitions()
         self._build_type = self._settings.get_safe("build_type")
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
+        self._verbose = None
 
     @property
-    def _def_builder(self):
-        return CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
-                                       make_program=self._make_program, parallel=self.parallel,
-                                       generator=self.generator,
-                                       set_cmake_flags=self._set_cmake_flags)
+    def definitions(self):
+        builder = CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
+                                          make_program=self._make_program, parallel=self.parallel,
+                                          generator=self.generator,
+                                          set_cmake_flags=self._set_cmake_flags)
+        definitions = builder.get_definitions()
+        definitions.update(build_type_definition(self._build_type, self.generator))
+        if self._verbose is not None:
+            definitions.update(verbose_definition(self._verbose))
+        return definitions
 
     @property
     def build_folder(self):
@@ -81,7 +86,6 @@ class CMake(object):
                 'Set CMake build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(build_type_definition(build_type, self.generator))
 
     @property
     def flags(self):
@@ -233,14 +237,13 @@ class CMake(object):
     @property
     def verbose(self):
         try:
-            verbose = self.definitions[verbose_definition_name]
-            return get_bool_from_text(str(verbose))
+            return get_bool_from_text(str(self._verbose))
         except KeyError:
             return False
 
     @verbose.setter
     def verbose(self, value):
-        self.definitions.update(verbose_definition(value))
+        self._verbose = value
 
     @property
     def in_local_cache(self):
@@ -249,11 +252,6 @@ class CMake(object):
             return get_bool_from_text(str(in_local_cache))
         except KeyError:
             return False
-
-    @in_local_cache.setter
-    def in_local_cache(self, value):
-        self._conanfile.in_local_cache = value  # Update value of conanfile too
-        self.definitions.update(in_local_cache_definition(value))
 
     def patch_config_paths(self):
         """
