@@ -71,7 +71,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
                                repo_key=None)
 
-    def add_repositories_test(self):
+    def add_repository_test(self):
         class RunnerOrderedMock:
             commands = []  # Command + return value
 
@@ -82,49 +82,36 @@ class SystemPackageToolTest(unittest.TestCase):
                 self.assertEqual(expected, command)
                 return ret
 
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            repository = "deb http://repo/url/ saucy universe multiverse"
-            gpg_key = 'http://one/key.gpg'
-
-            # Add one repository giving a gpg key for it
+        def _run_add_repository_test(repository, gpg_key, sudo, update):
+            sudo_cmd = "sudo " if sudo else ""
             runner = RunnerOrderedMock()
-            runner.commands.append(("sudo apt-add-repository {}".format(repository), 0))
-            runner.commands.append(("wget -qO - {} | sudo apt-key add -".format(gpg_key), 0))
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
+            if gpg_key:
+                runner.commands.append(
+                    ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            if update:
+                runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
 
-            os_info = OSInfo()
-            os_info.is_macos = False
-            os_info.is_linux = True
-            os_info.is_windows = False
-            os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": str(sudo)}):
+                os_info = OSInfo()
+                os_info.is_macos = False
+                os_info.is_linux = True
+                os_info.is_windows = False
+                os_info.linux_distro = "debian"
+                spt = SystemPackageTool(runner=runner, os_info=os_info)
 
-            spt.add_repository(repository=repository, repo_key=gpg_key, update=False)
-            self.assertTrue(len(runner.commands) == 0)
+                spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
+                self.assertTrue(len(runner.commands) == 0)
 
-            # Add one repository without gpg_key, but updating
-            runner.commands.append(("sudo apt-add-repository {}".format(repository), 0))
-            spt.add_repository(repository=repository, repo_key=None, update=False)
-            self.assertTrue(len(runner.commands) == 0)
-
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
-            repository = "deb http://repo/url/ saucy universe multiverse"
-            gpg_key = 'http://one/key.gpg'
-
-            # Add one repository giving a gpg key for it
-            runner = RunnerOrderedMock()
-            runner.commands.append(("apt-add-repository {}".format(repository), 0))
-            runner.commands.append(("wget -qO - {} | apt-key add -".format(gpg_key), 0))
-            runner.commands.append(("apt-get update", 0))
-
-            os_info = OSInfo()
-            os_info.is_macos = False
-            os_info.is_linux = True
-            os_info.is_windows = False
-            os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
-
-            spt.add_repository(repository=repository, repo_key=gpg_key, update=True)
-            self.assertTrue(len(runner.commands) == 0)
+        # Run several test cases
+        repository = "deb http://repo/url/ saucy universe multiverse"
+        gpg_key = 'http://one/key.gpg'
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=False)
+        _run_add_repository_test(repository, gpg_key=None, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key=None, sudo=False, update=False)
 
     def system_package_tool_test(self):
 
