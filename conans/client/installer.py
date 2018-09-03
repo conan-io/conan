@@ -48,13 +48,14 @@ def build_id(conan_file):
 class _ConanPackageBuilder(object):
     """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, package_reference, client_cache, output):
+    def __init__(self, conan_file, package_reference, client_cache, output, plugin_manager):
         self._client_cache = client_cache
         self._conan_file = conan_file
         self._out = output
         self._package_reference = package_reference
         self._conan_ref = self._package_reference.conan
         self._skip_build = False  # If build_id()
+        self._plugin_manager = plugin_manager
 
         new_id = build_id(self._conan_file)
         self.build_reference = PackageReference(self._conan_ref, new_id) if new_id else package_reference
@@ -139,7 +140,7 @@ class _ConanPackageBuilder(object):
             pkg_id = self._conan_file.info.package_id()
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out)
+                           self.package_folder, install_folder, self._out, self._plugin_manager)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -245,13 +246,15 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace):
+    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace,
+                 plugin_manager):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = registry
         self._recorder = recorder
         self._workspace = workspace
+        self._plugin_manager = plugin_manager
 
     def install(self, deps_graph, keep_build=False):
         # order by levels and separate the root node (conan_ref=None) from the rest
@@ -355,7 +358,8 @@ class ConanInstaller(object):
             output.info("Won't be built as specified by --keep-build")
 
         t1 = time.time()
-        builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
+        builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
+                                       self._plugin_manager)
 
         if skip_build:
             if not os.path.exists(builder.build_folder):

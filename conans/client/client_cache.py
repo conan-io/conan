@@ -3,7 +3,8 @@ import shutil
 from os.path import join, normpath
 from collections import OrderedDict
 
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
+from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml,\
+    recipe_linter
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -142,7 +143,6 @@ class ClientCache(SimplePaths):
         else:
             return join(self.conan_folder, PROFILES_FOLDER,
                         self.conan_config.default_profile)
-
     @property
     def plugins_path(self):
         return join(self.conan_folder, PLUGINS_FOLDER)
@@ -193,6 +193,18 @@ class ClientCache(SimplePaths):
 
             self._settings = settings
         return self._settings
+
+    @property
+    def plugins(self):
+        """Returns a list of plugins inside the plugins folder"""
+        recipe_linter_path = os.path.join(self.plugins_path, "recipe_linter.py")
+        if not os.path.exists(recipe_linter_path):
+            save(recipe_linter_path, normalize(recipe_linter))
+        plugins = []
+        for plugin_name in os.listdir(self.plugins_path):
+            if plugin_name.endswith(".py"):
+                plugins.append(plugin_name[:-3])
+        return plugins
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """

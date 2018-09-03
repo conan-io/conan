@@ -141,7 +141,8 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=None)
+                                   self._registry, recorder=self._recorder, workspace=None,
+                                   plugin_manager=self._plugin_manager)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:

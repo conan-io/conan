@@ -77,6 +77,43 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
 
+recipe_linter = """
+import os
+from conans import ConanPlugin
+
+
+class RecipeLinter(ConanPlugin):
+
+    def pre_export(self):
+        # Check basic meta-data
+        for field in ["url", "license", "description"]:
+            field_value = getattr(self.conanfile, field, None)
+            if not field_value:
+                self.output.warn("Conanfile doesn't have '%s'. It is recommended to add it as "
+                                 "attribute" % field)
+
+        # Check header only
+        settings = getattr(self.conanfile, "settings", None)
+        build = getattr(self.conanfile, "build", None)
+        if not settings and build:
+            self.output.warn("Recipe does not declare 'settings' and has a 'build()' step")
+
+        no_copy_source = getattr(self.conanfile, "no_copy_source", None)
+        if not settings and not no_copy_source:
+            self.output.warn("This recipe seems to be for a header only library as it does not "
+                             "declare 'settings'. Please include 'no_copy_source' to avoid "
+                             "unnecessary copy steps")
+
+        # Check fPIC option
+        options = getattr(self.conanfile, "options", None)
+        if settings and options and "fPIC" not in options:
+            self.output.warn("This recipe does not include an 'fPIC' option. Make sure you are "
+                             "using the right casing")
+        elif options and not settings and ("fPIC" in options or "shared" in options):
+            self.output.warn("This recipe has 'shared' or 'fPIC' options but does not delcare any "
+                             "settings")
+"""
+
 default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
@@ -90,6 +127,7 @@ default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
+plugins = recipe_linter               # environment CONAN_PLUGINS
 # sysrequires_mode = enabled            # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
@@ -136,9 +174,6 @@ path = ~/.conan/data
 # https = http://10.10.1.10:1080
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
-
-[plugins]
-linters = default_recipe_linter
 
 
 # Default settings now declared in the default profile
@@ -202,7 +237,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_PLUGINS_LINTERS": self._env_c("plugins.linters", "CONAN_PLUGINS_LINTERS", None)
+               "CONAN_PLUGINS": self._env_c("general.plugins", "CONAN_PLUGINS", None)
                }
 
         # Filter None values

@@ -1397,7 +1397,7 @@ def main(args):
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
-    except ConanException:  # Error migrating
+    except ConanException as e:  # Error migrating
         sys.exit(2)
 
     outputer = CommandOutputer(user_io, client_cache)
