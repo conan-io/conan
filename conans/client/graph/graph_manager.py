@@ -60,7 +60,7 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
-        if False and deps_info_required:
+        if deps_info_required:
             graph_str = load(os.path.join(info_folder, "serial_graph.json"))
             graph_json = json.loads(graph_str)
             deps_graph = DepsGraph.deserialize(graph_json, self._output, self._proxy, self._loader)

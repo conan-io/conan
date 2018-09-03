@@ -58,6 +58,17 @@ class PackageOptionValues(object):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
 
+    def serialize_graph(self):
+        result = {k: v.serialize()
+                  for k, v in self._dict.items()}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = PackageOptionValues()
+        result._dict = {k: PackageOptionValue.deserialize(v) for k, v in data.items()}
+        return result
+
     def __bool__(self):
         return bool(self._dict)
 
@@ -311,6 +322,18 @@ class PackageOption(object):
         else:
             self._possible_values = sorted(str(v) for v in possible_values)
 
+    def serialize(self):
+        result = {"name": self._name,
+                  "value": self._value,
+                  "possible_values": self._possible_values}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = PackageOption(data["possible_values"], data["name"])
+        result._value = data["value"]
+        return result
+
     def __bool__(self):
         if not self._value:
             return False
@@ -373,6 +396,16 @@ class PackageOptions(object):
         self._data = {str(k): PackageOption(v, str(k))
                       for k, v in definition.items()}
         self._modified = {}
+
+    def serialize(self):
+        result = {k: v.serialize() for k, v in self._data.items()}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = PackageOptions(None)
+        result._data = {k: PackageOption.deserialize(v) for k, v in data.items()}
+        return result
 
     def __contains__(self, option):
         return str(option) in self._data
@@ -501,6 +534,20 @@ class Options(object):
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
+
+    def serialize(self):
+        result = {}
+        result["package_options"] = self._package_options.serialize()
+        result["deps_package_values"] = {k: v.serialize_graph()
+                                         for k, v in self._deps_package_values.items()}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = Options(PackageOptions.deserialize(data["package_options"]))
+        result._deps_package_values = {k: PackageOptionValues.deserialize(v)
+                                       for k, v in data["deps_package_values"].items()}
+        return result
 
     @property
     def deps_package_values(self):

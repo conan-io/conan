@@ -229,6 +229,22 @@ class RequirementsList(list):
 
 class ConanInfo(object):
 
+    def serialize(self):
+        result = {}
+        result["settings"] = self.settings.serialize()
+        result["options"] = self.options.serialize()
+        result["requires"] = self.requires.serialize()
+        result["deps_package_values"] = {k: v.serialize_graph()
+                                         for k, v in self._deps_package_values.items()}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = Options(PackageOptions.deserialize(data["package_options"]))
+        result._deps_package_values = {k: PackageOptionValues.deserialize(v)
+                                       for k, v in data["deps_package_values"].items()}
+        return result
+
     def copy(self):
         """ Useful for build_id implementation
         """

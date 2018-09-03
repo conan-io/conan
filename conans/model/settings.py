@@ -45,6 +45,37 @@ class SettingsItem(object):
             # list or tuple of possible values
             self._definition = sorted(str(v) for v in definition)
 
+    def serialize(self):
+        result = {}
+        result["name"] = self._name
+        result["value"] = self._value
+        if isinstance(self._definition, dict):
+            subdict = {}
+            for k, v in self._definition.items():
+                subdict[k] = v.serialize()
+            result["definition"] = subdict
+        elif self._definition == "ANY":
+            result["definition"] = "ANY"
+        else:
+            result["definition"] = self._definition
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = SettingsItem([], data["name"])
+        result._value = data["value"]
+        definition = data["definition"]
+        if isinstance(definition, dict):
+            subdict = {}
+            for k, v in definition.items():
+                subdict[k] = Settings.deserialize(v)
+            result._definition = subdict
+        elif definition == "ANY":
+            result._definition = "ANY"
+        else:
+            result._definition = definition
+        return result
+
     def __contains__(self, value):
         return value in (self._value or "")
 
@@ -198,6 +229,21 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+
+    def serialize(self):
+        result = {}
+        result["name"] = self._name
+        result["parent_value"] = self._parent_value
+        result["data"] = {k: v.serialize() for k, v in self._data.items()}
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        result = Settings()
+        result._name = data["name"]
+        result._parent_value = data["parent_value"]
+        result._data = {k: SettingsItem.deserialize(v) for k, v in data["data"].items()}
+        return result
 
     def get_safe(self, name):
         try:

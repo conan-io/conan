@@ -14,6 +14,7 @@ from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
 from conans.model.info import ConanInfo
+from conans.model.settings import Settings
 
 
 def create_options(conanfile):
@@ -152,10 +153,15 @@ class ConanFile(object):
 
     def serialize(self):
         result = {}
+        result["info"] = self.info.serialize()
+        result["settings"] = self.settings.serialize()
+        result["options"] = self.options.serialize()
         return result
 
     def deserialize(self, data):
-        self.info = ConanInfo.loads("")
+        self.info = ConanInfo.deserialize(data["info"])
+        self.settings = Settings.deserialize(data["settings"])
+        self.options = Options.deserialize(data["options"])
         self.requires = Requirements()
         self._env_values = EnvValues()
 
