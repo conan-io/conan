@@ -252,19 +252,20 @@ class RestV1Methods(RestCommonMethods):
         t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
+        if remote_snapshot:
+            remote_manifest = self.get_package_manifest(package_reference)
+            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False
+            if remote_manifest == local_manifest:
+                return False
 
-        if no_overwrite and remote_snapshot:
             if no_overwrite == "all":
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbidden overwrite")
 
-        files_to_upload = {filename: the_files[filename] for filename in new + modified}
+        local_snapshot = {filename: None for filename, abs_path in the_files.items()}
+        files_to_upload = {filename: the_files[filename] for filename in local_snapshot}
+        deleted = set(remote_snapshot).difference(local_snapshot)
         if files_to_upload:        # Obtain upload urls
             url = "%s/conans/%s/packages/%s/upload_urls" % (self.remote_api_url,
                                                             "/".join(package_reference.conan),
