@@ -13,8 +13,8 @@ from conans.util.files import decode_text, to_file_bytes
 
 class Git(object):
 
-    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
+                 force_english=True, runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -32,6 +32,9 @@ class Git(object):
                     return subprocess.check_output(command, shell=True).decode().strip()
                 else:
                     return self._runner(command)
+
+    def get_repo_root(self):
+        return self.run("rev-parse --show-toplevel")
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
