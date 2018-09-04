@@ -102,6 +102,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.should_configure = False
         conan_file.should_build = False
         conan_file.should_install = False
+        conan_file.should_test = False
         cmake = CMake(conan_file, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conan_file.command)
@@ -113,6 +114,52 @@ class CMakeTest(unittest.TestCase):
         cmake.patch_config_paths()
         cmake.test()
         self.assertIsNone(conan_file.command)
+
+    def should_flags_test(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_configure = False
+        conanfile.should_build = True
+        conanfile.should_install = False
+        conanfile.should_test = True
+        conanfile.package_folder = "pkg_folder"
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.configure()
+        self.assertIsNone(conanfile.command)
+        cmake.build()
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                      conanfile.command)
+        cmake.install()
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                              % cpu_count()), conanfile.command)
+        cmake.test()
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+                      conanfile.command)
+        conanfile.should_build = False
+        cmake.configure()
+        self.assertNotIn("cd . && cmake", conanfile.command)
+        cmake.build()
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                         conanfile.command)
+        cmake.install()
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                              % cpu_count()), conanfile.command)
+        cmake.test()
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+                      conanfile.command)
+        conanfile.should_install = True
+        conanfile.should_test = False
+        cmake.configure()
+        self.assertNotIn("cd . && cmake", conanfile.command)
+        cmake.build()
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                         conanfile.command)
+        cmake.install()
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                           % cpu_count()), conanfile.command)
+        cmake.test()
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i"
+                                                              % cpu_count()), conanfile.command)
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()

@@ -7,7 +7,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     pyvers = ['py37', 'py36', 'py34', 'py27']
 }
 else{
-	pyvers = ['py37', 'py36', 'py27']
+	pyvers = ['py37', 'py36', 'py34', 'py27']
 }
 
 def module = "\"conans.test\""
