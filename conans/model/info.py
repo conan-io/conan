@@ -3,7 +3,8 @@ import os
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
-from conans.model.options import OptionsValues
+from conans.model.options import OptionsValues, Options, PackageOptions,\
+    PackageOptionValues
 from conans.model.ref import PackageReference
 from conans.model.values import Values
 from conans.paths import CONANINFO
@@ -169,7 +170,7 @@ class RequirementsInfo(object):
 
     @staticmethod
     def deserialize(data):
-        ret = RequirementsInfo({}, None)
+        ret = RequirementsInfo({})
         for ref, requinfo in data.items():
             ref = PackageReference.loads(ref)
             ret._data[ref] = RequirementInfo.deserialize(requinfo)
@@ -229,20 +230,19 @@ class RequirementsList(list):
 
 class ConanInfo(object):
 
-    def serialize(self):
+    def serial(self):
         result = {}
-        result["settings"] = self.settings.serialize()
-        result["options"] = self.options.serialize()
+        result["settings"] = self.settings.serial()
+        result["options"] = self.options.serial()
         result["requires"] = self.requires.serialize()
-        result["deps_package_values"] = {k: v.serialize_graph()
-                                         for k, v in self._deps_package_values.items()}
         return result
 
     @staticmethod
-    def deserialize(data):
-        result = Options(PackageOptions.deserialize(data["package_options"]))
-        result._deps_package_values = {k: PackageOptionValues.deserialize(v)
-                                       for k, v in data["deps_package_values"].items()}
+    def unserial(data):
+        result = ConanInfo()
+        result.settings = Values.unserial(data["settings"])
+        result.options = OptionsValues.unserial(data["options"])
+        result.requires = RequirementsInfo.deserialize(data["requires"])
         return result
 
     def copy(self):

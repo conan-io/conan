@@ -63,7 +63,7 @@ class GraphManager(object):
         if deps_info_required:
             graph_str = load(os.path.join(info_folder, "serial_graph.json"))
             graph_json = json.loads(graph_str)
-            deps_graph = DepsGraph.deserialize(graph_json, self._output, self._proxy, self._loader)
+            deps_graph = DepsGraph.unserial(graph_json, self._output, self._proxy, self._loader)
             print "GRAPH ", deps_graph
             conanfile = deps_graph.root.conanfile
 

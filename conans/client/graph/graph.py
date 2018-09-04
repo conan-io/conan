@@ -38,24 +38,24 @@ class Node(object):
         self.binary_remote = None
         self.build_require = False
 
-    def serialize(self):
+    def serial(self):
         result = {}
         result["path"] = getattr(self, "path", None)
-        result["conan_ref"] = self.conan_ref.serialize() if self.conan_ref else None
-        result["conanfile"] = self.conanfile.serialize()
+        result["conan_ref"] = self.conan_ref.serial() if self.conan_ref else None
+        result["conanfile"] = self.conanfile.serial()
         result["binary"] = self.binary
         result["recipe"] = self.recipe
-        result["remote"] = self.remote.serialize() if self.remote else None
-        result["binary_remote"] = self.binary_remote.serialize() if self.binary_remote else None
+        result["remote"] = self.remote.serial() if self.remote else None
+        result["binary_remote"] = self.binary_remote.serial() if self.binary_remote else None
         result["build_require"] = self.build_require
         return result
 
     @staticmethod
-    def deserialize(data, output, proxy, loader, update=False):
+    def unserial(data, output, proxy, loader, update=False):
         path = data["path"]
-        conan_ref = ConanFileReference.deserialize(data["conan_ref"])
+        conan_ref = ConanFileReference.unserial(data["conan_ref"])
         # Remotes needs to be decoupled
-        remote = Remote.deserialize(data["remote"])
+        remote = Remote.unserial(data["remote"])
         remote_name = remote.name if remote else None
         if path:
             conanfile_path = path
@@ -65,13 +65,13 @@ class Node(object):
             conanfile_path, recipe_status, remote, _ = result
         output = ScopedOutput(str(conan_ref or "Project"), output)
         conanfile = loader.load_basic(conanfile_path, output, conan_ref)
-        conanfile.deserialize(data["conanfile"])
+        conanfile.unserial(data["conanfile"])
 
         result = Node(conan_ref, conanfile)
         result.binary = data["binary"]
         result.recipe = data["recipe"]
         result.remote = remote
-        result.binary_remote = Remote.deserialize(data["binary_remote"])
+        result.binary_remote = Remote.unserial(data["binary_remote"])
         result.build_require = data["build_require"]
         return result
 
@@ -161,7 +161,7 @@ class Edge(object):
     def __hash__(self):
         return hash((self.src, self.dst))
 
-    def serialize(self):
+    def serial(self):
         result = {}
         result["src"] = str(id(self.src))
         result["dst"] = str(id(self.dst))
@@ -174,17 +174,17 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
 
-    def serialize(self):
+    def serial(self):
         result = {}
-        result["nodes"] = {str(id(n)): n.serialize() for n in self.nodes}
-        result["edges"] = [e.serialize() for n in self.nodes for e in n.dependencies]
+        result["nodes"] = {str(id(n)): n.serial() for n in self.nodes}
+        result["edges"] = [e.serial() for n in self.nodes for e in n.dependencies]
         result["root"] = str(id(self.root))
         return result
 
     @staticmethod
-    def deserialize(data, output, proxy, loader):
+    def unserial(data, output, proxy, loader):
         result = DepsGraph()
-        nodes_dict = {id_: Node.deserialize(n, output, proxy, loader) for id_, n in data["nodes"].items()}
+        nodes_dict = {id_: Node.unserial(n, output, proxy, loader) for id_, n in data["nodes"].items()}
         result.nodes = set(nodes_dict.values())
         result.root = nodes_dict[data["root"]]
         for edge in data["edges"]:

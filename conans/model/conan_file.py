@@ -151,17 +151,17 @@ class ConanFile(object):
         # user specified env variables
         self._env_values = env.copy()  # user specified -e
 
-    def serialize(self):
+    def serial(self):
         result = {}
-        result["info"] = self.info.serialize()
-        result["settings"] = self.settings.serialize()
-        result["options"] = self.options.serialize()
+        result["info"] = self.info.serial()
+        result["settings"] = self.settings.serial()
+        result["options"] = self.options.serial()
         return result
 
-    def deserialize(self, data):
-        self.info = ConanInfo.deserialize(data["info"])
-        self.settings = Settings.deserialize(data["settings"])
-        self.options = Options.deserialize(data["options"])
+    def unserial(self, data):
+        self.info = ConanInfo.unserial(data["info"])
+        self.settings = Settings.unserial(data["settings"])
+        self.options = Options.unserial(data["options"])
         self.requires = Requirements()
         self._env_values = EnvValues()
 

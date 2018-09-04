@@ -58,15 +58,15 @@ class PackageOptionValues(object):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
 
-    def serialize_graph(self):
-        result = {k: v.serialize()
+    def serial(self):
+        result = {k: str(v)
                   for k, v in self._dict.items()}
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         result = PackageOptionValues()
-        result._dict = {k: PackageOptionValue.deserialize(v) for k, v in data.items()}
+        result._dict = {k: PackageOptionValue(v) for k, v in data.items()}
         return result
 
     def __bool__(self):
@@ -193,6 +193,13 @@ class OptionsValues(object):
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
+
+    def serial(self):
+        return self.as_list()
+
+    @staticmethod
+    def unserial(data):
+        return OptionsValues(data)
 
     def update(self, other):
         self._package_values.update(other._package_values)
@@ -322,14 +329,14 @@ class PackageOption(object):
         else:
             self._possible_values = sorted(str(v) for v in possible_values)
 
-    def serialize(self):
+    def serial(self):
         result = {"name": self._name,
                   "value": self._value,
                   "possible_values": self._possible_values}
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         result = PackageOption(data["possible_values"], data["name"])
         result._value = data["value"]
         return result
@@ -397,14 +404,14 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
-    def serialize(self):
-        result = {k: v.serialize() for k, v in self._data.items()}
+    def serial(self):
+        result = {k: v.serial() for k, v in self._data.items()}
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         result = PackageOptions(None)
-        result._data = {k: PackageOption.deserialize(v) for k, v in data.items()}
+        result._data = {k: PackageOption.unserial(v) for k, v in data.items()}
         return result
 
     def __contains__(self, option):
@@ -535,17 +542,17 @@ class Options(object):
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
 
-    def serialize(self):
+    def serial(self):
         result = {}
-        result["package_options"] = self._package_options.serialize()
-        result["deps_package_values"] = {k: v.serialize_graph()
+        result["package_options"] = self._package_options.serial()
+        result["deps_package_values"] = {k: v.serial()
                                          for k, v in self._deps_package_values.items()}
         return result
 
     @staticmethod
-    def deserialize(data):
-        result = Options(PackageOptions.deserialize(data["package_options"]))
-        result._deps_package_values = {k: PackageOptionValues.deserialize(v)
+    def unserial(data):
+        result = Options(PackageOptions.unserial(data["package_options"]))
+        result._deps_package_values = {k: PackageOptionValues.unserial(v)
                                        for k, v in data["deps_package_values"].items()}
         return result
 

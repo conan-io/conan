@@ -77,11 +77,11 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def __hash__(self):
         return hash((self.name, self.version, self.user, self.channel, self.revision))
 
-    def serialize(self):
+    def serial(self):
         return repr(self)
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         if data is None:
             return None
         return ConanFileReference.loads(data)

@@ -14,7 +14,7 @@ default_remotes = "conan-center https://conan.bintray.com True"
 
 
 class Remote(namedtuple("Remote", "name url verify_ssl")):
-    def serialize(self):
+    def serial(self):
         result = {}
         result["name"] = self.name
         result["url"] = self.url
@@ -22,7 +22,7 @@ class Remote(namedtuple("Remote", "name url verify_ssl")):
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         if data is None:
             return None
         return Remote(data["name"], data["url"], data["verify_ssl"])

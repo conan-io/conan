@@ -45,14 +45,14 @@ class SettingsItem(object):
             # list or tuple of possible values
             self._definition = sorted(str(v) for v in definition)
 
-    def serialize(self):
+    def serial(self):
         result = {}
         result["name"] = self._name
         result["value"] = self._value
         if isinstance(self._definition, dict):
             subdict = {}
             for k, v in self._definition.items():
-                subdict[k] = v.serialize()
+                subdict[k] = v.serial()
             result["definition"] = subdict
         elif self._definition == "ANY":
             result["definition"] = "ANY"
@@ -61,14 +61,14 @@ class SettingsItem(object):
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         result = SettingsItem([], data["name"])
         result._value = data["value"]
         definition = data["definition"]
         if isinstance(definition, dict):
             subdict = {}
             for k, v in definition.items():
-                subdict[k] = Settings.deserialize(v)
+                subdict[k] = Settings.unserial(v)
             result._definition = subdict
         elif definition == "ANY":
             result._definition = "ANY"
@@ -230,19 +230,19 @@ class Settings(object):
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
-    def serialize(self):
+    def serial(self):
         result = {}
         result["name"] = self._name
         result["parent_value"] = self._parent_value
-        result["data"] = {k: v.serialize() for k, v in self._data.items()}
+        result["data"] = {k: v.serial() for k, v in self._data.items()}
         return result
 
     @staticmethod
-    def deserialize(data):
+    def unserial(data):
         result = Settings()
         result._name = data["name"]
         result._parent_value = data["parent_value"]
-        result._data = {k: SettingsItem.deserialize(v) for k, v in data["data"].items()}
+        result._data = {k: SettingsItem.unserial(v) for k, v in data["data"].items()}
         return result
 
     def get_safe(self, name):
