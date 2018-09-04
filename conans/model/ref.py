@@ -37,12 +37,6 @@ class ConanName(object):
                                                       type=type(value).__name__))
 
     @staticmethod
-    def validate_user(username, message=None):
-        ConanName.validate_string(username, message=message)
-        if ConanName._validation_pattern.match(username) is None:
-            ConanName.invalid_name_message(username, message=message)
-
-    @staticmethod
     def validate_name(name, version=False, message=None):
         """Check for name compliance with pattern rules"""
         ConanName.validate_string(name, message=message)
