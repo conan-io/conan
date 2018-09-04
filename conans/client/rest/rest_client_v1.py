@@ -12,7 +12,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, load
 from conans.util.log import logger
 
 
@@ -212,22 +212,23 @@ class RestV1Methods(RestCommonMethods):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if ignore_deleted_file and ignore_deleted_file in deleted:
-            deleted.remove(ignore_deleted_file)
+        if remote_snapshot:
+            remote_manifest = self.get_conan_manifest(conan_reference)
+            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False, conan_reference
+            if remote_manifest == local_manifest:
+                return False, conan_reference
 
-        if no_overwrite and remote_snapshot:
             if no_overwrite in ("all", "recipe"):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite")
+
+        local_snapshot = {filename: None for filename, abs_path in the_files.items()}
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
-                           for filename in new + modified}
+                           for filename in local_snapshot}
+
+        deleted = set(remote_snapshot).difference(local_snapshot)
 
         if files_to_upload:
             # Get the upload urls
