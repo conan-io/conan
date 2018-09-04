@@ -127,7 +127,8 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertIsNone(conanfile.command)
         cmake.build()
-        self.assertIn("cmake --build . -- -j8", conanfile.command)
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                      conanfile.command)
         cmake.install()
         self.assertNotIn("--target install", conanfile.command)
         cmake.test()
@@ -136,7 +137,8 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build . -- -j8", conanfile.command)
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                         conanfile.command)
         cmake.install()
         self.assertNotIn("--target install", conanfile.command)
         cmake.test()
@@ -146,12 +148,12 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build . -- -j8", conanfile.command)
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+                         conanfile.command)
         cmake.install()
         self.assertIn("--target install", conanfile.command)
         cmake.test()
         self.assertNotIn("--target test", conanfile.command)
-
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
