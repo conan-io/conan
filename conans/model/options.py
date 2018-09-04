@@ -163,9 +163,9 @@ class OptionsValues(object):
         if not values:
             return
 
-        if isinstance(values, six.string_types):
-            raise ConanException("String type not expected in OptionValues constructor, "
-                                 "did you mean to call OptionValues.loads(<string>)")
+        assert not isinstance(values, six.string_types), "String type not expected in OptionValues " \
+                                                         "constructor, did you mean to call " \
+                                                         "OptionValues.loads(<string>)"
 
         # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
         if isinstance(values, tuple):
@@ -190,7 +190,7 @@ class OptionsValues(object):
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                package_values = self._reqs_options.setdefault(package, PackageOptionValues())
+                package_values = self._reqs_options.setdefault(package.strip(), PackageOptionValues())
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
@@ -280,7 +280,7 @@ class OptionsValues(object):
         other_option=3
         OtherPack:opt3=12.1
         """
-        options = tuple(line.strip() for line in text.splitlines() if len(line.strip()))
+        options = tuple(line.strip() for line in text.splitlines() if line.strip())
         return OptionsValues(options)
 
     @property
