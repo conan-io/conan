@@ -75,7 +75,6 @@ class PluginManager(object):
             loaded_plugin = self._parse_module(loaded, filename)
             return loaded_plugin
         except Exception as e:  # re-raise with file name
-            print("eerrrrooss")
             raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
 
     def _parse_module(self, plugin_module, filename):
