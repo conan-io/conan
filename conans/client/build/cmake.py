@@ -186,6 +186,9 @@ class CMake(object):
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
             return
+        self._build(args, build_dir, target)
+
+    def _build(self, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
@@ -220,14 +223,14 @@ class CMake(object):
             raise ConanException("%s not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is "
                                  "defined" % cmake_install_prefix_var_name)
-        self.build(args=args, build_dir=build_dir, target="install")
+        self._build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
-        self.build(args=args, build_dir=build_dir, target=target)
+        self._build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):
