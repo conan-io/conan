@@ -245,7 +245,7 @@ class OptionsValuesTest(unittest.TestCase):
         self.assertEqual(option_values.dumps(), self.sut.dumps())
 
     def test_consistency(self):
-        def _checkEqual(hs1, hs2, hs3, hs4):
+        def _check_equal(hs1, hs2, hs3, hs4):
             opt_values1 = OptionsValues(hs1)
             opt_values2 = OptionsValues(hs2)
             opt_values3 = OptionsValues(hs3)
@@ -256,16 +256,17 @@ class OptionsValuesTest(unittest.TestCase):
             self.assertEqual(opt_values1.dumps(), opt_values4.dumps())
 
         # Check that all possible input options give the same result
-        _checkEqual([('opt', 3)], [('opt', '3'), ], ('opt=3', ), {'opt': 3})
-        _checkEqual([('opt', True)], [('opt', 'True'), ], ('opt=True', ), {'opt': True})
-        _checkEqual([('opt', False)], [('opt', 'False'), ], ('opt=False', ), {'opt': False})
-        _checkEqual([('opt', None)], [('opt', 'None'), ], ('opt=None', ), {'opt': None})
-        _checkEqual([('opt', 0)], [('opt', '0'), ], ('opt=0', ), {'opt': 0})
-        _checkEqual([('opt', '')], [('opt', ''), ], ('opt=', ), {'opt': ''})
+        _check_equal([('opt', 3)],       [('opt', '3'), ],       ('opt=3', ),       {'opt': 3})
+        _check_equal([('opt', True)],    [('opt', 'True'), ],    ('opt=True', ),    {'opt': True})
+        _check_equal([('opt', False)],   [('opt', 'False'), ],   ('opt=False', ),   {'opt': False})
+        _check_equal([('opt', None)],    [('opt', 'None'), ],    ('opt=None', ),    {'opt': None})
+        _check_equal([('opt', 0)],       [('opt', '0'), ],       ('opt=0', ),       {'opt': 0})
+        _check_equal([('opt', '')],      [('opt', ''), ],        ('opt=', ),        {'opt': ''})
 
         # Check for leading and trailing spaces
-        _checkEqual([('  opt  ', 3)], [(' opt  ', '3'), ], ('  opt =3', ), {' opt ': 3})
-        _checkEqual([('opt', '  value  ')], [('opt', '  value '), ], ('opt= value  ', ), {'opt': ' value '})
+        _check_equal([('  opt  ', 3)], [(' opt  ', '3'), ], ('  opt =3', ), {' opt ': 3})
+        _check_equal([('opt', '  value  ')], [('opt', '  value '), ], ('opt= value  ', ),
+                     {'opt': ' value '})
 
         # This is expected behaviour:
         self.assertNotEqual(OptionsValues([('opt', ''), ]).dumps(),
@@ -310,7 +311,7 @@ class OptionsValuesTest(unittest.TestCase):
             OptionsValues.loads("config\na=2\ncommit\nb=3")
 
     def test_exceptions_empty_value(self):
-        with self.assertRaisesRegexp(ConanException, "String type not expected"):
+        with self.assertRaisesRegexp(AssertionError, "String type not expected"):
             OptionsValues("a=2\nconfig\nb=3")
 
         with self.assertRaisesRegexp(
@@ -321,9 +322,9 @@ class OptionsValuesTest(unittest.TestCase):
         with self.assertRaisesRegexp(
                 ConanException,
                 "Please define a default value for 'config' in 'default_options'"):
-            OptionsValues([('a', 2), ('config'), ])
+            OptionsValues([('a', 2), ('config', ), ])
 
-    def test_exceptions_repeatedd_value(self):
+    def test_exceptions_repeated_value(self):
         with self.assertRaisesRegexp(ConanException, "repeated element"):
             OptionsValues.loads("a=2\na=12\nb=3").dumps()
 
@@ -332,3 +333,7 @@ class OptionsValuesTest(unittest.TestCase):
 
         with self.assertRaisesRegexp(ConanException, "repeated element"):
             OptionsValues([('a', 2), ('b', True), ('a', '12')])
+
+    def test_package_with_spaces(self):
+        self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
+                         OptionsValues([('pck2 :opt', 50), ]).dumps())
