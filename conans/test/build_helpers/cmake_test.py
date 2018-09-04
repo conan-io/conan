@@ -102,6 +102,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.should_configure = False
         conan_file.should_build = False
         conan_file.should_install = False
+        conan_file.should_test = False
         cmake = CMake(conan_file, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conan_file.command)
