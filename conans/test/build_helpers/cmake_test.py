@@ -155,7 +155,8 @@ class CMakeTest(unittest.TestCase):
         self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
                          conanfile.command)
         cmake.install()
-        self.assertIn("--target install", conanfile.command)
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                           % cpu_count()), conanfile.command)
         cmake.test()
         self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i"
                                                               % cpu_count()), conanfile.command)
