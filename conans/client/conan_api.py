@@ -887,6 +887,9 @@ def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
     # Init paths
     client_cache = ClientCache(base_folder, storage_folder, out)
 
+    # Create default plugins
+    client_cache.plugins
+
     # Migration system
     migrator = ClientMigrator(client_cache, Version(client_version), out)
     migrator.migrate()

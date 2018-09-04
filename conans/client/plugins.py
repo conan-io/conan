@@ -18,10 +18,11 @@ class PluginManager(object):
         self.loaded_plugins = []
         self.plugins = None
         self.output = output
+        self._last_method_executed = None
 
     def load_plugins(self):
         for name in self._plugin_names:
-            if name and name not in [file[:-3] for file in  os.listdir(self._plugins_folder)]:
+            if name and name not in [file[:-3] for file in os.listdir(self._plugins_folder)]:
                 self.output.warn("Plugin '%s' not found in %s folder. Please remove plugin "
                                  "from conan.conf or include it inside the plugins folder."
                                  % (name, self._plugins_folder))
@@ -42,8 +43,18 @@ class PluginManager(object):
                 if remote_name:
                     plugin.remote_name = remote_name
 
+    def deinitialize_plugins(self):
+        for plugin in self.plugins:
+            plugin.conanfile = None
+            plugin.conanfile_path = None
+            plugin.remote_name = None
+
     def execute_plugins_method(self, method_name, conanfile=None, conanfile_path=None,
                                remote_name=None):
+        if self._last_method_executed:
+            if self._last_method_executed.split("_")[:-1] != method_name.split("_"):
+                self.deinitialize_plugins()
+        self._last_method_executed = method_name
         self.initialize_plugins(conanfile, conanfile_path, remote_name)
 
         for plugin in self.plugins:
@@ -57,7 +68,6 @@ class PluginManager(object):
                                                                 traceback.format_exc()))
 
     def load_plugin(self, plugin_name):
-        print("load_plugin")
         filename = "%s.py" % plugin_name
         plugin_path = os.path.join(self._plugins_folder, filename)
         try:
