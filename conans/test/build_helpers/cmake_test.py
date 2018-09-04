@@ -130,9 +130,11 @@ class CMakeTest(unittest.TestCase):
         self.assertIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
                       conanfile.command)
         cmake.install()
-        self.assertNotIn("--target install", conanfile.command)
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                              % cpu_count()), conanfile.command)
         cmake.test()
-        self.assertIn("--target test", conanfile.command)
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+                      conanfile.command)
         conanfile.should_build = False
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
@@ -140,9 +142,11 @@ class CMakeTest(unittest.TestCase):
         self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
                          conanfile.command)
         cmake.install()
-        self.assertNotIn("--target install", conanfile.command)
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
+                                                              % cpu_count()), conanfile.command)
         cmake.test()
-        self.assertIn("--target test", conanfile.command)
+        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+                      conanfile.command)
         conanfile.should_install = True
         conanfile.should_test = False
         cmake.configure()
@@ -153,7 +157,8 @@ class CMakeTest(unittest.TestCase):
         cmake.install()
         self.assertIn("--target install", conanfile.command)
         cmake.test()
-        self.assertNotIn("--target test", conanfile.command)
+        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i"
+                                                              % cpu_count()), conanfile.command)
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
