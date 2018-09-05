@@ -149,6 +149,23 @@ class ConanLib(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
 
+    def test_auto_conanfile_no_root(self):
+        """
+        Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
+        """
+        curdir=self.client.current_folder
+        conanfile = base.format(url="auto", revision="auto")
+        self.client.save({"conanfile.py": conanfile},
+                         path=os.path.join(self.client.current_folder, 'conan'))
+        self.client.save({"myfile.txt": "content of my file"})
+        self._commit_contents()
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
+
+        # Create the package
+        self.client.run("create conan/ user/channel")
+        sources_dir = self.client.client_cache.scm_folder(self.reference)
+        self.assertEquals(load(sources_dir), curdir)  # Root of git is 'curdir'
+
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         curdir = self.client.current_folder.replace("\\", "/")
