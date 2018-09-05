@@ -168,7 +168,7 @@ class CMakeDefinitionsBuilder(object):
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
-            if str(os_).lower() == "macos":
+            if str(os_) == "Macos":
                 ret["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
@@ -237,7 +237,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(build_type_definition(build_type, self.generator))
         ret.update(runtime_definition(runtime))
 
-        if str(os_).lower() == "macos":
+        if str(os_) == "Macos":
             if arch == "x86":
                 ret["CMAKE_OSX_ARCHITECTURES"] = "i386"
 
