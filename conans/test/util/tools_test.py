@@ -101,7 +101,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt = SystemPackageTool(runner=runner, os_info=os_info)
 
                 spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
-                self.assertTrue(len(runner.commands) == 0)
+                self.assertEqual(len(runner.commands), 0)
 
         # Run several test cases
         repository = "deb http://repo/url/ saucy universe multiverse"
