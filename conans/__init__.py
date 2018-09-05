@@ -19,3 +19,4 @@ REVISIONS = "revisions"  # Only when enabled in config, not by default look at s
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, API_V2]
 
 __version__ = '1.7.3'
+
