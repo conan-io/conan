@@ -220,3 +220,20 @@ class SVN(SCMBase):
     def get_revision(self):
         return self.run("info --show-item revision").strip()
 
+    def get_last_changed_revision(self):
+        return self.run("info --show-item last-changed-revision").strip()
+
+    def get_branch(self):
+        url = self.run("info --show-item relative-url").strip()
+        try:
+            pattern = "(tags|branches)/[^/]+|trunk"
+            branch = re.search(pattern, url)
+            
+            if branch is None:
+                return None
+            else:
+                # Replace non alphanumeric
+                branch = re.sub('[^0-9a-zA-Z]+', '_', branch[0])
+                return branch
+        except Exception as e:
+            raise ConanException("Unable to get svn branch from %s\n%s" % (self.folder, str(e)))
