@@ -4,6 +4,7 @@ import stat
 import sys
 import unittest
 import platform
+import mock
 
 from collections import namedtuple
 
@@ -962,7 +963,8 @@ build_type: [ Release]
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
 
-    def test_cmake_system_version_osx(self):
+    @mock.patch('platform.system', return_value="Macos")
+    def test_cmake_system_version_osx(self, _):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Macos"
 
