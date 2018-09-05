@@ -168,6 +168,8 @@ class CMakeDefinitionsBuilder(object):
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
+            if str(os_).lower() == "macos":
+                ret["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR")
@@ -227,6 +229,7 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
         arch = self._ss("arch")
         os_ = self._ss("os")
+        os_version = self._ss("os.version")
         libcxx = self._ss("compiler.libcxx")
         runtime = self._ss("compiler.runtime")
         build_type = self._ss("build_type")
