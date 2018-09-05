@@ -1100,6 +1100,19 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 class GitToolTest(unittest.TestCase):
 
+    def test_repo_root(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        # Initialized in the root folder
+        git = Git(root_path)
+        self.assertEqual(root_path, git.get_repo_root())
+
+        # Initialized elsewhere
+        subfolder = os.path.join(root_path, 'subfolder')
+        os.makedirs(subfolder)
+        git = Git(subfolder)
+        self.assertEqual(root_path, git.get_repo_root())
+
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
         tmp = temp_folder()
