@@ -57,4 +57,4 @@ class ConanFileToolsTest(ConanFile):
                              users={"default": [("lasote", "mypass")]},
                              requester_class=DownloadFilesBrokenRequester)
         client2.run("install lib/1.0@lasote/stable")
-        self.assertIn("Waiting 0 seconds to retry...", client2.out)
+        self.assertEqual(1, str(client2.out).count("Waiting 0 seconds to retry..."))
