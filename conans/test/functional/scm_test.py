@@ -153,7 +153,7 @@ class ConanLib(ConanFile):
         """
         Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
         """
-        curdir=self.client.current_folder
+        curdir = self.client.current_folder
         conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile},
                          path=os.path.join(self.client.current_folder, 'conan'))
@@ -164,7 +164,7 @@ class ConanLib(ConanFile):
         # Create the package
         self.client.run("create conan/ user/channel")
         sources_dir = self.client.client_cache.scm_folder(self.reference)
-        self.assertEquals(load(sources_dir), curdir)  # Root of git is 'curdir'
+        self.assertEquals(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
 
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
