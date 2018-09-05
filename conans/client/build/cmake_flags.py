@@ -229,7 +229,6 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
         arch = self._ss("arch")
         os_ = self._ss("os")
-        os_version = self._ss("os.version")
         libcxx = self._ss("compiler.libcxx")
         runtime = self._ss("compiler.runtime")
         build_type = self._ss("build_type")
