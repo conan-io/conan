@@ -202,7 +202,9 @@ class SVN(SCMBase):
         return excluded_list
 
     def get_remote_url(self):
-        return self.run("info --show-item url").strip()
+        url = self.run("info --show-item url").strip()
+        revision = self.run("info --show-item revision").strip()
+        return "{url}@{revision}".format(url=url, revision=revision)
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
