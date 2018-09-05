@@ -36,6 +36,8 @@ class PluginManager(object):
                             for plugin in self.loaded_plugins]
         else:
             for plugin in self.plugins:
+                if self.output:
+                    plugin.output = self.output
                 if conanfile:
                     plugin.conanfile = conanfile
                 if conanfile_path:
@@ -146,8 +148,16 @@ class ConanPlugin(object):
     def __init__(self, output, conanfile=None, conanfile_path=None, remote_name=None):
         self.conanfile = conanfile
         self.conanfile_path = conanfile_path
-        self.output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
+        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
         self.remote_name = remote_name
+
+    @property
+    def output(self):
+        return self._output
+
+    @output.setter
+    def output(self, output):
+        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
 
     def pre_export(self):
         raise NotImplementedError("Implement in subclass")

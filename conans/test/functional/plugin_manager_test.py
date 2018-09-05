@@ -62,7 +62,6 @@ class PluginManagerTest(unittest.TestCase):
         self.file_path = os.path.join(temp_dir, "my_plugin.py")
         save(self.file_path, my_plugin)
         self.output = TestBufferConanOutput()
-        # self.user_io = UserIO(out=self.output)
         self.plugin_manager = PluginManager(temp_dir, ["my_plugin"], self.output)
 
     def load_test(self):
@@ -100,3 +99,34 @@ class MyPlugin(ConanPlugin):
         self.assertIsNotNone(plugin.output)
         self.plugin_manager.loaded_plugins[0].pre_export(plugin)
         self.assertIn("[PLUGIN - MyPlugin]: pre_export()", self.output)
+
+    def test_clear_plugin_attributes(self):
+        """
+        Plugins may not keep old attributes between calls with
+        :return:
+        """
+        my_plugin = """
+from conans import ConanPlugin
+
+class MyPlugin(ConanPlugin):
+
+    def pre_upload(self):
+        self.output.info("conanfile: %s, conanfile_path: %s, remote_name: %s"
+                         % (self.conanfile, self.conanfile_path, self.remote_name))
+
+    def pre_build(self):
+        self.output.info("conanfile: %s, conanfile_path: %s, remote_name: %s"
+                         % (self.conanfile, self.conanfile_path, self.remote_name))
+        """
+        save(self.file_path, my_plugin)
+        self.plugin_manager.load_plugins()
+        self.plugin_manager.initialize_plugins("This is a conanfile", "fake/conanfile/path",
+                                               "my_remote")
+        self.plugin_manager.execute_plugins_method("pre_upload")
+        self.assertIn("[PLUGIN - MyPlugin]: conanfile: This is a conanfile, conanfile_path: "
+                      "fake/conanfile/path, remote_name: my_remote", self.output)
+        self.output = TestBufferConanOutput()
+        self.plugin_manager.output = self.output
+        self.plugin_manager.execute_plugins_method("pre_build")
+        self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, remote_name: "
+                      "None", self.output)
