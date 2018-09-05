@@ -116,11 +116,7 @@ class CmdUpload(object):
             conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
-            ignore_deleted_file = None
-        else:
-            ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
         result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                    ignore_deleted_file=ignore_deleted_file,
                                                     skip_upload=skip_upload,
                                                     no_overwrite=no_overwrite)
         return result

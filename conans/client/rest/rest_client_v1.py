@@ -4,7 +4,6 @@ import time
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
@@ -12,7 +11,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, md5sum, load
+from conans.util.files import decode_text, load
 from conans.util.log import logger
 
 
@@ -125,7 +124,8 @@ class RestV1Methods(RestCommonMethods):
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait, headers=self._put_headers)
+                                           retry=retry, retry_wait=retry_wait,
+                                           headers=self._put_headers)
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
@@ -203,8 +203,7 @@ class RestV1Methods(RestCommonMethods):
 
         return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, no_overwrite):
         """
         the_files: dict with relative_path: content
         """
