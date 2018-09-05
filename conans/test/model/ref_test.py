@@ -76,21 +76,3 @@ class ConanNameTestCase(unittest.TestCase):
     def validate_name_version_test_invalid(self):
         self._check_invalid_format("[no.close.bracket", True)
         self._check_invalid_format("no.open.bracket]", True)
-
-    def custom_message_test_invalid_type(self):
-        message = "value={value}, type={type}, reason={reason}"
-        value = 1234
-        typename = type(value).__name__
-        reason = "is not a string"
-        with self.assertRaisesRegexp(InvalidNameException,
-                                     message.format(value=value, type=typename, reason=reason)):
-            ConanName.validate_name(value, message=message)
-
-    def custom_message_test_invalid_format(self):
-        message = "value={value}, type={type}, reason={reason}"
-        value = "-no.dash.start"
-        typename = type(value).__name__
-        reason = "is an invalid name"  # Message is longer, but it will validate.
-        with self.assertRaisesRegexp(InvalidNameException,
-                                     message.format(value=value, type=typename, reason=reason)):
-            ConanName.validate_name(value, message=message)

@@ -12,8 +12,7 @@ class ConanName(object):
                                      % (_min_chars - 1, _max_chars - 1))
 
     @staticmethod
-    def invalid_name_message(value, message=None):
-        message = message or "'{value}' {reason}"
+    def invalid_name_message(value, reference_token=None):
         if len(value) > ConanName._max_chars:
             reason = "is too long. Valid names must contain at most %s characters."\
                      % ConanName._max_chars
@@ -25,28 +24,34 @@ class ConanName(object):
                       "letter, number or underscore, have between %s-%s chars, including "
                       "letters, numbers, underscore, dot and dash"
                       % (ConanName._min_chars, ConanName._max_chars))
-        raise InvalidNameException(message.format(value=value, reason=reason,
-                                                  type=type(value).__name__))
+        message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
+            ref_token=" for {}".format(reference_token) if reference_token else "",
+            value=value, type=type(value).__name__, reason=reason
+        )
+        raise InvalidNameException(message)
 
     @staticmethod
-    def validate_string(value, message=None):
+    def validate_string(value, reference_token=None):
         """Check for string"""
         if not isinstance(value, string_types):
-            message = message or "'{value}' (type {type}) {reason}"
-            raise InvalidNameException(message.format(value=value, reason="is not a string",
-                                                      type=type(value).__name__))
+            message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
+                ref_token=" for {}".format(reference_token) if reference_token else "",
+                value=value, type=type(value).__name__,
+                reason="is not a string"
+            )
+            raise InvalidNameException(message)
 
     @staticmethod
-    def validate_name(name, version=False, message=None):
+    def validate_name(name, version=False, reference_token=None):
         """Check for name compliance with pattern rules"""
-        ConanName.validate_string(name, message=message)
+        ConanName.validate_string(name, reference_token=reference_token)
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and name.startswith("[") and name.endswith("]"):
                 # TODO: Check value between brackets
                 return
-            ConanName.invalid_name_message(name, message=message)
+            ConanName.invalid_name_message(name, reference_token=reference_token)
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
@@ -65,15 +70,14 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        message = "Value provided for {item}, '{{value}}' (type {{type}}), {{reason}}"
-        ConanName.validate_name(name, message=message.format(item="package name"))
-        ConanName.validate_name(version, True, message=message.format(item="package version"))
-        ConanName.validate_name(user, message=message.format(item="package user name"))
-        ConanName.validate_name(channel, message=message.format(item="package user"))
+        ConanName.validate_name(name, reference_token="package name")
+        ConanName.validate_name(version, True, reference_token="package version")
+        ConanName.validate_name(user, reference_token="user name")
+        ConanName.validate_name(channel, reference_token="channel")
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
         if revision:
-            ConanName.validate_name(revision, message=message.format(item="package revision"))
+            ConanName.validate_name(revision, reference_token="revision")
         obj.revision = revision
         return obj
 
@@ -135,8 +139,7 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         revision = None
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-            message = "Value provided for package revision, '{value}' (type {type}) {reason}"
-            ConanName.validate_name(revision, message=message)
+            ConanName.validate_name(revision, reference_token="revision")
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
         return obj
