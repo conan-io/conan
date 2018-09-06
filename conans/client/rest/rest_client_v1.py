@@ -225,11 +225,9 @@ class RestV1Methods(RestCommonMethods):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite")
 
-        local_snapshot = {filename: None for filename, abs_path in the_files.items()}
-        files_to_upload = {filename.replace("\\", "/"): the_files[filename]
-                           for filename in local_snapshot}
-
-        deleted = set(remote_snapshot).difference(local_snapshot)
+        files_to_upload = {filename.replace("\\", "/"): path
+                           for filename, path in the_files.items()}
+        deleted = set(remote_snapshot).difference(the_files)
 
         if files_to_upload:
             # Get the upload urls
@@ -264,9 +262,8 @@ class RestV1Methods(RestCommonMethods):
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbidden overwrite")
 
-        local_snapshot = {filename: None for filename, abs_path in the_files.items()}
-        files_to_upload = {filename: the_files[filename] for filename in local_snapshot}
-        deleted = set(remote_snapshot).difference(local_snapshot)
+        files_to_upload = the_files
+        deleted = set(remote_snapshot).difference(the_files)
         if files_to_upload:        # Obtain upload urls
             url = "%s/conans/%s/packages/%s/upload_urls" % (self.remote_api_url,
                                                             "/".join(package_reference.conan),
