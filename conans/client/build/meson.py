@@ -30,8 +30,6 @@ class Meson(object):
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
 
-        self.definitions = {}
-
     @property
     def build_type(self):
         return self._build_type
