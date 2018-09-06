@@ -587,7 +587,7 @@ class Options(object):
             else:
                 # This code is necessary to process patterns like *:shared=True
                 # To apply to the current consumer, which might not have name
-                for pattern, pkg_options in user_values._reqs_options.items():
+                for pattern, pkg_options in sorted(user_values._reqs_options.items()):
                     if fnmatch.fnmatch(name or "", pattern):
                         self._package_options.initialize_patterns(pkg_options)
                 # Then, the normal assignment of values, which could override patterns

@@ -53,6 +53,37 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         self.assertIn("Pkg/0.1@user/testing (test package): Running build()", client.out)
 
+    def general_scope_priorities_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"shared": ["1", "2", "3"]}
+    def configure(self):
+        self.output.info("BUILD SHARED: %s" % self.options.shared)
+"""
+        test = """from conans import ConanFile
+class Pkg(ConanFile):
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile})
+        # Consumer has priority
+        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o shared=2")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        # Consumer has priority over pattern, even if the pattern specifies the package name
+        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o Pkg:shared=2 -o shared=3")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 3", client.out)
+        # With test_package
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test})
+        # Sorted (longest, alphabetical) patterns, have priority
+        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o Pkg:shared=2")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . Pkg/0.1@user/testing  -o Pk*:shared=2 -o P*:shared=1")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . Pkg/0.1@user/testing  -o Pk*:shared=2 -o P*:shared=1")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+
     def parsing_test(self):
         client = TestClient()
         conanfile = '''
