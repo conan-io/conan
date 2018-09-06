@@ -144,8 +144,6 @@ class Git(object):
             status = self.run("status -bs --porcelain")
             # ## feature/scm_branch...myorigin/feature/scm_branch
             branch = status.splitlines()[0].split("...")[0].strip("#").strip()
-            # Replace non alphanumeric
-            branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
             return branch
         except Exception as e:
             raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
