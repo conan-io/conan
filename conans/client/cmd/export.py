@@ -60,7 +60,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
                           keep_source)
 
 
-def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
 
     scm_src_file = paths.scm_folder(conan_ref)
     if os.path.exists(scm_src_file):
@@ -71,7 +71,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return
 
-    scm = SCM(scm_data, src_path)
+    scm = SCM(scm_data, conanfile_dir)
 
     if scm_data.url == "auto":
         origin = scm.get_remote_url()
@@ -87,6 +87,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     # Generate the scm_folder.txt file pointing to the src_path
+    src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
     scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
 
