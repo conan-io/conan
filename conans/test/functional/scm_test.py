@@ -155,9 +155,7 @@ class ConanLib(ConanFile):
         """
         curdir = self.client.current_folder
         conanfile = base.format(url="auto", revision="auto")
-        self.client.save({"conanfile.py": conanfile},
-                         path=os.path.join(self.client.current_folder, 'conan'))
-        self.client.save({"myfile.txt": "content of my file"})
+        self.client.save({"conan/conanfile.py": conanfile, "myfile.txt": "content of my file"})
         self._commit_contents()
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
 
