@@ -6,7 +6,7 @@ from conans.model.version import Version
 
 
 class ConanName(object):
-    _max_chars = 50
+    _max_chars = 51
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars - 1))
@@ -49,7 +49,6 @@ class ConanName(object):
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and name.startswith("[") and name.endswith("]"):
-                # TODO: Check value between brackets
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 

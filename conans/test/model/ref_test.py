@@ -60,6 +60,7 @@ class ConanNameTestCase(unittest.TestCase):
         self.assertIsNone(ConanName.validate_name("*"))
         self.assertIsNone(ConanName.validate_name("a" * ConanName._min_chars))
         self.assertIsNone(ConanName.validate_name("a" * ConanName._max_chars))
+        self.assertIsNone(ConanName.validate_name("a" * 50))  # Regression test
 
     def validate_name_test_invalid_format(self):
         self._check_invalid_format("-no.dash.start")
