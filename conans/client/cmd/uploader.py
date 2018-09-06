@@ -3,7 +3,6 @@ import time
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
 from conans.search.search import search_recipes, search_packages
 
@@ -27,7 +26,7 @@ class CmdUpload(object):
         self._loader = loader
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
+               confirm=False, retry=0, retry_wait=0, skip_upload=False,
                integrity_check=False, no_overwrite=None, remote_name=None,
                query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
@@ -67,12 +66,12 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
+                self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
                              skip_upload, integrity_check, no_overwrite, remote_name, recorder)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
-    def _upload(self, conan_file, conan_ref, force, packages_ids, retry, retry_wait, skip_upload,
+    def _upload(self, conan_file, conan_ref, packages_ids, retry, retry_wait, skip_upload,
                 integrity_check, no_overwrite, remote_name, recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
 
@@ -84,7 +83,7 @@ class CmdUpload(object):
         else:  # Or use the default otherwise
             upload_remote = self._registry.default_remote
 
-        if not force:
+        if no_overwrite != "force":
             self._check_recipe_date(conan_ref, upload_remote)
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))

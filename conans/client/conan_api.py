@@ -734,11 +734,13 @@ class ConanAPIV1(object):
             recorder.error = True
             exc.info = recorder.get_info()
             raise exc
+        if force:
+            no_overwrite = "force"
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry, self._loader)
         try:
-            uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
+            uploader.upload(recorder, pattern, package, all_packages, confirm, retry,
                             retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,
                             query=query)
             return recorder.get_info()

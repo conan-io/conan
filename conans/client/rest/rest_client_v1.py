@@ -212,7 +212,7 @@ class RestV1Methods(RestCommonMethods):
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
 
-        if remote_snapshot:
+        if remote_snapshot and no_overwrite != "force":
             remote_manifest = self.get_conan_manifest(conan_reference)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
