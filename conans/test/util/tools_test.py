@@ -1217,12 +1217,15 @@ class GitToolTest(unittest.TestCase):
 
     def git_to_capture_branch_test(self):
         conanfile = """
+import re
 from conans import ConanFile, tools
 
 def get_version():
     git = tools.Git()
     try:
-        return "%s_%s" % (git.get_branch(), git.get_revision())
+        branch = git.get_branch()
+        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+        return "%s_%s" % (branch, git.get_revision())
     except:
         return None
 
