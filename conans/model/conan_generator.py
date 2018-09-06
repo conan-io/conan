@@ -10,6 +10,10 @@ class Generator(object):
         self._deps_env_info = conanfile.deps_env_info
         self._env_info = conanfile.env_info
         self._deps_user_info = conanfile.deps_user_info
+        self.data = None
+
+    def init_data(self, **kwargs):
+        self.data = kwargs
 
     @property
     def deps_build_info(self):
