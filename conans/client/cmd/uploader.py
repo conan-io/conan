@@ -110,7 +110,7 @@ class CmdUpload(object):
                 if ret_upload_package:
                     recorder.add_package(str(conan_ref), package_id)
 
-        if not defined_remote and not policy != UPLOAD_POLICY_SKIP:
+        if not defined_remote and policy != UPLOAD_POLICY_SKIP:
             self._registry.set_ref(conan_ref, upload_remote.name)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote):
