@@ -720,29 +720,17 @@ class ConanAPIV1(object):
         return recorder.get_info()
 
     @api_method
-    def upload(self, pattern, package=None, remote_name=None,
-               all_packages=False, force=False, confirm=False, retry=2,
-               retry_wait=5, skip_upload=False, integrity_check=False,
-               no_overwrite=None, query=None):
+    def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
+               retry=2, retry_wait=5, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
         recorder = UploadRecorder()
-
-        if force and no_overwrite:
-            exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")
-            recorder.error = True
-            exc.info = recorder.get_info()
-            raise exc
-        if force:
-            no_overwrite = "force"
-
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry, self._loader)
         try:
             uploader.upload(recorder, pattern, package, all_packages, confirm, retry,
-                            retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,
-                            query=query)
+                            retry_wait, integrity_check, policy, remote_name, query=query)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True

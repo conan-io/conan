@@ -13,6 +13,8 @@ from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXP
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text, load
 from conans.util.log import logger
+from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE,\
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 
 
 def complete_url(base_url, url):
@@ -203,7 +205,7 @@ class RestV1Methods(RestCommonMethods):
 
         return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, no_overwrite):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
         """
         the_files: dict with relative_path: content
         """
@@ -212,14 +214,14 @@ class RestV1Methods(RestCommonMethods):
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
 
-        if remote_snapshot and no_overwrite != "force":
+        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self.get_conan_manifest(conan_reference)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
                 return False, conan_reference
 
-            if no_overwrite in ("all", "recipe"):
+            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite")
 
@@ -241,7 +243,7 @@ class RestV1Methods(RestCommonMethods):
 
         return (files_to_upload or deleted), conan_reference
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -258,7 +260,7 @@ class RestV1Methods(RestCommonMethods):
             if remote_manifest == local_manifest:
                 return False
 
-            if no_overwrite == "all":
+            if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbidden overwrite")
 
