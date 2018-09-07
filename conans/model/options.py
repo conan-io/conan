@@ -163,25 +163,9 @@ class OptionsValues(object):
         if not values:
             return
 
-        assert not isinstance(values, six.string_types), "String type not expected in OptionValues " \
-                                                         "constructor, did you mean to call " \
-                                                         "OptionValues.loads(<string>)"
-
         # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
         if isinstance(values, tuple):
             values = [item.split("=", 1) for item in values]
-
-        # Check that we have a list of tuples
-        offenders = list(filter(lambda u: not isinstance(u, (tuple, list)) or len(u) <= 1, values))
-        if offenders:
-            offender_str = lambda u: str(u) if not isinstance(u, (tuple, list)) else u[0]
-            raise ConanException("Please define a default value for '%s' in "
-                                 "'default_options'" % "', '".join(map(offender_str, offenders)))
-
-        # Raise on repeated option
-        counter = Counter([k for k, v in values])
-        if len(counter.values()) != len(values):
-            raise ConanException("There is a repeated element in 'default_options'.")
 
         # handle list of tuples (name, value)
         for (k, v) in values:
