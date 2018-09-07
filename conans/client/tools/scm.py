@@ -127,7 +127,14 @@ class Git(SCMBase):
         return None
 
     def get_qualified_remote_url(self):
-        return self.get_remote_url()
+        url = self.get_remote_url()
+        if os.path.exists(url):
+            url = url.replace("\\", "/")
+        return url
+
+    def is_local_repository(self):
+        url = self.get_remote_url()
+        return os.path.exists(url)   
 
     def get_commit(self):
         self._check_git_repo()
@@ -214,6 +221,10 @@ class SVN(SCMBase):
         url = self.run("info --show-item url").strip()
         revision = self.run("info --show-item revision").strip()
         return "{url}@{revision}".format(url=url, revision=revision)
+        
+    def is_local_repository(self):
+        url = self.get_remote_url()
+        return url.startswith("file://")   
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
