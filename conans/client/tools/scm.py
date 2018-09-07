@@ -167,7 +167,7 @@ class Git(SCMBase):
             branch = status.splitlines()[0].split("...")[0].strip("#").strip()
             return branch
         except Exception as e:
-            raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
+            raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
 
 class SVN(SCMBase):
@@ -259,4 +259,4 @@ class SVN(SCMBase):
             else:
                 return branch[0]
         except Exception as e:
-            raise ConanException("Unable to get svn branch from %s\n%s" % (self.folder, str(e)))
+            raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
