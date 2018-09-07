@@ -13,7 +13,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path
+from conans.util.files import mkdir, get_abs_path, walk
 
 
 class CMake(object):
@@ -307,7 +307,7 @@ class CMake(object):
                                  "Define name in your recipe")
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
-        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
+        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
