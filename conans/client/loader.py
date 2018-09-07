@@ -1,8 +1,9 @@
 import os
 import sys
-import imp
 import inspect
 import uuid
+
+from past.builtins import execfile
 
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.errors import ConanException, NotFoundException
@@ -232,7 +233,9 @@ def _parse_file(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(filename, conan_file_path)
+            print("Before import:", filename)
+            loaded = __import__(filename, locals=None, globals=globals(), fromlist=[])
+            print("After import:", filename)
             loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
         # Put all imported files under a new package name
@@ -253,7 +256,7 @@ def _parse_file(conan_file_path):
         import traceback
         trace = traceback.format_exc().split('\n')
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
-                                                                     '\n'.join(trace[3:])))
+                                                                     '\n'.join(trace[:])))
     finally:
         sys.path.pop()
 
