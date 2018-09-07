@@ -1428,6 +1428,20 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.clone(url="https://myrepo")
         self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[0])
 
+    def test_repo_root(self):
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.clone(url=project_url)
+
+        self.assertEqual(os.path.realpath(tmp_folder), svn.get_repo_root())
+
+        # SVN instantiated in a subfolder
+        svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
+        self.assertFalse(svn2.folder == tmp_folder)
+        self.assertEqual(os.path.realpath(tmp_folder), svn2.get_repo_root())
+
 
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
