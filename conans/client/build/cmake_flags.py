@@ -14,6 +14,7 @@ from conans.util.log import logger
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
 cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"
 runtime_definition_var_name = "CONAN_LINK_RUNTIME"
+cmake_in_local_cache_var_name = "CONAN_IN_LOCAL_CACHE"
 
 
 def get_toolset(settings):
@@ -81,6 +82,10 @@ def is_multi_configuration(generator):
 
 def verbose_definition(value):
     return {verbose_definition_name: "ON" if value else "OFF"}
+
+
+def in_local_cache_definition(value):
+    return {cmake_in_local_cache_var_name: "ON" if value else "OFF"}
 
 
 def runtime_definition(runtime):
@@ -243,6 +248,9 @@ class CMakeDefinitionsBuilder(object):
         ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
+        ret[cmake_in_local_cache_var_name] =\
+            in_local_cache_definition(self._conanfile.in_local_cache)[cmake_in_local_cache_var_name]
+
         if compiler:
             ret["CONAN_COMPILER"] = compiler
         if compiler_version:
