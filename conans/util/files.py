@@ -14,13 +14,13 @@ import tarfile
 import stat
 
 
-def walk(top, **kwrgs):
+def walk(top, **kwargs):
     if six.PY2:
         # If py2 os.walk receives a unicode object, it will fail if a non-ascii file name is found
         # during the iteration. More info:
         # https://stackoverflow.com/questions/21772271/unicodedecodeerror-when-performing-os-walk
         top = str(top)
-    return os.walk(top, **kwrgs)
+    return os.walk(top, **kwargs)
 
 
 def make_read_only(path):
