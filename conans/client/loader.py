@@ -233,7 +233,6 @@ def _parse_file(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
-            execfile(conan_file_path, globals(), locals())
             loaded = __import__(filename)
             loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
