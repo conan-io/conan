@@ -31,22 +31,20 @@ class RestV1Methods(RestCommonMethods):
     def remote_api_url(self):
         return "%s/v1" % self.remote_url.rstrip("/")
 
-    def _download_files(self, file_urls, output=None):
+    def _download_files(self, file_urls):
         """
         :param: file_urls is a dict with {filename: url}
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, output, self.verify_ssl)
+        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
-                output.writeln("Downloading %s" % filename)
+            self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
-            if output:
-                output.writeln("")
+            self._output.writeln("")
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
