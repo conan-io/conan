@@ -21,7 +21,9 @@ from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
+from conans.test.build_helpers.cmake_test import ConanFileMock
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
@@ -1383,3 +1385,48 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
+
+    def collect_libs_test(self):
+        conanfile = ConanFileMock()
+        # Without package_folder
+        conanfile.package_folder = None
+        result = tools.collect_libs(conanfile)
+        self.assertEqual([], result)
+
+        # Default behavior
+        conanfile.package_folder = temp_folder()
+        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(mylib_path, "")
+        cpp_info = CppInfo("")
+        conanfile.cpp_info = cpp_info
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+
+        # Custom folder
+        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+        save(customlib_path, "")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Custom folder doesn't exist
+        result = tools.collect_libs(conanfile, folder="fake_folder")
+        self.assertEqual([], result)
+        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+
+        # Use cpp_info.libdirs
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "customlib"], result)
+
+        # Custom folder with multiple libdirs should only collect from custom folder
+        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Warn same lib different folders
+        mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+        save(mylib_path, "")
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "customlib"], result)
+        self.assertIn("Library 'mylib' already found in a previous 'conanfile.cpp_info.libdirs' "
+                      "folder", conanfile.output)

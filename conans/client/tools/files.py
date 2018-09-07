@@ -251,21 +251,31 @@ def _path_equals(path1, path2):
     return path1 == path2
 
 
-def collect_libs(conanfile, folder="lib"):
+def collect_libs(conanfile, folder=None):
     if not conanfile.package_folder:
         return []
-    lib_folder = os.path.join(conanfile.package_folder, folder)
-    if not os.path.exists(lib_folder):
-        conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: {0}".format(lib_folder))
-        return []
-    files = os.listdir(lib_folder)
+    if folder:
+        lib_folders = [os.path.join(conanfile.package_folder, folder)]
+    else:
+        lib_folders = [os.path.join(conanfile.package_folder, folder)
+                       for folder in conanfile.cpp_info.libdirs]
     result = []
-    for f in files:
-        name, ext = os.path.splitext(f)
-        if ext in (".so", ".lib", ".a", ".dylib"):
-            if ext != ".lib" and name.startswith("lib"):
-                name = name[3:]
-            result.append(name)
+    for lib_folder in lib_folders:
+        if not os.path.exists(lib_folder):
+            conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
+                                  "{0}".format(lib_folder))
+            return []
+        files = os.listdir(lib_folder)
+        for f in files:
+            name, ext = os.path.splitext(f)
+            if ext in (".so", ".lib", ".a", ".dylib"):
+                if ext != ".lib" and name.startswith("lib"):
+                    name = name[3:]
+                if name in result:
+                    conanfile.output.warn("Library '%s' already found in a previous "
+                                          "'conanfile.cpp_info.libdirs' folder" % name)
+                else:
+                    result.append(name)
     return result
 
 
