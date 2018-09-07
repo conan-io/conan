@@ -213,9 +213,7 @@ class SVN(SCMBase):
         return excluded_list
 
     def get_remote_url(self):
-        url = self.run("info --show-item url").strip()
-        revision = self.run("info --show-item revision").strip()
-        return "{url}@{revision}".format(url=url, revision=revision)
+        return self.run("info --show-item url").strip()
 
     def get_qualified_remote_url(self):
         url = self.run("info --show-item url").strip()
