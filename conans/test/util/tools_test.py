@@ -1435,12 +1435,12 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=tmp_folder)
         svn.clone(url=project_url)
 
-        self.assertEqual(os.path.realpath(tmp_folder), svn.get_repo_root())
+        self.assertEqual(os.path.realpath(tmp_folder).lower(), svn.get_repo_root().lower())
 
         # SVN instantiated in a subfolder
         svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
         self.assertFalse(svn2.folder == tmp_folder)
-        self.assertEqual(os.path.realpath(tmp_folder), svn2.get_repo_root())
+        self.assertEqual(os.path.realpath(tmp_folder).lower(), svn2.get_repo_root().lower())
 
 
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
