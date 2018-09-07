@@ -157,7 +157,7 @@ class ConanLib(ConanFile):
         Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
         """
         curdir = self.client.current_folder
-        conanfile = base.format(url="auto", revision="auto")
+        conanfile = base_git.format(url="auto", revision="auto")
         self.client.save({"conan/conanfile.py": conanfile, "myfile.txt": "content of my file"})
         self._commit_contents()
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
@@ -541,6 +541,21 @@ class ConanLib(ConanFile):
         folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
+
+    def test_auto_conanfile_no_root(self):
+        """
+        Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
+        """
+        curdir = self.client.current_folder
+        conanfile = base_svn.format(url="auto", revision="auto")
+        project_url, rev = self.create_project(files={"conan/conanfile.py": conanfile,
+                                                      "myfile.txt": "My file is copied"})
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        self.client.run("create conan/ user/channel")
+
+        sources_dir = self.client.client_cache.scm_folder(self.reference)
+        self.assertEquals(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
 
     def test_deleted_source_folder(self):
         # SVN will always retrieve from 'remote'
