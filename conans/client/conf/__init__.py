@@ -106,12 +106,15 @@ class RecipeLinter(ConanPlugin):
 
         # Check fPIC option
         options = getattr(self.conanfile, "options", None)
-        if settings and options and "fPIC" not in options:
-            self.output.warn("This recipe does not include an 'fPIC' option. Make sure you are "
-                             "using the right casing")
-        elif options and not settings and ("fPIC" in options or "shared" in options):
-            self.output.warn("This recipe has 'shared' or 'fPIC' options but does not delcare any "
-                             "settings")
+        if options:
+            if settings:
+                if "fPIC" not in options and "shared" in options:
+                    self.output.warn("This recipe does not include an 'fPIC' option or it does not "
+                                     "have the right casing to be detected")
+            else:
+                if "fPIC" in options or "shared" in options:
+                    self.output.warn("This recipe has 'shared' or 'fPIC' options but does not "
+                                     "declare any 'settings'")
 """
 
 default_client_conf = """
