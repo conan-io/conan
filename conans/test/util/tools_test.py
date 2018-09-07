@@ -829,10 +829,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self._runner = MyRun()
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile._runner.command)
-        self.assertIn("--login -c", conanfile._runner.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn("bash", conanfile._runner.command)
+            self.assertIn("--login -c", conanfile._runner.command)
+            self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
@@ -844,10 +845,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # try to append more env vars
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
-                                                                                       "MYVAR": "34"})
-        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
+                                      env={"PATH": "/other/path", "MYVAR": "34"})
+            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
 
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -1046,7 +1048,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
     def detect_windows_subsystem_test(self):
         # Dont raise test
         result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path or platform.system() != "Windows":
+        if not tools.os_info.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1099,6 +1101,19 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 
 class GitToolTest(unittest.TestCase):
+
+    def test_repo_root(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        # Initialized in the root folder
+        git = Git(root_path)
+        self.assertEqual(root_path, git.get_repo_root())
+
+        # Initialized elsewhere
+        subfolder = os.path.join(root_path, 'subfolder')
+        os.makedirs(subfolder)
+        git = Git(subfolder)
+        self.assertEqual(root_path, git.get_repo_root())
 
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
@@ -1204,12 +1219,15 @@ class GitToolTest(unittest.TestCase):
 
     def git_to_capture_branch_test(self):
         conanfile = """
+import re
 from conans import ConanFile, tools
 
 def get_version():
     git = tools.Git()
     try:
-        return "%s_%s" % (git.get_branch(), git.get_revision())
+        branch = git.get_branch()
+        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+        return "%s_%s" % (branch, git.get_revision())
     except:
         return None
 
