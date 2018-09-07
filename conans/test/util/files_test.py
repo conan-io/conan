@@ -39,10 +39,9 @@ class SaveTestCase(unittest.TestCase):
     def walk_encoding_test(self):
         badfilename = "\xE3\x81\x82badfile.txt"
         folder = temp_folder()
+        filepath = os.path.join(folder, badfilename)
         if six.PY2:
             folder = unicode(folder)
-        filepath = os.path.join(folder, badfilename)
         save(filepath, "contents")
         file = [f[0] for _, _, f in walk(folder)][0]
         self.assertEquals(file, badfilename)
-
