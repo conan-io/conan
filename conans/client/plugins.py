@@ -1,9 +1,10 @@
 import traceback
-from importlib.machinery import SourceFileLoader
 import inspect
 import os
 import sys
 import uuid
+
+from past.builtins import execfile
 
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
@@ -80,8 +81,8 @@ class PluginManager(object):
             raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
 
     def _parse_module(self, plugin_module, filename):
-        """ Parses a python in-memory module, to extract the classes, mainly the main
-        class defining the Recipe, but also process possible existing generators
+        """ Parses a python in-memory module, to extract the classes, mainly the main class defining
+        the Plugin
         @param plugin_module: the module to be processed
         @return: the main ConanPlugin class from the module
         """
@@ -115,8 +116,8 @@ class PluginManager(object):
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
-                loaded = SourceFileLoader(filename, plugin_path).load_module()
-                # loaded = imp.load_source(filename, plugin_path) # TODO: needed for python 2?
+                execfile(plugin_path)
+                loaded = __import__(filename)
                 sys.dont_write_bytecode = False
             # Put all imported files under a new package name
             module_id = uuid.uuid1()

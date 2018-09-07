@@ -101,8 +101,8 @@ class RecipeLinter(ConanPlugin):
         no_copy_source = getattr(self.conanfile, "no_copy_source", None)
         if not settings and not no_copy_source:
             self.output.warn("This recipe seems to be for a header only library as it does not "
-                             "declare 'settings'. Please include 'no_copy_source' to avoid "
-                             "unnecessary copy steps")
+                             "declare 'settings'. Include 'no_copy_source' to avoid unnecessary "
+                             "copy steps")
 
         # Check fPIC option
         options = getattr(self.conanfile, "options", None)
