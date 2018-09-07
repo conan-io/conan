@@ -395,6 +395,29 @@ class ConanLib(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
 
+    def test_scm_bad_filename(self):
+        # Fixes: #3500
+        badfilename = "\xE3\x81\x82badfile.txt"
+        path, _ = create_local_git_repo({badfilename: "contents"}, branch="my_release")
+        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
+
+        conanfile = '''
+import os
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {
+        "type": "git",
+        "url": "auto",
+        "revision": "auto"
+    }
+'''
+        self.client.current_folder = path
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
+        
     def test_source_method_export_sources_and_scm_mixed(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
 
