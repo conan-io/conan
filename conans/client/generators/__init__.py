@@ -76,9 +76,6 @@ def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
     for generator_name in conanfile.generators:
-        args = None
-        if isinstance(conanfile.generators, dict):
-            args = conanfile.generators[generator_name]
         try:
             generator_class = registered_generators[generator_name]
         except KeyError:
@@ -87,7 +84,8 @@ def write_generators(conanfile, path, output):
 
         try:
             generator = generator_class(conanfile)
-            if args:
+            if isinstance(conanfile.generators, dict):
+                args = conanfile.generators[generator_name]
                 try:
                     generator.init_args(**args)
                 except TypeError as exc:
