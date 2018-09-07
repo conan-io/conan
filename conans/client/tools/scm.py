@@ -216,8 +216,9 @@ class SVN(SCMBase):
         return self.run("info --show-item url").strip()
 
     def get_qualified_remote_url(self):
-        url = self.run("info --show-item url").strip()
-        revision = self.run("info --show-item revision").strip()
+        # Return url with peg revision
+        url = self.get_remote_url()
+        revision = self.get_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
         
     def is_local_repository(self):
