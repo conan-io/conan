@@ -1100,6 +1100,19 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 class GitToolTest(unittest.TestCase):
 
+    def test_repo_root(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        # Initialized in the root folder
+        git = Git(root_path)
+        self.assertEqual(root_path, git.get_repo_root())
+
+        # Initialized elsewhere
+        subfolder = os.path.join(root_path, 'subfolder')
+        os.makedirs(subfolder)
+        git = Git(subfolder)
+        self.assertEqual(root_path, git.get_repo_root())
+
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
         tmp = temp_folder()
@@ -1204,12 +1217,15 @@ class GitToolTest(unittest.TestCase):
 
     def git_to_capture_branch_test(self):
         conanfile = """
+import re
 from conans import ConanFile, tools
 
 def get_version():
     git = tools.Git()
     try:
-        return "%s_%s" % (git.get_branch(), git.get_revision())
+        branch = git.get_branch()
+        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+        return "%s_%s" % (branch, git.get_revision())
     except:
         return None
 
