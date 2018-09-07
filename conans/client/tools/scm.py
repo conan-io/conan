@@ -126,6 +126,9 @@ class Git(SCMBase):
             pass
         return None
 
+    def get_qualified_remote_url(self):
+        return self.get_remote_url()
+
     def get_commit(self):
         self._check_git_repo()
         try:
@@ -203,6 +206,11 @@ class SVN(SCMBase):
         return excluded_list
 
     def get_remote_url(self):
+        url = self.run("info --show-item url").strip()
+        revision = self.run("info --show-item revision").strip()
+        return "{url}@{revision}".format(url=url, revision=revision)
+
+    def get_qualified_remote_url(self):
         url = self.run("info --show-item url").strip()
         revision = self.run("info --show-item revision").strip()
         return "{url}@{revision}".format(url=url, revision=revision)
