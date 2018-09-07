@@ -116,7 +116,6 @@ class PluginManager(object):
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
-                execfile(plugin_path)
                 loaded = __import__(filename)
                 sys.dont_write_bytecode = False
             # Put all imported files under a new package name
