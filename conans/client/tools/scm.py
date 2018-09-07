@@ -238,8 +238,6 @@ class SVN(SCMBase):
             if branch is None:
                 return None
             else:
-                # Replace non alphanumeric
-                branch = re.sub('[^0-9a-zA-Z]+', '_', branch[0])
-                return branch
+                return branch[0]
         except Exception as e:
             raise ConanException("Unable to get svn branch from %s\n%s" % (self.folder, str(e)))
