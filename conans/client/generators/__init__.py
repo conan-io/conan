@@ -71,16 +71,14 @@ registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
 registered_generators.add("json", JsonGenerator)
 
-own_generator_names = registered_generators.available
-
 
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
     for generator_name in conanfile.generators:
-        data = None
+        args = None
         if isinstance(conanfile.generators, dict):
-            data = conanfile.generators[generator_name]
+            args = conanfile.generators[generator_name]
         try:
             generator_class = registered_generators[generator_name]
         except KeyError:
@@ -89,17 +87,16 @@ def write_generators(conanfile, path, output):
 
         try:
             generator = generator_class(conanfile)
-            if data:
+            if args:
                 try:
-                    generator.init_data(**data)
+                    generator.init_args(**args)
                 except TypeError as exc:
                     raise ConanException("Invalid arguments passed to "
-                                         "'%s' generator: %s" %  (generator_name, exc))
+                                         "'%s' generator: %s" % (generator_name, exc))
         except TypeError:
             # To allow old-style generator packages to work (e.g. premake)
             output.warn("Generator %s failed with new __init__(), trying old one")
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-
 
         try:
             generator.output_path = path

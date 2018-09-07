@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractproperty
 
+from conans.errors import ConanException
+
 
 class Generator(object):
     __metaclass__ = ABCMeta
@@ -10,10 +12,9 @@ class Generator(object):
         self._deps_env_info = conanfile.deps_env_info
         self._env_info = conanfile.env_info
         self._deps_user_info = conanfile.deps_user_info
-        self.data = None
 
-    def init_data(self, **kwargs):
-        self.data = kwargs
+    def init_args(self, **kwargs):
+        raise ConanException("This generator do not accept arguments")
 
     @property
     def deps_build_info(self):
