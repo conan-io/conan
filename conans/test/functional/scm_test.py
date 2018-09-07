@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
-from conans.util.files import load, rmdir
+from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''
 import os
@@ -398,7 +398,8 @@ class ConanLib(ConanFile):
     def test_scm_bad_filename(self):
         # Fixes: #3500
         badfilename = "\xE3\x81\x82badfile.txt"
-        path, _ = create_local_git_repo({badfilename: "contents"}, branch="my_release")
+        path, _ = create_local_git_repo({"goodfile.txt": "good contents"}, branch="my_release")
+        save(to_file_bytes(os.path.join(self.client.current_folder, badfilename)), "contents")
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
 
         conanfile = '''
