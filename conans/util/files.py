@@ -19,7 +19,11 @@ def walk(top, **kwargs):
         # If py2 os.walk receives a unicode object, it will fail if a non-ascii file name is found
         # during the iteration. More info:
         # https://stackoverflow.com/questions/21772271/unicodedecodeerror-when-performing-os-walk
-        top = str(top)
+        try:
+            top = str(top)
+        except UnicodeDecodeError:
+            pass
+
     return os.walk(top, **kwargs)
 
 
