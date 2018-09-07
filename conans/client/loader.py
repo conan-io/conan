@@ -234,7 +234,7 @@ def _parse_file(conan_file_path):
         with chdir(current_dir):
             sys.dont_write_bytecode = True
             print("Before import:", filename)
-            loaded = __import__(filename)
+            loaded = __import__(filename, locals=None, globals=globals(), fromlist=[])
             print("After import:", filename)
             loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
