@@ -81,3 +81,6 @@ class SCM(object):
 
     def is_pristine(self):
         return self.repo.is_pristine()
+
+    def get_repo_root(self):
+        return self.repo.get_repo_root()
