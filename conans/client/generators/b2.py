@@ -263,7 +263,7 @@ class B2Generator(Generator):
                 'MinSizeRel': 'minsizerel',
             }.get(self.conanfile.settings.get_safe('build_type'))
             self._b2_variation['cxxstd'] = {
-                '98': '98', 'gnnu98': '98',
+                '98': '98', 'gnu98': '98',
                 '11': '11', 'gnu11': '11',
                 '14': '14', 'gnu14': '14',
                 '17': '17', 'gnu17': '17',
@@ -272,7 +272,7 @@ class B2Generator(Generator):
                 '2c': '2c', 'gnu2c': '2c',
             }.get(self.conanfile.settings.get_safe('cppstd'))
             self._b2_variation['cxxstd:dialect'] = {
-                '98': None, 'gnnu98': 'gnu',
+                '98': None, 'gnu98': 'gnu',
                 '11': None, 'gnu11': 'gnu',
                 '14': None, 'gnu14': 'gnu',
                 '17': None, 'gnu17': 'gnu',
