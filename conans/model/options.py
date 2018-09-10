@@ -176,11 +176,7 @@ class OptionsValues(object):
             new_values = []
             for v in values:
                 option, value = v.split("=", 1)
-                option, value = option.strip(), value.strip()
-                if not value:
-                    raise ConanException("Please define a default value for '%s' in"
-                                         "'default_options'" % option)
-                new_values.append((option, value))
+                new_values.append((option.strip(), value.strip()))
             values = new_values
 
         # handle list of tuples (name, value)
@@ -292,11 +288,7 @@ class OptionsValues(object):
             if not line:
                 continue
             name, value = line.split("=", 1)
-            name, value = name.strip(), value.strip()
-            if not value:
-                raise ConanException("Please define a default value for '%s' in"
-                                     "'default_options'" % name)
-            result.append((name, value))
+            result.append((name.strip(), value.strip()))
         return OptionsValues(result)
 
     @property
@@ -422,9 +414,7 @@ class PackageOptions(object):
         return PackageOptions(yaml.load(text) or {})
 
     def get_safe(self, field):
-        if field not in self._data:
-            return None
-        return self._data[field]
+        return self._data.get(field)
 
     def validate(self):
         for child in self._data.values():
@@ -498,6 +488,12 @@ class PackageOptions(object):
                 self._data[k].value = values._dict[k]
             except KeyError:
                 self._data.pop(k)
+
+    def initialize_patterns(self, values):
+        # Need to apply only those that exists
+        for option, value in values.items():
+            if option in self._data:
+                self._data[option].value = value
 
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
@@ -632,7 +628,7 @@ class Options(object):
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, name)
 
-    def initialize_upstream(self, user_values, local=False):
+    def initialize_upstream(self, user_values, local=False, name=None):
         """ used to propagate from downstream the options to the upper requirements
         """
         if user_values is not None:
@@ -641,6 +637,12 @@ class Options(object):
             if local:
                 self._package_options.set_local(user_values._package_values)
             else:
+                # This code is necessary to process patterns like *:shared=True
+                # To apply to the current consumer, which might not have name
+                for pattern, pkg_options in sorted(user_values._reqs_options.items()):
+                    if fnmatch.fnmatch(name or "", pattern):
+                        self._package_options.initialize_patterns(pkg_options)
+                # Then, the normal assignment of values, which could override patterns
                 self._package_options.values = user_values._package_values
             for package_name, package_values in user_values._reqs_options.items():
                 pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
