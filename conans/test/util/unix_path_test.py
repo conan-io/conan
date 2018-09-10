@@ -13,7 +13,7 @@ from conans.util.files import mkdir
 class GetCasedPath(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def test_case(self):
-        folder = temp_folder()
+        folder = get_cased_path(temp_folder())
         p1 = os.path.join(folder, "MyFolder", "Subfolder")
         mkdir(p1)
         p2 = get_cased_path(p1)
