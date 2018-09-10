@@ -9,7 +9,7 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 
-from conans.errors import ConanException, NoRemoteAvailable
+from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
@@ -1267,7 +1267,11 @@ class Command(object):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods
         """
-        errors = False
+        SUCCESS = 0
+        ERROR_GENERAL = 1
+        ERROR_INVALID_CONFIGURATION = 5
+
+        ret_code = SUCCESS
         try:
             try:
                 command = args[0][0]
@@ -1287,24 +1291,28 @@ class Command(object):
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
-            errors = True
+            ret_code = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:
                 logger.error(exc)
                 self._user_io.out.error("Exiting with code: %d" % exc.code)
-            errors = exc.code
+            ret_code = exc.code
+        except ConanInvalidConfiguration as exc:
+            ret_code = ERROR_INVALID_CONFIGURATION
+            msg = exception_message_safe(exc)
+            self._user_io.out.error(msg)
         except ConanException as exc:
-            errors = True
+            ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
-            errors = True
+            ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
 
-        return errors
+        return ret_code
 
 
 def get_reference_fields(arg_reference):
@@ -1394,6 +1402,7 @@ def main(args):
         2: Migration error
         3: Ctrl+C
         4: Ctrl+Break
+        5: Invalid configuration (done)
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
