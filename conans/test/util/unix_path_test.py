@@ -12,16 +12,22 @@ from conans.util.files import mkdir
 
 class GetCasedPath(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def test_case(self):
+    def test_case_existing(self):
         folder = temp_folder()
         p1 = os.path.join(folder, "MyFolder", "Subfolder")
         mkdir(p1)
-        p2 = get_cased_path(p1)
-        self.assertEqual(p1, p2)
 
-        p3 = os.path.join(folder, "myfolder", "subfolder")
-        p4 = get_cased_path(p3)
-        self.assertEqual(p1, p4)
+        self.assertEqual(p1, get_cased_path(p1))  # Idempotent
+        self.assertEqual(p1, get_cased_path(os.path.join(folder, "myfolder", "subfolder")))
+
+    def test_case_not_existing(self):
+        try:
+            non_existing_path = os.path.abspath(
+                os.path.join("this", "Path", "does", "NOT", "Exists"))
+            p = get_cased_path(non_existing_path)
+            self.assertEqual(p, non_existing_path)
+        except Exception as e:
+            self.fail("Unexpected exception: %s" % e)
 
 
 class UnixPathTest(unittest.TestCase):
