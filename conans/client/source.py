@@ -161,11 +161,11 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
 
 
 def config_source_local(dest_dir, conanfile, conanfile_folder, output, plugin_manager):
-    output.info('Configuring sources in %s' % dest_dir)
     conanfile.source_folder = dest_dir
     conanfile.build_folder = None
     conanfile.package_folder = None
     plugin_manager.execute_plugins_method("pre_source", conanfile)
+    output.info('Configuring sources in %s' % dest_dir)
     with tools.chdir(dest_dir):
         try:
             with conanfile_exception_formatter(str(conanfile), "source"):

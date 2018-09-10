@@ -7,7 +7,7 @@ from conans.client.source import complete_recipe_sources
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
-             client_cache, out, recorder, loader):
+             client_cache, out, recorder, loader, plugin_manager):
 
     assert(isinstance(reference, ConanFileReference))
     output = ScopedOutput(str(reference), out)
@@ -16,36 +16,39 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     if not package:  # Search the reference first, and raise if it doesn't exist
         raise ConanException("'%s' not found in remote" % str(reference))
 
+    plugin_manager.execute_plugins_method("pre_download", reference=str(reference),
+                                          remote_name=remote_name)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
     registry.set_ref(reference, remote.name)
 
-    if recipe:
-        return
+    if not recipe:
+        # Download the sources too, don't be lazy
+        conan_file_path = client_cache.conanfile(reference)
+        conanfile = loader.load_class(conan_file_path)
+        complete_recipe_sources(remote_manager, client_cache, registry,
+                                conanfile, reference)
 
-    # Download the sources too, don't be lazy
-    conan_file_path = client_cache.conanfile(reference)
-    conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, client_cache, registry,
-                            conanfile, reference)
-
-    if package_ids:
-        _download_binaries(reference, package_ids, client_cache, remote_manager,
-                           remote, output, recorder, loader)
-    else:
-        output.info("Getting the complete package list "
-                    "from '%s'..." % str(reference))
-        packages_props = remote_manager.search_packages(remote, reference, None)
-        if not packages_props:
-            output = ScopedOutput(str(reference), out)
-            output.warn("No remote binary packages found in remote")
+        if package_ids:
+            _download_binaries(reference, package_ids, client_cache, remote_manager,
+                               remote, output, recorder, loader)
         else:
-            _download_binaries(reference, list(packages_props.keys()), client_cache,
-                               remote_manager, remote, output, recorder, loader)
+            output.info("Getting the complete package list "
+                        "from '%s'..." % str(reference))
+            packages_props = remote_manager.search_packages(remote, reference, None)
+            if not packages_props:
+                output = ScopedOutput(str(reference), out)
+                output.warn("No remote binary packages found in remote")
+            else:
+                _download_binaries(reference, list(packages_props.keys()), client_cache,
+                                   remote_manager, remote, output, recorder, loader, plugin_manager)
+    plugin_manager.execute_plugins_method("post_download", conanfile=(conanfile or None),
+                                          conanfile_path=(conan_file_path or None),
+                                          reference=str(reference), remote_name=remote_name)
 
 
 def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,
-                       recorder, loader):
+                       recorder, loader, plugin_manager):
     conanfile_path = client_cache.conanfile(reference)
     if not os.path.exists(conanfile_path):
         raise Exception("Download recipe first")
@@ -55,5 +58,8 @@ def _download_binaries(reference, package_ids, client_cache, remote_manager, rem
     for package_id in package_ids:
         package_ref = PackageReference(reference, package_id)
         package_folder = client_cache.package(package_ref, short_paths=short_paths)
+        plugin_manager.execute_plugins_method("pre_download_package", package_id=package_id)
         output.info("Downloading %s" % str(package_ref))
         remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
+        plugin_manager.execute_plugins_method("post_download_package")
+    plugin_manager.deinitialize_plugins()

@@ -311,11 +311,11 @@ class ConanAPIV1(object):
             keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
-                self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
+                self._plugin_manager.execute_plugins_method("pre_export", conanfile,
+                                                            conanfile_path, str(reference))
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                            self._client_cache)
-                self._plugin_manager.execute_plugins_method("post_export", conanfile,
-                                                            conanfile_path)
+                self._plugin_manager.execute_plugins_method("post_export")
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -381,9 +381,10 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path,
+                                                    str(reference))
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out, self._client_cache)
-        self._plugin_manager.execute_plugins_method("post_export", conanfile, conanfile_path)
+        self._plugin_manager.execute_plugins_method("post_export")
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -638,7 +639,8 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
+        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path,
+                                                    str(reference))
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                    self._client_cache)
         self._plugin_manager.execute_plugins_method("post_export")

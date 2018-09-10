@@ -15,7 +15,7 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, pl
     mkdir(package_folder)
     conanfile.package_folder = src_package_folder
 
-    plugin_manager.execute_plugins_method("pre_package", conanfile)
+    plugin_manager.execute_plugins_method("pre_package", conanfile, package_id=pkg_id)
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
 
@@ -53,7 +53,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
 
-        plugin_manager.execute_plugins_method("pre_package", conanfile)
+        plugin_manager.execute_plugins_method("pre_package", conanfile, package_id=pkg_id)
 
         def recipe_has(attribute):
             return attribute in conanfile.__class__.__dict__
@@ -90,7 +90,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
-    plugin_manager.execute_plugins_method("post_package", conanfile)
+    plugin_manager.execute_plugins_method("post_package", conanfile, package_id=pkg_id)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):

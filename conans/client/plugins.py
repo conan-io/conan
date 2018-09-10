@@ -4,11 +4,80 @@ import os
 import sys
 import uuid
 
-from past.builtins import execfile
 
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
 from conans.tools import chdir
+
+
+NOT_DEINITIALIZE_POST_METHODS = "post_download_package", "post_upload_package"
+
+class ConanPlugin(object):
+
+    def __init__(self, output, conanfile=None, conanfile_path=None, reference=None, package_id=None,
+                 remote_name=None):
+        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
+        self.conanfile = conanfile
+        self.conanfile_path = conanfile_path
+        self.reference = reference
+        self.package_id = package_id
+        self.remote_name = remote_name
+
+    @property
+    def output(self):
+        return self._output
+
+    @output.setter
+    def output(self, output):
+        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
+
+    def pre_export(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_export(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_source(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_source(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_build(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_build(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_package(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_package(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_upload(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_upload(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_upload_package(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_upload_package(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_download(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_download(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def pre_download_package(self):
+        raise NotImplementedError("Implement in subclass")
+
+    def post_download_package(self):
+        raise NotImplementedError("Implement in subclass")
 
 
 class PluginManager(object):
@@ -19,7 +88,6 @@ class PluginManager(object):
         self.loaded_plugins = []
         self.plugins = None
         self.output = output
-        self._last_method_executed = None
 
     def load_plugins(self):
         for name in self._plugin_names:
@@ -31,10 +99,11 @@ class PluginManager(object):
             plugin = self.load_plugin(name)
             self.loaded_plugins.append(plugin)
 
-    def initialize_plugins(self, conanfile=None, conanfile_path=None, remote_name=None):
+    def initialize_plugins(self, conanfile=None, conanfile_path=None, reference=None,
+                           package_id=None, remote_name=None):
         if not self.plugins:
-            self.plugins = [plugin(self.output, conanfile, conanfile_path, remote_name)
-                            for plugin in self.loaded_plugins]
+            self.plugins = [plugin(self.output, conanfile, conanfile_path, reference, package_id,
+                                   remote_name) for plugin in self.loaded_plugins]
         else:
             for plugin in self.plugins:
                 if self.output:
@@ -43,6 +112,10 @@ class PluginManager(object):
                     plugin.conanfile = conanfile
                 if conanfile_path:
                     plugin.conanfile_path = conanfile_path
+                if reference:
+                    plugin.reference = reference
+                if package_id:
+                    plugin.package_id = package_id
                 if remote_name:
                     plugin.remote_name = remote_name
 
@@ -50,15 +123,13 @@ class PluginManager(object):
         for plugin in self.plugins:
             plugin.conanfile = None
             plugin.conanfile_path = None
+            plugin.reference = None
+            plugin.package_id = None
             plugin.remote_name = None
 
     def execute_plugins_method(self, method_name, conanfile=None, conanfile_path=None,
-                               remote_name=None):
-        if self._last_method_executed:
-            if self._last_method_executed.split("_")[:-1] != method_name.split("_"):
-                self.deinitialize_plugins()
-        self._last_method_executed = method_name
-        self.initialize_plugins(conanfile, conanfile_path, remote_name)
+                               reference=None, package_id=None, remote_name=None):
+        self.initialize_plugins(conanfile, conanfile_path, reference, package_id, remote_name)
 
         for plugin in self.plugins:
             try:
@@ -69,6 +140,9 @@ class PluginManager(object):
             except Exception as e:
                 raise ConanException("[PLUGIN: %s()] %s\n%s" % (method_name, e,
                                                                 traceback.format_exc()))
+
+        if method_name.startswith("post_") and method_name not in NOT_DEINITIALIZE_POST_METHODS:
+            self.deinitialize_plugins()
 
     def load_plugin(self, plugin_name):
         filename = "%s.py" % plugin_name
@@ -141,62 +215,3 @@ class PluginManager(object):
             sys.path.pop()
 
         return loaded, filename
-
-
-class ConanPlugin(object):
-
-    def __init__(self, output, conanfile=None, conanfile_path=None, remote_name=None):
-        self.conanfile = conanfile
-        self.conanfile_path = conanfile_path
-        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
-        self.remote_name = remote_name
-
-    @property
-    def output(self):
-        return self._output
-
-    @output.setter
-    def output(self, output):
-        self._output = ScopedOutput("[PLUGIN - %s]" % self.__class__.__name__, output)
-
-    def pre_export(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_export(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_source(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_source(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_build(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_build(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_package(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_package(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_upload(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_upload(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_install(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_install(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def pre_download(self):
-        raise NotImplementedError("Implement in subclass")
-
-    def post_download(self):
-        raise NotImplementedError("Implement in subclass")

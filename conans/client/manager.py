@@ -70,7 +70,8 @@ class ConanManager(object):
         conanfile.info.recipe_hash = recipe_hash
         conanfile.develop = True
         package_output = ScopedOutput(str(reference), self._user_io.out)
-        self._plugin_manager.initialize_plugins(conanfile_path=conan_file_path)
+        self._plugin_manager.initialize_plugins(conanfile_path=conan_file_path,
+                                                reference=str(reference))
         if package_folder:
             packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
                                 package_output, self._plugin_manager)

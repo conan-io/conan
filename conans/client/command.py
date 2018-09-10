@@ -318,6 +318,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         cwd = get_cwd()
+        cwd = get_cwd()
 
         info = None
         try:

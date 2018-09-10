@@ -167,7 +167,9 @@ class _ConanPackageBuilder(object):
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            self._plugin_manager.execute_plugins_method("pre_build", self._conan_file)
+            self._plugin_manager.execute_plugins_method("pre_build", self._conan_file,
+                                                        reference=str(self._conan_ref),
+                                                        package_id=self._package_reference.package_id)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
             self._out.highlight("Calling build()")
@@ -176,7 +178,7 @@ class _ConanPackageBuilder(object):
 
             self._out.success("Package '%s' built" % self._conan_file.info.package_id())
             self._out.info("Build folder %s" % self.build_folder)
-            self._plugin_manager.execute_plugins_method("post_build", self._conan_file)
+            self._plugin_manager.execute_plugins_method("post_build")
         except Exception as exc:
             self._out.writeln("")
             self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
@@ -348,8 +350,14 @@ class ConanInstaller(object):
         report_copied_files(copied_files, output)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
+        self._plugin_manager.execute_plugins_method("pre_download_package",
+                                                    reference=str(package_reference.conan),
+                                                    package_id=package_reference.package_id,
+                                                    remote_name=remote.name)
         self._remote_manager.get_package(package_reference, package_folder,
                                          remote, output, self._recorder)
+        self._plugin_manager.execute_plugins_method("post_download_package")
+        self._plugin_manager.deinitialize_plugins()
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
