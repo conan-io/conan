@@ -13,7 +13,7 @@ from conans.util.files import mkdir
 class GetCasedPath(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def test_case_existing(self):
-        folder = temp_folder()
+        folder = get_cased_path(temp_folder())
         p1 = os.path.join(folder, "MyFolder", "Subfolder")
         mkdir(p1)
 
@@ -29,9 +29,10 @@ class GetCasedPath(unittest.TestCase):
         except Exception as e:
             self.fail("Unexpected exception: %s" % e)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def test_case_partial_exists(self):
         try:
-            folder = temp_folder()
+            folder = get_cased_path(temp_folder())
             p1 = os.path.join(folder, "MyFolder", "Subfolder")
             mkdir(p1)
 
