@@ -21,27 +21,21 @@ class GetCasedPath(unittest.TestCase):
         self.assertEqual(p1, get_cased_path(os.path.join(folder, "myfolder", "subfolder")))
 
     def test_case_not_existing(self):
-        try:
-            non_existing_path = os.path.abspath(
-                os.path.join("this", "Path", "does", "NOT", "Exists"))
-            p = get_cased_path(non_existing_path)  # If not exists from the root, returns as is
-            self.assertEqual(p, non_existing_path)
-        except Exception as e:
-            self.fail("Unexpected exception: %s" % e)
+        non_existing_path = os.path.abspath(
+            os.path.join("this", "Path", "does", "NOT", "Exists"))
+        p = get_cased_path(non_existing_path)  # If not exists from the root, returns as is
+        self.assertEqual(p, non_existing_path)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def test_case_partial_exists(self):
-        try:
-            folder = get_cased_path(temp_folder())
-            p1 = os.path.join(folder, "MyFolder", "Subfolder")
-            mkdir(p1)
+        folder = get_cased_path(temp_folder())
+        p1 = os.path.join(folder, "MyFolder", "Subfolder")
+        mkdir(p1)
 
-            non_existing_path = os.path.join(folder, "myfolder", "subfolder", "not-existing")
-            # The first part of the path will be properly cased.
-            self.assertEqual(os.path.join(p1, "not-existing"),
-                             get_cased_path(non_existing_path))
-        except Exception as e:
-            self.fail("Unexpected exception: %s" % e)
+        non_existing_path = os.path.join(folder, "myfolder", "subfolder", "not-existing")
+        # The first part of the path will be properly cased.
+        self.assertEqual(os.path.join(p1, "not-existing"),
+                         get_cased_path(non_existing_path))
 
 
 class UnixPathTest(unittest.TestCase):
