@@ -37,7 +37,7 @@ class GetCasedPath(unittest.TestCase):
             mkdir(p1)
 
             non_existing_path = os.path.join(folder, "myfolder", "subfolder", "not-existing")
-            # The first path of the path will be properly cased.
+            # The first part of the path will be properly cased.
             self.assertEqual(os.path.join(p1, "not-existing"),
                              get_cased_path(non_existing_path))
         except Exception as e:
