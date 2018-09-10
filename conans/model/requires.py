@@ -18,6 +18,21 @@ class Requirement(object):
         self.override = override
         self.private = private
 
+    def serial(self):
+        result = {}
+        result["conan"] = self.conan_reference.serial()
+        result["range"] = self.range_reference.serial()
+        result["override"] = self.override
+        result["private"] = self.private
+        return result
+
+    @staticmethod
+    def unserial(data):
+        result = Requirement(ConanFileReference.unserial(data["conan"]),
+                             data["private"], data["override"])
+        result.range_reference = ConanFileReference.unserial(data["range"])
+        return result
+
     @property
     def version_range(self):
         """ returns the version range expression, without brackets []
@@ -66,6 +81,18 @@ class Requirements(OrderedDict):
                 self.add(ref, private=private, override=override)
             else:
                 self.add(v)
+
+    def serial(self):
+        result = [v.serial() for v in self.values()]
+        return result
+
+    @staticmethod
+    def unserial(data):
+        result = Requirements()
+        for d in data:
+            d = Requirement.unserial(d)
+            result[d.conan_reference.name] = d
+        return result
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be

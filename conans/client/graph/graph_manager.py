@@ -19,6 +19,7 @@ from conans.client.loader import ProcessedProfile
 import json
 from conans.client.installer import ConanInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
+import time
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -61,6 +62,7 @@ class GraphManager(object):
         """loads a conanfile for local flow: source, imports, package, build
         """
         if deps_info_required:
+            t1 = time.time()
             try:
                 serial_path = os.path.join(info_folder, "serial_graph.json")
                 graph_str = load(serial_path)
@@ -68,13 +70,16 @@ class GraphManager(object):
             except:
                 raise ConanException("Conan serial_graph.json NOT FOUND. Run 'conan install' first")
             graph_json = json.loads(graph_str)
-            deps_graph = DepsGraph.unserial(graph_json, conanfile_path, self._output, self._proxy, self._loader,
+            profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
+            deps_graph = DepsGraph.unserial(graph_json, profile.env_values, conanfile_path,
+                                            self._output, self._proxy, self._loader,
                                             scoped_output=output)
             conanfile = deps_graph.root.conanfile
-
+            print "DepsGraph.unserial() ", time.time() - t1
             installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                        self._registry, recorder=ActionRecorder(), workspace=None)
             installer.unserial(deps_graph)
+            print "DepsGraph. installer propagate() ", time.time() - t1
         else:
             profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
             cache_settings = self._client_cache.settings.copy()
@@ -109,6 +114,7 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
                    recorder, workspace):
+        t1 = time.time()
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -152,6 +158,7 @@ class GraphManager(object):
         deps_graph.root.path = root_path
 
         build_mode.report_matches()
+        print "GraphManager.load_graph() ", time.time() - t1
         return deps_graph, conanfile, cache_settings
 
     @staticmethod

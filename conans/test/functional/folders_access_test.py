@@ -198,7 +198,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": c1}, clean_first=True)
         error = self.client.run("package .", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
+        self.assertIn("ERROR: Conan serial_graph.json NOT FOUND. Run 'conan install' first", self.client.out)
 
         self.client.run("install . --build missing")
 
@@ -214,7 +214,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": c1}, clean_first=True)
         error = self.client.run("imports .", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
+        self.assertIn("ERROR: Conan serial_graph.json NOT FOUND. Run 'conan install' first", self.client.out)
 
     def deploy_test(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,

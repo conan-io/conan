@@ -156,14 +156,15 @@ class ConanFile(object):
         result["info"] = self.info.serial()
         result["settings"] = self.settings.serial()
         result["options"] = self.options.serial()
+        result["requires"] = self.requires.serial()
         return result
 
-    def unserial(self, data):
+    def unserial(self, data, env):
         self.info = ConanInfo.unserial(data["info"])
         self.settings = Settings.unserial(data["settings"])
         self.options = Options.unserial(data["options"])
-        self.requires = Requirements()
-        self._env_values = EnvValues()
+        self.requires = Requirements.unserial(data["requires"])
+        self._env_values = env.copy()  # user specified -e
 
     @property
     def env(self):

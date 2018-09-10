@@ -159,9 +159,7 @@ class ConanManager(object):
         if install_folder:
             # write serialized graph
             serialized_graph = deps_graph.serial()
-            print serialized_graph
             serialized_graph_str = json.dumps(serialized_graph)
-            print serialized_graph_str
             serialized_graph_path = os.path.join(install_folder, "serial_graph.json")
             save(serialized_graph_path, serialized_graph_str)
 

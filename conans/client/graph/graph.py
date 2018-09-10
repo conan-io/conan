@@ -52,7 +52,7 @@ class Node(object):
         return result
 
     @staticmethod
-    def unserial(data, conanfile_path, output, proxy, loader, update=False, scoped_output=None):
+    def unserial(data, env, conanfile_path, output, proxy, loader, update=False, scoped_output=None):
         path = data["path"]
         conan_ref = ConanFileReference.unserial(data["conan_ref"])
         # Remotes needs to be decoupled
@@ -71,7 +71,7 @@ class Node(object):
             conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
         else:
             conanfile = loader.load_basic(conanfile_path, output, conan_ref)
-        conanfile.unserial(data["conanfile"])
+        conanfile.unserial(data["conanfile"], env)
 
         result = Node(conan_ref, conanfile)
         result.binary = data["binary"]
@@ -188,9 +188,9 @@ class DepsGraph(object):
         return result
 
     @staticmethod
-    def unserial(data, conanfile_path, output, proxy, loader, scoped_output=None):
+    def unserial(data, env, conanfile_path, output, proxy, loader, scoped_output=None):
         result = DepsGraph()
-        nodes_dict = {id_: Node.unserial(n, conanfile_path, output, proxy, loader, scoped_output=scoped_output) for id_, n in data["nodes"].items()}
+        nodes_dict = {id_: Node.unserial(n, env, conanfile_path, output, proxy, loader, scoped_output=scoped_output) for id_, n in data["nodes"].items()}
         result.nodes = set(nodes_dict.values())
         result.root = nodes_dict[data["root"]]
         for edge in data["edges"]:

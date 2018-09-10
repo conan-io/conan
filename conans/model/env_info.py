@@ -33,7 +33,9 @@ class EnvValues(object):
     @staticmethod
     def unserial(data):
         result = EnvValues()
-        result._data = data
+        result._data = defaultdict(dict)
+        for k, v in data.items():
+            result._data[k] = v
         return result
 
     def copy(self):
