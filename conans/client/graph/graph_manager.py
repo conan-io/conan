@@ -61,15 +61,20 @@ class GraphManager(object):
         """loads a conanfile for local flow: source, imports, package, build
         """
         if deps_info_required:
-            graph_str = load(os.path.join(info_folder, "serial_graph.json"))
+            try:
+                serial_path = os.path.join(info_folder, "serial_graph.json")
+                graph_str = load(serial_path)
+                output.info("Found serial_graph.json file: %s" % serial_path)
+            except:
+                raise ConanException("Conan serial_graph.json NOT FOUND. Run 'conan install' first")
             graph_json = json.loads(graph_str)
-            deps_graph = DepsGraph.unserial(graph_json, self._output, self._proxy, self._loader)
-            print "GRAPH ", deps_graph
+            deps_graph = DepsGraph.unserial(graph_json, conanfile_path, self._output, self._proxy, self._loader,
+                                            scoped_output=output)
             conanfile = deps_graph.root.conanfile
 
             installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                        self._registry, recorder=ActionRecorder(), workspace=None)
-            installer.install(deps_graph, keep_build=False)
+            installer.unserial(deps_graph)
         else:
             profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
             cache_settings = self._client_cache.settings.copy()

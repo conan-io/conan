@@ -191,11 +191,17 @@ class OptionsValues(object):
                 self._package_values.add_option(k, v)
 
     def serial(self):
-        return self.as_list()
+        result = {}
+        result["package_values"] = self._package_values.serial()
+        result["reqs_options"] = {k: v.serial() for k, v in self._reqs_options.items()}
+        return result
 
     @staticmethod
     def unserial(data):
-        return OptionsValues(data)
+        result = OptionsValues()
+        result._package_values = PackageOptionValues.unserial(data["package_values"])
+        result._reqs_options = {k: PackageOptionValues.unserial(v) for k, v in data["reqs_options"].items()}
+        return result
 
     def update(self, other):
         self._package_values.update(other._package_values)

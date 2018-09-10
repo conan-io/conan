@@ -21,6 +21,7 @@ from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
 from conans.model.values import Values
 import json
+import time
 
 
 class ConanManager(object):
@@ -158,10 +159,12 @@ class ConanManager(object):
         if install_folder:
             # write serialized graph
             serialized_graph = deps_graph.serial()
+            print serialized_graph
             serialized_graph_str = json.dumps(serialized_graph)
             print serialized_graph_str
-            save(os.path.join(install_folder, "serial_graph.json"),
-                 serialized_graph_str)
+            serialized_graph_path = os.path.join(install_folder, "serial_graph.json")
+            save(serialized_graph_path, serialized_graph_str)
+
             # Write generators
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators

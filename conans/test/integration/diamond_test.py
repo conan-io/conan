@@ -49,8 +49,9 @@ class DiamondTester(object):
         self.conan.run("upload %s" % str(conan_ref))
 
     def _check_individual_deps(self, client):
-        self.test_obj.assertIn("INCLUDE [", client.user_io.out)
-        self.test_obj.assertIn(".conan/data/Hello0/0.1/lasote/stable", client.user_io.out)
+        out = str(client.out).replace("\\", "/").replace("//", "/")
+        self.test_obj.assertIn("INCLUDE [", out)
+        self.test_obj.assertIn(".conan/data/Hello0/0.1/lasote/stable", out)
         build_file = os.path.join(client.current_folder, BUILD_INFO)
         content = load(build_file)
         cmakebuildinfo = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))

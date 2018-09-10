@@ -28,7 +28,7 @@ from conans.util.tracer import log_package_built,\
     log_package_got_from_local_cache
 from conans.client.tools.env import pythonpath
 from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING,\
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
+    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE, BINARY_WORKSPACE
 from conans.client.file_copier import report_copied_files
 
 
@@ -251,6 +251,33 @@ class ConanInstaller(object):
         self._registry = registry
         self._recorder = recorder
         self._workspace = workspace
+
+    def unserial(self, deps_graph):
+        nodes_by_level = deps_graph.by_levels()
+        root_level = nodes_by_level.pop()
+        root_node = root_level[0]
+        inverse_levels = deps_graph.inverse_levels()
+
+        for level in nodes_by_level:
+            for node in level:
+                conan_ref, conan_file = node.conan_ref, node.conanfile
+                output = ScopedOutput(str(conan_ref), self._out)
+                package_id = conan_file.info.package_id()
+                package_ref = PackageReference(conan_ref, package_id)
+
+                self._propagate_info(node, inverse_levels, deps_graph, output)
+                if node.binary == BINARY_SKIP:  # Privates not necessary
+                    continue
+
+                if node.binary == BINARY_WORKSPACE:
+                    raise Exception("NOT MANAGING WORKSPACES YET")
+                else:
+                    package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                    self._call_package_info(conan_file, package_folder)
+
+        # Finally, propagate information to root node (conan_ref=None)
+        self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
+
 
     def install(self, deps_graph, keep_build=False):
         # order by levels and separate the root node (conan_ref=None) from the rest

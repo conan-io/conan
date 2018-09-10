@@ -6,6 +6,7 @@ from conans.model.conan_file import ConanFile
 from conans.client.remote_registry import Remote
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.output import ScopedOutput
+from conans.client.loader import ProcessedProfile
 
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -51,20 +52,25 @@ class Node(object):
         return result
 
     @staticmethod
-    def unserial(data, output, proxy, loader, update=False):
+    def unserial(data, conanfile_path, output, proxy, loader, update=False, scoped_output=None):
         path = data["path"]
         conan_ref = ConanFileReference.unserial(data["conan_ref"])
         # Remotes needs to be decoupled
         remote = Remote.unserial(data["remote"])
         remote_name = remote.name if remote else None
         if path:
-            conanfile_path = path
+            conanfile_path = conanfile_path
+            output = scoped_output
         else:
             result = proxy.get_recipe(conan_ref, check_updates=False, update=update,
                                       remote_name=remote_name, recorder=ActionRecorder())
             conanfile_path, recipe_status, remote, _ = result
-        output = ScopedOutput(str(conan_ref or "Project"), output)
-        conanfile = loader.load_basic(conanfile_path, output, conan_ref)
+            output = ScopedOutput(str(conan_ref or "Project"), output)
+        if conanfile_path.endswith(".txt"):
+            # FIXME: remove this ugly ProcessedProfile
+            conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
+        else:
+            conanfile = loader.load_basic(conanfile_path, output, conan_ref)
         conanfile.unserial(data["conanfile"])
 
         result = Node(conan_ref, conanfile)
@@ -182,9 +188,9 @@ class DepsGraph(object):
         return result
 
     @staticmethod
-    def unserial(data, output, proxy, loader):
+    def unserial(data, conanfile_path, output, proxy, loader, scoped_output=None):
         result = DepsGraph()
-        nodes_dict = {id_: Node.unserial(n, output, proxy, loader) for id_, n in data["nodes"].items()}
+        nodes_dict = {id_: Node.unserial(n, conanfile_path, output, proxy, loader, scoped_output=scoped_output) for id_, n in data["nodes"].items()}
         result.nodes = set(nodes_dict.values())
         result.root = nodes_dict[data["root"]]
         for edge in data["edges"]:
