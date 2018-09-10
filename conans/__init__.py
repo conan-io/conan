@@ -19,5 +19,5 @@ CHECKSUM_DEPLOY = "checksum_deploy"  # Only when v2
 REVISIONS = "revisions"  # Only when enabled in config, not by default look at server_launcher.py
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, API_V2]
 
-__version__ = '1.7.1'
+__version__ = '1.8.0-dev'
 

@@ -505,6 +505,10 @@ class ConanAPIV1(object):
 
     @api_method
     def config_install(self, item, verify_ssl, config_type=None, args=None):
+        # _make_abs_path, but could be not a path at all
+        if item is not None and os.path.exists(item) and not os.path.isabs(item):
+            item = os.path.abspath(item)
+
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type, args)
 

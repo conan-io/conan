@@ -75,3 +75,6 @@ class SCM(object):
 
     def get_revision(self):
         return self.repo.get_revision()
+
+    def get_repo_root(self):
+        return self.repo.get_repo_root()
