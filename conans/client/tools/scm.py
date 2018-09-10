@@ -146,8 +146,12 @@ class Git(SCMBase):
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
 
     def is_pristine(self):
-        return True  # TODO: To be implemented
-
+        status = self.run("status --porcelain")
+        if status:
+            return True
+        else:
+            return False
+        
     get_revision = get_commit
 
     def get_repo_root(self):
@@ -246,7 +250,7 @@ class SVN(SCMBase):
 
     def get_last_changed_revision(self, use_wc_root=True):
         if use_wc_root:
-            return self.run("info {root} --show-item last-changed-revision".format(self.get_repo_root()).strip()
+            return self.run("info {root} --show-item last-changed-revision".format(self.get_repo_root())).strip()
         else:
             return self.run("info --show-item last-changed-revision").strip()
 
