@@ -49,6 +49,37 @@ int main(){
 
 @attr("slow")
 class CMakeTargetsTest(unittest.TestCase):
+    def transitive_flags_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Charlie(ConanFile):
+    def package_info(self):
+        self.cpp_info.sharedlinkflags = ["CharlieFlag"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Charlie/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Beta(ConanFile):
+    requires = "Charlie/0.1@user/testing"
+    def package_info(self):
+        self.cpp_info.sharedlinkflags = ["BetaFlag"]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Beta/0.1@user/testing")
+        conanfile = """from conans import ConanFile, load
+import os
+class Alpha(ConanFile):
+    requires = "Beta/0.1@user/testing"
+    generators = "cmake"
+    def build(self):
+        cmake = load(os.path.join(self.build_folder, "conanbuildinfo.cmake"))
+        self.output.info()
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
+                      '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
 
     def header_only_test(self):
         client = TestClient()
