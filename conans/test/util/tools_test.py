@@ -1102,6 +1102,7 @@ class GitToolTest(unittest.TestCase):
 
     def test_repo_root(self):
         root_path, _ = create_local_git_repo({"myfile": "anything"})
+
         # Initialized in the root folder
         git = Git(root_path)
         self.assertEqual(root_path, git.get_repo_root())
