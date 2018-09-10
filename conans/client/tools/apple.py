@@ -126,3 +126,8 @@ class XCRun(object):
     def strip(self):
         """path to symbol removal utility (STRIP)"""
         return self.find('strip')
+    
+    @property
+    def libtool(self):
+        """path to create libraries"""
+        return self.find('libtool')
