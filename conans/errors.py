@@ -95,6 +95,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
 
+class ConanInvalidConfiguration(ConanException):
+    pass
+
+
 # Remote exceptions #
 class InternalErrorException(ConanException):
     """
