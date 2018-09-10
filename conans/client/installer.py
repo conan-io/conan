@@ -90,7 +90,7 @@ class _ConanPackageBuilder(object):
         sources_pointer = self._client_cache.scm_folder(self._conan_ref)
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
-                      self._conan_file, self._out)
+                      self._conan_file, self._out, self._plugin_manager)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -167,6 +167,7 @@ class _ConanPackageBuilder(object):
         try:
             # This is necessary because it is different for user projects
             # than for packages
+            self._plugin_manager.execute_plugins_method("pre_build", self._conan_file)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
             self._out.highlight("Calling build()")
@@ -175,6 +176,7 @@ class _ConanPackageBuilder(object):
 
             self._out.success("Package '%s' built" % self._conan_file.info.package_id())
             self._out.info("Build folder %s" % self.build_folder)
+            self._plugin_manager.execute_plugins_method("post_build", self._conan_file)
         except Exception as exc:
             self._out.writeln("")
             self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())

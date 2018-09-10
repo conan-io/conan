@@ -85,7 +85,7 @@ def get_scm_data(conanfile):
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
-                  conanfile, output, force=False):
+                  conanfile, output, plugin_manager, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
@@ -128,6 +128,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                 with get_env_context_manager(conanfile):
                     conanfile.build_folder = None
                     conanfile.package_folder = None
+                    plugin_manager.execute_plugins_method("pre_source", conanfile)
 
                     scm_data = get_scm_data(conanfile)
                     if scm_data:
@@ -146,7 +147,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                         pass
 
                     conanfile.source()
-
+            plugin_manager.execute_plugins_method("post_source")
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)

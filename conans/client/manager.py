@@ -265,17 +265,16 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             conan_file.install_folder = install_folder
-            self._plugin_manager.execute_plugins_method("pre_build", conan_file,
-                                                        load(conanfile_path), output)
+            self._plugin_manager.execute_plugins_method("pre_build", conan_file, conanfile_path)
             with get_env_context_manager(conan_file):
                 output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):
                     conan_file.build()
+                self._plugin_manager.execute_plugins_method("post_build")
                 if test:
                     output.highlight("Running test()")
                     with conanfile_exception_formatter(str(conan_file), "test"):
                         conan_file.test()
-            self._plugin_manager.execute_plugins_method("post_build")
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:

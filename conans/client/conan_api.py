@@ -4,7 +4,7 @@ import sys
 import requests
 
 import conans
-from conans import __version__ as client_version, tools, load
+from conans import __version__ as client_version, tools
 from conans.client.cmd.create import create
 from conans.client.plugins import PluginManager
 from conans.client.recorder.action_recorder import ActionRecorder
@@ -311,14 +311,11 @@ class ConanAPIV1(object):
             keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
-                self._plugin_manager.execute_plugins_method("pre_export", conanfile,
-                                                            load(conanfile_path),
-                                                            self._user_io.out)
+                self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path)
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                            self._client_cache)
                 self._plugin_manager.execute_plugins_method("post_export", conanfile,
-                                                            load(conanfile_path),
-                                                            self._user_io.out)
+                                                            conanfile_path)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -331,6 +328,7 @@ class ConanAPIV1(object):
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(reference)
 
+            self._plugin_manager.initialize_plugins(conanfile_path=conanfile_path)
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
