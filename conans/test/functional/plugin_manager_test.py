@@ -102,31 +102,37 @@ class MyPlugin(ConanPlugin):
 
     def test_clear_plugin_attributes(self):
         """
-        Plugins may not keep old attributes between calls with
-        :return:
+        Plugins may not keep old attributes between calls after a "post" method execution
         """
         my_plugin = """
 from conans import ConanPlugin
 
 class MyPlugin(ConanPlugin):
 
-    def pre_upload(self):
-        self.output.info("conanfile: %s, conanfile_path: %s, remote_name: %s"
-                         % (self.conanfile, self.conanfile_path, self.remote_name))
+    def post_upload(self):
+        self.output.info("conanfile: %s, conanfile_path: %s, reference: %s, package_id: %s, "
+                         "remote_name: %s" % (self.conanfile, self.conanfile_path, self.reference,
+                          self.package_id, self.remote_name))
 
     def pre_build(self):
-        self.output.info("conanfile: %s, conanfile_path: %s, remote_name: %s"
-                         % (self.conanfile, self.conanfile_path, self.remote_name))
+        self.post_upload()
         """
         save(self.file_path, my_plugin)
         self.plugin_manager.load_plugins()
-        self.plugin_manager.initialize_plugins("This is a conanfile", "fake/conanfile/path",
-                                               "my_remote")
-        self.plugin_manager.execute_plugins_method("pre_upload")
+        self.plugin_manager.initialize_plugins(conanfile="This is a conanfile",
+                                               conanfile_path="fake/conanfile/path",
+                                               reference="conanfile_reference",
+                                               package_id="a_package_id",
+                                               remote_name="my_remote")
+        self.plugin_manager.execute_plugins_method("post_upload")
         self.assertIn("[PLUGIN - MyPlugin]: conanfile: This is a conanfile, conanfile_path: "
-                      "fake/conanfile/path, remote_name: my_remote", self.output)
+                      "fake/conanfile/path, reference: conanfile_reference, package_id: "
+                      "a_package_id, remote_name: my_remote", self.output)
         self.output = TestBufferConanOutput()
         self.plugin_manager.output = self.output
         self.plugin_manager.execute_plugins_method("pre_build")
-        self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, remote_name: "
-                      "None", self.output)
+        self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, reference: None,"
+                      " package_id: None, remote_name: None", self.output)
+        self.plugin_manager.execute_plugins_method("post_upload")
+        self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, reference: None,"
+                      " package_id: None, remote_name: None", self.output)
