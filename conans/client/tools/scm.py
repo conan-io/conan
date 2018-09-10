@@ -244,8 +244,11 @@ class SVN(SCMBase):
     def get_repo_root(self):
         return self.run("info --show-item wc-root").strip()
 
-    def get_last_changed_revision(self):
-        return self.run("info --show-item last-changed-revision").strip()
+    def get_last_changed_revision(self, use_wc_root=True):
+        if use_wc_root:
+            return self.run("info {root} --show-item last-changed-revision".format(self.get_repo_root()).strip()
+        else:
+            return self.run("info --show-item last-changed-revision").strip()
 
     def get_branch(self):
         url = self.run("info --show-item relative-url").strip()
