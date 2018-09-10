@@ -129,5 +129,5 @@ class XCRun(object):
     
     @property
     def libtool(self):
-        """path to create libraries"""
+        """path to libtool"""
         return self.find('libtool')
