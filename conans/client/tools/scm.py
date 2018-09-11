@@ -128,7 +128,7 @@ class Git(SCMBase):
 
     def get_qualified_remote_url(self):
         url = self.get_remote_url()
-        if os.path.exists(url):
+        if url and os.path.exists(url):
             url = url.replace("\\", "/")
         return url
 
