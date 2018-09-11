@@ -78,43 +78,13 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
 
 recipe_linter = """
-import os
-from conans import ConanPlugin
-
-
-class RecipeLinter(ConanPlugin):
-
-    def pre_export(self):
-        # Check basic meta-data
-        for field in ["url", "license", "description"]:
-            field_value = getattr(self.conanfile, field, None)
-            if not field_value:
-                self.output.warn("Conanfile doesn't have '%s'. It is recommended to add it as "
-                                 "attribute" % field)
-
-        # Check header only
-        settings = getattr(self.conanfile, "settings", None)
-        build = getattr(self.conanfile, "build", None)
-        if not settings and build:
-            self.output.warn("Recipe does not declare 'settings' and has a 'build()' step")
-
-        no_copy_source = getattr(self.conanfile, "no_copy_source", None)
-        if not settings and not no_copy_source:
-            self.output.warn("This recipe seems to be for a header only library as it does not "
-                             "declare 'settings'. Include 'no_copy_source' to avoid unnecessary "
-                             "copy steps")
-
-        # Check fPIC option
-        options = getattr(self.conanfile, "options", None)
-        if options:
-            if settings:
-                if "fPIC" not in options and "shared" in options:
-                    self.output.warn("This recipe does not include an 'fPIC' option or it does not "
-                                     "have the right casing to be detected")
-            else:
-                if "fPIC" in options or "shared" in options:
-                    self.output.warn("This recipe has 'shared' or 'fPIC' options but does not "
-                                     "declare any 'settings'")
+def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
+    # Check basic meta-data
+    for field in ["url", "license", "description"]:
+        field_value = getattr(conanfile, field, None)
+        if not field_value:
+            output.warn("Conanfile doesn't have '%s'. It is recommended to add it as attribute"
+                        % field)
 """
 
 default_client_conf = """
