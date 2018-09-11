@@ -66,17 +66,12 @@ class Beta(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . Beta/0.1@user/testing")
-        conanfile = """from conans import ConanFile, load
-import os
+        conanfile = """from conans import ConanFile
 class Alpha(ConanFile):
     requires = "Beta/0.1@user/testing"
-    generators = "cmake"
-    def build(self):
-        cmake = load(os.path.join(self.build_folder, "conanbuildinfo.cmake"))
-        self.output.info()
 """
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
+        client.run("install . -g cmake")
         cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
                       '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
