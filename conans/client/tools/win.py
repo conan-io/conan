@@ -389,11 +389,15 @@ def get_cased_path(name):
         parent, child = os.path.split(current)
         if parent == current:
             break
-        children = os.listdir(parent)
-        for c in children:
-            if c.upper() == child.upper():
-                result.append(c)
-                break
+
+        child_cased = child
+        if os.path.exists(parent):
+            children = os.listdir(parent)
+            for c in children:
+                if c.upper() == child.upper():
+                    child_cased = c
+                    break
+        result.append(child_cased)
         current = parent
     drive, _ = os.path.splitdrive(current)
     result.append(drive)
