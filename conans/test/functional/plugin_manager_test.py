@@ -77,7 +77,7 @@ class PluginManagerTest(unittest.TestCase):
         methods = [method for method in self.plugin_manager.loaded_plugins[0].__dict__.keys()
                    if method.startswith("pre") or method.startswith("post")]
         for method in methods:
-            self.plugin_manager.execute_plugins_method(method)
+            self.plugin_manager.execute(method)
             self.assertIn("[PLUGIN - MyPlugin]: %s()" % method, self.output)
 
     def no_error_with_not_implemented_method_test(self):
@@ -89,12 +89,11 @@ class MyPlugin(ConanPlugin):
 """
         save(self.file_path, my_plugin)
         self.plugin_manager.load_plugins()
-        self.plugin_manager.execute_plugins_method("pre_source")
+        self.plugin_manager.execute("pre_source")
         self.assertEqual("", self.output)
 
     def execute_method_test(self):
         self.plugin_manager.load_plugins()
-        self.plugin_manager.initialize_plugins()
         plugin = self.plugin_manager.plugins[0]
         self.assertIsNotNone(plugin.output)
         self.plugin_manager.loaded_plugins[0].pre_export(plugin)
@@ -119,20 +118,15 @@ class MyPlugin(ConanPlugin):
         """
         save(self.file_path, my_plugin)
         self.plugin_manager.load_plugins()
-        self.plugin_manager.initialize_plugins(conanfile="This is a conanfile",
-                                               conanfile_path="fake/conanfile/path",
-                                               reference="conanfile_reference",
-                                               package_id="a_package_id",
-                                               remote_name="my_remote")
-        self.plugin_manager.execute_plugins_method("post_upload")
+        self.plugin_manager.execute("post_upload")
         self.assertIn("[PLUGIN - MyPlugin]: conanfile: This is a conanfile, conanfile_path: "
                       "fake/conanfile/path, reference: conanfile_reference, package_id: "
                       "a_package_id, remote_name: my_remote", self.output)
         self.output = TestBufferConanOutput()
         self.plugin_manager.output = self.output
-        self.plugin_manager.execute_plugins_method("pre_build")
+        self.plugin_manager.execute("pre_build")
         self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, reference: None,"
                       " package_id: None, remote_name: None", self.output)
-        self.plugin_manager.execute_plugins_method("post_upload")
+        self.plugin_manager.execute("post_upload")
         self.assertIn("[PLUGIN - MyPlugin]: conanfile: None, conanfile_path: None, reference: None,"
                       " package_id: None, remote_name: None", self.output)

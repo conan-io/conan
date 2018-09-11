@@ -78,6 +78,7 @@ class _ConanPackageBuilder(object):
         export_folder = self._client_cache.export(self._conan_ref)
         export_source_folder = self._client_cache.export_sources(self._conan_ref,
                                                                  self._conan_file.short_paths)
+        conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
         try:
             rmdir(self.build_folder)
@@ -90,7 +91,7 @@ class _ConanPackageBuilder(object):
         sources_pointer = self._client_cache.scm_folder(self._conan_ref)
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
-                      self._conan_file, self._out, self._plugin_manager)
+                      self._conan_file, self._out, conanfile_path, self._plugin_manager)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -138,9 +139,11 @@ class _ConanPackageBuilder(object):
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
             pkg_id = self._conan_file.info.package_id()
+            conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out, self._plugin_manager)
+                           self.package_folder, install_folder, self._out, self._plugin_manager,
+                           conanfile_path, str(self._conan_ref))
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -167,9 +170,9 @@ class _ConanPackageBuilder(object):
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            self._plugin_manager.execute_plugins_method("pre_build", self._conan_file,
-                                                        reference=str(self._conan_ref),
-                                                        package_id=self._package_reference.package_id)
+            self._plugin_manager.execute("pre_build", conanfile=self._conan_file,
+                                         reference=str(self._conan_ref),
+                                         package_id=self._package_reference.package_id)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
             self._out.highlight("Calling build()")
@@ -178,7 +181,9 @@ class _ConanPackageBuilder(object):
 
             self._out.success("Package '%s' built" % self._conan_file.info.package_id())
             self._out.info("Build folder %s" % self.build_folder)
-            self._plugin_manager.execute_plugins_method("post_build")
+            self._plugin_manager.execute("post_build", conanfile=self._conan_file,
+                                         reference=str(self._conan_ref),
+                                         package_id=self._package_reference.package_id)
         except Exception as exc:
             self._out.writeln("")
             self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
@@ -350,14 +355,18 @@ class ConanInstaller(object):
         report_copied_files(copied_files, output)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._plugin_manager.execute_plugins_method("pre_download_package",
-                                                    reference=str(package_reference.conan),
-                                                    package_id=package_reference.package_id,
-                                                    remote_name=remote.name)
+        self._plugin_manager.execute("pre_download_package",
+                                     reference=str(package_reference.conan),
+                                     package_id=package_reference.package_id,
+                                     remote_name=remote.name)
         self._remote_manager.get_package(package_reference, package_folder,
                                          remote, output, self._recorder)
-        self._plugin_manager.execute_plugins_method("post_download_package")
-        self._plugin_manager.deinitialize_plugins()
+        conanfile_path = self._client_cache.conanfile(package_reference.conan)
+        self._plugin_manager.execute("post_download_package",
+                                     conanfile_path=conanfile_path,
+                                     reference=str(package_reference.conan),
+                                     package_id=package_reference.package_id,
+                                     remote_name=remote.name)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build):

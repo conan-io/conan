@@ -69,13 +69,11 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._plugin_manager.execute_plugins_method("pre_upload",
-                                                            conanfile_path=conanfile_path,
-                                                            reference=str(conan_ref),
-                                                            remote_name=remote_name)
+                self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
+                                             reference=str(conan_ref), remote_name=remote_name)
                 self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
                              skip_upload, integrity_check, no_overwrite, remote_name, recorder)
-                self._plugin_manager.execute_plugins_method("post_upload",
+                self._plugin_manager.execute("post_upload",
                                                             conanfile_path=conanfile_path,
                                                             reference=str(conan_ref),
                                                             remote_name=remote_name)
@@ -108,14 +106,17 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
-                self._plugin_manager.execute_plugins_method("pre_upload_package",
-                                                            package_id=str(package_id))
+                conanfile_path = self._client_cache.conanfile(conan_ref)
+                self._plugin_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
+                                             reference=str(conan_ref), package_id=str(package_id),
+                                             remote_name=upload_remote.name)
                 ret_upload_package = self._upload_package(PackageReference(conan_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
                                                           skip_upload, integrity_check,
                                                           no_overwrite, upload_remote)
-                self._plugin_manager.execute_plugins_method("post_upload_package")
-                self._plugin_manager.deinitilize_plugins()
+                self._plugin_manager.execute("post_upload_package", conanfile_path=conanfile_path,
+                                             reference=str(conan_ref), package_id=str(package_id),
+                                             remote_name=upload_remote.name)
                 if ret_upload_package:
                     recorder.add_package(str(conan_ref), package_id)
 

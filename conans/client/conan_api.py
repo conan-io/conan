@@ -311,11 +311,14 @@ class ConanAPIV1(object):
             keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
-                self._plugin_manager.execute_plugins_method("pre_export", conanfile,
-                                                            conanfile_path, str(reference))
+                self._plugin_manager.execute("pre_export", conanfile=conanfile,
+                                             conanfile_path=conanfile_path,
+                                             reference=str(reference))
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                            self._client_cache)
-                self._plugin_manager.execute_plugins_method("post_export")
+                self._plugin_manager.execute("post_export", conanfile=conanfile,
+                                             conanfile_path=conanfile_path,
+                                             reference=str(reference))
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -328,7 +331,6 @@ class ConanAPIV1(object):
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(reference)
 
-            self._plugin_manager.initialize_plugins(conanfile_path=conanfile_path)
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
@@ -381,10 +383,12 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path,
-                                                    str(reference))
+        self._plugin_manager.execute("pre_export", conanfile=conanfile,
+                                     conanfile_path=conanfile_path,
+                                     reference=str(reference))
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out, self._client_cache)
-        self._plugin_manager.execute_plugins_method("post_export")
+        self._plugin_manager.execute("post_export", conanfile=conanfile,
+                                     conanfile_path=conanfile_path, reference=str(reference))
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -400,7 +404,8 @@ class ConanAPIV1(object):
         conan_ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
-                 self._client_cache, self._user_io.out, recorder, self._loader)
+                 self._client_cache, self._user_io.out, recorder, self._loader,
+                 self._plugin_manager)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -639,11 +644,12 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute_plugins_method("pre_export", conanfile, conanfile_path,
-                                                    str(reference))
+        self._plugin_manager.execute("pre_export", conanfile=conanfile,
+                                     conanfile_path=conanfile_path, reference=str(reference))
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                    self._client_cache)
-        self._plugin_manager.execute_plugins_method("post_export")
+        self._plugin_manager.execute("post_export", conanfile=conanfile,
+                                     conanfile_path=conanfile_path, reference=str(reference))
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
