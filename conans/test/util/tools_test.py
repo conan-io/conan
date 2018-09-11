@@ -1133,7 +1133,8 @@ class GitToolTest(unittest.TestCase):
     def test_is_local_repository(self):
         root_path, _ = create_local_git_repo({"myfile": "anything"})
 
-        git = Git(root_path)
+        git = Git(temp_folder())
+        git.clone(root_path)
         self.assertTrue(git.is_local_repository())
         # TODO: Check that with remote one it is working too
 

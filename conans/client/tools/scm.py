@@ -264,6 +264,6 @@ class SVN(SCMBase):
             if branch is None:
                 return None
             else:
-                return branch[0]
+                return branch.group(0)
         except Exception as e:
             raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
