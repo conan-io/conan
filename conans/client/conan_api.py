@@ -75,7 +75,6 @@ def get_basic_requester(client_cache):
 def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
-        the_self._plugin_manager.load_plugins()
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
@@ -91,7 +90,6 @@ def api_method(f):
             raise
         finally:
             os.chdir(curdir)
-
     return wrapper
 
 
