@@ -19,6 +19,24 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_system_requirements_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    def system_requirements(self):
+        self.output.info("Running system requirements!!")
+"""})
+        client.run("install .")
+        self.assertIn("Running system requirements!!", client.out)
+        client.run("export . Pkg/0.1@lasote/testing")
+        client.run("install Pkg/0.1@lasote/testing --build")
+        self.assertIn("Running system requirements!!", client.out)
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("install Pkg/0.1@lasote/testing")
+        self.assertIn("Running system requirements!!", client.out)
+
     def install_transitive_pattern_test(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()
@@ -358,7 +376,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
-        self.assertIn("Hello/0.1@lasote/stable from local cache\n",
+        self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
@@ -451,6 +469,8 @@ class Pkg(ConanFile):
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(error)
+        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
+                      client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 

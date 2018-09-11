@@ -134,14 +134,11 @@ class MyPkg(ConanFile):
 
     def create_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """
-import os
-from conans import ConanFile
+        client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-
     def configure(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
@@ -157,16 +154,21 @@ class MyPkg(ConanFile):
     def package_info(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+    def system_requirements(self):
+        assert(self.version=="0.1")
+        assert(self.name=="Pkg")
+        self.output.info("Running system requirements!!")
 """})
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        self.assertIn("Running system requirements!!", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
         # Create with only user will raise an error because of no name/version
         error = client.run("create conanfile.py lasote/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("conanfile.py doesn't declare package name or version", client.out)
+        self.assertIn("ERROR: conanfile didn't specify name", client.out)
         # Same with only user, (default testing)
         error = client.run("create . lasote", ignore_error=True)
         self.assertTrue(error)
@@ -342,30 +344,29 @@ class MyPkg(ConanFile):
     def create_with_tests_and_build_requires_test(self):
         client = TestClient()
         # Generate and export the build_require recipe
-        client.save({"conanfile.py": """from conans import ConanFile
+        conanfile = """from conans import ConanFile
 class MyBuildRequire(ConanFile):
-    name = "BuildRequire"
-    version = "0.1"
-
     def package_info(self):
         self.env_info.MYVAR="1"
-"""})
-        client.run("export . conan/stable")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Build1/0.1@conan/stable")
+        client.save({"conanfile.py": conanfile.replace('MYVAR="1"', 'MYVAR2="2"')})
+        client.run("create . Build2/0.1@conan/stable")
 
         # Create a recipe that will use a profile requiring the build_require
         client.save({"conanfile.py": """from conans import ConanFile
 import os
 
 class MyLib(ConanFile):
-    name = "MyLib"
-    version = "0.1"
-
+    build_requires = "Build2/0.1@conan/stable"
     def build(self):
         assert(os.environ['MYVAR']=='1')
+        assert(os.environ['MYVAR2']=='2')
 
 """, "myprofile": '''
 [build_requires]
-BuildRequire/0.1@conan/stable
+Build1/0.1@conan/stable
 ''',
                     "test_package/conanfile.py": """from conans import ConanFile
 import os
@@ -378,7 +379,9 @@ class MyTest(ConanFile):
 """}, clean_first=True)
 
         # Test that the build require is applyed to testing
-        client.run("create . conan/stable --profile ./myprofile --build missing")
+        client.run("create . Lib/0.1@conan/stable --profile=./myprofile")
+        self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: Applying build-requirement: "
+                                                  "Build1/0.1@conan/stable"))
         self.assertIn("TESTING!!", client.user_io.out)
 
     def build_policy_test(self):

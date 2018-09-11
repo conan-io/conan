@@ -11,10 +11,10 @@ from conans import tools
 
 
 @attr('visual_studio')
+@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsArchTest(unittest.TestCase):
+
     def test_arch(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
@@ -45,8 +45,6 @@ class VCVarsArchTest(unittest.TestCase):
             tools.vcvars_command(settings)
 
     def test_arch_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
@@ -73,8 +71,6 @@ class VCVarsArchTest(unittest.TestCase):
             tools.vcvars_command(settings, arch='mips')
 
     def test_vcvars_ver_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
@@ -88,11 +84,9 @@ class VCVarsArchTest(unittest.TestCase):
 
         command = tools.vcvars_command(settings, vcvars_ver='14.14')
         self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('-vcvars_ver', command)
+        self.assertIn('-vcvars_ver=14.14', command)
 
     def test_winsdk_version_override(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
@@ -106,4 +100,4 @@ class VCVarsArchTest(unittest.TestCase):
 
         command = tools.vcvars_command(settings, winsdk_version='8.1')
         self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('8.1', command)
+        self.assertIn('8.1', command)

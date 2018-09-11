@@ -77,6 +77,7 @@ class OSInfo(object):
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
         self.is_solaris = platform.system() == "SunOS"
+        self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
             import distro
@@ -113,7 +114,7 @@ class OSInfo(object):
     @property
     def with_pacman(self):
         if self.is_linux:
-            return self.linux_distro == "arch"
+            return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
             uname = subprocess.check_output(['uname.exe', '-s']).decode()
             return uname.startswith('MSYS_NT') and which('pacman.exe')
@@ -121,9 +122,12 @@ class OSInfo(object):
 
     @property
     def with_zypper(self):
-        return self.is_linux and self.linux_distro in \
-            ("opensuse", "sles")
-
+        if not self.is_linux:
+            return False
+        if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
+            return True
+        return False
+    
     @staticmethod
     def get_win_os_version():
         """

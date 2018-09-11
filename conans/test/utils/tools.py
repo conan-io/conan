@@ -1,20 +1,23 @@
 import os
+import random
 import shlex
 import shutil
 import sys
+import threading
 import uuid
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
 
+import bottle
 import requests
 import six
+import time
 from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
@@ -36,6 +39,25 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.client.tools.win import get_cased_path
+
+
+def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
+    conan_ref = ConanFileReference.loads(str(conan_ref))
+    path = client_cache.export(conan_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
+
+
+def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
+    pkg_ref = PackageReference.loads(str(package_ref))
+    path = client_cache.package(pkg_ref)
+    manifest = FileTreeManifest.load(path)
+    manifest.time += inc_time
+    manifest.save(path)
 
 
 class TestingResponse(object):
@@ -47,6 +69,9 @@ class TestingResponse(object):
 
     def __init__(self, test_response):
         self.test_response = test_response
+
+    def close(self):
+        pass  # Compatibility with close() method of a requests when stream=True
 
     @property
     def headers(self):
@@ -217,7 +242,7 @@ class TestServer(object):
 
     @property
     def paths(self):
-        return self.test_server.file_manager.paths
+        return self.test_server.server_store
 
     def __repr__(self):
         return "TestServer @ " + self.fake_url
@@ -256,17 +281,27 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files, branch=None):
-    tmp = temp_folder()
-    save_files(tmp, files)
+def create_local_git_repo(files=None, branch=None, submodules=None, folder=None):
+    tmp = folder or temp_folder()
+    tmp = get_cased_path(tmp)
+    if files:
+        save_files(tmp, files)
     git = Git(tmp)
     git.run("init .")
-    if branch:
-        git.run("checkout -b %s" % branch)
-    git.run("add .")
     git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
-    git.run('commit -m "message"')
+
+    if branch:
+        git.run("checkout -b %s" % branch)
+
+    git.run("add .")
+    git.run('commit -m  "commiting"')
+
+    if submodules:
+        for submodule in submodules:
+            git.run('submodule add "%s"' % submodule)
+        git.run('commit -m "add submodules"')
+
     return tmp.replace("\\", "/"), git.get_revision()
 
 
@@ -357,11 +392,24 @@ class TestClient(object):
         self.servers = servers or {}
         save(self.client_cache.registry, "")
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-        for name, server in self.servers.items():
+
+        def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
                 registry.add(name, server.fake_url)
             else:
                 registry.add(name, server)
+
+        for name, server in self.servers.items():
+            if name == "default":
+                add_server_to_registry(name, server)
+
+        for name, server in self.servers.items():
+            if name != "default":
+                add_server_to_registry(name, server)
+
+    @property
+    def remote_registry(self):
+        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
     @property
     def paths(self):
@@ -437,7 +485,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          settings_preprocessor, interactive=interactive)
+                          interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
@@ -457,9 +505,14 @@ class TestClient(object):
                 sys.modules.pop(added, None)
 
         if not ignore_error and error:
-            logger.error(self.user_io.out)
-            print(self.user_io.out)
-            raise Exception("Command failed:\n%s" % command_line)
+            exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
+                command_header='{:-^80}'.format(" Command failed: "),
+                output_header='{:-^80}'.format(" Output: "),
+                output_footer='-'*80,
+                command=command_line,
+                output=self.user_io.out
+            )
+            raise Exception(exc_message)
 
         self.all_output += str(self.user_io.out)
         return error
@@ -474,3 +527,26 @@ class TestClient(object):
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+
+class StoppableThreadBottle(threading.Thread):
+    """
+    Real server to test download endpoints
+    """
+    server = None
+    port = None
+
+    def __init__(self, host="127.0.0.1", port=None):
+        self.port = port or random.randrange(8200, 8600)
+        self.server = bottle.Bottle()
+        super(StoppableThreadBottle, self).__init__(target=self.server.run,
+                                                    kwargs={"host": host, "port": self.port})
+        self.daemon = True
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def run_server(self):
+        self.start()
+        time.sleep(1)

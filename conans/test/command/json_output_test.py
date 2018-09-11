@@ -2,8 +2,6 @@ import json
 import os
 import unittest
 
-import datetime
-
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save, load

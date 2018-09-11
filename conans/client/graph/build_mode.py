@@ -63,8 +63,13 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file, reference):
-        return (self.missing or self.outdated or self.forced(conan_file, reference) or
-                conan_file.build_policy_missing)
+        if self.missing or self.outdated:
+            return True
+        if conan_file.build_policy_missing:
+            out = ScopedOutput(str(reference), self._out)
+            out.info("Building package from source as defined by build_policy='missing'")
+            return True
+        return False
 
     def report_matches(self):
         for pattern in self._unused_patterns:

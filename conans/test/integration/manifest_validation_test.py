@@ -26,7 +26,6 @@ class ConanFileTest(ConanFile):
     exports = "*"
 """
         self.files = {CONANFILE: conanfile, "data.txt": "MyData"}
-        # Export and upload the conanfile
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable")
@@ -40,11 +39,15 @@ class ConsumerFileTest(ConanFile):
     name = "Chat"
     version = "0.1"
     requires = "Hello/0.1@lasote/stable"
+    def package_info(self):
+        self.cpp_info.libs = ["MyLib"]
 """
         test_conanfile = """from conans import ConanFile
 
 class ConsumerFileTest(ConanFile):
     requires = "Chat/0.1@lasote/stable"
+    def build(self):
+        self.output.info("LIBS = %s" % self.deps_cpp_info.libs[0])
     def test(self):
         self.output.info("TEST OK")
 """
@@ -59,6 +62,7 @@ class ConsumerFileTest(ConanFile):
                           "test_package/conanfile.py": test_conanfile}, clean_first=True)
 
         self.client.run("create . lasote/stable --manifests%s" % dest)
+        self.assertIn("Chat/0.1@lasote/stable (test package): LIBS = MyLib", self.client.out)
         self.assertIn("Chat/0.1@lasote/stable (test package): TEST OK", self.client.user_io.out)
         self.assertIn("Installed manifest for 'Chat/0.1@lasote/stable' from local cache",
                       self.client.user_io.out)

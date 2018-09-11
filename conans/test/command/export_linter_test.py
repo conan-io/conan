@@ -124,6 +124,7 @@ class BaseConan(ConanFile):
 """
         client.save({CONANFILE: conanfile_base})
         client.run("export . conan/stable")
+        self.assertNotIn("Failed pylint", client.out)
         self.assertNotIn("Linter", client.user_io.out)
 
     def test_warning_as_errors(self):
@@ -149,6 +150,7 @@ class BaseConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . conan/stable")
+        self.assertNotIn("Failed pylint", client.out)
         self.assertNotIn("Linter warnings", client.out)
         self.assertNotIn("WARN: Linter. Line 8: Instance of 'BaseConan' has no 'copy_deps' member",
                          client.out)

@@ -24,13 +24,16 @@ class CommandOutputer(object):
         for p in sorted(profiles):
             self.user_io.out.info(p)
 
-    def remote_list(self, remotes):
+    def remote_list(self, remotes, raw):
         for r in remotes:
-            self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+            if raw:
+                self.user_io.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+            else:
+                self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote))
+        for ref, remote_name in refs.items():
+            self.user_io.out.info("%s: %s" % (ref, remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
@@ -56,7 +59,8 @@ class CommandOutputer(object):
             return obj.isoformat() if hasattr(obj, 'isoformat') else obj
 
         save(json_output, json.dumps(info, default=date_handler))
-        self.user_io.out.info("json file created at '%s'" % json_output)
+        self.user_io.out.writeln("")
+        self.user_io.out.info("JSON file created at '%s'" % json_output)
 
     def _read_dates(self, deps_graph):
         ret = {}
@@ -68,23 +72,23 @@ class CommandOutputer(object):
         return ret
 
     def nodes_to_build(self, nodes_to_build):
-        self.user_io.out.info(", ".join(nodes_to_build))
+        self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def info(self, deps_graph, graph_updates_info, only, remote, package_filter, show_paths, project_reference):
+    def info(self, deps_graph, only, package_filter, show_paths):
         registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
-        Printer(self.user_io.out).print_info(deps_graph, project_reference,
-                                             only, registry, graph_updates_info=graph_updates_info,
-                                             remote=remote, node_times=self._read_dates(deps_graph),
+        Printer(self.user_io.out).print_info(deps_graph,
+                                             only, registry,
+                                             node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache, package_filter=package_filter,
                                              show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
+    def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(project_reference, deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph)
         else:
             from conans.client.graph.grapher import ConanGrapher
-            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher = ConanGrapher(deps_graph)
 
         cwd = os.path.abspath(cwd or get_cwd())
         if not os.path.isabs(graph_filename):
@@ -95,13 +99,15 @@ class CommandOutputer(object):
         printer = Printer(self.user_io.out)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, search_info, reference, packages_query, table):
+    def print_search_packages(self, search_info, reference, packages_query, table,
+                                outdated=False):
         if table:
             from conans.client.graph.grapher import html_binary_graph
-            html_binary_graph(search_info, table)
+            html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
-            printer.print_search_packages(search_info, reference, packages_query)
+            printer.print_search_packages(search_info, reference, packages_query,
+                                          outdated=outdated)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
@@ -127,3 +133,25 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
+
+    def print_user_list(self, info):
+        for remote in info["remotes"]:
+            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            anonymous = " (anonymous)" if not remote["user_name"] else ""
+            self.user_io.out.info("Current user of remote '%s' set to: '%s'%s%s" %
+                                  (remote["name"], str(remote["user_name"]), anonymous,
+                                   authenticated))
+
+    def print_user_set(self, remote_name, prev_user, user):
+        previous_username = prev_user or "None"
+        previous_anonymous = " (anonymous)" if not prev_user else ""
+        username = user or "None"
+        anonymous = " (anonymous)" if not user else ""
+
+        if prev_user == user:
+            self.user_io.out.info("User of remote '%s' is already '%s'%s" %
+                                  (remote_name, previous_username, previous_anonymous))
+        else:
+            self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
+                                  (remote_name, previous_username, previous_anonymous, username,
+                                   anonymous))

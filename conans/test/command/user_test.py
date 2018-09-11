@@ -1,5 +1,10 @@
+import json
 import unittest
+
+import os
+
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 class UserTest(unittest.TestCase):
@@ -32,13 +37,14 @@ class UserTest(unittest.TestCase):
 
         # Test user list for requested remote reported
         client.run("user -r test_remote_1")
-        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
-        self.assertNotIn("Current 'default' user: None (anonymous)", client.out)
+        self.assertIn("Current user of remote 'test_remote_1' set to: 'None' (anonymous)",
+                      client.out)
+        self.assertNotIn("Current user of 'default' remote set to: 'None' (anonymous)", client.out)
 
         # Test user list for all remotes is reported
         client.run("user")
-        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
-        self.assertIn("Current 'default' user: None (anonymous)", client.out)
+        self.assertIn("Current user of remote 'test_remote_1' set to: 'None' (anonymous)", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
     def test_with_no_user(self):
         test_server = TestServer()
@@ -52,22 +58,24 @@ class UserTest(unittest.TestCase):
         test_server = TestServer()
         client = TestClient(servers={"default": test_server})
         client.run('user')
-        self.assertIn("Current 'default' user: None (anonymous)", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
         client.run('user john')
-        self.assertIn("Change 'default' user from None (anonymous) to john", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
+                      client.out)
         self.assertEqual(('john', None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user will')
-        self.assertIn("Change 'default' user from john to will", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
         self.assertEqual(('will', None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user None')
-        self.assertIn("Change 'default' user from will to None (anonymous)", client.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
+                      client.out)
         self.assertEqual((None, None), client.localdb.get_login(test_server.fake_url))
 
         client.run('user')
-        self.assertIn("Current 'default' user: None (anonymous)", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
     def test_command_user_with_password(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -81,12 +89,14 @@ class UserTest(unittest.TestCase):
         self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
         conan.run('user lasote -p mypass')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
         conan.run('user none')
-        self.assertIn("Change 'default' user from lasote to None (anonymous)", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
+                      conan.out)
         self.assertEqual((None, None), conan.localdb.get_login(test_server.fake_url))
         conan.run('user')
-        self.assertIn("Current 'default' user: None (anonymous)", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)
 
     def test_command_user_with_password_spaces(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -97,12 +107,14 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run(r'user lasote -p="my \"password"')
-        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
+        self.assertNotIn("ERROR: Wrong user or password", conan.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
         conan.run('user none')
         conan.run(r'user lasote -p "my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+                      conan.out)
 
     def test_clean(self):
         test_server = TestServer()
@@ -115,20 +127,19 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
 '''
-
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export . lasote/stable")
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
-        self.assertIn("Current 'default' user: lasote", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
         client.run("user --clean")
         client.run("user")
-        self.assertNotIn("lasote", client.user_io.out)
-        self.assertEqual("Current 'default' user: None (anonymous)\n", client.user_io.out)
+        self.assertNotIn("lasote", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
-        self.assertIn("Current 'default' user: lasote", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.user_io.out)
 
     def test_command_user_with_interactive_password(self):
         test_server = TestServer()
@@ -137,7 +148,7 @@ class ConanLib(ConanFile):
         conan.run('user -p -r default lasote')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
-        self.assertIn("Current 'default' user: lasote", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
 
     def test_command_interactive_only(self):
         test_server = TestServer()
@@ -146,7 +157,7 @@ class ConanLib(ConanFile):
         conan.run('user -p')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
-        self.assertIn("Current 'default' user: lasote", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
         """ Interactive password should not work.
@@ -160,8 +171,178 @@ class ConanLib(ConanFile):
         self.assertIn('ERROR: Conan interactive mode disabled', conan.user_io.out)
         self.assertNotIn("Please enter a password for \"lasote\" account:", conan.out)
         conan.run("user")
-        self.assertIn("Current 'default' user: None", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)
         error = conan.run("user -p", ignore_error=True)
         self.assertTrue(error)
         self.assertIn('ERROR: Conan interactive mode disabled', conan.out)
         self.assertNotIn("Remote 'default' username:", conan.out)
+
+    def authenticated_test(self):
+        test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers = {"default": test_server, "other_server": TestServer()}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
+                                                                ("danimtb", "passpass")],
+                                                    "other_server": []})
+        client.run("user")
+        self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
+        self.assertNotIn("[Authenticated]", client.out)
+        client.run('user bad_user')
+        client.run("user")
+        self.assertNotIn("[Authenticated]", client.out)
+        client.run("user lasote")
+        client.run("user")
+        self.assertNotIn("[Authenticated]", client.out)
+        client.run("user lasote -p mypass")
+        client.run("user")
+        self.assertIn("Current user of remote 'default' set to: 'lasote' [Authenticated]",
+                      client.out)
+        client.run("user danimtb -p passpass")
+        client.run("user")
+        self.assertIn("Current user of remote 'default' set to: 'danimtb' [Authenticated]",
+                      client.out)
+        client.run("user lasote -r other_server")
+        client.run("user")
+        self.assertIn("Current user of remote 'default' set to: 'danimtb' [Authenticated]",
+                      client.out)
+        self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
+        client.run("user lasote -r default")
+        client.run("user")
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
+        self.assertNotIn("[Authenticated]", client.out)
+
+    def json_test(self):
+
+        def _compare_dicts(first_dict, second_dict):
+            self.assertTrue(set(first_dict), set(second_dict))
+
+        default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        other_server = TestServer()
+        servers = {"default": default_server, "other_server": other_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
+                                                                ("danimtb", "passpass")],
+                                                    "other_server": []})
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": None
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
+
+        client.run('user bad_user')
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "bad_user"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
+
+        client.run("user lasote")
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
+
+        client.run("user lasote -p mypass")
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
+
+        client.run("user danimtb -p passpass")
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "danimtb"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": None
+                            }
+                        ]}, info)
+
+        client.run("user lasote -r other_server")
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": True,
+                                "user_name": "danimtb"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            }
+                        ]}, info)
+
+        client.run("user lasote -r default")
+        client.run("user --json user.json")
+        content = load(os.path.join(client.current_folder, "user.json"))
+        info = json.loads(content)
+        _compare_dicts({"error": False,
+                        "remotes": [
+                            {
+                                "name": "default",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            },
+                            {
+                                "name": "other_server",
+                                "authenticated": False,
+                                "user_name": "lasote"
+                            }
+                        ]}, info)

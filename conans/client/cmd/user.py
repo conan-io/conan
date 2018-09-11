@@ -2,48 +2,36 @@ from conans.errors import ConanException
 from conans.client.store.localdb import LocalDB
 
 
-def users_list(client_cache, registry, remote_name=None):
-    # List all users from required remotes
-    if remote_name:
-        remotes = [registry.remote(remote_name)]
-    else:
-        remotes = registry.remotes
-
+def users_list(localdb_file, remotes):
     if not remotes:
         raise ConanException("No remotes defined")
 
-    localdb = LocalDB(client_cache.localdb)
-    result = []
+    localdb = LocalDB(localdb_file)
+    remotes_info = []
     for remote in remotes:
-        prev_user = localdb.get_username(remote.url)
-        username = prev_user or "None (anonymous)"
-        result.append((remote.name, username))
-    return result
+        user_info = {}
+        user, token = localdb.get_login(remote.url)
+        user_info["name"] = remote.name
+        user_info["user_name"] = user
+        user_info["authenticated"] = True if token else False
+        remotes_info.append(user_info)
+    return remotes_info
 
 
-def users_clean(client_cache):
-    localdb = LocalDB(client_cache.localdb)
+def users_clean(localdb_file):
+    localdb = LocalDB(localdb_file)
     localdb.init(clean=True)
 
 
-def user_set(client_cache, output, registry, user, remote_name=None):
-    localdb = LocalDB(client_cache.localdb)
-    if not remote_name:
-        remote = registry.default_remote
-    else:
-        remote = registry.remote(remote_name)
+def user_set(localdb_file, user, remote_name=None):
+    localdb = LocalDB(localdb_file)
 
     if user.lower() == "none":
         user = None
-    update_localdb(localdb, user, None, remote, output)
+    return update_localdb(localdb, user, None, remote_name)
 
 
-def update_localdb(localdb, user, token, remote, output):
+def update_localdb(localdb, user, token, remote):
     previous_user = localdb.get_username(remote.url)
     localdb.set_login((user, token), remote.url)
-    previous_user = previous_user or "None (anonymous)"
-    user = user or "None (anonymous)"
-    if previous_user == user:
-        output.info("Current '%s' user already: %s" % (remote.name, previous_user))
-    else:
-        output.info("Change '%s' user from %s to %s" % (remote.name, previous_user, user))
+    return remote.name, previous_user, user

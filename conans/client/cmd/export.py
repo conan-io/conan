@@ -1,19 +1,13 @@
-""" manages the movement of conanfiles and associated files from the user space
-to the local store, as an initial step before building or uploading to remotes
-"""
-
 import os
 import shutil
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
-from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput
-from conans.client.source import get_scm
+from conans.client.source import get_scm_data
 from conans.errors import ConanException
-from conans.model.conan_file import create_exports, create_exports_sources
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
 from conans.util.log import logger
@@ -21,6 +15,8 @@ from conans.search.search import search_recipes
 
 
 def export_alias(reference, target_reference, client_cache):
+    if reference.name != target_reference.name:
+        raise ConanException("An alias can only be defined to a package with the same name")
     conanfile = """
 from conans import ConanFile
 
@@ -36,92 +32,64 @@ class AliasConanfile(ConanFile):
     digest.save(export_path)
 
 
-def cmd_export(conanfile_path, name, version, user, channel, keep_source,
-               output, client_cache):
+def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
-    param user: user under this package will be exported
-    param channel: string (stable, testing,...)
     """
     logger.debug("Exporting %s" % conanfile_path)
+    output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
-    conanfile = _load_export_conanfile(conanfile_path, output, name, version)
-    conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-    conan_ref_str = str(conan_ref)
-    # Maybe a platform check could be added, but depends on disk partition
-    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
-    if refs and conan_ref not in refs:
-        raise ConanException("Cannot export package with same name but different case\n"
-                             "You exported '%s' but already existing '%s'"
-                             % (conan_ref_str, " ".join(str(s) for s in refs)))
-    output = ScopedOutput(str(conan_ref), output)
-    with client_cache.conanfile_write_lock(conan_ref):
-        _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source)
-
-
-def _load_export_conanfile(conanfile_path, output, name, version):
-    conanfile = load_conanfile_class(conanfile_path)
-
     for field in ["url", "license", "description"]:
         field_value = getattr(conanfile, field, None)
         if not field_value:
             output.warn("Conanfile doesn't have '%s'.\n"
                         "It is recommended to add it as attribute" % field)
 
-    try:
-        # Exports is the only object field, we need to do this, because conan export needs it
-        conanfile.exports = create_exports(conanfile)
-        conanfile.exports_sources = create_exports_sources(conanfile)
-    except Exception as e:  # re-raise with file name
-        raise ConanException("%s: %s" % (conanfile_path, str(e)))
+    conan_ref_str = str(reference)
+    # Maybe a platform check could be added, but depends on disk partition
+    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
+    if refs and reference not in refs:
+        raise ConanException("Cannot export package with same name but different case\n"
+                             "You exported '%s' but already existing '%s'"
+                             % (conan_ref_str, " ".join(str(s) for s in refs)))
 
-    # check name and version were specified
-    if not conanfile.name:
-        if name:
-            conanfile.name = name
-        else:
-            raise ConanException("conanfile didn't specify name")
-    elif name and name != conanfile.name:
-        raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
-
-    if not conanfile.version:
-        if version:
-            conanfile.version = version
-        else:
-            raise ConanException("conanfile didn't specify version")
-    elif version and version != conanfile.version:
-        raise ConanException("Package recipe exported with version %s!=%s"
-                             % (version, conanfile.version))
-
-    return conanfile
+    with client_cache.conanfile_write_lock(reference):
+        _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
+                          keep_source)
 
 
-def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
 
     scm_src_file = paths.scm_folder(conan_ref)
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 
-    scm = get_scm(conanfile, src_path)
+    scm_data = get_scm_data(conanfile)
 
-    if not scm or not (scm.capture_origin or scm.capture_revision):
+    if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return
 
-    if scm.url == "auto":
+    scm = SCM(scm_data, conanfile_dir)
+
+    if scm_data.url == "auto":
         origin = scm.get_remote_url()
         if not origin:
             raise ConanException("Repo origin cannot be deduced by 'auto'")
+        if os.path.exists(origin):
+            output.warn("Repo origin looks like a local path: %s" % origin)
+            origin = origin.replace("\\", "/")
         output.success("Repo origin deduced by 'auto': %s" % origin)
-        scm.url = origin
-    if scm.revision == "auto":
-        scm.revision = scm.get_revision()
-        output.success("Revision deduced by 'auto': %s" % scm.revision)
+        scm_data.url = origin
+    if scm_data.revision == "auto":
+        scm_data.revision = scm.get_revision()
+        output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     # Generate the scm_folder.txt file pointing to the src_path
+    src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
@@ -190,6 +158,11 @@ def _init_export_folder(destination_folder, destination_src_folder):
 
 def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
                     output):
+
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+    if isinstance(conanfile.exports_sources, str):
+        conanfile.exports_sources = (conanfile.exports_sources, )
 
     origin_folder = os.path.dirname(conanfile_path)
 

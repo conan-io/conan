@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from conans.client.tools.files import which, _path_equals
 from conans.errors import ConanException
+from conans.client.run_environment import RunEnvironment
 
 
 @contextmanager
@@ -23,11 +24,17 @@ def pythonpath(conanfile):
 
 
 @contextmanager
+def run_environment(conanfile):
+    with environment_append(RunEnvironment(conanfile).vars):
+        yield
+
+
+@contextmanager
 def environment_append(env_vars):
     """
-    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
+    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.g.: MYVAR=1
                      The values can also be lists of appendable environment vars. {name: [value, value2]}
-                      => e.j. PATH=/path/1:/path/2
+                      => e.g. PATH=/path/1:/path/2
     :return: None
     """
     for name, value in env_vars.items():

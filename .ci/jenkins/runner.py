@@ -29,7 +29,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
-                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
+                    "--process-restartworker --with-coverage" % num_cores)
 
     if num_cores <= 1:
         multiprocess = ""
@@ -65,7 +65,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
-    env["CONAN_RECIPE_LINTER"] = "False"
+    # env["CONAN_RECIPE_LINTER"] = "False"
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     with chdir(source_folder):
@@ -90,13 +90,13 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='Launch tests in a venv')
-    parser.add_argument('module', help='e.j: conans.test')
-    parser.add_argument('pyver', help='e.j: py27')
+    parser.add_argument('module', help='e.g.: conans.test')
+    parser.add_argument('pyver', help='e.g.: py27')
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
-                        help='Tags to exclude from testing, e.j: rest_api')
+                        help='Tags to exclude from testing, e.g.: rest_api')
 
     args = parser.parse_args()
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.exclude_tag, num_cores=args.num_cores)

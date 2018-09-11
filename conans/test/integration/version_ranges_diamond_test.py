@@ -1,10 +1,12 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.util.files import load, save
 import os
+import unittest
+
 from parameterized import parameterized
-from conans.model.ref import ConanFileReference
+
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer, \
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
+from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
@@ -73,12 +75,13 @@ class HelloReuseConan(ConanFile):
                              users={"default": [("lasote", "mypass")]})
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
-        conan_reference = ConanFileReference.loads("Pkg/1.2@lasote/testing")
-        manifest = os.path.join(client2.client_cache.export(conan_reference), CONAN_MANIFEST)
+
         # Make sure timestamp increases, in some machines in testing, it can fail due to same timestamp
-        content = load(manifest).splitlines()
-        content[0] = str(int(content[0]) + 1)
-        save(manifest, "\n".join(content))
+        inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
+        inc_package_manifest_timestamp(client2.client_cache,
+                                       "Pkg/1.2@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                       1)
+
         client2.run("upload Pkg* -r=default --all --confirm")
 
         client.run("install .")

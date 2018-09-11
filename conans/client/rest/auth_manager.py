@@ -61,7 +61,7 @@ def input_credentials_if_unauthorized(func):
         for _ in range(LOGIN_RETRIES):
             user, password = self._user_io.request_login(self._remote.name, self.user)
             try:
-                token = self.authenticate(user, password)
+                token, _, _, _ = self.authenticate(user, password)
             except AuthenticationException:
                 if self.user is None:
                     self._user_io.out.error('Wrong user or password')
@@ -144,12 +144,16 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_package_manifest(package_reference)
 
     @input_credentials_if_unauthorized
-    def get_recipe_urls(self, conan_reference):
-        return self._rest_client.get_recipe_urls(conan_reference)
+    def get_package(self, package_reference, dest_folder):
+        return self._rest_client.get_package(package_reference, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_package_urls(self, package_reference):
-        return self._rest_client.get_package_urls(package_reference)
+    def get_recipe(self, reference, dest_folder):
+        return self._rest_client.get_recipe(reference, dest_folder)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_sources(self, reference, dest_folder):
+        return self._rest_client.get_recipe_sources(reference, dest_folder)
 
     @input_credentials_if_unauthorized
     def download_files_to_folder(self, urls, dest_folder):
@@ -193,5 +197,5 @@ class ConanApiAuthManager(object):
             raise ConanException("Password contains not allowed symbols")
 
         # Store result in DB
-        update_localdb(self._localdb, user, token, self._remote, self._user_io.out)
-        return token
+        remote_name, prev_user, user = update_localdb(self._localdb, user, token, self._remote)
+        return token, remote_name, prev_user, user
