@@ -48,6 +48,7 @@ from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
+from conans.client.tools.win import get_cased_path
 
 
 
@@ -290,6 +291,7 @@ class TestBufferConanOutput(ConanOutput):
 
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None):
     tmp = folder or temp_folder()
+    tmp = get_cased_path(tmp)
     if files:
         save_files(tmp, files)
     git = Git(tmp)
