@@ -7,7 +7,6 @@ from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.range_resolver import RangeResolver
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
 from conans.client import settings_preprocessor
 from conans.client.output import ScopedOutput
@@ -45,10 +44,10 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, loader, proxy):
+    def __init__(self, output, client_cache, registry, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
-        self._resolver = RangeResolver(output, client_cache, self._proxy)
+        self._resolver = resolver
         self._client_cache = client_cache
         self._registry = registry
         self._remote_manager = remote_manager
@@ -73,6 +72,21 @@ class GraphManager(object):
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
+
+    def load_simple_graph(self, reference, profile, recorder):
+        # Loads a graph without computing the binaries. It is necessary for
+        # export-pkg command, not hitting the server
+        # # https://github.com/conan-io/conan/issues/3432
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
+                                   workspace=None, recorder=recorder)
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        settings_preprocessor.preprocess(cache_settings)
+        processed_profile = ProcessedProfile(cache_settings, profile, create_reference=None)
+        conanfile = self._loader.load_virtual([reference], processed_profile)
+        graph = builder.load_graph(conanfile, check_updates=False, update=False, remote_name=None,
+                                   processed_profile=processed_profile)
+        return graph
 
     def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
                    recorder, workspace):

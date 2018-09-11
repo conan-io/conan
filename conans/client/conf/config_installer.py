@@ -39,12 +39,13 @@ def _handle_profiles(source_folder, target_folder, output):
             shutil.copy(os.path.join(root, f), os.path.join(target_folder, profile))
 
 
-def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl):
+def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl, args=None):
     output.info("Trying to clone repo  %s" % repo_url)
 
     with tools.chdir(tmp_folder):
         try:
-            subprocess.check_output('git -c http.sslVerify=%s clone "%s" config' % (verify_ssl, repo_url),
+            args = args or ""
+            subprocess.check_output('git -c http.sslVerify=%s %s clone "%s" config' % (verify_ssl, args, repo_url),
                                     shell=True)
             output.info("Repo cloned")
         except Exception as e:
@@ -107,7 +108,7 @@ def _process_download(item, client_cache, output, tmp_folder, verify_ssl):
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(item, client_cache, output, verify_ssl, config_type=None):
+def configuration_install(item, client_cache, output, verify_ssl, config_type=None, args=None):
     tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
@@ -121,7 +122,7 @@ def configuration_install(item, client_cache, output, verify_ssl, config_type=No
                                      "'general.config_install' not defined in conan.conf")
 
         if item.endswith(".git") or config_type == "git":
-            _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl)
+            _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl, args)
         elif os.path.exists(item):
             # is a local file
             _process_zip_file(item, client_cache, output, tmp_folder)

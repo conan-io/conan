@@ -13,11 +13,11 @@ from conans.util.files import decode_text, to_file_bytes
 
 class Git(object):
 
-    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
+                 force_english=True, runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
-            os.mkdir(self.folder)
+            os.makedirs(self.folder)
         self._verify_ssl = verify_ssl
         self._force_eng = force_english
         self._username = username
@@ -32,6 +32,9 @@ class Git(object):
                     return subprocess.check_output(command, shell=True).decode().strip()
                 else:
                     return self._runner(command)
+
+    def get_repo_root(self):
+        return self.run("rev-parse --show-toplevel")
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
@@ -130,8 +133,10 @@ class Git(object):
     get_revision = get_commit
 
     def _check_git_repo(self):
-        if not os.path.exists(os.path.join(self.folder, ".git")):
-            raise ConanException("Not a git repository")
+        try:
+            self.run("status")
+        except Exception:
+            raise ConanException("Not a valid git repository")
 
     def get_branch(self):
         self._check_git_repo()
@@ -139,8 +144,6 @@ class Git(object):
             status = self.run("status -bs --porcelain")
             # ## feature/scm_branch...myorigin/feature/scm_branch
             branch = status.splitlines()[0].split("...")[0].strip("#").strip()
-            # Replace non alphanumeric
-            branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
             return branch
         except Exception as e:
             raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
