@@ -175,21 +175,6 @@ class Command(object):
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx)
 
-    def display(self, *args):
-        """Displays conanfile attributes, like name, version, options
-        Works both locally, in local cache and remote
-        """
-        parser = argparse.ArgumentParser(description=self.display.__doc__, prog="conan display")
-        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                            " (conanfile.py) or to a recipe file. e.g., "
-                            "./my_project/conanfile.py. It could also be a reference")
-        parser.add_argument("attribute", help='The attribute to be displayed, e.g "name"')
-        parser.add_argument("-r", "--remote", help='look in the specified remote server',
-                            action=OnceArgument)
-        args = parser.parse_args(*args)
-        result = self._conan.display(args.path_or_reference, args.attribute, args.remote)
-        self._user_io.out.write(str(result))
-
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method.
 
@@ -1225,7 +1210,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "display", "help"))]
+                                   "alias", "download", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
