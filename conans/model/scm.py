@@ -84,3 +84,10 @@ class SCM(object):
 
     def get_repo_root(self):
         return self.repo.get_repo_root()
+
+    def get_qualified_remote_url(self):
+        return self.repo.get_qualified_remote_url()
+
+    def is_local_repository(self):
+        return self.repo.is_local_repository()
+
