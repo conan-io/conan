@@ -37,9 +37,6 @@ class SCMBase(object):
                 else:
                     return self._runner(command)
 
-    def get_repo_root(self):
-        return self.run("rev-parse --show-toplevel")
-
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
             return url
@@ -129,6 +126,16 @@ class Git(SCMBase):
             pass
         return None
 
+    def get_qualified_remote_url(self):
+        url = self.get_remote_url()
+        if os.path.exists(url):
+            url = url.replace("\\", "/")
+        return url
+
+    def is_local_repository(self):
+        url = self.get_remote_url()
+        return os.path.exists(url)   
+
     def get_commit(self):
         self._check_git_repo()
         try:
@@ -139,9 +146,16 @@ class Git(SCMBase):
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
 
     def is_pristine(self):
-        return True  # TODO: To be implemented
-
+        status = self.run("status --porcelain").strip()
+        if not status:
+            return True
+        else:
+            return False
+        
     get_revision = get_commit
+
+    def get_repo_root(self):
+        return self.run("rev-parse --show-toplevel")
 
     def _check_git_repo(self):
         try:
@@ -157,7 +171,7 @@ class Git(SCMBase):
             branch = status.splitlines()[0].split("...")[0].strip("#").strip()
             return branch
         except Exception as e:
-            raise ConanException("Unable to get git branch from %s\n%s" % (self.folder, str(e)))
+            raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
 
 class SVN(SCMBase):
@@ -205,6 +219,16 @@ class SVN(SCMBase):
     def get_remote_url(self):
         return self.run("info --show-item url").strip()
 
+    def get_qualified_remote_url(self):
+        # Return url with peg revision
+        url = self.get_remote_url()
+        revision = self.get_revision()
+        return "{url}@{revision}".format(url=url, revision=revision)
+        
+    def is_local_repository(self):
+        url = self.get_remote_url()
+        return url.startswith("file://")   
+
     def is_pristine(self):
         # Check if working copy is pristine/consistent
         output = self.run("status -u -r {}".format(self.get_revision()))
@@ -223,3 +247,23 @@ class SVN(SCMBase):
 
     def get_repo_root(self):
         return self.run("info --show-item wc-root").strip()
+
+    def get_last_changed_revision(self, use_wc_root=True):
+        if use_wc_root:
+            return self.run('info "{root}" --show-item last-changed-revision'.format(
+                root=self.get_repo_root())).strip()
+        else:
+            return self.run("info --show-item last-changed-revision").strip()
+
+    def get_branch(self):
+        url = self.run("info --show-item relative-url").strip()
+        try:
+            pattern = "(tags|branches)/[^/]+|trunk"
+            branch = re.search(pattern, url)
+            
+            if branch is None:
+                return None
+            else:
+                return branch[0]
+        except Exception as e:
+            raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
