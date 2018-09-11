@@ -222,7 +222,7 @@ class SVN(SCMBase):
     def get_qualified_remote_url(self):
         # Return url with peg revision
         url = self.get_remote_url()
-        revision = self.get_revision()
+        revision = self.get_last_changed_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
         
     def is_local_repository(self):
