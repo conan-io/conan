@@ -394,7 +394,7 @@ class ConanInstaller(object):
         closure = deps_graph.full_closure(node)
         node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
-        node_order.sort(lambda n1, n2: cmp(inverse_levels[n1], inverse_levels[n2]))
+        node_order.sort(key=lambda n: inverse_levels[n])
 
         conan_file = node.conanfile
         for n in node_order:
