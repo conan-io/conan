@@ -1,15 +1,8 @@
-import unittest
-import platform
-import os
 
-from conans.test.utils.tools import TestClient, TestServer
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO
-from conans.model.info import ConanInfo
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE_TXT
-from conans.client.conf.detect import detected_os
-from conans.util.files import load, mkdir, rmdir
+import unittest
+
+from conans.test.utils.tools import TestClient
+from conans.client.command import ERROR_INVALID_CONFIGURATION
 
 
 class InvalidConfigurationTest(unittest.TestCase):
@@ -36,7 +29,7 @@ class MyPkg(ConanFile):
         self.client.run("install . %s" % self.settings_msvc15)
 
         error = self.client.run("install . %s" % self.settings_msvc12, ignore_error=True)
-        self.assertEqual(error, 5)  # TODO: hardcoded!!
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("Invalid configuration: user says that compiler.version=12 is invalid",
                       self.client.out)
 
@@ -45,7 +38,7 @@ class MyPkg(ConanFile):
 
         error = self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc12,
                                 ignore_error=True)
-        self.assertEqual(error, 5)  # TODO: hardcoded!!
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
                       "compiler.version=12 is invalid", self.client.out)
 
@@ -63,6 +56,6 @@ class MyPkg(ConanFile):
 
         error = self.client.run("create other/ other/ver@jgsogo/test %s" % self.settings_msvc12,
                                 ignore_error=True)
-        self.assertEqual(error, 5)  # TODO: hardcoded!!
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
                       "compiler.version=12 is invalid", self.client.out)

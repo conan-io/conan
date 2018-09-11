@@ -17,6 +17,16 @@ from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
 
 
+# Exit codes for conan command:
+SUCCESS = 0                         # 0: Success (done)
+ERROR_GENERAL = 1                   # 1: General ConanException error (done)
+ERROR_MIGRATION = 2                 # 2: Migration error
+USER_CTRL_C = 3                     # 3: Ctrl+C
+USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
+ERROR_SIGTERM = 5                   # 5: SIGTERM
+ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+
+
 class Extender(argparse.Action):
     """Allows to use the same flag several times in a command and creates a list with the values.
     For example:
@@ -1267,10 +1277,6 @@ class Command(object):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods
         """
-        SUCCESS = 0
-        ERROR_GENERAL = 1
-        ERROR_INVALID_CONFIGURATION = 5
-
         ret_code = SUCCESS
         try:
             try:
@@ -1402,12 +1408,13 @@ def main(args):
         2: Migration error
         3: Ctrl+C
         4: Ctrl+Break
-        5: Invalid configuration (done)
+        5: SIGTERM
+        6: Invalid configuration (done)
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
-        sys.exit(2)
+        sys.exit(ERROR_MIGRATION)
 
     outputer = CommandOutputer(user_io, client_cache)
     command = Command(conan_api, client_cache, user_io, outputer)
@@ -1417,15 +1424,15 @@ def main(args):
 
         def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
-            sys.exit(3)
+            sys.exit(USER_CTRL_C)
 
         def sigterm_handler(_, __):
             print('Received SIGTERM!')
-            sys.exit(5)
+            sys.exit(ERROR_SIGTERM)
 
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
-            sys.exit(4)
+            sys.exit(USER_CTRL_BREAK)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
         signal.signal(signal.SIGTERM, sigterm_handler)
