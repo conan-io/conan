@@ -1115,6 +1115,28 @@ class GitToolTest(unittest.TestCase):
         git = Git(subfolder)
         self.assertEqual(root_path, git.get_repo_root())
 
+    def test_is_pristine(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(root_path)
+        self.assertTrue(git.is_pristine())
+
+        save(os.path.join(root_path, "other_file"), "content")
+        self.assertFalse(git.is_pristine())
+
+        git.run("add .")
+        self.assertFalse(git.is_pristine())
+
+        git.run('commit -m "commit"')
+        self.assertTrue(git.is_pristine())
+
+    def test_is_local_repository(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(root_path)
+        self.assertTrue(git.is_local_repository())
+        # TODO: Check that with remote one it is working too
+
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
         tmp = temp_folder()
@@ -1441,6 +1463,67 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
         self.assertFalse(svn2.folder == tmp_folder)
         self.assertEqual(os.path.realpath(tmp_folder).lower(), svn2.get_repo_root().lower())
+
+    def test_is_local_repository(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.clone(url=self.repo_url)
+        self.assertTrue(svn.is_local_repository())
+
+        # TODO: Test not local repository
+
+    def test_last_changed_revision(self):
+        project_url, _ = self.create_project(files={'project1/myfile': "contents",
+                                                    'project2/myfile': "content",
+                                                    'project2/subdir1/myfile': "content",
+                                                    'project2/subdir2/myfile': "content",
+                                                    })
+        prj1 = SVN(folder=self.gimme_tmp())
+        prj1.clone(url=os.path.join(project_url, "project1"))
+
+        prj2 = SVN(folder=self.gimme_tmp())
+        prj2.clone(url=os.path.join(project_url, "project2"))
+
+        self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+
+        # Modify file in one subfolder of prj2
+        with open(os.path.join(prj2.folder, "subdir1", "myfile"), "a") as f:
+            f.write("new content")
+        prj2.run('commit -m "add to file"')
+        prj2.run('update')
+        prj1.run('update')
+
+        self.assertNotEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+        self.assertEqual(prj1.get_revision(), prj2.get_revision())
+
+        # Instantiate a SVN in the other subfolder
+        prj2_subdir2 = SVN(folder=os.path.join(prj2.folder, "subdir2"))
+        prj2_subdir2.run('update')
+        self.assertEqual(prj2.get_last_changed_revision(),
+                         prj2_subdir2.get_last_changed_revision())
+        self.assertNotEqual(prj2.get_last_changed_revision(use_wc_root=False),
+                            prj2_subdir2.get_last_changed_revision(use_wc_root=False))
+
+    def test_branch(self):
+        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
+                                                    'prj1/branches/my_feature/myfile': "",
+                                                    'prj1/branches/issue3434/myfile': "",
+                                                    'prj1/tags/v12.3.4/myfile': "",
+                                                    })
+        svn = SVN(folder=self.gimme_tmp())
+        svn.clone(url=os.path.join(project_url, 'prj1', 'trunk'))
+        self.assertEqual("trunk", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.clone(url=os.path.join(project_url, 'prj1', 'branches', 'my_feature'))
+        self.assertEqual("branches/my_feature", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.clone(url=os.path.join(project_url, 'prj1', 'branches', 'issue3434'))
+        self.assertEqual("branches/issue3434", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.clone(url=os.path.join(project_url, 'prj1', 'tags', 'v12.3.4'))
+        self.assertEqual("tags/v12.3.4", svn.get_branch())
 
 
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
