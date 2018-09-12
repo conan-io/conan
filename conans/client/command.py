@@ -1010,12 +1010,12 @@ class Command(object):
         info = None
 
         if args.force and args.no_overwrite:
-            raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
+            raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
         if args.force and args.skip_upload:
-            raise ConanException("'skip_upload' argument cannot be used together with 'force'")
+            raise ConanException("'--skip-upload' argument cannot be used together with '--force'")
         if args.no_overwrite and args.skip_upload:
-            raise ConanException("'skip_upload' argument cannot be used together "
-                                 "with 'no_overwrite'")
+            raise ConanException("'--skip-upload' argument cannot be used together "
+                                 "with '--no-overwrite'")
         if args.force:
             policy = UPLOAD_POLICY_FORCE
         elif args.no_overwrite == "all":
