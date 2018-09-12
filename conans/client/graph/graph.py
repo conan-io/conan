@@ -1,12 +1,7 @@
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import conanfile_exception_formatter
 from collections import OrderedDict
-from conans.model.conan_file import ConanFile
-from conans.client.remote_registry import Remote
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.output import ScopedOutput
-from conans.client.loader import ProcessedProfile
 
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -38,48 +33,6 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
-
-    def serial(self):
-        result = {}
-        result["path"] = getattr(self, "path", None)
-        result["conan_ref"] = self.conan_ref.serial() if self.conan_ref else None
-        result["conanfile"] = self.conanfile.serial()
-        result["binary"] = self.binary
-        result["recipe"] = self.recipe
-        result["remote"] = self.remote.serial() if self.remote else None
-        result["binary_remote"] = self.binary_remote.serial() if self.binary_remote else None
-        result["build_require"] = self.build_require
-        return result
-
-    @staticmethod
-    def unserial(data, env, conanfile_path, output, proxy, loader, update=False, scoped_output=None):
-        path = data["path"]
-        conan_ref = ConanFileReference.unserial(data["conan_ref"])
-        # Remotes needs to be decoupled
-        remote = Remote.unserial(data["remote"])
-        remote_name = remote.name if remote else None
-        if path:
-            conanfile_path = conanfile_path
-            output = scoped_output
-        else:
-            result = proxy.get_recipe(conan_ref, check_updates=False, update=update,
-                                      remote_name=remote_name, recorder=ActionRecorder())
-            conanfile_path, recipe_status, remote, _ = result
-            output = ScopedOutput(str(conan_ref or "Project"), output)
-        if conanfile_path.endswith(".txt"):
-            # FIXME: remove this ugly ProcessedProfile
-            conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
-        else:
-            conanfile = loader.load_basic(conanfile_path, output, conan_ref)
-        conanfile.unserial(data["conanfile"], env)
-
-        result = Node(conan_ref, conanfile)
-        result.binary = data["binary"]
-        result.recipe = data["recipe"]
-        result.remote = remote
-        result.binary_remote = Remote.unserial(data["binary_remote"])
-        result.build_require = data["build_require"]
-        return result
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)
@@ -167,35 +120,11 @@ class Edge(object):
     def __hash__(self):
         return hash((self.src, self.dst))
 
-    def serial(self):
-        result = {}
-        result["src"] = str(id(self.src))
-        result["dst"] = str(id(self.dst))
-        result["private"] = self.private
-        return result
-
 
 class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
         self.root = None
-
-    def serial(self):
-        result = {}
-        result["nodes"] = {str(id(n)): n.serial() for n in self.nodes}
-        result["edges"] = [e.serial() for n in self.nodes for e in n.dependencies]
-        result["root"] = str(id(self.root))
-        return result
-
-    @staticmethod
-    def unserial(data, env, conanfile_path, output, proxy, loader, scoped_output=None):
-        result = DepsGraph()
-        nodes_dict = {id_: Node.unserial(n, env, conanfile_path, output, proxy, loader, scoped_output=scoped_output) for id_, n in data["nodes"].items()}
-        result.nodes = set(nodes_dict.values())
-        result.root = nodes_dict[data["root"]]
-        for edge in data["edges"]:
-            result.add_edge(nodes_dict[edge["src"]], nodes_dict[edge["dst"]], edge["private"])
-        return result
 
     def add_graph(self, node, graph, build_require=False):
         for n in graph.nodes:

@@ -30,23 +30,6 @@ class RequirementInfo(object):
         else:
             self.semver()
 
-    def serial(self):
-        return {"name": self.name,
-                "version": self.version,
-                "user": self.user,
-                "channel": self.channel,
-                "package_id": self.package_id}
-
-    @staticmethod
-    def unserial(data):
-        result = RequirementInfo("pkg/0.1@user/testing:id")
-        result.name = data["name"]
-        result.version = data["version"]
-        result.channel = data["channel"]
-        result.user = data["user"]
-        result.package_id = data["package_id"]
-        return result
-
     def dumps(self):
         if not self.name:
             return ""
@@ -124,16 +107,6 @@ class RequirementsInfo(object):
     def __init__(self, requires):
         # {PackageReference: RequirementInfo}
         self._data = {r: RequirementInfo(str(r)) for r in requires}
-
-    def serial(self):
-        return {str(k): v.serial() for k, v in self._data.items()}
-
-    @staticmethod
-    def unserial(data):
-        result = RequirementsInfo([])
-        result._data = {PackageReference.loads(k): RequirementInfo.unserial(v)
-                        for k, v in data.items()}
-        return result
 
     def copy(self):
         return RequirementsInfo(self._data.keys())
@@ -253,38 +226,8 @@ class RequirementsList(list):
     def deserialize(data):
         return RequirementsList([PackageReference.loads(line) for line in data])
 
-    def serial(self):
-        return self.serialize()
-
-    @staticmethod
-    def unserial(data):
-        return RequirementsList.deserialize(data)
-
 
 class ConanInfo(object):
-
-    def serial(self):
-        result = {}
-        result["settings"] = self.settings.serial()
-        result["full_settings"] = self.full_settings.serial()
-        result["full_requires"] = self.full_requires.serial()
-        result["full_options"] = self.full_options.serial()
-        result["options"] = self.options.serial()
-        result["requires"] = self.requires.serial()
-        result["env_values"] = self.env_values.serial()
-        return result
-
-    @staticmethod
-    def unserial(data):
-        result = ConanInfo()
-        result.settings = Values.unserial(data["settings"])
-        result.full_settings = Values.unserial(data["full_settings"])
-        result.full_requires = RequirementsList.unserial(data["full_requires"])
-        result.full_options = OptionsValues.unserial(data["full_options"])
-        result.options = OptionsValues.unserial(data["options"])
-        result.requires = RequirementsInfo.unserial(data["requires"])
-        result.env_values = EnvValues.unserial(data["env_values"])
-        return result
 
     def copy(self):
         """ Useful for build_id implementation

@@ -77,15 +77,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def __hash__(self):
         return hash((self.name, self.version, self.user, self.channel, self.revision))
 
-    def serial(self):
-        return repr(self)
-
-    @staticmethod
-    def unserial(data):
-        if data is None:
-            return None
-        return ConanFileReference.loads(data)
-
     @staticmethod
     def loads(text):
         """ Parses a text string to generate a ConanFileReference object

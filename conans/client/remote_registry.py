@@ -12,20 +12,7 @@ from conans.util.log import logger
 
 default_remotes = "conan-center https://conan.bintray.com True"
 
-
-class Remote(namedtuple("Remote", "name url verify_ssl")):
-    def serial(self):
-        result = {}
-        result["name"] = self.name
-        result["url"] = self.url
-        result["verify_ssl"] = self.verify_ssl
-        return result
-
-    @staticmethod
-    def unserial(data):
-        if data is None:
-            return None
-        return Remote(data["name"], data["url"], data["verify_ssl"])
+Remote = namedtuple("Remote", "name url verify_ssl")
 
 
 class RemoteRegistry(object):

@@ -7,7 +7,8 @@ from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, DepsGraph
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, DepsGraph,\
+    Node
 from conans.client import settings_preprocessor
 from conans.client.output import ScopedOutput
 from conans.client.graph.build_mode import BuildMode
@@ -74,6 +75,8 @@ class GraphManager(object):
             deps_graph = DepsGraph.unserial(graph_json, profile.env_values, conanfile_path,
                                             self._output, self._proxy, self._loader,
                                             scoped_output=output)
+            print "DepsGraph _conanfile_time ", Node._conanfile_time
+            print "DepsGraph _unserial_time ", Node._unserial_time
             conanfile = deps_graph.root.conanfile
             print "DepsGraph.unserial() ", time.time() - t1
             installer = ConanInstaller(self._client_cache, output, self._remote_manager,
