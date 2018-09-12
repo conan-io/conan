@@ -91,6 +91,14 @@ class FileCopier(object):
         """
         filenames = []
         linked_folders = []
+        if excludes:
+            if not isinstance(excludes, (tuple, list)):
+                excludes = (excludes, )
+            if ignore_case:
+                excludes = [e.lower() for e in excludes]
+        else:
+            excludes = []
+
         for root, subfolders, files in os.walk(src, followlinks=True):
             if root in self._excluded:
                 subfolders[:] = []
@@ -112,6 +120,11 @@ class FileCopier(object):
                     pass
 
             relative_path = os.path.relpath(root, src)
+            for exclude in excludes:
+                if fnmatch.fnmatch(relative_path, exclude):
+                    subfolders[:] = []
+                    files = []
+                    break
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
@@ -121,13 +134,8 @@ class FileCopier(object):
             pattern = pattern.lower()
 
         files_to_copy = fnmatch.filter(filenames, pattern)
-        if excludes:
-            if not isinstance(excludes, (tuple, list)):
-                excludes = (excludes, )
-            if ignore_case:
-                excludes = [e.lower() for e in excludes]
-            for exclude in excludes:
-                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+        for exclude in excludes:
+            files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
 
         if ignore_case:
             files_to_copy = [filenames[f] for f in files_to_copy]
