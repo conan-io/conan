@@ -256,7 +256,7 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
-        inverse_levels = deps_graph.inverse_levels()
+        inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
         time_propagate = 0
         time_call = 0
 
