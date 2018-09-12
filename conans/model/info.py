@@ -45,14 +45,6 @@ class RequirementInfo(object):
         return "/".join([str(n) for n in [self.name, self.version, self.user, self.channel,
                                           self.package_id]])
 
-    def serialize(self):
-        return str(self.package)
-
-    @staticmethod
-    def deserialize(data):
-        ret = RequirementInfo(data)
-        return ret
-
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
 
@@ -163,17 +155,6 @@ class RequirementsInfo(object):
             if dumped:
                 result.append(dumped)
         return "\n".join(result)
-
-    def serialize(self):
-        return {str(ref): requinfo.serialize() for ref, requinfo in self._data.items()}
-
-    @staticmethod
-    def deserialize(data):
-        ret = RequirementsInfo({})
-        for ref, requinfo in data.items():
-            ref = PackageReference.loads(ref)
-            ret._data[ref] = RequirementInfo.deserialize(requinfo)
-        return ret
 
     def unrelated_mode(self):
         self.clear()
@@ -341,16 +322,6 @@ class ConanInfo(object):
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())
         return self._package_id
-
-    def serialize(self):
-        conan_info_json = {"settings": self.settings.serialize(),
-                           "full_settings": self.full_settings.serialize(),
-                           "options": self.options.serialize(),
-                           "full_options": self.full_options.serialize(),
-                           "requires": self.requires.serialize(),
-                           "full_requires": self.full_requires.serialize(),
-                           "recipe_hash": self.recipe_hash}
-        return conan_info_json
 
     def serialize_min(self):
         """

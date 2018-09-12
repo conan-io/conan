@@ -21,8 +21,8 @@ class GetCasedPath(unittest.TestCase):
         self.assertEqual(p1, get_cased_path(os.path.join(folder, "myfolder", "subfolder")))
 
     def test_case_not_existing(self):
-        non_existing_path = os.path.abspath(
-            os.path.join("this", "Path", "does", "NOT", "Exists"))
+        current_dir = get_cased_path(os.getcwd())
+        non_existing_path = os.path.join(current_dir, "this", "Path", "does", "NOT", "Exists")
         p = get_cased_path(non_existing_path)  # If not exists from the root, returns as is
         self.assertEqual(p, non_existing_path)
 
