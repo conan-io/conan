@@ -29,7 +29,7 @@ from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
 from conans.search.search import filter_packages
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.util.progress_bar import FileObjectProgress
+from conans.util import progress_bar as pb
 
 
 class RemoteManager(object):
@@ -185,7 +185,7 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote.name, zipped_files)
 
-        unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
+        unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
         touch_folder(dest_folder)
@@ -203,7 +203,8 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote.name, zipped_files)
 
-        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
+        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
+                            output=self._output)
         c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
@@ -220,7 +221,7 @@ class RemoteManager(object):
             zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
-            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
+            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(dest_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -367,24 +368,22 @@ def compress_files(files, symlinks, name, dest_dir):
     return tgz_path
 
 
-def unzip_and_get_files(files, destination_dir, tgz_name):
+def unzip_and_get_files(files, destination_dir, tgz_name, output):
     """Moves all files from package_files, {relative_name: tmp_abs_path}
     to destination_dir, unzipping the "tgz_name" if found"""
 
     tgz_file = files.pop(tgz_name, None)
     check_compressed_files(tgz_name, files)
     if tgz_file:
-        uncompress_file(tgz_file, destination_dir)
+        uncompress_file(tgz_file, destination_dir, output=output)
         os.remove(tgz_file)
 
 
-def uncompress_file(src_path, dest_folder, show_progress_bar=True):
+def uncompress_file(src_path, dest_folder, output, show_progress_bar=True):
     t1 = time.time()
     try:
-        with open(src_path, 'rb') as file_handler:
-            if show_progress_bar:
-                filename = os.path.basename(src_path)
-                file_handler = FileObjectProgress(file_handler, desc="Decompressing %s" % filename)
+        with pb.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
+                            output=output) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
