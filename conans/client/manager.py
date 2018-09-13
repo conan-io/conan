@@ -72,11 +72,11 @@ class ConanManager(object):
         package_output = ScopedOutput(str(reference), self._user_io.out)
         if package_folder:
             packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
-                                package_output, self._plugin_manager)
+                                package_output, self._plugin_manager, conan_file_path, reference)
         else:
             packager.create_package(conanfile, pkg_id, source_folder, build_folder,
                                     dest_package_folder, install_folder, package_output,
-                                    self._plugin_manager, local=True)
+                                    self._plugin_manager, conan_file_path, reference, local=True)
 
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
@@ -217,10 +217,10 @@ class ConanManager(object):
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
-        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder, output,
-                                                                deps_info_required=True)
+        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
+                                                                output, deps_info_required=True)
         packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                install_folder, output, self._plugin_manager, conanfile_path,
+                                install_folder, output, self._plugin_manager, conanfile_path, None,
                                 local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,

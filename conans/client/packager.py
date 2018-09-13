@@ -19,7 +19,7 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, pl
     output.info("Package folder %s" % package_folder)
 
     plugin_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference, package_id=pkg_id)
+                           reference=str(reference), package_id=pkg_id)
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
@@ -34,7 +34,7 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, pl
     output.success("Package '%s' created" % pkg_id)
     conanfile.package_folder = package_folder
     plugin_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference, package_id=pkg_id)
+                           reference=str(reference), package_id=pkg_id)
 
 
 def create_package(conanfile, pkg_id, source_folder, build_folder, package_folder, install_folder,
@@ -55,7 +55,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         conanfile.build_folder = build_folder
 
         plugin_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                               reference=reference, package_id=pkg_id)
+                               reference=str(reference), package_id=pkg_id)
 
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
@@ -96,7 +96,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
     plugin_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference, package_id=pkg_id)
+                           reference=str(reference), package_id=pkg_id)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):

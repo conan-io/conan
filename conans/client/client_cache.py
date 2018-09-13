@@ -145,6 +145,9 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
     @property
     def plugins_path(self):
+        """
+        :return: Plugins folder in client cache
+        """
         return join(self.conan_folder, PLUGINS_FOLDER)
 
     @property
