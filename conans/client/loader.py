@@ -53,7 +53,10 @@ class ConanFileLoader(object):
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
-
+        conanfile = conanfile(self._output, self._runner, user, channel)
+        if hasattr(conanfile, "preexport") and callable(conanfile.preexport):
+            conanfile.recipe_folder = os.path.dirname(conanfile_path)
+            conanfile.preexport()
         # check name and version were specified
         if not conanfile.name:
             if name:
@@ -73,8 +76,8 @@ class ConanFileLoader(object):
                                  % (version, conanfile.version))
 
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        output = ScopedOutput(str(conan_ref), self._output)
-        return conan_ref, conanfile(output, self._runner, user, channel)
+        conanfile.output = ScopedOutput(str(conan_ref), self._output)
+        return conan_ref, conanfile
 
     def load_basic(self, conanfile_path, output, reference=None):
         result = self.load_class(conanfile_path)
