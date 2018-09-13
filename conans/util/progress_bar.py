@@ -1,8 +1,6 @@
 
-import io
 import os
 import tqdm
-from contextlib import contextmanager
 
 
 class FileObjectProgress:
