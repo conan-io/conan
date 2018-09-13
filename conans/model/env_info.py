@@ -24,20 +24,6 @@ class EnvValues(object):
     def __init__(self):
         self._data = defaultdict(dict)
 
-    def serial(self):
-        result = {}
-        for package_name, d in self._data.items():
-            result[package_name] = d
-        return result
-
-    @staticmethod
-    def unserial(data):
-        result = EnvValues()
-        result._data = defaultdict(dict)
-        for k, v in data.items():
-            result._data[k] = v
-        return result
-
     def copy(self):
         ret = EnvValues()
         ret._data = copy.deepcopy(self._data)

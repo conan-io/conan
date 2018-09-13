@@ -1,11 +1,154 @@
-from conans.client.remote_registry import Remote
+
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.output import ScopedOutput
 import time
 from conans.client.loader import ProcessedProfile
-from conans.client.graph.graph import Node, DepsGraph
+from _collections import defaultdict
+from conans.model.env_info import EnvValues
+from conans.model.info import RequirementsList, ConanInfo, RequirementsInfo,\
+    RequirementInfo
+from conans.model.settings import Settings, SettingsItem
+from conans.model.options import OptionsValues, PackageOptions, PackageOption,\
+    PackageOptionValues, PackageOptionValue, Options
+from conans.model.values import Values
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.info import RequirementInfo, RequirementsInfo, ConanInfo
+from conans.model.requires import Requirement, Requirements
+
+
+def serial_option_values(self):
+    result = {}
+    result["package_values"] = serial_package_option_values(self._package_values)
+    result["reqs_options"] = {k: serial_package_option_values(v)
+                              for k, v in self._reqs_options.items()}
+    return result
+
+
+def unserial_option_values(data):
+    result = OptionsValues()
+    result._package_values = unserial_package_option_values(data["package_values"])
+    result._reqs_options = {k: unserial_package_option_values(v)
+                            for k, v in data["reqs_options"].items()}
+    return result
+
+
+def serial_package_option(self):
+    result = {"name": self._name,
+              "value": self._value,
+              "possible_values": self._possible_values}
+    return result
+
+
+def unserial_package_option(data):
+    result = PackageOption(data["possible_values"], data["name"])
+    result._value = data["value"]
+    return result
+
+
+def serial_package_options(self):
+    result = {k: serial_package_option(v) for k, v in self._data.items()}
+    return result
+
+
+def unserial_package_options(data):
+    result = PackageOptions(None)
+    result._data = {k: unserial_package_option(v) for k, v in data.items()}
+    return result
+
+
+def serial_package_option_values(self):
+    result = {k: str(v)
+              for k, v in self._dict.items()}
+    return result
+
+
+def serial_requirement(self):
+    result = {}
+    result["conan"] = serial_ref(self.conan_reference)
+    result["range"] = serial_ref(self.range_reference)
+    result["override"] = self.override
+    result["private"] = self.private
+    return result
+
+
+def serial_values(self):
+    return self.as_list()
+
+
+def unserial_values(data):
+    return Values.from_list(data)
+
+
+def unserial_requirement(data):
+    result = Requirement(unserial_ref(data["conan"]),
+                         data["private"], data["override"])
+    result.range_reference = unserial_ref(data["range"])
+    return result
+
+
+def serial_requirements(self):
+    result = [serial_requirement(v) for v in self.values()]
+    return result
+
+
+def unserial_requirements(data):
+    result = Requirements()
+    for d in data:
+        d = unserial_requirement(d)
+        result[d.conan_reference.name] = d
+    return result
+
+
+def unserial_package_option_values(data):
+    result = PackageOptionValues()
+    result._dict = {k: PackageOptionValue(v) for k, v in data.items()}
+    return result
+
+
+def serial_options(self):
+    result = {}
+    result["package_options"] = serial_package_options(self._package_options)
+    result["deps_package_values"] = {k: serial_package_option_values(v)
+                                     for k, v in self._deps_package_values.items()}
+    return result
+
+
+def unserial_options(data):
+    result = Options(unserial_package_options(data["package_options"]))
+    result._deps_package_values = {k: unserial_package_option_values(v)
+                                   for k, v in data["deps_package_values"].items()}
+    return result
+
+
+def serial_env_values(env_values):
+    result = {}
+    for package_name, d in env_values._data.items():
+        result[package_name] = d
+    return result
+
+
+def unserial_env_values(data):
+    result = EnvValues()
+    result._data = defaultdict(dict)
+    for k, v in data.items():
+        result._data[k] = v
+    return result
+
+
+def serial_conanfile(conanfile):
+    result = {}
+    result["info"] = serial_conan_info(conanfile.info)
+    result["settings"] = serial_settings(conanfile.settings)
+    result["options"] = serial_options(conanfile.options)
+    result["requires"] = serial_requirements(conanfile.requires)
+    return result
+
+
+def unserial_conanfile(conanfile, data, env):
+    conanfile.info = unserial_conan_info(data["info"])
+    conanfile.settings = unserial_settings(data["settings"])
+    conanfile.options = unserial_options(data["options"])
+    conanfile.requires = unserial_requirements(data["requires"])
+    conanfile._env_values = env.copy()  # user specified -e
 
 
 def serial_remote(remote):
@@ -19,6 +162,7 @@ def serial_remote(remote):
 def unserial_remote(data):
     if data is None:
         return None
+    from conans.client.remote_registry import Remote
     return Remote(data["name"], data["url"], data["verify_ssl"])
 
 
@@ -48,10 +192,10 @@ def serial_node(node):
     result = {}
     result["path"] = getattr(node, "path", None)
     result["conan_ref"] = serial_ref(node.conan_ref) if node.conan_ref else None
-    result["conanfile"] = node.conanfile.serial()
+    result["conanfile"] = serial_conanfile(node.conanfile)
     result["binary"] = node.binary
     result["recipe"] = node.recipe
-    result["remote"] = node.remote.serial() if node.remote else None
+    result["remote"] = serial_remote(node.remote) if node.remote else None
     result["binary_remote"] = serial_remote(node.binary_remote) if node.binary_remote else None
     result["build_require"] = node.build_require
     return result
@@ -78,17 +222,64 @@ def unserial_node(data, env, conanfile_path, output, proxy, loader, update=False
         conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
     else:
         conanfile = loader.load_basic(conanfile_path, output, conan_ref)
-    Node._conanfile_time += time.time() - t1
+    from conans.client.graph.graph import Node
     t1 = time.time()
-    conanfile.unserial(data["conanfile"], env)
+    unserial_conanfile(conanfile, data["conanfile"], env)
 
     result = Node(conan_ref, conanfile)
     result.binary = data["binary"]
     result.recipe = data["recipe"]
     result.remote = remote
-    result.binary_remote = Remote.unserial(data["binary_remote"])
+    result.binary_remote = unserial_remote(data["binary_remote"])
     result.build_require = data["build_require"]
-    Node._unserial_time += time.time() - t1
+    return result
+
+
+def serial_settings_item(settings_item):
+    result = {}
+    result["name"] = settings_item._name
+    result["value"] = settings_item._value
+    if isinstance(settings_item._definition, dict):
+        subdict = {}
+        for k, v in settings_item._definition.items():
+            subdict[k] = serial_settings(v)
+        result["definition"] = subdict
+    elif settings_item._definition == "ANY":
+        result["definition"] = "ANY"
+    else:
+        result["definition"] = settings_item._definition
+    return result
+
+
+def unserial_settings_item(data):
+    result = SettingsItem([], data["name"])
+    result._value = data["value"]
+    definition = data["definition"]
+    if isinstance(definition, dict):
+        subdict = {}
+        for k, v in definition.items():
+            subdict[k] = unserial_settings(v)
+        result._definition = subdict
+    elif definition == "ANY":
+        result._definition = "ANY"
+    else:
+        result._definition = definition
+    return result
+
+
+def serial_settings(settings):
+    result = {}
+    result["name"] = settings._name
+    result["parent_value"] = settings._parent_value
+    result["data"] = {k: serial_settings_item(v) for k, v in settings._data.items()}
+    return result
+
+
+def unserial_settings(data):
+    result = Settings()
+    result._name = data["name"]
+    result._parent_value = data["parent_value"]
+    result._data = {k: unserial_settings_item(v) for k, v in data["data"].items()}
     return result
 
 
@@ -101,6 +292,7 @@ def serial_graph(graph):
 
 
 def unserial_graph(data, env, conanfile_path, output, proxy, loader, scoped_output=None):
+    from conans.client.graph.graph import Node, DepsGraph
     result = DepsGraph()
     nodes_dict = {id_: unserial_node(n, env, conanfile_path, output, proxy, loader,
                                      scoped_output=scoped_output)
@@ -136,36 +328,38 @@ def serial_requirements_info(requirements_info):
 
 def unserial_requirements_info(data):
     result = RequirementsInfo([])
-    result._data = {PackageReference.loads(k): unserial_requirements_info(v)
+    result._data = {PackageReference.loads(k): unserial_requirement_info(v)
                     for k, v in data.items()}
     return result
 
-    def serial(self):
-        return self.serialize()
 
-    @staticmethod
-    def unserial(data):
-        return RequirementsList.deserialize(data)
+def serial_requirements_list(self):
+    return self.serialize()
+
+
+def unserial_requirements_list(data):
+    return RequirementsList.deserialize(data)
+
 
 def serial_conan_info(conan_info):
     result = {}
-    result["settings"] = conan_info.settings.serial()
-    result["full_settings"] = conan_info.full_settings.serial()
-    result["full_requires"] = conan_info.full_requires.serial()
-    result["full_options"] = conan_info.full_options.serial()
-    result["options"] = conan_info.options.serial()
-    result["requires"] = conan_info.requires.serial()
-    result["env_values"] = conan_info.env_values.serial()
+    result["settings"] = serial_values(conan_info.settings)
+    result["full_settings"] = serial_values(conan_info.full_settings)
+    result["full_requires"] = serial_requirements_list(conan_info.full_requires)
+    result["full_options"] = serial_option_values(conan_info.full_options)
+    result["options"] = serial_option_values(conan_info.options)
+    result["requires"] = serial_requirements_info(conan_info.requires)
+    result["env_values"] = serial_env_values(conan_info.env_values)
     return result
 
 
 def unserial_conan_info(data):
     result = ConanInfo()
-    result.settings = Values.unserial(data["settings"])
-    result.full_settings = Values.unserial(data["full_settings"])
-    result.full_requires = RequirementsList.unserial(data["full_requires"])
-    result.full_options = OptionsValues.unserial(data["full_options"])
-    result.options = OptionsValues.unserial(data["options"])
-    result.requires = RequirementsInfo.unserial(data["requires"])
-    result.env_values = EnvValues.unserial(data["env_values"])
+    result.settings = unserial_values(data["settings"])
+    result.full_settings = unserial_values(data["full_settings"])
+    result.full_requires = unserial_requirements_list(data["full_requires"])
+    result.full_options = unserial_option_values(data["full_options"])
+    result.options = unserial_option_values(data["options"])
+    result.requires = unserial_requirements_info(data["requires"])
+    result.env_values = unserial_env_values(data["env_values"])
     return result

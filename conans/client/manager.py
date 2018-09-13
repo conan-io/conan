@@ -19,9 +19,8 @@ from conans.util.files import save, rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
-from conans.model.values import Values
 import json
-import time
+from conans.client.serial import serial_graph
 
 
 class ConanManager(object):
@@ -158,7 +157,7 @@ class ConanManager(object):
 
         if install_folder:
             # write serialized graph
-            serialized_graph = deps_graph.serial()
+            serialized_graph = serial_graph(deps_graph)
             serialized_graph_str = json.dumps(serialized_graph)
             serialized_graph_path = os.path.join(install_folder, "serial_graph.json")
             save(serialized_graph_path, serialized_graph_str)

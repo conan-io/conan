@@ -5,7 +5,7 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -13,8 +13,6 @@ from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
-from conans.model.info import ConanInfo
-from conans.model.settings import Settings
 
 
 def create_options(conanfile):
@@ -149,21 +147,6 @@ class ConanFile(object):
             pass
 
         # user specified env variables
-        self._env_values = env.copy()  # user specified -e
-
-    def serial(self):
-        result = {}
-        result["info"] = self.info.serial()
-        result["settings"] = self.settings.serial()
-        result["options"] = self.options.serial()
-        result["requires"] = self.requires.serial()
-        return result
-
-    def unserial(self, data, env):
-        self.info = ConanInfo.unserial(data["info"])
-        self.settings = Settings.unserial(data["settings"])
-        self.options = Options.unserial(data["options"])
-        self.requires = Requirements.unserial(data["requires"])
         self._env_values = env.copy()  # user specified -e
 
     @property
