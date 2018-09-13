@@ -160,7 +160,7 @@ class RestCommonMethods(object):
         self.check_credentials()
 
         # Get the remote snapshot
-        remote_snapshot, conan_reference = self._get_conan_snapshot(conan_reference)
+        remote_snapshot, conan_reference = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self.get_conan_manifest(conan_reference)
@@ -297,7 +297,7 @@ class RestCommonMethods(object):
         url += "/packages/%s" % p_reference.package_id
         return url.replace("#", "%23")
 
-    def _get_conan_snapshot(self, reference):
+    def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
         snap, reference = self._get_snapshot(url, reference.full_repr())
         reference = ConanFileReference.loads(reference)
