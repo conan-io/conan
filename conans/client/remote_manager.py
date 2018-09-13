@@ -29,6 +29,7 @@ from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
 from conans.search.search import filter_packages
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
+from conans.util.progress_bar import FileObjectProgress
 
 
 class RemoteManager(object):
@@ -377,10 +378,13 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
         os.remove(tgz_file)
 
 
-def uncompress_file(src_path, dest_folder):
+def uncompress_file(src_path, dest_folder, show_progress_bar=True):
     t1 = time.time()
     try:
         with open(src_path, 'rb') as file_handler:
+            if show_progress_bar:
+                filename = os.path.basename(src_path)
+                file_handler = FileObjectProgress(file_handler, desc="Decompressing %s" % filename)
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
