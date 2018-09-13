@@ -11,6 +11,9 @@ class FileObjectProgress:
                              unit='B', unit_scale=True, unit_divisor=1024)
         self._fileobj.seek(0)
 
+    def seek(self, *args, **kwargs):
+        return self._fileobj.seek(*args, **kwargs)
+
     def tell(self):
         return self._fileobj.tell()
 
