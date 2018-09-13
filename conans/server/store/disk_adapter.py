@@ -1,12 +1,13 @@
-import fasteners
 import os
+
+import fasteners
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.server.store.server_store_revisions import REVISIONS_FILE
-from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
-from conans.util.files import path_exists
 from conans.paths import SimplePaths
+from conans.server.store.server_store_revisions import REVISIONS_FILE
+from conans.util.files import path_exists
+from conans.util.files import relative_dirs, rmdir, md5sum, decode_text
 
 
 class ServerDiskAdapter(object):
@@ -58,15 +59,23 @@ class ServerDiskAdapter(object):
 
         return ret
 
-    def get_snapshot(self, absolute_path="", files_subset=None):
-        """returns a dict with the filepaths and md5"""
+    def _get_paths(self, absolute_path, files_subset):
         if not path_exists(absolute_path, self._store_folder):
             raise NotFoundException("")
         paths = relative_dirs(absolute_path)
         if files_subset is not None:
             paths = set(paths).intersection(set(files_subset))
         abs_paths = [os.path.join(absolute_path, relpath) for relpath in paths]
+        return abs_paths
+
+    def get_snapshot(self, absolute_path="", files_subset=None):
+        """returns a dict with the filepaths and md5"""
+        abs_paths = self._get_paths(absolute_path, files_subset)
         return {filepath: md5sum(filepath) for filepath in abs_paths}
+
+    def get_file_list(self, absolute_path="", files_subset=None):
+        abs_paths = self._get_paths(absolute_path, files_subset)
+        return abs_paths
 
     def delete_folder(self, path):
         '''Delete folder from disk. Path already contains base dir'''

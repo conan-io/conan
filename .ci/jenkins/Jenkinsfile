@@ -1,18 +1,20 @@
-def nightly = (env.JOB_NAME == "ConanNightly")
-
-def full_test = false
+############################
+def full_py_vers = false
 def test_v2 = true
+############################
 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
-    full_test = true
+    full_py_vers = true
 }
 
 def slaves = ['Linux', 'Windows', 'Macos']
 def flavors = ["no_revisions"]
+
+
 def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
 
-if (full_test){
+if (full_py_vers){
     pyvers = ['py36', 'py34', 'py27']
     api_confs = ["v1", "v2"]
 }
@@ -171,7 +173,7 @@ try{
     }
 }
 catch(e){
-    if(nightly){
+    if(env.JOB_NAME == "ConanNightly"){
         def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
         def summary = "${subject} (${env.BUILD_URL}), Branch: ${branch}"
         slackSend (color: '#FF0000', message: summary)
@@ -179,7 +181,7 @@ catch(e){
     throw e
 }
 
-if(nightly){
+if(env.JOB_NAME == "ConanNightly"){
     def subject = "SUCCESS ${env.JOB_NAME}! Another day with a green ${branch}!"
     def summary = "${subject} (${env.BUILD_URL})"
     slackSend (color: '#00FF00', message: summary)

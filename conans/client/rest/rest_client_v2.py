@@ -2,7 +2,6 @@ import os
 import time
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
@@ -11,7 +10,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text
 from conans.util.log import logger
 
 
@@ -32,6 +31,15 @@ class RestV2Methods(RestCommonMethods):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
         contents = downloader.download(url, auth=self.auth)
         return contents
+
+    def _get_snapshot(self, url, reference):
+        try:
+            data = self.get_json(url)
+            files_list = [os.path.normpath(filename) for filename in data["files"]]
+            reference = data["reference"]
+        except NotFoundException:
+            files_list = []
+        return files_list, reference
 
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
@@ -54,7 +62,8 @@ class RestV2Methods(RestCommonMethods):
         files = data["files"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
         reference = ConanFileReference.loads(data["reference"])
-        files.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        if EXPORT_SOURCES_TGZ_NAME in files:
+            files.remove(EXPORT_SOURCES_TGZ_NAME)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._recipe_url(reference)
         self._download_and_save_files(url, dest_folder, files)
@@ -68,7 +77,7 @@ class RestV2Methods(RestCommonMethods):
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
-        files = {EXPORT_SOURCES_TGZ_NAME: files[EXPORT_SOURCES_TGZ_NAME]}
+        files = [EXPORT_SOURCES_TGZ_NAME, ]
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._recipe_url(ConanFileReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
@@ -105,7 +114,7 @@ class RestV2Methods(RestCommonMethods):
         def is_dir(the_path):
             if the_path == ".":
                 return True
-            for the_file in files["files"].keys():
+            for the_file in files["files"]:
                 if the_path == the_file:
                     return False
                 elif the_file.startswith(the_path):
@@ -114,7 +123,7 @@ class RestV2Methods(RestCommonMethods):
 
         if is_dir(path):
             ret = []
-            for the_file in files["files"].keys():
+            for the_file in files["files"]:
                 if path == "." or the_file.startswith(path):
                     tmp = the_file[len(path)-1:].split("/", 1)[0]
                     if tmp not in ret:
@@ -125,77 +134,14 @@ class RestV2Methods(RestCommonMethods):
             content = self._get_remote_file_contents(url)
             return decode_text(content)
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite):
-        self.check_credentials()
-
-        # Get the remote snapshot
+    def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
+        # Direct upload the recipe
         url = self._recipe_url(conan_reference)
-        try:
-            data = self.get_json(url)
-        except NotFoundException:
-            data = {"files": {},
-                    "reference": str(conan_reference)}
+        self._upload_files(files_to_upload, url, retry, retry_wait)
 
-        remote_snapshot = data["files"]
-        new_ref = ConanFileReference.loads(data["reference"])
-
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
-
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if ignore_deleted_file and ignore_deleted_file in deleted:
-            deleted.remove(ignore_deleted_file)
-
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False, new_ref
-
-        if no_overwrite and remote_snapshot:
-            if no_overwrite in ("all", "recipe"):
-                raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite")
-        files_to_upload = {filename.replace("\\", "/"): the_files[filename]
-                           for filename in new + modified}
-
-        if files_to_upload:
-            self._upload_files(files_to_upload, url, retry, retry_wait)
-        if deleted:
-            self._remove_conanfile_files(conan_reference, deleted)
-
-        return (files_to_upload or deleted), new_ref
-
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
-        self.check_credentials()
-
-        t1 = time.time()
-        # Get the remote snapshot
+    def _upload_package(self, package_reference, files_to_upload, retry, retry_wait):
         url = self._package_url(package_reference)
-
-        try:
-            data = self.get_json(url)
-        except NotFoundException:
-            data = {"files": {}}
-        remote_snapshot = data["files"]
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
-
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False
-
-        if no_overwrite and remote_snapshot:
-            if no_overwrite == "all":
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite")
-
-        files_to_upload = {filename: the_files[filename] for filename in new + modified}
-        if files_to_upload:        # Obtain upload urls
-            self._upload_files(files_to_upload, url, retry, retry_wait)
-        if deleted:
-            self._remove_package_files(package_reference, deleted)
-
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-        return files_to_upload or deleted
+        self._upload_files(files_to_upload, url, retry, retry_wait)
 
     def _upload_files(self, files, base_url, retry, retry_wait):
         t1 = time.time()
@@ -208,7 +154,8 @@ class RestV2Methods(RestCommonMethods):
             resource_url = "%s/%s" % (base_url, filename)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=self.auth,
-                                           dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                           dedup=self._checksum_deploy, retry=retry,
+                                           retry_wait=retry_wait,
                                            headers=self._put_headers)
                 self._output.writeln("")
                 if not response.ok:
@@ -231,7 +178,7 @@ class RestV2Methods(RestCommonMethods):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, _ in sorted(files.items(), reverse=True):
+        for filename in sorted(files, reverse=True):
             if self._output:
                 self._output.writeln("Downloading %s" % filename)
             resource_url = "%s/%s" % (base_url, filename)

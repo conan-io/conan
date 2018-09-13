@@ -65,7 +65,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('get_conan_manifest_url', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
+                              ('get_recipe_snapshot', 'Bearer'),
                               ('get_conanfile_upload_urls', 'Bearer'),
                               ('put', None)]
         else:
@@ -73,7 +73,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('get_recipe_file', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
+                              ('get_recipe_file_list', 'Bearer'),
                               ('upload_recipe_file', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
@@ -100,7 +100,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
-                          ('get_conanfile_snapshot', 'Bearer'),
+                          ('get_recipe_snapshot', 'Bearer'),
                           ('get_conanfile_upload_urls', 'Bearer'),
                           ('put', 'Bearer')]
 
