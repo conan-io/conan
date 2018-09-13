@@ -4,7 +4,6 @@ import time
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.differ import diff_snapshots
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
@@ -12,8 +11,10 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, load
 from conans.util.log import logger
+from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE,\
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 
 
 def complete_url(base_url, url):
@@ -123,7 +124,8 @@ class RestV1Methods(RestCommonMethods):
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait, headers=self._put_headers)
+                                           retry=retry, retry_wait=retry_wait,
+                                           headers=self._put_headers)
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
@@ -201,8 +203,7 @@ class RestV1Methods(RestCommonMethods):
 
         return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
         """
         the_files: dict with relative_path: content
         """
@@ -210,22 +211,21 @@ class RestV1Methods(RestCommonMethods):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if ignore_deleted_file and ignore_deleted_file in deleted:
-            deleted.remove(ignore_deleted_file)
+        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
+            remote_manifest = self.get_conan_manifest(conan_reference)
+            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False, conan_reference
+            if remote_manifest == local_manifest:
+                return False, conan_reference
 
-        if no_overwrite and remote_snapshot:
-            if no_overwrite in ("all", "recipe"):
+            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite")
-        files_to_upload = {filename.replace("\\", "/"): the_files[filename]
-                           for filename in new + modified}
+
+        files_to_upload = {filename.replace("\\", "/"): path
+                           for filename, path in the_files.items()}
+        deleted = set(remote_snapshot).difference(the_files)
 
         if files_to_upload:
             # Get the upload urls
@@ -239,7 +239,7 @@ class RestV1Methods(RestCommonMethods):
 
         return (files_to_upload or deleted), conan_reference
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -249,19 +249,19 @@ class RestV1Methods(RestCommonMethods):
         t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
+        if remote_snapshot:
+            remote_manifest = self.get_package_manifest(package_reference)
+            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified in (["conanmanifest.txt"], []):
-            return False
+            if remote_manifest == local_manifest:
+                return False
 
-        if no_overwrite and remote_snapshot:
-            if no_overwrite == "all":
+            if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbidden overwrite")
 
-        files_to_upload = {filename: the_files[filename] for filename in new + modified}
+        files_to_upload = the_files
+        deleted = set(remote_snapshot).difference(the_files)
         if files_to_upload:        # Obtain upload urls
             url = "%s/conans/%s/packages/%s/upload_urls" % (self.remote_api_url,
                                                             "/".join(package_reference.conan),
