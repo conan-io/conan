@@ -67,3 +67,5 @@ def open_binary(path, output, **kwargs):
         file_wrapped = BinaryFileWrapper(f, output=output, **kwargs)
         yield file_wrapped
         file_wrapped.pb_close()
+        if not output.is_terminal:
+            output.write("\n")
