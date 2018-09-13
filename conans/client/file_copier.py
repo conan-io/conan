@@ -144,8 +144,20 @@ class FileCopier(object):
 
     @staticmethod
     def _link_folders(src, dst, linked_folders):
+        created_links = []
         for linked_folder in linked_folders:
-            link = os.readlink(os.path.join(src, linked_folder))
+            src_link = os.path.join(src, linked_folder)
+            # Discard symlinks that go out of the src folder
+            abs_path = os.path.realpath(src_link)
+            relpath = os.path.relpath(abs_path, src)
+            if relpath.startswith("."):
+                continue
+            
+            link = os.readlink(src_link)
+            # Absoluted path symlinks are a problem, convert it to relative
+            if os.path.isabs(link):
+                link = os.path.relpath(link, os.path.dirname(src_link))
+
             dst_link = os.path.join(dst, linked_folder)
             try:
                 # Remove the previous symlink
@@ -156,12 +168,19 @@ class FileCopier(object):
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
             mkdir(os.path.dirname(dst_link))
             os.symlink(link, dst_link)
+            created_links.append(dst_link)
         # Remove empty links
-        for linked_folder in linked_folders:
-            dst_link = os.path.join(dst, linked_folder)
+        for dst_link in created_links:
             abs_path = os.path.realpath(dst_link)
             if not os.path.exists(abs_path):
+                base_path = os.path.dirname(dst_link)
                 os.remove(dst_link)
+                while True:
+                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
+                        os.rmdir(base_path)
+                    except OSError:
+                        break  # not empty
+                    base_path = os.path.dirname(base_path)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):
