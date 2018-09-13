@@ -379,7 +379,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
         os.remove(tgz_file)
 
 
-def uncompress_file(src_path, dest_folder, output, show_progress_bar=True):
+def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
         with pb.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
