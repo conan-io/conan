@@ -4,6 +4,7 @@ from tqdm import tqdm
 from contextlib import contextmanager
 
 TIMEOUT_BEAT_SECONDS = 30
+TIMEOUT_BEAT_CHARACTER = '.'
 
 
 class BinaryFileWrapper(object):
@@ -55,7 +56,7 @@ class _NoTerminalOutput(object):
         self._output = output
 
     def write(self, *args, **kwargs):
-        self._output.write(">")
+        self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def flush(self, *args, **kwargs):
         self._output.flush()
