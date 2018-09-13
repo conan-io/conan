@@ -41,6 +41,7 @@ from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
+from conans.client.tools.win import get_cased_path
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -282,6 +283,7 @@ class TestBufferConanOutput(ConanOutput):
 
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None):
     tmp = folder or temp_folder()
+    tmp = get_cased_path(tmp)
     if files:
         save_files(tmp, files)
     git = Git(tmp)
@@ -503,9 +505,14 @@ class TestClient(object):
                 sys.modules.pop(added, None)
 
         if not ignore_error and error:
-            logger.error(self.user_io.out)
-            print(self.user_io.out)
-            raise Exception("Command failed:\n%s" % command_line)
+            exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
+                command_header='{:-^80}'.format(" Command failed: "),
+                output_header='{:-^80}'.format(" Output: "),
+                output_footer='-'*80,
+                command=command_line,
+                output=self.user_io.out
+            )
+            raise Exception(exc_message)
 
         self.all_output += str(self.user_io.out)
         return error

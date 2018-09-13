@@ -15,6 +15,8 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
+    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 
 
 class Extender(argparse.Action):
@@ -374,6 +376,8 @@ class Command(object):
                                        help='Verify SSL connection when downloading file')
         install_subparser.add_argument("--type", "-t", choices=["git"],
                                        help='Type of remote config')
+        install_subparser.add_argument("--args", "-a",
+                                       help='String with extra arguments for "git clone"')
 
         args = parser.parse_args(*args)
 
@@ -389,7 +393,7 @@ class Command(object):
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan.config_install(args.item, verify_ssl, args.type)
+            return self._conan.config_install(args.item, verify_ssl, args.type, args.args)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.
@@ -1005,14 +1009,30 @@ class Command(object):
         cwd = os.getcwd()
         info = None
 
+        if args.force and args.no_overwrite:
+            raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
+        if args.force and args.skip_upload:
+            raise ConanException("'--skip-upload' argument cannot be used together with '--force'")
+        if args.no_overwrite and args.skip_upload:
+            raise ConanException("'--skip-upload' argument cannot be used together "
+                                 "with '--no-overwrite'")
+        if args.force:
+            policy = UPLOAD_POLICY_FORCE
+        elif args.no_overwrite == "all":
+            policy = UPLOAD_POLICY_NO_OVERWRITE
+        elif args.no_overwrite == "recipe":
+            policy = UPLOAD_POLICY_NO_OVERWRITE_RECIPE
+        elif args.skip_upload:
+            policy = UPLOAD_POLICY_SKIP
+        else:
+            policy = None
+
         try:
             info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
-                                      query=args.query,
-                                      remote_name=args.remote, all_packages=args.all,
-                                      force=args.force,
+                                      query=args.query, remote_name=args.remote,
+                                      all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, skip_upload=args.skip_upload,
-                                      integrity_check=args.check, no_overwrite=args.no_overwrite)
+                                      retry_wait=args.retry_wait, integrity_check=args.check)
         except ConanException as exc:
             info = exc.info
             raise
