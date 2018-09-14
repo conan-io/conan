@@ -109,7 +109,6 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
-                conanfile_path = self._client_cache.conanfile(conan_ref)
                 ret_upload_package = self._upload_package(PackageReference(conan_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
                                                           integrity_check,

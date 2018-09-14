@@ -32,29 +32,26 @@ class PluginManager(object):
 
     def load_plugins(self):
         for name in self._plugin_names:
-            if name and name not in [file[:-3] for file in os.listdir(self._plugins_folder)]:
-                self.output.warn("Plugin '%s' not found in %s folder. Please remove plugin "
-                                 "from conan.conf or include it inside the plugins folder."
-                                 % (name, self._plugins_folder))
-                continue
-            plugin = self.load_plugin(name)
-            self.plugins[name] = plugin
+            self.load_plugin(name)
 
     def load_plugin(self, plugin_name):
         filename = "%s.py" % plugin_name
-        plugin_path = os.path.join(self._plugins_folder, filename)
-        try:
-            loaded_plugin, filename = self._parse_file(plugin_path)
-            return loaded_plugin
-        except Exception as e:  # re-raise with file name
-            raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
+        if filename and filename not in os.listdir(self._plugins_folder):
+            self.output.warn("Plugin '%s' not found in %s folder. Please remove plugin "
+                             "from conan.conf or include it inside the plugins folder."
+                             % (filename, self._plugins_folder))
+        else:
+            plugin_path = os.path.join(self._plugins_folder, filename)
+            try:
+                self.plugins[plugin_name] = PluginManager._load_module_from_file(plugin_path)
+            except NotFoundException as e:  # re-raise with file name
+                raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
 
-    def _parse_file(self, plugin_path):
+    @staticmethod
+    def _load_module_from_file(plugin_path):
         """ From a given path, obtain the in memory python import module
         """
-        if not os.path.exists(plugin_path):
-            raise NotFoundException("%s not found!" % plugin_path)
-
+        assert os.path.exists(plugin_path)
         filename = os.path.splitext(os.path.basename(plugin_path))[0]
 
         try:
@@ -86,4 +83,4 @@ class PluginManager(object):
         finally:
             sys.path.pop()
 
-        return loaded, filename
+        return loaded
