@@ -28,6 +28,12 @@ class RestV2Methods(RestCommonMethods):
     def remote_api_url(self):
         return "%s/v2" % self.remote_url.rstrip("/")
 
+    def _get_file_list_json(self, url):
+        data = self.get_json(url)
+        # Discarding (.keys()) still empty metadata for files
+        data["files"] = list(data["files"].keys())
+        return data
+
     def _get_remote_file_contents(self, url):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)
         contents = downloader.download(url, auth=self.auth)
@@ -35,7 +41,7 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_snapshot(self, url, reference):
         try:
-            data = self.get_json(url)
+            data = self._get_file_list_json(url)
             files_list = [os.path.normpath(filename) for filename in data["files"]]
             reference = data["reference"]
         except NotFoundException:
@@ -44,17 +50,17 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
-        snap, reference = self._get_snapshot(url, reference.full_repr())
+        repr_ref = reference.full_repr() if self._revisions_enabled else str(reference)
+        snap, reference = self._get_snapshot(url, repr_ref)
         reference = ConanFileReference.loads(reference)
-        # Discarding (.keys()) still empty metadata for files
-        return snap.keys(), reference
+        return snap, reference
 
-    def _get_package_snapshot(self, package_reference):
-        url = self._package_url(package_reference)
-        snap, p_reference = self._get_snapshot(url, package_reference.full_repr())
+    def _get_package_snapshot(self, p_ref):
+        url = self._package_url(p_ref)
+        repr_ref = p_ref.full_repr() if self._revisions_enabled else str(p_ref)
+        snap, p_reference = self._get_snapshot(url, repr_ref)
         reference = PackageReference.loads(p_reference)
-        # Discarding (.keys()) still empty metadata for files
-        return snap.keys(), reference
+        return snap, reference
 
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
@@ -73,7 +79,7 @@ class RestV2Methods(RestCommonMethods):
 
     def get_recipe(self, conan_reference, dest_folder):
         url = self._recipe_url(conan_reference)
-        data = self.get_json(url)
+        data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
         reference = ConanFileReference.loads(data["reference"])
@@ -88,7 +94,7 @@ class RestV2Methods(RestCommonMethods):
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         url = self._recipe_url(conan_reference)
-        data = self.get_json(url)
+        data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
@@ -103,7 +109,7 @@ class RestV2Methods(RestCommonMethods):
 
     def get_package(self, package_reference, dest_folder):
         url = self._package_url(package_reference)
-        data = self.get_json(url)
+        data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
@@ -121,7 +127,7 @@ class RestV2Methods(RestCommonMethods):
             url = self._package_url(package_ref)
 
         try:
-            files = self.get_json(url)
+            files = self._get_file_list_json(url)
         except NotFoundException:
             if package_id:
                 raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
