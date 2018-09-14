@@ -320,7 +320,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         cwd = get_cwd()
-        cwd = get_cwd()
 
         info = None
         try:
@@ -1416,7 +1415,7 @@ def main(args):
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
-    except ConanException as e:  # Error migrating
+    except ConanException:  # Error migrating
         sys.exit(2)
 
     outputer = CommandOutputer(user_io, client_cache)
