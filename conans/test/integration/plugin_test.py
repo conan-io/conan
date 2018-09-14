@@ -145,6 +145,18 @@ REFERENCE_LOCAL = "basic/0.1@PROJECT"
 REFERENCE_CACHE = "basic/0.1@danimtb/testing"
 PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
+custom_module = """
+def my_printer(output):
+    output.info("my_printer(): CUSTOM MODULE")
+"""
+
+my_plugin = """
+from custom_module.custom import my_printer
+
+def pre_export(output, conanfile_path, reference, **kwargs):
+    my_printer(output)
+"""
+
 
 class PluginTest(unittest.TestCase):
 
@@ -319,3 +331,17 @@ class PluginTest(unittest.TestCase):
         self.assertIn("[PLUGIN - complete_plugin] post_download_package(): reference=%s" % REFERENCE_CACHE, out)
         self.assertIn("[PLUGIN - complete_plugin] post_download_package(): package_id=%s" % PACKAGE_ID, out)
         self.assertIn("[PLUGIN - complete_plugin] post_download_package(): remote.name=default", out)
+
+    def import_plugin_test(self):
+        client = TestClient()
+        plugin_path = os.path.join(client.client_cache.plugins_path, "my_plugin.py")
+        init_path = os.path.join(client.client_cache.plugins_path, "custom_module", "__init__.py")
+        custom_path = os.path.join(client.client_cache.plugins_path, "custom_module", "custom.py")
+        client.save({plugin_path: complete_plugin,
+                     init_path: "",
+                     custom_path: custom_module,
+                     plugin_path: my_plugin,
+                     "conanfile.py": conanfile_basic})
+        client.run("config set general.plugins='my_plugin'")
+        client.run("export . danimtb/testing")
+        self.assertIn("[PLUGIN - my_plugin] pre_export(): my_printer(): CUSTOM MODULE", client.out)

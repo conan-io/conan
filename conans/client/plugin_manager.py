@@ -53,15 +53,14 @@ class PluginManager(object):
         """
         assert os.path.exists(plugin_path)
         filename = os.path.splitext(os.path.basename(plugin_path))[0]
+        current_dir = os.path.dirname(plugin_path)
 
         try:
-            current_dir = os.path.dirname(plugin_path)
             sys.path.append(current_dir)
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
                 loaded = __import__(filename)
-                sys.dont_write_bytecode = False
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
@@ -81,6 +80,7 @@ class PluginManager(object):
             raise ConanException("Unable to load Plugin in %s\n%s" % (plugin_path,
                                                                       '\n'.join(trace[3:])))
         finally:
+            sys.dont_write_bytecode = False
             sys.path.pop()
 
         return loaded

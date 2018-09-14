@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from conans import load
 from conans.client.plugin_manager import PluginManager
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -60,50 +61,54 @@ def post_download_package(output, **kwargs):
 
 class PluginManagerTest(unittest.TestCase):
 
-    def setUp(self):
+    def _init(self):
         temp_dir = temp_folder()
-        self.file_path = os.path.join(temp_dir, "my_plugin.py")
-        save(self.file_path, my_plugin)
-        self.output = TestBufferConanOutput()
-        self.plugin_manager = PluginManager(temp_dir, ["my_plugin"], self.output)
+        plugin_path = os.path.join(temp_dir, "my_plugin.py")
+        save(os.path.join(temp_dir, "my_plugin.py"), my_plugin)
+        output = TestBufferConanOutput()
+        plugin_manager = PluginManager(temp_dir, ["my_plugin"], output)
+        return plugin_manager, output, plugin_path
 
     def load_test(self):
-        self.assertEqual({}, self.plugin_manager.plugins)
-        self.assertEqual(["my_plugin"], self.plugin_manager._plugin_names)
-        self.plugin_manager.load_plugins()
-        self.assertEqual(1, len(self.plugin_manager.plugins))
+        plugin_manager, output, _ = self._init()
+        self.assertEqual({}, plugin_manager.plugins)
+        self.assertEqual(["my_plugin"], plugin_manager._plugin_names)
+        plugin_manager.load_plugins()
+        self.assertEqual(1, len(plugin_manager.plugins))
 
     def check_output_test(self):
-        self.plugin_manager.load_plugins()
-        methods = [method for method in self.plugin_manager.plugins["my_plugin"].__dict__.keys()
+        plugin_manager, output, _ = self._init()
+        plugin_manager.load_plugins()
+        methods = [method for method in plugin_manager.plugins["my_plugin"].__dict__.keys()
                    if method.startswith("pre") or method.startswith("post")]
         for method in methods:
-            self.plugin_manager.execute(method)
-            self.assertIn("[PLUGIN - my_plugin] %s(): %s()" % (method, method), self.output)
+            plugin_manager.execute(method)
+            self.assertIn("[PLUGIN - my_plugin] %s(): %s()" % (method, method), output)
 
     def no_error_with_no_method_test(self):
-        my_plugin = """
+        plugin_manager, output, plugin_path = self._init()
+        other_plugin = """
 def my_custom_function():
     pass
 """
-        save(self.file_path, my_plugin)
-        self.plugin_manager.load_plugins()
-        self.plugin_manager.execute("pre_source")
-        self.assertEqual("", self.output)
+        save(plugin_path, other_plugin)
+        self.assertEqual(other_plugin, load(plugin_path))
+        plugin_manager.execute("pre_source")
+        self.assertEqual("", output)
 
     def exception_in_method_test(self):
+        plugin_manager, output, plugin_path = self._init()
         my_plugin = """
 from conans.errors import ConanException
 
 def pre_build(output, **kwargs):
     raise Exception("My custom exception")
-        """
-        save(self.file_path, my_plugin)
-        self.plugin_manager.load_plugins()
+"""
+        save(plugin_path, my_plugin)
         with self.assertRaisesRegexp(ConanException, "My custom exception"):
-            self.plugin_manager.execute("pre_build")
+            plugin_manager.execute("pre_build")
         # Check traceback output
         try:
-            self.plugin_manager.execute("pre_build")
+            plugin_manager.execute("pre_build")
         except ConanException as e:
             self.assertIn("[PLUGIN - my_plugin] pre_build(): My custom exception", str(e))
