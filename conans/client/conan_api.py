@@ -6,7 +6,7 @@ import requests
 import conans
 from conans import __version__ as client_version, tools
 from conans.client.cmd.create import create
-from conans.client.plugins import PluginManager
+from conans.client.plugin_manager import PluginManager
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser

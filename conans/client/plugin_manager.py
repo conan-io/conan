@@ -22,13 +22,12 @@ class PluginManager(object):
 
         for name, plugin in self.plugins.items():
             try:
-                method = getattr(plugin, method_name)
-                output = ScopedOutput("[PLUGIN - %s] %s()" % (name, method_name), self.output)
-                method(output, **kwargs)
-            except AttributeError:
-                pass
+                method = getattr(plugin, method_name, None)
+                if method:
+                    output = ScopedOutput("[PLUGIN - %s] %s()" % (name, method_name), self.output)
+                    method(output, **kwargs)
             except Exception as e:
-                raise ConanException("[PLUGIN - %s] %s() %s\n%s" % (name, method_name, e,
+                raise ConanException("[PLUGIN - %s] %s(): %s\n%s" % (name, method_name, e,
                                                                     traceback.format_exc()))
 
     def load_plugins(self):

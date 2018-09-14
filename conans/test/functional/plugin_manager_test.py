@@ -1,7 +1,8 @@
 import os
 import unittest
 
-from conans.client.plugins import PluginManager
+from conans.client.plugin_manager import PluginManager
+from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
@@ -80,7 +81,7 @@ class PluginManagerTest(unittest.TestCase):
             self.plugin_manager.execute(method)
             self.assertIn("[PLUGIN - my_plugin] %s(): %s()" % (method, method), self.output)
 
-    def no_error_with_not_implemented_method_test(self):
+    def no_error_with_no_method_test(self):
         my_plugin = """
 def my_custom_function():
     pass
@@ -89,3 +90,20 @@ def my_custom_function():
         self.plugin_manager.load_plugins()
         self.plugin_manager.execute("pre_source")
         self.assertEqual("", self.output)
+
+    def exception_in_method_test(self):
+        my_plugin = """
+from conans.errors import ConanException
+
+def pre_build(output, **kwargs):
+    raise Exception("My custom exception")
+        """
+        save(self.file_path, my_plugin)
+        self.plugin_manager.load_plugins()
+        with self.assertRaisesRegexp(ConanException, "My custom exception"):
+            self.plugin_manager.execute("pre_build")
+        # Check traceback output
+        try:
+            self.plugin_manager.execute("pre_build")
+        except ConanException as e:
+            self.assertIn("[PLUGIN - my_plugin] pre_build(): My custom exception", str(e))

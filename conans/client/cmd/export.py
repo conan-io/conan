@@ -13,7 +13,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
-from conans.client.plugins import PluginManager
+from conans.client.plugin_manager import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):

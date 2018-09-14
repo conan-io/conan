@@ -24,7 +24,7 @@ from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_req
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
-from conans.client.plugins import PluginManager
+from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
