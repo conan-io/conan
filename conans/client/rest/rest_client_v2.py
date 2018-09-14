@@ -46,13 +46,15 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(reference)
         snap, reference = self._get_snapshot(url, reference.full_repr())
         reference = ConanFileReference.loads(reference)
-        return snap, reference
+        # Discarding (.keys()) still empty metadata for files
+        return snap.keys(), reference
 
     def _get_package_snapshot(self, package_reference):
         url = self._package_url(package_reference)
         snap, p_reference = self._get_snapshot(url, package_reference.full_repr())
         reference = PackageReference.loads(p_reference)
-        return snap, reference
+        # Discarding (.keys()) still empty metadata for files
+        return snap.keys(), reference
 
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
