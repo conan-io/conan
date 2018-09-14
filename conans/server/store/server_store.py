@@ -33,8 +33,8 @@ class ServerStore(SimplePaths):
     def path_exists(self, path):
         return self._storage_adapter.path_exists(path)
 
-    # ############ SNAPSHOTS (APIv1 and APIv2)
-    def get_conanfile_snapshot(self, reference):
+    # ############ SNAPSHOTS (APIv1)
+    def get_recipe_snapshot(self, reference):
         """Returns a {filepath: md5} """
         assert isinstance(reference, ConanFileReference)
         return self._get_snapshot_of_files(self.export(reference))
@@ -49,6 +49,22 @@ class ServerStore(SimplePaths):
         snapshot = self._storage_adapter.get_snapshot(relative_path)
         snapshot = self._relativize_keys(snapshot, relative_path)
         return snapshot
+
+    # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
+    def get_recipe_file_list(self, reference):
+        """Returns a {filepath: md5} """
+        assert isinstance(reference, ConanFileReference)
+        return self._get_file_list(self.export(reference))
+
+    def get_package_file_list(self, p_reference):
+        """Returns a {filepath: md5} """
+        assert isinstance(p_reference, PackageReference)
+        return self._get_file_list(self.package(p_reference))
+
+    def _get_file_list(self, relative_path):
+        file_list = self._storage_adapter.get_file_list(relative_path)
+        file_list = [relpath(old_key, relative_path) for old_key in file_list]
+        return file_list
 
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, reference):

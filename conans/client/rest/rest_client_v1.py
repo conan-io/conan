@@ -9,6 +9,7 @@ from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text, load
@@ -64,7 +65,7 @@ class RestV1Methods(RestCommonMethods):
         """Gets a FileTreeManifest from conans"""
 
         # Obtain the URLs
-        url = "%s/conans/%s/digest" % (self.remote_api_url, "/".join(conan_reference))
+        url = "%s/digest" % self._recipe_url(conan_reference)
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
@@ -77,9 +78,7 @@ class RestV1Methods(RestCommonMethods):
         """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
-        url = "%s/conans/%s/packages/%s/digest" % (self.remote_api_url,
-                                                   "/".join(package_reference.conan),
-                                                   package_reference.package_id)
+        url = "%s/digest" % self._package_url(package_reference)
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
@@ -91,9 +90,7 @@ class RestV1Methods(RestCommonMethods):
     def get_package_info(self, package_reference):
         """Gets a ConanInfo file from a package"""
 
-        url = "%s/conans/%s/packages/%s/download_urls" % (self.remote_api_url,
-                                                          "/".join(package_reference.conan),
-                                                          package_reference.package_id)
+        url = "%s/download_urls" % self._package_url(package_reference)
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
@@ -112,6 +109,25 @@ class RestV1Methods(RestCommonMethods):
         converting the url to a complete url when needed"""
         urls = self.get_json(url, data=data)
         return {filepath: complete_url(self.remote_url, url) for filepath, url in urls.items()}
+
+    def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
+        # Get the upload urls and then upload files
+        url = "%s/upload_urls" % self._recipe_url(conan_reference)
+        filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
+                     for filename, abs_path in files_to_upload.items()}
+        urls = self._get_file_to_url_dict(url, data=filesizes)
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
+
+    def _upload_package(self, package_reference, files_to_upload, retry, retry_wait):
+        # Get the upload urls and then upload files
+        url = "%s/upload_urls" % self._package_url(package_reference)
+        filesizes = {filename: os.stat(abs_path).st_size for filename,
+                     abs_path in files_to_upload.items()}
+        self._output.rewrite_line("Requesting upload urls...")
+        urls = self._get_file_to_url_dict(url, data=filesizes)
+        self._output.rewrite_line("Requesting upload urls...Done!")
+        self._output.writeln("")
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
 
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
         t1 = time.time()
@@ -182,7 +198,7 @@ class RestV1Methods(RestCommonMethods):
     def _get_recipe_urls(self, conan_reference):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
-        url = "%s/conans/%s/download_urls" % (self.remote_api_url, "/".join(conan_reference))
+        url = "%s/download_urls" % self._recipe_url(conan_reference)
         urls = self._get_file_to_url_dict(url)
         return urls
 
@@ -194,124 +210,21 @@ class RestV1Methods(RestCommonMethods):
 
     def _get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
-        url = "%s/conans/%s/packages/%s/download_urls" % (self.remote_api_url,
-                                                          "/".join(package_reference.conan),
-                                                          package_reference.package_id)
+        url = "%s/download_urls" % self._package_url(package_reference)
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
         return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
-        """
-        the_files: dict with relative_path: content
-        """
-        self.check_credentials()
-
-        # Get the remote snapshot
-        remote_snapshot = self._get_conan_snapshot(conan_reference)
-
-        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = self.get_conan_manifest(conan_reference)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
-            if remote_manifest == local_manifest:
-                return False, conan_reference
-
-            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
-                raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite")
-
-        files_to_upload = {filename.replace("\\", "/"): path
-                           for filename, path in the_files.items()}
-        deleted = set(remote_snapshot).difference(the_files)
-
-        if files_to_upload:
-            # Get the upload urls
-            url = "%s/conans/%s/upload_urls" % (self.remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
-                         for filename, abs_path in files_to_upload.items()}
-            urls = self._get_file_to_url_dict(url, data=filesizes)
-            self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        if deleted:
-            self._remove_conanfile_files(conan_reference, deleted)
-
-        return (files_to_upload or deleted), conan_reference
-
-    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
-        """
-        basedir: Base directory with the files to upload (for read the files in disk)
-        relative_files: relative paths to upload
-        """
-        self.check_credentials()
-
-        t1 = time.time()
-        # Get the remote snapshot
-        remote_snapshot = self._get_package_snapshot(package_reference)
-        if remote_snapshot:
-            remote_manifest = self.get_package_manifest(package_reference)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
-            if remote_manifest == local_manifest:
-                return False
-
-            if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite")
-
-        files_to_upload = the_files
-        deleted = set(remote_snapshot).difference(the_files)
-        if files_to_upload:        # Obtain upload urls
-            url = "%s/conans/%s/packages/%s/upload_urls" % (self.remote_api_url,
-                                                            "/".join(package_reference.conan),
-                                                            package_reference.package_id)
-            filesizes = {filename: os.stat(abs_path).st_size for filename,
-                         abs_path in files_to_upload.items()}
-            self._output.rewrite_line("Requesting upload permissions...")
-            urls = self._get_file_to_url_dict(url, data=filesizes)
-            self._output.rewrite_line("Requesting upload permissions...Done!")
-            self._output.writeln("")
-            self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        if deleted:
-            raise Exception("This shouldn't be happening, deleted files "
-                            "in local package present in remote: %s.\n Please, report it at "
-                            "https://github.com/conan-io/conan/issues " % str(deleted))
-
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-        return files_to_upload or deleted
-
-    def _get_conan_snapshot(self, reference):
-        url = "%s/conans/%s" % (self.remote_api_url, '/'.join(reference))
-        try:
-            snapshot = self.get_json(url)
-        except NotFoundException:
-            snapshot = {}
-        norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.items()}
-        return norm_snapshot
-
-    def _get_package_snapshot(self, package_reference):
-        url = "%s/conans/%s/packages/%s" % (self.remote_api_url,
-                                            "/".join(package_reference.conan),
-                                            package_reference.package_id)
-        try:
-            snapshot = self.get_json(url)
-        except NotFoundException:
-            snapshot = {}
-        norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.items()}
-        return norm_snapshot
-
     def get_path(self, conan_reference, package_id, path):
         """Gets a file content or a directory list"""
 
+        tmp = "%s/download_urls"
         if not package_id:
-            url = "%s/conans/%s/download_urls" % (self.remote_api_url, "/".join(conan_reference))
+            url = tmp % self._recipe_url(conan_reference)
         else:
-            url = "%s/conans/%s/packages/%s/download_urls" % (self.remote_api_url,
-                                                              "/".join(conan_reference),
-                                                              package_id)
+            url = tmp % self._package_url(PackageReference(conan_reference, package_id))
         try:
             urls = self._get_file_to_url_dict(url)
         except NotFoundException:
@@ -345,3 +258,30 @@ class RestV1Methods(RestCommonMethods):
             content = downloader.download(urls[path], auth=auth)
 
             return decode_text(content)
+
+    def _get_snapshot(self, url):
+        try:
+            snapshot = self.get_json(url)
+            snapshot = {os.path.normpath(filename): the_md5
+                        for filename, the_md5 in snapshot.items()}
+        except NotFoundException:
+            snapshot = []
+        return snapshot
+
+    def _get_recipe_snapshot(self, reference):
+        url = self._recipe_url(reference)
+        snap = self._get_snapshot(url)
+        return snap, reference.copy_without_revision()
+
+    def _get_package_snapshot(self, package_reference):
+        url = self._package_url(package_reference)
+        snap = self._get_snapshot(url)
+        return snap, package_reference
+
+    def _recipe_url(self, conan_reference):
+        return "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+
+    def _package_url(self, p_reference):
+        url = self._recipe_url(p_reference.conan)
+        url += "/packages/%s" % p_reference.package_id
+        return url
