@@ -288,6 +288,8 @@ def serial_graph(graph):
     result["nodes"] = {str(id(n)): serial_node(n) for n in graph.nodes}
     result["edges"] = [serial_edge(e) for n in graph.nodes for e in n.dependencies]
     result["root"] = str(id(graph.root))
+    build_order = graph.build_order_ids("ALL")
+    result["build_order"] = build_order
     return result
 
 

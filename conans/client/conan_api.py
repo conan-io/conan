@@ -52,6 +52,11 @@ from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 import time
+from conans.client.serial import serial_graph, unserial_graph
+import json
+from conans.model.env_info import EnvValues
+from conans.client.installer import ConanInstaller
+import pprint
 
 
 default_manifest_folder = '.conan_manifests'
@@ -391,6 +396,43 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
                  self._client_cache, self._user_io.out, recorder, self._loader)
+
+    @api_method
+    def lock(self, reference, remote_name=None, settings=None, options=None, env=None,
+             profile_name=None, update=False, build=None):
+        try:
+            reference = ConanFileReference.loads(reference)
+        except ConanException:
+            reference = _get_conanfile_path(reference, cwd=None, py=None)
+        profile = profile_from_args(profile_name, settings, options, env=env,
+                                    cwd=get_cwd(), client_cache=self._client_cache)
+        recorder = ActionRecorder()
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
+                                                                  False, remote_name, recorder, workspace=None)
+
+        # write serialized graph
+        serialized_graph = serial_graph(deps_graph)
+        return serialized_graph
+    
+    @api_method
+    def install_lock(self, lock_graph, node_id):
+
+        try:
+            recorder = ActionRecorder()
+            pprint.pprint (lock_graph)
+            deps_graph = unserial_graph(lock_graph, EnvValues(), None,
+                                        self._user_io.out, self._proxy, self._loader,
+                                        scoped_output=self._user_io.out)
+            deps_graph = deps_graph.subgraph(node_id)
+            installer = ConanInstaller(self._client_cache, self._user_io.output, self._remote_manager,
+                                       self._registry, recorder=recorder, workspace=None)
+            installer.unserial(deps_graph)
+            installer.install(deps_graph)
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

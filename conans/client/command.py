@@ -13,10 +13,12 @@ from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
-from conans.util.files import exception_message_safe
+from conans.util.files import exception_message_safe, load
 from conans.unicode import get_cwd
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
+import json
+from conans.tools import save
 
 
 class Extender(argparse.Action):
@@ -507,6 +509,34 @@ class Command(object):
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
+
+    def lock(self, *args):
+        """
+        """
+        parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
+        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("--lock-id", action=OnceArgument)
+        _add_common_install_arguments(parser, build_help="build_help")
+        args = parser.parse_args(*args)
+
+        if args.lock_id:
+            graph = json.loads(load(args.path_or_reference))
+            self._conan.install_lock(graph, args.lock_id)
+            return
+
+        serialized_graph = self._conan.lock(args.path_or_reference,
+                                    remote_name=args.remote,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    profile_name=args.profile,
+                                    update=args.update,
+                                    build=args.build)
+        serialized_graph_str = json.dumps(serialized_graph)
+        serialized_graph_path = "serial_graph.json"
+        save(serialized_graph_path, serialized_graph_str)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method.

@@ -276,6 +276,16 @@ class DepsGraph(object):
                 result.append(new_level)
         return result
 
+    def build_order_ids(self, references):
+        levels = self.inverse_levels()
+        closure = self._inverse_closure(references)
+        result = []
+        for level in reversed(levels):
+            new_level = [str(id(n)) for n in level if (n in closure and n.conan_ref)]
+            if new_level:
+                result.append(new_level)
+        return result
+
     def nodes_to_build(self):
         ret = []
         for level in self.by_levels():
