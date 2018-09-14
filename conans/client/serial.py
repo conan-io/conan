@@ -13,6 +13,8 @@ from conans.model.options import OptionsValues, PackageOptions, PackageOption,\
 from conans.model.values import Values
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.requires import Requirement, Requirements
+from conans.model.conan_file import ConanFile
+from conans.client.graph.graph import BINARY_BUILD
 
 
 def serial_option_values(self):
@@ -209,25 +211,28 @@ def unserial_node(data, env, conanfile_path, output, proxy, loader, update=False
     remote = unserial_remote(data["remote"])
     remote_name = remote.name if remote else None
     t1 = time.time()
-    if path:
-        conanfile_path = conanfile_path
-        output = scoped_output
+    if not path and not conan_ref:
+        conanfile = ConanFile(None, loader._runner, Values())
     else:
-        result = proxy.get_recipe(conan_ref, check_updates=False, update=update,
-                                  remote_name=remote_name, recorder=ActionRecorder())
-        conanfile_path, recipe_status, remote, _ = result
-        output = ScopedOutput(str(conan_ref or "Project"), output)
-    if conanfile_path.endswith(".txt"):
-        # FIXME: remove this ugly ProcessedProfile
-        conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
-    else:
-        conanfile = loader.load_basic(conanfile_path, output, conan_ref)
+        if path:
+            conanfile_path = conanfile_path
+            output = scoped_output
+        else:
+            result = proxy.get_recipe(conan_ref, check_updates=False, update=update,
+                                      remote_name=remote_name, recorder=ActionRecorder())
+            conanfile_path, recipe_status, remote, _ = result
+            output = ScopedOutput(str(conan_ref or "Project"), output)
+        if conanfile_path.endswith(".txt"):
+            # FIXME: remove this ugly ProcessedProfile
+            conanfile = loader.load_conanfile_txt(conanfile_path, output, ProcessedProfile())
+        else:
+            conanfile = loader.load_basic(conanfile_path, output, conan_ref)
     from conans.client.graph.graph import Node
     t1 = time.time()
     unserial_conanfile(conanfile, data["conanfile"], env)
 
     result = Node(conan_ref, conanfile)
-    result.binary = data["binary"]
+    result.binary = None # data["binary"]
     result.recipe = data["recipe"]
     result.remote = remote
     result.binary_remote = unserial_remote(data["binary_remote"])
@@ -293,7 +298,7 @@ def serial_graph(graph):
     return result
 
 
-def unserial_graph(data, env, conanfile_path, output, proxy, loader, scoped_output=None):
+def unserial_graph(data, env, conanfile_path, output, proxy, loader, scoped_output=None, id_=None):
     from conans.client.graph.graph import Node, DepsGraph
     result = DepsGraph()
     nodes_dict = {id_: unserial_node(n, env, conanfile_path, output, proxy, loader,
@@ -303,6 +308,14 @@ def unserial_graph(data, env, conanfile_path, output, proxy, loader, scoped_outp
     result.root = nodes_dict[data["root"]]
     for edge in data["edges"]:
         result.add_edge(nodes_dict[edge["src"]], nodes_dict[edge["dst"]], edge["private"])
+    if id_:
+        node = nodes_dict[id_]
+        result.subgraph(node)
+        virtual = Node(None, ConanFile(None, loader._runner, Values()))
+        result.add_node(virtual)
+        result.add_edge(virtual, node)
+        result.root = virtual
+        
     return result
 
 

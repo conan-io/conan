@@ -20,9 +20,9 @@ class Pkg(ConanFile):
         client.run("export . PkgA/0.1@user/channel")
         client.save({"conanfile.py": conanfile % "requires = 'PkgA/0.1@user/channel'"})
         client.run("export . PkgB/0.1@user/channel")
-        client.save({"conanfile.py": conanfile % "requires = 'PkgA/0.1@user/channel'"})
+        client.save({"conanfile.py": conanfile % "requires = 'PkgB/0.1@user/channel'"})
         client.run("export . PkgC/0.1@user/channel")
-        client.save({"conanfile.py": conanfile % "requires = 'PkgA/0.1@user/channel'"})
+        client.save({"conanfile.py": conanfile % "requires = 'PkgC/0.1@user/channel'"})
         client.run("export . PkgD/0.1@user/channel")
 
         client.run("lock PkgD/0.1@user/channel -o PkgA:custom_option=2 "
@@ -37,5 +37,6 @@ class Pkg(ConanFile):
                 graph_node = lock_graph["nodes"][node]
                 ref = graph_node["conan_ref"]
                 ref = ConanFileReference.loads(ref)
-
+                print "++++++++++++++++ REF ", ref
                 client.run("lock serial_graph.json --lock-id=%s" % (node))
+                print client.out

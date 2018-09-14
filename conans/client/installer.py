@@ -254,8 +254,8 @@ class ConanInstaller(object):
 
     def unserial(self, deps_graph):
         nodes_by_level = deps_graph.by_levels()
-        root_level = nodes_by_level.pop()
-        root_node = root_level[0]
+        #root_level = nodes_by_level.pop()
+        #root_node = root_level[0]
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
         time_propagate = 0
         time_call = 0
@@ -282,7 +282,7 @@ class ConanInstaller(object):
                     time_call += (time.time() - t1)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
+        #self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
         print "TIME PROPAGETE ", time_propagate
         print "TIME CALL ", time_call
 

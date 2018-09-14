@@ -57,6 +57,10 @@ import json
 from conans.model.env_info import EnvValues
 from conans.client.installer import ConanInstaller
 import pprint
+from conans.client.graph.graph import BINARY_BUILD
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph import build_mode
+from conans.client.graph.build_mode import BuildMode
 
 
 default_manifest_folder = '.conan_manifests'
@@ -419,14 +423,19 @@ class ConanAPIV1(object):
 
         try:
             recorder = ActionRecorder()
-            pprint.pprint (lock_graph)
             deps_graph = unserial_graph(lock_graph, EnvValues(), None,
                                         self._user_io.out, self._proxy, self._loader,
-                                        scoped_output=self._user_io.out)
-            deps_graph = deps_graph.subgraph(node_id)
-            installer = ConanInstaller(self._client_cache, self._user_io.output, self._remote_manager,
+                                        scoped_output=self._user_io.out,
+                                        id_=node_id)
+            binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._user_io.out,
+                                                      self._remote_manager, self._registry, workspace=None)
+            build_mode = BuildMode(["missing"], self._user_io.out)
+            binaries_analyzer.evaluate_graph(deps_graph, build_mode, update=False, remote_name=None)
+
+            installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
                                        self._registry, recorder=recorder, workspace=None)
-            installer.unserial(deps_graph)
+            #installer.unserial(deps_graph)
+            print "INSTALLING ", deps_graph.nodes
             installer.install(deps_graph)
             return recorder.get_info()
         except ConanException as exc:
