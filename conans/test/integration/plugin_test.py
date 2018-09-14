@@ -215,7 +215,6 @@ class PluginTest(unittest.TestCase):
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         conanfile_cache_path = client.client_cache.conanfile(
             ConanFileReference("basic", "0.1", "danimtb", "testing"))
-        # TODO: CHECK CONANFILE PATH PARAMETERS IN PRE AND POST
         client.run("config set general.plugins='complete_plugin'")
 
         client.run("source .")

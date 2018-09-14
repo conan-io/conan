@@ -380,13 +380,8 @@ class ConanAPIV1(object):
             profile = read_conaninfo_profile(install_folder)
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        self._plugin_manager.execute("pre_export", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=str(reference))
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
                    self._client_cache, self._plugin_manager)
-        self._plugin_manager.execute("post_export", conanfile=conanfile,
-                                     conanfile_path=conanfile_path, reference=str(reference))
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
