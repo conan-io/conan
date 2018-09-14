@@ -1,6 +1,7 @@
 // ########## CONFIGURATION ##################
 def full_py_vers = false
 def test_v2 = true
+def test_revisions = true
 // ############################
 
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
@@ -10,6 +11,9 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
 
 def slaves = ['Linux', 'Windows', 'Macos']
 def flavors = ["no_revisions"]
+if(test_revisions){
+    flavors = ["revisions", "no_revisions"]
+}
 def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
 
