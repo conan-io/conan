@@ -11,7 +11,7 @@ class Router(object):
 
     @property
     def recipe_revision(self):
-        return '%s#<revision>' % self.recipe
+        return '%s/revisions/<revision>' % self.recipe
 
     @property
     def recipe_file(self):
@@ -40,11 +40,14 @@ class Router(object):
 
     @property
     def package_revision(self):
-        return '%s/<package_id>#<p_revision>' % self.packages_revision
+        return '%s/<package_id>/revisions/<p_revision>' % self.packages_revision
 
     @property
     def package_file(self):
         return '%s/<the_path:path>' % self.package
+
+
+    'lib/1.0/lasote/testing/packages/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/revisions/7200b02593a12d8cf214c92ddf805ea9'
 
     @property
     def package_revision_file(self):

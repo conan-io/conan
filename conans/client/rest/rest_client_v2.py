@@ -214,12 +214,15 @@ class RestV2Methods(RestCommonMethods):
         url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
 
         if conan_reference.revision:
-            url += "#%s" % conan_reference.revision
-        return url.replace("#", "%23")
+            url += "/revisions/%s" % conan_reference.revision
+        return url
 
     def _package_url(self, p_reference):
+        if not p_reference.conan.revision and p_reference.revision:
+            raise ConanException("It is needed to specify the recipe revision if you "
+                                 "specify a package revision")
         url = self._recipe_url(p_reference.conan)
         url += "/packages/%s" % p_reference.package_id
         if p_reference.revision:
-            url += "#%s" % p_reference.revision
-        return url.replace("#", "%23")
+            url += "/revisions/%s" % p_reference.revision
+        return url

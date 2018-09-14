@@ -92,16 +92,24 @@ class HelloConan(ConanFile):
 
         # Download specifying recipe with revisions and package with revisions
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
-                        "7200b02593a12d8cf214c92ddf805ea9" % str(self.ref))
+                        "7200b02593a12d8cf214c92ddf805ea9" % self.ref.full_repr())
 
         contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "2")
 
         # Download previous package revision
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
-                        "e18c97f441d104e8be42d1ad7e9d425d" % str(self.ref))
+                        "e18c97f441d104e8be42d1ad7e9d425d" % self.ref.full_repr())
         contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "1")
+
+        # Specify a package revision without a recipe revision
+        error = self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
+                                "e18c97f441d104e8be42d1ad7e9d425d" % str(self.ref),
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("It is needed to specify the recipe revision if "
+                      "you specify a package revision", self.client.out)
 
     def test_search_with_revision(self):
         conanfile = '''
