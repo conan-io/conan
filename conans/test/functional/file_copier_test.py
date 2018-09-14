@@ -37,25 +37,27 @@ class FileCopierTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def basic_with_linked_dir_test(self):
-        folder1 = temp_folder()
+        folder1 = os.path.join(temp_folder(), "folder1")
         sub1 = os.path.join(folder1, "subdir1")
         sub2 = os.path.join(folder1, "subdir2")
         os.makedirs(sub1)
-        os.symlink("subdir1", sub2) # @UndefinedVariable
+        os.symlink("subdir1", sub2)
         save(os.path.join(sub1, "file1.txt"), "Hello1")
         save(os.path.join(sub1, "file2.c"), "Hello2")
-        save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
+        save(os.path.join(sub1, "sub1", "file1.txt"), "Hello1 sub")
 
         for links in (False, True):
-            folder2 = temp_folder()
+            folder2 = os.path.join(temp_folder(), "folder2")
             copier = FileCopier(folder1, folder2)
             copier("*.txt", "texts", links=links)
             if links:
-                self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1") # @UndefinedVariable
+                self.assertEqual(os.readlink(os.path.join(folder2, "texts", "subdir2")), "subdir1")
+                self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
+                self.assertEqual(['file1.txt', 'sub1'].sort(),
+                                 os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
-            self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
-            self.assertEqual(['file1.txt', 'sub1'].sort(), os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
+
 
         for links in (False, True):
             folder2 = temp_folder()
@@ -89,10 +91,10 @@ class FileCopierTest(unittest.TestCase):
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def linked_relative_test(self):
         folder1 = temp_folder()
-        sub1 = os.path.join(folder1, "foo/other/file")
-        save(os.path.join(sub1, "file.txt"), "Hello")
-        sub2 = os.path.join(folder1, "foo/symlink")
-        os.symlink("other/file", sub2)  # @UndefinedVariable
+        sub1 = os.path.join(folder1, "foo", "other", "file")
+        save(os.path.join(sub1, "file.txt"), "Hello")  # folder1:foo/other/file/file.txt
+        sub2 = os.path.join(folder1, "foo", "symlink")  # folder1:foo/symlink
+        os.symlink(sub1, sub2)  # @UndefinedVariable
 
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)

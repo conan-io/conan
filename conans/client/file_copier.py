@@ -77,27 +77,24 @@ class FileCopier(object):
         src = os.path.join(base_src, src)
         dst = os.path.join(self._base_dst, dst)
 
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
-                                                         ignore_case)
+        files_to_copy, link_folders, link_files = self._filter_files(src, pattern, links, excludes,
+                                                                     ignore_case)
+
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
-        self._link_folders(src, dst, link_folders)
+        self._link_elements(src, dst, link_folders + link_files)
         self._copied.extend(files_to_copy)
         return copied_files
 
     def _filter_files(self, src, pattern, links, excludes, ignore_case):
-
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
-        filenames = []
+        filepaths = []
         linked_folders = []
+        linked_files = []
         for root, subfolders, files in os.walk(src, followlinks=True):
+            symlink = False
             if root in self._excluded:
-                subfolders[:] = []
-                continue
-
-            if links and os.path.islink(root):
-                linked_folders.append(os.path.relpath(root, src))
                 subfolders[:] = []
                 continue
             basename = os.path.basename(root)
@@ -105,53 +102,105 @@ class FileCopier(object):
             if basename in [".git", ".svn"]:
                 subfolders[:] = []
                 continue
-            if basename == "test_package":  # DO NOT export test_package/build folder
+            # DO NOT export test_package/build folder
+            if basename == "test_package":
                 try:
                     subfolders.remove("build")
                 except:
                     pass
+            # Mark folder is a symlink
+            if os.path.islink(root):
+                symlink = os.path.relpath(root, src)
 
             relative_path = os.path.relpath(root, src)
             for f in files:
-                relative_name = os.path.normpath(os.path.join(relative_path, f))
-                filenames.append(relative_name)
+                f = os.path.normpath(os.path.join(relative_path, f)).replace("\\", "/")
+                if os.path.islink(os.path.join(root, f)):
+                    filepaths.append((f, f))
+                else:
+                    if not symlink:
+                        # Check upstream symlinked folders
+                        folder_path = src.replace("\\", "/")[:-1]
+                        for folder in f.split("/")[:-1]:
+                            folder_path = folder_path + "/" + folder
+                            if os.path.islink(folder_path):
+                                symlink = os.path.relpath(folder_path, src)
+                                break
+                    filepaths.append((f, symlink))
 
         if ignore_case:
-            filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
+            filepaths = {(file.lower(), symlink): (file, symlink) for file, symlink in filepaths}
+            uncased_filepaths = filepaths
 
-        files_to_copy = fnmatch.filter(filenames, pattern)
+        # Filter fnmatch
+        filtered_filepaths = []
+        for item in filepaths:
+            result = fnmatch.fnmatchcase(item[0], pattern)
+            if result:
+                filtered_filepaths.append(item)
+
+        if not links:
+            withtout_links = []
+            for item in filtered_filepaths:
+                if not item[1]:
+                    withtout_links.append(item)
+            filtered_filepaths = withtout_links
+
         if excludes:
             if not isinstance(excludes, (tuple, list)):
                 excludes = (excludes, )
             if ignore_case:
                 excludes = [e.lower() for e in excludes]
             for exclude in excludes:
-                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+                filtered_filepaths = [f for f in filtered_filepaths if not fnmatch.fnmatch(f[0], exclude)]
 
         if ignore_case:
-            files_to_copy = [filenames[f] for f in files_to_copy]
+            filtered_filepaths = [uncased_filepaths[(file, symlink)] for file, symlink in filtered_filepaths]
 
-        return files_to_copy, linked_folders
+        files_to_copy = []
+        for item in filtered_filepaths:
+            if item[1]:
+                if os.path.isdir(os.path.join(src, item[1])):
+                    if item[1] not in linked_folders:
+                        linked_folders.append(item[1])
+                else:
+                    if item[1] not in linked_files:
+                        linked_files.append(item[1])
+            else:
+                files_to_copy.append(item[0])
+
+        return files_to_copy, linked_folders, linked_files
 
     @staticmethod
-    def _link_folders(src, dst, linked_folders):
-        for linked_folder in linked_folders:
-            link = os.readlink(os.path.join(src, linked_folder))
-            dst_link = os.path.join(dst, linked_folder)
+    def _link_elements(src, dst, linked_elements):
+        # order elements from less dependant to more
+        linked_elements_ordered = []
+        for link_element in linked_elements:
+            if os.readlink(os.path.join(src, link_element)) in linked_elements:
+                linked_elements_ordered.append(link_element)
+            else:
+                linked_elements_ordered.insert(0, link_element)
+        for link_element in linked_elements_ordered:
+            src_link = os.path.normpath(os.path.join(src, link_element))  # link element in src
+            linked_to_element = os.path.normpath(os.readlink(src_link))  # 'linked to' element in src
+            dst_link = os.path.normpath(os.path.join(dst, link_element))  # link element in dst
             try:
                 # Remove the previous symlink
                 os.remove(dst_link)
             except OSError:
                 pass
-            # link is a string relative to linked_folder
+            # Create parent directories
+            if not os.path.exists(os.path.dirname(dst_link)):
+                mkdir(os.path.dirname(dst_link))
+            # link is a string relative to linked_element
             # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
-            mkdir(os.path.dirname(dst_link))
-            os.symlink(link, dst_link)
+            os.symlink(linked_to_element, dst_link)
         # Remove empty links
-        for linked_folder in linked_folders:
-            dst_link = os.path.join(dst, linked_folder)
-            abs_path = os.path.realpath(dst_link)
+        for link_element in linked_elements_ordered:
+            dst_link = os.path.normpath(os.path.join(dst, link_element))  # link element in dst
+            abs_path = os.path.normpath(os.path.join(os.path.dirname(dst_link),
+                                                     os.readlink(dst_link)))
             if not os.path.exists(abs_path):
                 os.remove(dst_link)
 
