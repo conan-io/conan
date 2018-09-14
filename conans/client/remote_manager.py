@@ -333,16 +333,6 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
     return result
 
 
-def check_compressed_files(tgz_name, files):
-    bare_name = os.path.splitext(tgz_name)[0]
-    for f in files:
-        if f == tgz_name:
-            continue
-        if bare_name == os.path.splitext(f)[0]:
-            raise ConanException("This Conan version is not prepared to handle '%s' file format. "
-                                 "Please upgrade conan client." % f)
-
-
 def compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
