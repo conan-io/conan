@@ -60,7 +60,6 @@ class AuthorizeBearerTest(unittest.TestCase):
         self.assertFalse(errors)
 
         if not get_env("CONAN_TESTING_SERVER_V2_ENABLED", False):
-
             expected_calls = [('ping', None),
                               ('get_conan_manifest_url', None),
                               ('check_credentials', None),

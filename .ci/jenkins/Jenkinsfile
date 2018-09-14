@@ -21,9 +21,11 @@ if (full_py_vers){
     pyvers = ['py36', 'py34', 'py27']
     api_confs = ["v1", "v2"]
 }
+
 else if(test_v2){
     api_confs = ["v1", "v2"]
 }
+
 
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
@@ -196,4 +198,3 @@ def build_linux(){
         sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}  --server_api=${api_conf}")
     }
 }
-

@@ -19,6 +19,7 @@ class RestV2Methods(RestCommonMethods):
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
                  revisions_enabled, put_headers=None, checksum_deploy=False):
 
+
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
                                             verify_ssl, put_headers)
         self._checksum_deploy = checksum_deploy
@@ -59,6 +60,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._package_url(p_ref)
         repr_ref = p_ref.full_repr() if self._revisions_enabled else str(p_ref)
         snap, p_reference = self._get_snapshot(url, repr_ref)
+
         reference = PackageReference.loads(p_reference)
         return snap, reference
 
@@ -147,7 +149,6 @@ class RestV2Methods(RestCommonMethods):
         if is_dir(path):
             ret = []
             for the_file in files["files"]:
-
                 if path == "." or the_file.startswith(path):
                     tmp = the_file[len(path)-1:].split("/", 1)[0]
                     if tmp not in ret:
