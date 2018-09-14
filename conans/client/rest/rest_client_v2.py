@@ -22,7 +22,7 @@ class RestV2Methods(RestCommonMethods):
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
                                             verify_ssl, put_headers)
         self._checksum_deploy = checksum_deploy
-        self._revisions_enabled = revisions_enabled  # !!!! NOT USED!
+        self._revisions_enabled = revisions_enabled
 
     @property
     def remote_api_url(self):
