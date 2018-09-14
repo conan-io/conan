@@ -30,7 +30,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
 
         if package_ids:
             _download_binaries(reference, package_ids, client_cache, remote_manager,
-                               remote, output, recorder, loader, plugin_manager)
+                               remote, output, recorder, loader)
         else:
             output.info("Getting the complete package list "
                         "from '%s'..." % str(reference))
