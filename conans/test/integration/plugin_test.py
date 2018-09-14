@@ -2,8 +2,7 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient
-
+from conans.test.utils.tools import TestClient, TestServer
 
 conanfile_basic = """
 from conans import ConanFile
@@ -83,54 +82,114 @@ def post_package(output, conanfile, conanfile_path, **kwargs):
     if conanfile.in_local_cache:
         assert kwargs["reference"]
         assert kwargs["package_id"]
-        print("REFERENCE", kwargs["reference"])
         output.info("reference=%s" % kwargs["reference"])
         output.info("package_id=%s" % kwargs["package_id"])
 
-def pre_upload(output, conanfile_path, reference, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s" % (conanfile_path, reference, remote_name))
+def pre_upload(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
 
-def post_upload(output, conanfile_path, reference, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s" % (conanfile_path, reference, remote_name))
+def post_upload(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
 
-def pre_upload_package(output, conanfile_path, reference, package_id, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s, %s" % (conanfile_path, reference, package_id, remote_name))
+def pre_upload_recipe(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
 
-def post_upload_package(output, conanfile_path, reference, package_id, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s, %s" % (conanfile_path, reference, package_id, remote_name))
+def post_upload_recipe(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
 
-def pre_download(output, reference, remote_name, **kwargs):
-    output.info("COMMON: %s, %s" % (reference, remote_name))
+def pre_upload_package(output, conanfile_path, reference, package_id, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert package_id
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("package_id=%s" % package_id)
+    output.info("remote.name=%s" % remote.name)
 
-def post_download(output, conanfile_path, reference, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s" % (conanfile_path, reference, remote_name))
+def post_upload_package(output, conanfile_path, reference, package_id, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert package_id
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("package_id=%s" % package_id)
+    output.info("remote.name=%s" % remote.name)
 
-def pre_download_package(output, conanfile_path, reference, package_id, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s, %s" % (conanfile_path, reference, package_id, remote_name))
+def pre_download(output, reference, remote, **kwargs):
+    assert reference
+    assert remote
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
 
-def post_download_package(output, conanfile_path, reference, package_id, remote_name, **kwargs):
-    output.info("COMMON: %s, %s, %s, %s" % (conanfile_path, reference, package_id, remote_name))
+def post_download(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
+
+def pre_download_recipe(output, reference, remote, **kwargs):
+    assert reference
+    assert remote
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
+
+def post_download_recipe(output, conanfile_path, reference, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("remote.name=%s" % remote.name)
+
+def pre_download_package(output, conanfile_path, reference, package_id, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert package_id
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("package_id=%s" % package_id)
+    output.info("remote.name=%s" % remote.name)
+
+def post_download_package(output, conanfile_path, reference, package_id, remote, **kwargs):
+    assert conanfile_path
+    assert reference
+    assert package_id
+    assert remote
+    output.info("conanfile_path=%s" % conanfile_path)
+    output.info("reference=%s" % reference)
+    output.info("package_id=%s" % package_id)
+    output.info("remote.name=%s" % remote.name)
 """
 
 HEADER = "[PLUGIN - complete_plugin] {method_name}():"
 REFERENCE_LOCAL = "basic/0.1@PROJECT"
 REFERENCE_CACHE = "basic/0.1@danimtb/testing"
 PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-
-COMMON_LOCAL = " ".join([HEADER, "COMMON:", REFERENCE_LOCAL])
-COMMON_CACHE = " ".join([HEADER, "COMMON:", REFERENCE_CACHE])
-IN_USER_SPACE = " ".join([HEADER, "IN USER SPACE:", REFERENCE_LOCAL])
-IN_LOCAL_CACHE = " ".join([HEADER, "IN LOCAL CACHE:", REFERENCE_CACHE, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
-
-common_conanfile = "[PLUGIN - complete_plugin] {method_name}(): COMMON: basic/0.1@PROJECT"
-common_conanfile_path = common_conanfile + ", {conanfile_path}"
-
-common_conanfile_cache = common_conanfile.replace("@PROJECT", "@danimtb/testing")
-common_conanfile_cache_path = common_conanfile_cache + ", {conanfile_path}"
-common_conanfile_cache_path_ref = common_conanfile_cache_path + ", basic/0.1@danimtb/testing"
-
-userspace_path = "[PLUGIN - complete_plugin] {method_name}(): IN USER SPACE: {conanfile_path}"
-cache_ref_pkgid = "[PLUGIN - complete_plugin] {method_name}(): IN LOCAL CACHE: basic/0.1@danimtb/testing, 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
 class PluginTest(unittest.TestCase):
@@ -147,7 +206,8 @@ class PluginTest(unittest.TestCase):
                       "'license'", client.out)
 
     def complete_plugin_test(self):
-        client = TestClient()
+        server = TestServer([], users={"danimtb": "pass"})
+        client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
         plugin_path = os.path.join(client.client_cache.plugins_path, "complete_plugin.py")
         client.save({plugin_path: complete_plugin, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
@@ -184,12 +244,29 @@ class PluginTest(unittest.TestCase):
         self._check_source(conanfile_cache_path, client.out, in_cache=True)
         self._check_build(conanfile_cache_path, client.out, in_cache=True)
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
-        # print(client.out)
-        # client.run("upload . danimtb/testing")  # --all ?
-        # client.run("download . danimtb/testing")
-        # print(client.out)
-        # client.run("create . danimtb/testing")
-        # print(client.out)
+
+        client.run("upload basic/0.1@danimtb/testing -r default")
+        self._check_upload(conanfile_cache_path, client.out)
+        self._check_upload_recipe(conanfile_cache_path, client.out)
+        client.run("upload basic/0.1@danimtb/testing -r default --all")
+        self._check_upload(conanfile_cache_path, client.out)
+        self._check_upload_recipe(conanfile_cache_path, client.out)
+        self._check_upload_package(conanfile_cache_path, client.out)
+
+        client.run("remove * --force")
+        client.run("download basic/0.1@danimtb/testing --recipe")
+        self._check_download(conanfile_cache_path, client.out)
+        self._check_download_recipe(conanfile_cache_path, client.out)
+        client.run("remove * --force")
+        client.run("download basic/0.1@danimtb/testing")
+        self._check_download(conanfile_cache_path, client.out)
+        self._check_download_recipe(conanfile_cache_path, client.out)
+        self._check_download_package(conanfile_cache_path, client.out)
+
+        client.run("remove * --force")
+        client.run("install basic/0.1@danimtb/testing")
+        self._check_download_recipe(conanfile_cache_path, client.out)
+        self._check_download_package(conanfile_cache_path, client.out)
 
     def _check_source(self, conanfile_path, out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
@@ -237,3 +314,53 @@ class PluginTest(unittest.TestCase):
         self.assertIn("[PLUGIN - complete_plugin] post_package(): conanfile_path=%s" % conanfile_cache_path, out)
         self.assertIn("[PLUGIN - complete_plugin] post_package(): reference=%s" % REFERENCE_CACHE, out)
         self.assertIn("[PLUGIN - complete_plugin] post_package(): package_id=%s" % PACKAGE_ID, out)
+
+    def _check_upload(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload(): remote.name=default", out)
+
+    def _check_upload_recipe(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_recipe(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_recipe(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_recipe(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_recipe(): remote.name=default", out)
+
+    def _check_upload_package(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_package(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_package(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_package(): package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_upload_package(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_package(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_package(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_package(): package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_upload_package(): remote.name=default", out)
+
+    def _check_download(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_download(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_download(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download(): remote.name=default", out)
+
+    def _check_download_recipe(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_recipe(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_recipe(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_recipe(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_recipe(): remote.name=default", out)
+
+    def _check_download_package(self, conanfile_cache_path, out):
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_package(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_package(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_package(): package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[PLUGIN - complete_plugin] pre_download_package(): remote.name=default", out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_package(): conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_package(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_package(): package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_download_package(): remote.name=default", out)

@@ -355,18 +355,8 @@ class ConanInstaller(object):
         report_copied_files(copied_files, output)
 
     def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._plugin_manager.execute("pre_download_package",
-                                     reference=str(package_reference.conan),
-                                     package_id=package_reference.package_id,
-                                     remote_name=remote.name)
         self._remote_manager.get_package(package_reference, package_folder,
                                          remote, output, self._recorder)
-        conanfile_path = self._client_cache.conanfile(package_reference.conan)
-        self._plugin_manager.execute("post_download_package",
-                                     conanfile_path=conanfile_path,
-                                     reference=str(package_reference.conan),
-                                     package_id=package_reference.package_id,
-                                     remote_name=remote.name)
         _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build):

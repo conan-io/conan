@@ -16,7 +16,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     if not package:  # Search the reference first, and raise if it doesn't exist
         raise ConanException("'%s' not found in remote" % str(reference))
 
-    plugin_manager.execute("pre_download", reference=str(reference), remote_name=remote.name)
+    plugin_manager.execute("pre_download", reference=str(reference), remote=remote)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
     registry.set_ref(reference, remote.name)
@@ -40,13 +40,13 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
                 output.warn("No remote binary packages found in remote")
             else:
                 _download_binaries(reference, list(packages_props.keys()), client_cache,
-                                   remote_manager, remote, output, recorder, loader, plugin_manager)
+                                   remote_manager, remote, output, recorder, loader)
     plugin_manager.execute("post_download", conanfile_path=conan_file_path,
-                           reference=str(reference), remote_name=remote.name)
+                           reference=str(reference), remote=remote)
 
 
 def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,
-                       recorder, loader, plugin_manager):
+                       recorder, loader):
     conanfile_path = client_cache.conanfile(reference)
     if not os.path.exists(conanfile_path):
         raise Exception("Download recipe first")
@@ -56,11 +56,5 @@ def _download_binaries(reference, package_ids, client_cache, remote_manager, rem
     for package_id in package_ids:
         package_ref = PackageReference(reference, package_id)
         package_folder = client_cache.package(package_ref, short_paths=short_paths)
-        plugin_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                               reference=str(reference), package_id=package_id,
-                               remote_name=remote.name)
         output.info("Downloading %s" % str(package_ref))
         remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
-        plugin_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                               reference=str(reference), package_id=package_id,
-                               remote_name=remote.name)

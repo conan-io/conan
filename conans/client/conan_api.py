@@ -138,7 +138,7 @@ class ConanAPIV1(object):
 
     @staticmethod
     def instance_remote_manager(requester, client_cache, user_io, _client_version,
-                                min_server_compatible_version):
+                                min_server_compatible_version, plugin_manager):
 
         # Verify client version against remotes
         version_checker_req = VersionCheckerRequester(requester, _client_version,
@@ -154,7 +154,7 @@ class ConanAPIV1(object):
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
         # Handle remote connections
-        remote_manager = RemoteManager(client_cache, auth_manager, user_io.out)
+        remote_manager = RemoteManager(client_cache, auth_manager, user_io.out, plugin_manager)
         return localdb, rest_api_client, remote_manager
 
     @staticmethod
@@ -189,13 +189,18 @@ class ConanAPIV1(object):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
 
+            # Create Plugin Manager
+            plugin_manager = PluginManager(client_cache.plugins_path,
+                                           get_env("CONAN_PLUGINS", list()), user_io.out)
+
             # Get the new command instance after migrations have been done
             requester = get_basic_requester(client_cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
                 requester,
                 client_cache, user_io,
                 Version(client_version),
-                Version(MIN_SERVER_COMPATIBLE_VERSION))
+                Version(MIN_SERVER_COMPATIBLE_VERSION),
+                plugin_manager)
 
             # Adjust global tool variables
             set_global_instances(out, requester)
@@ -204,11 +209,12 @@ class ConanAPIV1(object):
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager,
-                               interactive=interactive)
+                               plugin_manager, interactive=interactive)
 
         return conan, client_cache, user_io
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, interactive=True):
+    def __init__(self, client_cache, user_io, runner, remote_manager, plugin_manager,
+                 interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -225,8 +231,7 @@ class ConanAPIV1(object):
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
                                            self._remote_manager, self._loader, self._proxy, resolver)
-        self._plugin_manager = PluginManager(self._client_cache.plugins_path,
-                                             get_env("CONAN_PLUGINS", list()), self._user_io.out)
+        self._plugin_manager = plugin_manager
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""

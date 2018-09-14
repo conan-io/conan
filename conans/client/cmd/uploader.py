@@ -69,14 +69,9 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
-                                             reference=str(conan_ref), remote_name=remote_name)
+
                 self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
                              skip_upload, integrity_check, no_overwrite, remote_name, recorder)
-                self._plugin_manager.execute("post_upload",
-                                                            conanfile_path=conanfile_path,
-                                                            reference=str(conan_ref),
-                                                            remote_name=remote_name)
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
     def _upload(self, conan_file, conan_ref, force, packages_ids, retry, retry_wait, skip_upload,
@@ -90,6 +85,10 @@ class CmdUpload(object):
             upload_remote = defined_remote
         else:  # Or use the default otherwise
             upload_remote = self._registry.default_remote
+
+        conanfile_path = self._client_cache.conanfile(conan_ref)
+        self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
+                                     reference=str(conan_ref), remote=upload_remote)
 
         if not force:
             self._check_recipe_date(conan_ref, upload_remote)
@@ -107,21 +106,18 @@ class CmdUpload(object):
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
                 conanfile_path = self._client_cache.conanfile(conan_ref)
-                self._plugin_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                             reference=str(conan_ref), package_id=str(package_id),
-                                             remote_name=upload_remote.name)
                 ret_upload_package = self._upload_package(PackageReference(conan_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
                                                           skip_upload, integrity_check,
                                                           no_overwrite, upload_remote)
-                self._plugin_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                             reference=str(conan_ref), package_id=str(package_id),
-                                             remote_name=upload_remote.name)
                 if ret_upload_package:
                     recorder.add_package(str(conan_ref), package_id)
 
         if not defined_remote and not skip_upload:
             self._registry.set_ref(conan_ref, upload_remote.name)
+
+        self._plugin_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                     reference=str(conan_ref), remote=upload_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)

@@ -16,7 +16,7 @@ class PluginManager(object):
         self.plugins = {}
         self.output = output
 
-    def execute(self, method_name, conanfile=None, conanfile_path=None, **kwargs):
+    def execute(self, method_name, **kwargs):
         if not self.plugins:
             self.load_plugins()
 
@@ -24,7 +24,7 @@ class PluginManager(object):
             try:
                 method = getattr(plugin, method_name)
                 output = ScopedOutput("[PLUGIN - %s] %s()" % (name, method_name), self.output)
-                method(output=output, conanfile=conanfile, conanfile_path=conanfile_path, **kwargs)
+                method(output, **kwargs)
             except AttributeError:
                 pass
             except Exception as e:
