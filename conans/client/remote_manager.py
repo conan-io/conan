@@ -39,7 +39,7 @@ class RemoteManager(object):
         self._output = output
         self._auth_manager = auth_manager
 
-    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy=None):
+    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest):
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
 
@@ -61,7 +61,7 @@ class RemoteManager(object):
             return None
 
         ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
-                                         retry_wait, policy)
+                                         retry_wait, policy, remote_manifest)
         duration = time.time() - t1
         log_recipe_upload(new_ref, duration, the_files, remote.name)
         if ret:

@@ -32,20 +32,23 @@ class RestV1Methods(RestCommonMethods):
     def remote_api_url(self):
         return "%s/v1" % self.remote_url.rstrip("/")
 
-    def _download_files(self, file_urls):
+    def _download_files(self, file_urls, output=None):
         """
         :param: file_urls is a dict with {filename: url}
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        output = self._output if output is None else output
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            self._output.writeln("Downloading %s" % filename)
+            if output:
+                output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
-            self._output.writeln("")
+            if output:
+                output.writeln("")
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -68,7 +71,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls)
+        contents = self._download_files(urls, output=False)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
@@ -83,7 +86,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls)
+        contents = self._download_files(urls, output=False)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
@@ -203,7 +206,7 @@ class RestV1Methods(RestCommonMethods):
 
         return urls
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
         """
         the_files: dict with relative_path: content
         """
@@ -213,7 +216,7 @@ class RestV1Methods(RestCommonMethods):
         remote_snapshot = self._get_conan_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = self.get_conan_manifest(conan_reference)
+            remote_manifest = remote_manifest or self.get_conan_manifest(conan_reference)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
