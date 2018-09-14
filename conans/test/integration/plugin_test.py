@@ -229,20 +229,20 @@ class PluginTest(unittest.TestCase):
         self._check_package(conanfile_path, client.out)
 
         client.run("export . danimtb/testing")
-        self._check_export(conanfile_path, client.out)
+        self._check_export(conanfile_path, conanfile_cache_path, client.out)
 
         client.run("export-pkg . danimtb/testing")
-        self._check_export(conanfile_path, client.out)
-        self._check_export_pkg(conanfile_path, conanfile_cache_path, client.out)
+        self._check_export(conanfile_path, conanfile_cache_path, client.out)
+        self._check_export_pkg(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
         client.run("export-pkg . -pf . danimtb/testing")
-        self._check_export(conanfile_path, client.out)
-        self._check_export_pkg(conanfile_path, conanfile_cache_path, client.out)
+        self._check_export(conanfile_path, conanfile_cache_path, client.out)
+        self._check_export_pkg(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
         client.run("create . danimtb/testing")
-        self._check_export(conanfile_path, client.out)
+        self._check_export(conanfile_path, conanfile_cache_path, client.out) # Export gets
         self._check_source(conanfile_cache_path, client.out, in_cache=True)
         self._check_build(conanfile_cache_path, client.out, in_cache=True)
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
@@ -303,13 +303,13 @@ class PluginTest(unittest.TestCase):
             self.assertIn("[PLUGIN - complete_plugin] post_package(): reference=%s" % reference, out)
             self.assertIn("[PLUGIN - complete_plugin] post_package(): package_id=%s" % PACKAGE_ID, out)
 
-    def _check_export(self, conanfile_path,  out):
+    def _check_export(self, conanfile_path, conanfile_cache_path, out):
         self.assertIn("[PLUGIN - complete_plugin] pre_export(): conanfile_path=%s" % conanfile_path, out)
         self.assertIn("[PLUGIN - complete_plugin] pre_export(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[PLUGIN - complete_plugin] post_export(): conanfile_path=%s" % conanfile_path, out)
+        self.assertIn("[PLUGIN - complete_plugin] post_export(): conanfile_path=%s" % conanfile_cache_path, out)
         self.assertIn("[PLUGIN - complete_plugin] post_export(): reference=%s" % REFERENCE_CACHE, out)
 
-    def _check_export_pkg(self, conanfile_path, conanfile_cache_path, out):
+    def _check_export_pkg(self, conanfile_cache_path, out):
         self.assertIn("[PLUGIN - complete_plugin] pre_package(): conanfile_path=%s" % conanfile_cache_path, out)
         self.assertIn("[PLUGIN - complete_plugin] pre_package(): reference=%s" % REFERENCE_CACHE, out)
         self.assertIn("[PLUGIN - complete_plugin] pre_package(): package_id=%s" % PACKAGE_ID, out)
