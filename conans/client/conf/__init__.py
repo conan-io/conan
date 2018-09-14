@@ -77,7 +77,7 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
 
-recipe_linter = """
+attribute_checker_plugin = """
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
     # Check basic meta-data
     for field in ["url", "license", "description"]:
@@ -100,8 +100,8 @@ default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
-plugins = recipe_linter               # environment CONAN_PLUGINS
-# sysrequires_mode = enabled            # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
+plugins = attribute_checker           # environment CONAN_PLUGINS
+# sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)

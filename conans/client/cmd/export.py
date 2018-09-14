@@ -34,11 +34,14 @@ class AliasConanfile(ConanFile):
     digest.save(export_path)
 
 
-def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache):
+def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
+               plugin_manager):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                           reference=str(reference))
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
@@ -54,6 +57,8 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
+    plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                           reference=str(reference))
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):

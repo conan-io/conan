@@ -196,13 +196,15 @@ class PluginTest(unittest.TestCase):
 
     def default_plugin_test(self):
         client = TestClient()
+        self.assertTrue(client.client_cache.plugins_path.endswith("plugins"))
+        self.assertEqual(["attribute_checker"], client.client_cache.plugins)
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
-        self.assertIn("[PLUGIN - recipe_linter] pre_export(): WARN: Conanfile doesn't have 'url'",
+        self.assertIn("[PLUGIN - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'url'",
                       client.out)
-        self.assertIn("[PLUGIN - recipe_linter] pre_export(): WARN: Conanfile doesn't have "
+        self.assertIn("[PLUGIN - attribute_checker] pre_export(): WARN: Conanfile doesn't have "
                       "'description'", client.out)
-        self.assertIn("[PLUGIN - recipe_linter] pre_export(): WARN: Conanfile doesn't have "
+        self.assertIn("[PLUGIN - attribute_checker] pre_export(): WARN: Conanfile doesn't have "
                       "'license'", client.out)
 
     def complete_plugin_test(self):
