@@ -58,7 +58,7 @@ class _NoTerminalOutput(object):
     def write(self, *args, **kwargs):
         self._output.write(TIMEOUT_BEAT_CHARACTER)
 
-    def flush(self, *args, **kwargs):
+    def flush(self):
         self._output.flush()
 
 
