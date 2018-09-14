@@ -1,5 +1,4 @@
 import json
-import os
 
 import time
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -288,23 +287,3 @@ class RestCommonMethods(object):
                                        json=payload)
         return response
 
-    def _recipe_url(self, conan_reference):
-        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
-        return url.replace("#", "%23")
-
-    def _package_url(self, p_reference):
-        url = self._recipe_url(p_reference.conan)
-        url += "/packages/%s" % p_reference.package_id
-        return url.replace("#", "%23")
-
-    def _get_recipe_snapshot(self, reference):
-        url = self._recipe_url(reference)
-        snap, reference = self._get_snapshot(url, reference.full_repr())
-        reference = ConanFileReference.loads(reference)
-        return snap, reference
-
-    def _get_package_snapshot(self, package_reference):
-        url = self._package_url(package_reference)
-        snap, p_reference = self._get_snapshot(url, package_reference.full_repr())
-        reference = PackageReference.loads(p_reference)
-        return snap, reference

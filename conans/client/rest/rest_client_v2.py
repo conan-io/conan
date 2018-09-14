@@ -41,6 +41,20 @@ class RestV2Methods(RestCommonMethods):
             files_list = []
         return files_list, reference
 
+    def _get_recipe_snapshot(self, reference):
+        url = self._recipe_url(reference)
+        snap, reference = self._get_snapshot(url, reference.full_repr())
+        reference = ConanFileReference.loads(reference)
+        # Discarding (.keys()) still empty metadata for files
+        return snap.keys(), reference
+
+    def _get_package_snapshot(self, package_reference):
+        url = self._package_url(package_reference)
+        snap, p_reference = self._get_snapshot(url, package_reference.full_repr())
+        reference = PackageReference.loads(p_reference)
+        # Discarding (.keys()) still empty metadata for files
+        return snap.keys(), reference
+
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
         content = self._get_remote_file_contents(url)
@@ -64,6 +78,7 @@ class RestV2Methods(RestCommonMethods):
         reference = ConanFileReference.loads(data["reference"])
         if EXPORT_SOURCES_TGZ_NAME in files:
             files.remove(EXPORT_SOURCES_TGZ_NAME)
+
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._recipe_url(reference)
         self._download_and_save_files(url, dest_folder, files)
@@ -78,6 +93,7 @@ class RestV2Methods(RestCommonMethods):
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
         files = [EXPORT_SOURCES_TGZ_NAME, ]
+
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._recipe_url(ConanFileReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
@@ -184,3 +200,17 @@ class RestV2Methods(RestCommonMethods):
             resource_url = "%s/%s" % (base_url, filename)
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
+
+    def _recipe_url(self, conan_reference):
+        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+
+        if conan_reference.revision:
+            url += "#%s" % conan_reference.revision
+        return url.replace("#", "%23")
+
+    def _package_url(self, p_reference):
+        url = self._recipe_url(p_reference.conan)
+        url += "/packages/%s" % p_reference.package_id
+        if p_reference.revision:
+            url += "#%s" % p_reference.revision
+        return url.replace("#", "%23")

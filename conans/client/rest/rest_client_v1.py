@@ -259,11 +259,29 @@ class RestV1Methods(RestCommonMethods):
 
             return decode_text(content)
 
-    def _get_snapshot(self, url, reference):
+    def _get_snapshot(self, url):
         try:
             snapshot = self.get_json(url)
             snapshot = {os.path.normpath(filename): the_md5
                         for filename, the_md5 in snapshot.items()}
         except NotFoundException:
             snapshot = []
-        return snapshot, reference
+        return snapshot
+
+    def _get_recipe_snapshot(self, reference):
+        url = self._recipe_url(reference)
+        snap = self._get_snapshot(url)
+        return snap, reference.copy_without_revision()
+
+    def _get_package_snapshot(self, package_reference):
+        url = self._package_url(package_reference)
+        snap = self._get_snapshot(url)
+        return snap, package_reference
+
+    def _recipe_url(self, conan_reference):
+        return "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+
+    def _package_url(self, p_reference):
+        url = self._recipe_url(p_reference.conan)
+        url += "/packages/%s" % p_reference.package_id
+        return url

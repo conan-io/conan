@@ -23,15 +23,17 @@ class ConanServiceV2(object):
     # RECIPE METHODS
     def get_recipe_file_list(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        snap = self._server_store.get_recipe_file_list(reference)
-        if not snap:
+        file_list = self._server_store.get_recipe_file_list(reference)
+        if not file_list:
             raise NotFoundException("conanfile not found")
         if self.with_revisions:
             reference = self._server_store.ref_with_rev(reference)
         else:
             reference = reference.copy_without_revision()
 
-        return {"files": snap, "reference": reference.full_repr()}
+        # Send speculative metadata (empty) for files (non breaking future changes)
+        return {"files": {key: {} for key in file_list},
+                "reference": reference.full_repr()}
 
     def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
@@ -52,10 +54,12 @@ class ConanServiceV2(object):
     # PACKAGE METHODS
     def get_package_file_list(self, p_reference, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        snap = self._server_store.get_package_file_list(p_reference)
-        if not snap:
+        file_list = self._server_store.get_package_file_list(p_reference)
+        if not file_list:
             raise NotFoundException("conanfile not found")
-        return {"files": snap, "reference": p_reference.full_repr()}
+        # Send speculative metadata (empty) for files (non breaking future changes)
+        return {"files": {key: {} for key in file_list},
+                "reference": p_reference.full_repr()}
 
     def get_package_file(self, p_reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)
