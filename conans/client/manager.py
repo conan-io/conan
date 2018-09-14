@@ -88,7 +88,8 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=workspace)
+                                   self._registry, recorder=self._recorder, workspace=workspace,
+                                   plugin_manager=self._plugin_manager)
         installer.install(deps_graph, keep_build=False)
         workspace.generate()
 
