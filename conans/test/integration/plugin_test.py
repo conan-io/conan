@@ -15,21 +15,16 @@ class AConan(ConanFile):
 complete_plugin = """
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
     assert conanfile
-    assert conanfile_path
-    assert reference
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
 
 def post_export(output, conanfile, conanfile_path, reference, **kwargs):
     assert conanfile
-    assert conanfile_path
-    assert reference
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
 
 def pre_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
-    assert conanfile_path
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         assert kwargs["reference"]
@@ -37,7 +32,6 @@ def pre_source(output, conanfile, conanfile_path, **kwargs):
 
 def post_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
-    assert conanfile_path
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         assert kwargs["reference"]
@@ -67,7 +61,6 @@ def post_build(output, conanfile, **kwargs):
 
 def pre_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
-    assert conanfile_path
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         assert kwargs["reference"]
@@ -77,7 +70,6 @@ def pre_package(output, conanfile, conanfile_path, **kwargs):
 
 def post_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
-    assert conanfile_path
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         assert kwargs["reference"]
@@ -86,100 +78,62 @@ def post_package(output, conanfile, conanfile_path, **kwargs):
         output.info("package_id=%s" % kwargs["package_id"])
 
 def pre_upload(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def post_upload(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def pre_upload_recipe(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def post_upload_recipe(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def pre_upload_package(output, conanfile_path, reference, package_id, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert package_id
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("package_id=%s" % package_id)
     output.info("remote.name=%s" % remote.name)
 
 def post_upload_package(output, conanfile_path, reference, package_id, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert package_id
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("package_id=%s" % package_id)
     output.info("remote.name=%s" % remote.name)
 
 def pre_download(output, reference, remote, **kwargs):
-    assert reference
-    assert remote
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def post_download(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def pre_download_recipe(output, reference, remote, **kwargs):
-    assert reference
-    assert remote
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def post_download_recipe(output, conanfile_path, reference, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("remote.name=%s" % remote.name)
 
 def pre_download_package(output, conanfile_path, reference, package_id, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert package_id
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("package_id=%s" % package_id)
     output.info("remote.name=%s" % remote.name)
 
 def post_download_package(output, conanfile_path, reference, package_id, remote, **kwargs):
-    assert conanfile_path
-    assert reference
-    assert package_id
-    assert remote
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference)
     output.info("package_id=%s" % package_id)
