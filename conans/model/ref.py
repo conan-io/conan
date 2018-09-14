@@ -144,7 +144,8 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
 
     def full_repr(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s%s" % (str(self), str_rev)
+        tmp = "%s:%s%s" % (self.conan.full_repr(), self.package_id, str_rev)
+        return tmp
 
     def copy_with_revisions(self, revision, p_revision):
         ret = PackageReference(self.conan.copy_with_revision(revision), self.package_id)

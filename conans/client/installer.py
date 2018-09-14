@@ -222,15 +222,17 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def raise_package_not_found_error(conan_file, conan_ref, package_id, out, recorder):
+def raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies, out, recorder):
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
+    dependencies_text = ', '.join(dependencies)
 
-    msg = '''Can't find a '%s' package for the specified options and settings:
+    msg = '''Can't find a '%s' package for the specified settings, options and dependencies:
 - Settings: %s
 - Options: %s
+- Dependencies: %s
 - Package ID: %s
-''' % (conan_ref, settings_text, options_text, package_id)
+''' % (conan_ref, settings_text, options_text, dependencies_text, package_id)
     out.warn(msg)
     recorder.package_install_error(PackageReference(conan_ref, package_id),
                                    INSTALL_ERROR_MISSING, msg)
@@ -261,7 +263,7 @@ class ConanInstaller(object):
         self._build(nodes_by_level, deps_graph, keep_build, root_node)
 
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
-        inverse_levels = deps_graph.inverse_levels()
+        inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
         processed_package_references = set()
         for level in nodes_by_level:
@@ -270,7 +272,9 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
-                    raise_package_not_found_error(conan_file, conan_ref, package_id, output, self._recorder)
+                    dependencies = [str(dep.dst) for dep in node.dependencies]
+                    raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
+                                                  out=output, recorder=self._recorder)
 
                 self._propagate_info(node, inverse_levels, deps_graph, output)
                 if node.binary == BINARY_SKIP:  # Privates not necessary
@@ -387,14 +391,12 @@ class ConanInstaller(object):
         self._recorder.package_built(package_ref)
 
     @staticmethod
-    def _propagate_info(node, levels, deps_graph, out):
+    def _propagate_info(node, inverse_levels, deps_graph, out):
         # Get deps_cpp_info from upstream nodes
         closure = deps_graph.full_closure(node)
-        node_order = []
-        for level in levels:
-            for n in closure.values():
-                if n in level and n.binary != BINARY_SKIP:
-                    node_order.append(n)
+        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
+        # List sort is stable, will keep the original order of the closure, but prioritize levels
+        node_order.sort(key=lambda n: inverse_levels[n])
 
         conan_file = node.conanfile
         for n in node_order:

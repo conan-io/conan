@@ -5,7 +5,6 @@ from conans.model.conan_file import get_recipe_revision
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.source import complete_recipe_sources
 from conans.search.search import search_recipes, search_packages
 
@@ -19,6 +18,12 @@ def _is_a_reference(ref):
     return False
 
 
+UPLOAD_POLICY_FORCE = "force-upload"
+UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
+UPLOAD_POLICY_NO_OVERWRITE_RECIPE = "no-overwrite-recipe"
+UPLOAD_POLICY_SKIP = "skip-upload"
+
+
 class CmdUpload(object):
 
     def __init__(self, client_cache, user_io, remote_manager, registry, loader):
@@ -29,9 +34,8 @@ class CmdUpload(object):
         self._loader = loader
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False, no_overwrite=None, remote_name=None,
-               query=None):
+               confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
+               remote_name=None, query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         if package_id and not _is_a_reference(reference_or_pattern):
@@ -69,13 +73,13 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._upload(conan_file, conan_ref, force, packages_ids, retry, retry_wait,
-                             skip_upload, integrity_check, no_overwrite, remote_name, recorder)
+                self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
+                             integrity_check, policy, remote_name, recorder)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
-    def _upload(self, conan_file, conan_ref, force, packages_ids, retry, retry_wait, skip_upload,
-                integrity_check, no_overwrite, remote_name, recorder):
+    def _upload(self, conan_file, conan_ref, packages_ids, retry, retry_wait,
+                integrity_check, policy, remote_name, recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
 
         defined_remote = self._registry.get_recipe_remote(conan_ref)
@@ -86,16 +90,17 @@ class CmdUpload(object):
         else:  # Or use the default otherwise
             upload_remote = self._registry.default_remote
 
-        if not force:
+        if policy != UPLOAD_POLICY_FORCE:
             self._check_recipe_date(conan_ref, upload_remote)
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
+
         recipe_revision = get_recipe_revision(conan_file, self._client_cache, conan_ref)
 
-        new_ref = self._upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite,
-                                      upload_remote, recipe_revision)
+        new_ref = self._upload_recipe(conan_ref, retry, retry_wait, policy, upload_remote,
+                                      recipe_revision)
 
-        if not skip_upload:
+        if policy != UPLOAD_POLICY_SKIP:
             recorder.add_recipe(new_ref.full_repr(), upload_remote.name, upload_remote.url)
 
         if packages_ids:
@@ -121,48 +126,36 @@ class CmdUpload(object):
             for index, package_id in enumerate(packages_ids):
                 ret_upload_package = self._upload_package(PackageReference(new_ref, package_id),
                                                           index + 1, total, retry, retry_wait,
-                                                          skip_upload, integrity_check,
-                                                          no_overwrite, upload_remote,
-                                                          recipe_revision)
+                                                          integrity_check,
+                                                          policy, upload_remote,
+                                                          recipe_revision=recipe_revision)
                 if ret_upload_package:
                     recorder.add_package(new_ref.full_repr(), package_id)
 
-        if skip_upload:
-            return
-
-        if not defined_remote or defined_remote == upload_remote:
+        if (not defined_remote or defined_remote == upload_remote) and policy != UPLOAD_POLICY_SKIP:
             self._registry.set_ref(new_ref, upload_remote.name)
 
-    def _upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite,
-                       remote, recipe_revision):
+    def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, recipe_revision):
         conan_file_path = self._client_cache.conanfile(conan_reference)
         current_remote = self._registry.get_recipe_remote(conan_reference)
         if remote != current_remote:
             conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
-            ignore_deleted_file = None
-        else:
-            ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
-        new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                     ignore_deleted_file=ignore_deleted_file,
-                                                     skip_upload=skip_upload,
-                                                     no_overwrite=no_overwrite,
-                                                     recipe_revision=recipe_revision)
-        return new_ref
+        result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
+                                                    policy=policy, recipe_revision=recipe_revision)
+        return result
 
     def _upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
-                        skip_upload=False, integrity_check=False, no_overwrite=None, remote=None,
-                        recipe_revision=None):
+                        integrity_check=False, policy=None, remote=None, recipe_revision=None):
         """Uploads the package identified by package_id"""
 
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()
         self._user_io.out.info(msg)
 
-        result = self._remote_manager.upload_package(package_ref, remote, retry,
-                                                     retry_wait, skip_upload, integrity_check,
-                                                     no_overwrite, recipe_revision)
+        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
+                                                     integrity_check, policy, recipe_revision)
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
         return result
 

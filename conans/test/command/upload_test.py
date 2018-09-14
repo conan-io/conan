@@ -306,7 +306,8 @@ class UploadTest(unittest.TestCase):
         error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite --force",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: 'no_overwrite' argument cannot be used together with 'force'", client.out)
+        self.assertIn("ERROR: '--no-overwrite' argument cannot be used together with '--force'",
+                      client.out)
 
     def upload_no_overwrite_all_test(self):
         conanfile_new = """from conans import ConanFile, tools

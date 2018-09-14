@@ -9,6 +9,7 @@ from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 from conans.util.files import load, rmdir
+from conans.client.tools.win import get_cased_path
 
 base = '''
 import os
@@ -36,6 +37,13 @@ class SCMTest(unittest.TestCase):
     def setUp(self):
         self.reference = ConanFileReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
+
+    def _commit_contents(self):
+        self.client.runner("git init .", cwd=self.client.current_folder)
+        self.client.runner('git config user.email "you@example.com"', cwd=self.client.current_folder)
+        self.client.runner('git config user.name "Your Name"', cwd=self.client.current_folder)
+        self.client.runner("git add .", cwd=self.client.current_folder)
+        self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
     def test_scm_other_type_ignored(self):
         conanfile = '''
@@ -95,7 +103,7 @@ class ConanLib(ConanFile):
         self.assertIn("lib/0.1@user/channel: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
-        curdir = self.client.current_folder.replace("\\", "/")
+        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
@@ -141,6 +149,21 @@ class ConanLib(ConanFile):
         folder = self.client.client_cache.source(ConanFileReference.loads("lib/0.1@user/channel"))
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
+
+    def test_auto_conanfile_no_root(self):
+        """
+        Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
+        """
+        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
+        conanfile = base.format(url="auto", revision="auto")
+        self.client.save({"conan/conanfile.py": conanfile, "myfile.txt": "content of my file"})
+        self._commit_contents()
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=curdir)
+
+        # Create the package
+        self.client.run("create conan/ user/channel")
+        sources_dir = self.client.client_cache.scm_folder(self.reference)
+        self.assertEquals(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
 
     def test_deleted_source_folder(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")

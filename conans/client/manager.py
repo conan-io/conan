@@ -43,9 +43,7 @@ class ConanManager(object):
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile,
-                                                          build_mode=None, check_updates=False, update=False,
-                                                          remote_name=None, recorder=self._recorder, workspace=None)
+        deps_graph = self._graph_manager.load_simple_graph(reference, profile, self._recorder)
 
         # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
         # which is the exported pkg

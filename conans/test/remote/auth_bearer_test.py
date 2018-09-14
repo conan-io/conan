@@ -1,8 +1,8 @@
-import os
 import unittest
 from conans.test.utils.tools import TestServer, TestClient
 from bottle import request
 
+from conans.util.env_reader import get_env
 
 conanfile = """
 from conans import ConanFile
@@ -59,12 +59,13 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        if not os.getenv("CONAN_TESTING_SERVER_V2_ENABLED"):
+        if not get_env("CONAN_TESTING_SERVER_V2_ENABLED", False):
+
             expected_calls = [('ping', None),
                               ('get_conan_manifest_url', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
+                              ('get_recipe_snapshot', 'Bearer'),
                               ('get_conanfile_upload_urls', 'Bearer'),
                               ('put', None)]
         else:
@@ -72,7 +73,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('get_recipe_file', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_conanfile_snapshot', 'Bearer'),
+                              ('get_recipe_file_list', 'Bearer'),
                               ('upload_recipe_file', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
@@ -82,7 +83,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipUnless(os.getenv("CONAN_TESTING_SERVER_V2_ENABLED") is None, "ApiV1 test")
+    @unittest.skipIf(get_env("CONAN_TESTING_SERVER_V2_ENABLED", False), "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()
@@ -99,7 +100,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('get_conan_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
-                          ('get_conanfile_snapshot', 'Bearer'),
+                          ('get_recipe_snapshot', 'Bearer'),
                           ('get_conanfile_upload_urls', 'Bearer'),
                           ('put', 'Bearer')]
 

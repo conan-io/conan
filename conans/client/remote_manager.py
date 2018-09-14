@@ -28,6 +28,8 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
 from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
 from conans.search.search import filter_packages
+from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP, UPLOAD_POLICY_NO_OVERWRITE, \
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE
 
 
 class RemoteManager(object):
@@ -38,9 +40,8 @@ class RemoteManager(object):
         self._output = output
         self._auth_manager = auth_manager
 
-    def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
-                      skip_upload=False, no_overwrite=None, recipe_revision=None):
-        """Will upload the conans to the first remote"""
+    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy=None,
+                      recipe_revision=None):
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
 
@@ -58,13 +59,19 @@ class RemoteManager(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
-        if skip_upload:
+
+        if policy == UPLOAD_POLICY_SKIP:
             return conan_reference
 
         conan_reference.revision = recipe_revision
 
         ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
-                                         retry_wait, ignore_deleted_file, no_overwrite)
+                                         retry_wait, policy)
+
+        if policy in (UPLOAD_POLICY_NO_OVERWRITE,
+                      UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
+            self._output.warn("Remote '%s' uses revisions, argument "
+                              "'--no-overwrite' is useless" % remote.name)
 
         duration = time.time() - t1
         log_recipe_upload(new_ref, duration, the_files, remote.name)
@@ -103,9 +110,9 @@ class RemoteManager(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def upload_package(self, package_reference, remote, retry, retry_wait,
-                       skip_upload=False,
-                       integrity_check=False, no_overwrite=None, recipe_revision=None):
+    def upload_package(self, package_reference, remote, retry, retry_wait, integrity_check=False,
+                       policy=None, recipe_revision=None):
+
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -136,7 +143,7 @@ class RemoteManager(object):
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
-        if skip_upload:
+        if policy == UPLOAD_POLICY_SKIP:
             return None
 
         # Read the hashes (revisions) and build a correct package reference for the server
@@ -149,7 +156,8 @@ class RemoteManager(object):
         p_ref = package_reference.copy_with_revisions(recipe_revision, package_revision)
 
         tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
-                                no_overwrite)
+                                policy)
+
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)

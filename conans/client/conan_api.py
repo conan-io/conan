@@ -495,9 +495,13 @@ class ConanAPIV1(object):
         self._client_cache.invalidate()
 
     @api_method
-    def config_install(self, item, verify_ssl, config_type=None):
+    def config_install(self, item, verify_ssl, config_type=None, args=None):
+        # _make_abs_path, but could be not a path at all
+        if item is not None and os.path.exists(item) and not os.path.isabs(item):
+            item = os.path.abspath(item)
+
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type, args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
@@ -717,27 +721,17 @@ class ConanAPIV1(object):
         return recorder.get_info()
 
     @api_method
-    def upload(self, pattern, package=None, remote_name=None,
-               all_packages=False, force=False, confirm=False, retry=2,
-               retry_wait=5, skip_upload=False, integrity_check=False,
-               no_overwrite=None, query=None):
+    def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
+               retry=2, retry_wait=5, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
         recorder = UploadRecorder()
-
-        if force and no_overwrite:
-            exc = ConanException("'no_overwrite' argument cannot be used together with 'force'")
-            recorder.error = True
-            exc.info = recorder.get_info()
-            raise exc
-
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              self._registry, self._loader)
         try:
-            uploader.upload(recorder, pattern, package, all_packages, force, confirm, retry,
-                            retry_wait, skip_upload, integrity_check, no_overwrite, remote_name,
-                            query=query)
+            uploader.upload(recorder, pattern, package, all_packages, confirm, retry,
+                            retry_wait, integrity_check, policy, remote_name, query=query)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
