@@ -606,7 +606,6 @@ class ConanAPIV1(object):
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True,
               should_test=True, cwd=None):
-        t1 = time.time()
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
@@ -620,7 +619,6 @@ class ConanAPIV1(object):
         manager.build(conanfile_path, source_folder, build_folder, package_folder,
                       install_folder, should_configure=should_configure, should_build=should_build,
                       should_install=should_install, should_test=should_test)
-        print "TOTAL BUILD TIME ", time.time() - t1
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):

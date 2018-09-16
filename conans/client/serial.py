@@ -310,12 +310,12 @@ def unserial_graph(data, env, conanfile_path, output, proxy, loader, scoped_outp
         result.add_edge(nodes_dict[edge["src"]], nodes_dict[edge["dst"]], edge["private"])
     if id_:
         node = nodes_dict[id_]
-        result.subgraph(node)
+        result.prune_subgraph(node)
         virtual = Node(None, ConanFile(None, loader._runner, Values()))
         result.add_node(virtual)
         result.add_edge(virtual, node)
         result.root = virtual
-        
+
     return result
 
 

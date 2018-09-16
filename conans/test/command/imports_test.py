@@ -40,7 +40,6 @@ class HelloReuseConan(ConanFile):
     requires = "Hello/0.1@lasote/stable"
 
     def imports(self):
-        self.output.info("Running imports() test2 = *1.txt")
         self.copy("*1.txt")
 """
 
@@ -52,7 +51,6 @@ class HelloReuseConan(ConanFile):
     requires = "Hello/0.1@lasote/stable"
 
     def imports(self):
-        self.output.info("Running imports() test3 = *2.txt")
         self.copy("*2.txt")
 """
 
@@ -127,7 +125,7 @@ class ConanLib(ConanFile):
     def install_manifest_without_install_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
         self.client.run('imports . ', ignore_error=True)
-        self.assertIn("ERROR: Conan serial_graph.json NOT FOUND. Run 'conan install' first", self.client.user_io.out)
+        self.assertIn("You can generate it using 'conan install'", self.client.user_io.out)
 
     def install_dest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)

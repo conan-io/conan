@@ -380,7 +380,6 @@ class MyTest(ConanFile):
 
         # Test that the build require is applyed to testing
         client.run("create . Lib/0.1@conan/stable --profile=./myprofile")
-        print client.out
         self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: Applying build-requirement: "
                                                   "Build1/0.1@conan/stable"))
         self.assertIn("TESTING!!", client.user_io.out)

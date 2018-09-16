@@ -20,8 +20,6 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._workspace = workspace
         self._recorder = recorder
-        self._load_time = 0
-        self._num_loads = 0
 
     def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile):
         check_updates = check_updates or update

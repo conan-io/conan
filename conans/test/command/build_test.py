@@ -125,11 +125,10 @@ class AConan(ConanFile):
         ref = PackageReference.loads("Hello/0.1@lasote/testing:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_folder = client.paths.package(ref).replace("\\", "/")
-        out = str(client.out).replace("\\", "/")
-        self.assertIn("Project: INCLUDE PATH: %s/include" % package_folder, out)
-        self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, out)
+        self.assertIn("Project: INCLUDE PATH: %s/include" % package_folder, client.user_io.out)
+        self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
         self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
-                      % package_folder, out)
+                      % package_folder, client.user_io.out)
 
     def build_different_folders_test(self):
         conanfile = """
@@ -235,9 +234,8 @@ class AConan(ConanFile):
         client.run("install conanfile.py --build=missing")
         client.run("build .")
 
-        out = str(client.out).replace("\\", "/")
-        self.assertIn("Hello.Pkg/0.1/lasote/testing", out)
-        self.assertIn("Hello-Tools/0.1/lasote/testing", out)
+        self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
+        self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
     def build_cmake_install_test(self):
         client = TestClient()

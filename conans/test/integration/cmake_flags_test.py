@@ -279,7 +279,7 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile % "True"})
         client.run("build .", ignore_error=True)
 
-        self.assertIn("ERROR: Conan serial_graph.json NOT FOUND. Run 'conan install' first", client.user_io.out)
+        self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
 
         client.run("install .")
         client.run("build .")

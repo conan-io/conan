@@ -156,12 +156,6 @@ class ConanManager(object):
             manifest_manager.print_log()
 
         if install_folder:
-            # write serialized graph
-            serialized_graph = serial_graph(deps_graph)
-            serialized_graph_str = json.dumps(serialized_graph)
-            serialized_graph_path = os.path.join(install_folder, "serial_graph.json")
-            save(serialized_graph_path, serialized_graph_str)
-
             # Write generators
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators

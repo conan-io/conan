@@ -62,39 +62,19 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
-        if deps_info_required:
-            t1 = time.time()
-            try:
-                serial_path = os.path.join(info_folder, "serial_graph.json")
-                graph_str = load(serial_path)
-                output.info("Found serial_graph.json file: %s" % serial_path)
-            except:
-                raise ConanException("Conan serial_graph.json NOT FOUND. Run 'conan install' first")
-            graph_json = json.loads(graph_str)
-            profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-            deps_graph = unserial_graph(graph_json, profile.env_values, conanfile_path,
-                                        self._output, self._proxy, self._loader,
-                                        scoped_output=output)
-            conanfile = deps_graph.root.conanfile
-            print "DepsGraph.unserial() ", time.time() - t1
-            installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                       self._registry, recorder=ActionRecorder(), workspace=None)
-            installer.unserial(deps_graph)
-            print "DepsGraph. installer propagate() ", time.time() - t1
+        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        # We are recovering state from captured profile from conaninfo, remove not defined
+        cache_settings.remove_undefined()
+        processed_profile = ProcessedProfile(cache_settings, profile, None)
+        if conanfile_path.endswith(".py"):
+            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
+                                                    processed_profile=processed_profile)
         else:
-            profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-            cache_settings = self._client_cache.settings.copy()
-            cache_settings.values = profile.settings_values
-            # We are recovering state from captured profile from conaninfo, remove not defined
-            cache_settings.remove_undefined()
-            processed_profile = ProcessedProfile(cache_settings, profile, None)
-            if conanfile_path.endswith(".py"):
-                conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
-                                                        processed_profile=processed_profile)
-            else:
-                conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
 
-            load_deps_info(info_folder, conanfile, required=deps_info_required)
+        load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
 
