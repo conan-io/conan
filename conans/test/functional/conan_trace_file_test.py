@@ -92,7 +92,7 @@ class HelloConan(ConanFile):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        self.assertEquals(len(actions), 20)
+        self.assertTrue(len(actions) in [20, 16])  # APIv1 vs APIv2
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
