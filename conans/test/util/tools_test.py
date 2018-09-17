@@ -864,9 +864,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def run_in_bash_test(self):
-        if platform.system() != "Windows":
-            return
 
         class MockConanfile(object):
             def __init__(self):
@@ -878,7 +877,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                     def __call__(self, command, output, log_filepath=None,
                                  cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
-                self._runner = MyRun()
+                self._conan_runner = MyRun()
 
         conanfile = MockConanfile()
         with patch.object(OSInfo, "bash_path", return_value='bash'):
