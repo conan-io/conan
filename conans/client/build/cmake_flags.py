@@ -210,6 +210,14 @@ class CMakeDefinitionsBuilder(object):
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
 
+                # Raffi this is needed only when compiling from the NDK
+                stl_type = {'libc++_shared': 'c++_shared',
+                            'libc++_static': 'c++_static',
+                            'libstdc++': 'gnustl_shared',
+                            'libstdc++11': 'gnustl_shared',
+                            }.get(self._ss("compiler.libcxx"), "c++_shared")
+                ret["CMAKE_ANDROID_STL_TYPE"] = stl_type
+
         logger.info("Setting Cross build flags: %s"
                     % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
         return ret

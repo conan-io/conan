@@ -208,11 +208,20 @@ endfunction()
 macro(conan_set_libcxx)
     if(DEFINED CONAN_LIBCXX)
         message(STATUS "Conan: C++ stdlib: ${CONAN_LIBCXX}")
-        if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
+        if(CONAN_COMPILER STREQUAL "clang" 
+           OR CONAN_COMPILER STREQUAL "apple-clang")
             if(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
             elseif(CONAN_LIBCXX STREQUAL "libc++")
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+            endif()
+        elseif(CONAN_COMPILER STREQUAL "android-clang")
+            if(CONAN_LIBCXX STREQUAL "c++_shared")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++_shared")
+            elseif(CONAN_LIBCXX STREQUAL "c++_static")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++_static")
+            elseif(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
             endif()
         endif()
         if(CONAN_COMPILER STREQUAL "sun-cc")
@@ -427,6 +436,7 @@ function(conan_check_compiler)
     # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
     elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
+        (CONAN_COMPILER STREQUAL "android-clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
         message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")

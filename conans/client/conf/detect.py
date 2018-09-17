@@ -59,6 +59,8 @@ def _clang_compiler(output, compiler_exe="clang"):
             return None
         if "Apple" in out:
             compiler = "apple-clang"
+        if "Android" in out:
+            compiler = "android-clang"
         elif "clang version" in out:
             compiler = "clang"
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
@@ -202,6 +204,8 @@ def _detect_compiler_version(result, output):
         result.append(("compiler.version", version))
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
+        elif compiler == "android-clang":
+            result.append(("compiler.libcxx", "libc++_shared"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
             if Version(version) >= Version("5.1"):

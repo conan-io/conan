@@ -61,6 +61,9 @@ class CompilerFlagsTest(unittest.TestCase):
         arch_flags = libcxx_flag(compiler='apple-clang', libcxx='libc++')
         self.assertEquals(arch_flags, '-stdlib=libc++')
 
+        arch_flags = libcxx_flag(compiler='android-clang', libcxx='libc++')
+        self.assertEquals(arch_flags, '-stdlib=libc++_shared')
+
         arch_flags = libcxx_flag(compiler='Visual Studio', libcxx=None)
         self.assertEquals(arch_flags, "")
 

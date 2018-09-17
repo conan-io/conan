@@ -113,3 +113,17 @@ class CompilerArgsTest(unittest.TestCase):
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
                           '-Wl,-rpath,"path/to/lib1" '
                           '-Lpath/to/lib1 -lmylib', args.content)
+
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.os_build = "Android"
+        settings.compiler = "android-clang"
+        settings.compiler.version = "6.0"
+        settings.arch = "armv7"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings)
+        args = CompilerArgsGenerator(conan_file)
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
+                          '-Wl,-rpath,"path/to/lib1" '
+                          '-Lpath/to/lib1 -lmylib', args.content)

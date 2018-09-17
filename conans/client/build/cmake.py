@@ -157,6 +157,7 @@ class CMake(object):
                                                     source_dir, build_dir,
                                                     cache_build_folder)
         mkdir(self.build_dir)
+
         arg_list = join_arguments([
             self.command_line,
             args_to_string(args),
@@ -182,6 +183,8 @@ class CMake(object):
                     self._conanfile.run(command)
             else:
                 self._conanfile.run(command)
+
+        pass
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:

@@ -15,6 +15,7 @@ def cppstd_flag(compiler, compiler_version, cppstd):
         return ""
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
+            "android-clang": _cppstd_android_clang,
             "apple-clang": _cppstd_apple_clang,
             "Visual Studio": _cppstd_visualstudio}.get(str(compiler), None)
     flag = None
@@ -26,6 +27,7 @@ def cppstd_flag(compiler, compiler_version, cppstd):
 def cppstd_default(compiler, compiler_version):
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
+               "android-clang": _clang_cppstd_default(compiler_version), # same as for default clang
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
                "Visual Studio": _visual_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
@@ -147,6 +149,10 @@ def _cppstd_clang(clang_version, cppstd):
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20}.get(cppstd, None)
     return "-std=%s" % flag if flag else None
+
+
+def _cppstd_android_clang(clang_version, cppstd):
+    return "-std=libc++_shared"
 
 
 def _cppstd_gcc(gcc_version, cppstd):

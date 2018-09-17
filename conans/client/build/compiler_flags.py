@@ -16,7 +16,7 @@ from conans.tools import unix_path
 def rpath_flags(os_build, compiler, lib_paths):
     if not os_build:
         return []
-    if compiler in ("clang", "apple-clang", "gcc"):
+    if compiler in ("clang", "apple-clang", "android-clang", "gcc"):
         rpath_separator = "," if os_build in ["Macos", "iOS", "watchOS", "tvOS"] else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
@@ -30,7 +30,7 @@ def architecture_flag(compiler, arch):
     if not compiler or not arch:
         return ""
 
-    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+    if str(compiler) in ['gcc', 'apple-clang', 'android-clang', 'clang', 'sun-cc']:
         if str(arch) in ['x86_64', 'sparcv9']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
@@ -43,7 +43,7 @@ def libcxx_define(compiler, libcxx):
     if not compiler or not libcxx:
         return ""
 
-    if str(compiler) in ['gcc', 'clang', 'apple-clang']:
+    if str(compiler) in ['gcc', 'clang', 'apple-clang', 'android-clang']:
         if str(libcxx) == 'libstdc++':
             return '_GLIBCXX_USE_CXX11_ABI=0'
         elif str(libcxx) == 'libstdc++11':
@@ -62,6 +62,12 @@ def libcxx_flag(compiler, libcxx):
             return '-stdlib=libstdc++'
         elif str(libcxx) == 'libc++':
             return '-stdlib=libc++'
+    elif str(compiler) == 'android-clang':
+        if str(libcxx) in ['libc++_shared', 'libc++_static']:
+            return '-stdlib=' + str(libcxx)
+        if str(libcxx) in ['libstdc++', 'libstdc++11']:
+            return '-stdlib=' + str(libcxx)
+        return '-stdlib=libstdc++'
     elif str(compiler) == 'sun-cc':
         return ({"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -108,7 +114,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "android-clang"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.

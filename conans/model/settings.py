@@ -31,6 +31,7 @@ class SettingsItem(object):
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
+
         self._name = name  # settings.compiler
         self._value = None  # gcc
         if isinstance(definition, dict):
@@ -191,6 +192,7 @@ class SettingsItem(object):
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+
         if parent_value == "None" and definition:
             raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
