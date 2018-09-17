@@ -56,14 +56,14 @@ class DepsGraphBuilder(object):
             if alias:
                 req.conan_reference = alias
 
-        if not hasattr(conanfile, "_conan_eval_requires"):
-            conanfile._conan_eval_requires = conanfile.requires.copy()
-        elif conanfile.requires != conanfile._conan_eval_requires:
+        if not hasattr(conanfile, "_conan_evaluated_requires"):
+            conanfile._conan_evaluated_requires = conanfile.requires.copy()
+        elif conanfile.requires != conanfile._conan_evaluated_requires:
             raise ConanException("%s: Incompatible requirements obtained in different "
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile._conan_eval_requires.values()),
+                                 % (conanref, list(conanfile._conan_evaluated_requires.values()),
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
