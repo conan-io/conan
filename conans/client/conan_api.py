@@ -190,7 +190,6 @@ class ConanAPIV1(object):
             conans.util.log.logger = configure_logger()
 
             # Create Plugin Manager
-            print("CONAN PLUGINS", get_env("CONAN_PLUGINS", list()))
             plugin_manager = PluginManager(client_cache.plugins_path,
                                            get_env("CONAN_PLUGINS", list()), user_io.out)
 

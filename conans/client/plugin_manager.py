@@ -66,24 +66,19 @@ class PluginManager(object):
 
     def load_plugin(self, plugin_name):
         filename = "%s.py" % plugin_name
-        if filename and filename not in os.listdir(self._plugins_folder):
+        plugin_path = os.path.join(self._plugins_folder, filename)
+        try:
+            plugin = PluginManager._load_module_from_file(plugin_path)
+            for method in valid_plugin_methods:
+                plugin_method = getattr(plugin, method, None)
+                if plugin_method:
+                    self.plugins[method].append((plugin_name, plugin_method))
+        except NotFoundException:
             self.output.warn("Plugin '%s' not found in %s folder. Please remove plugin "
                              "from conan.conf or include it inside the plugins folder."
                              % (filename, self._plugins_folder))
-        else:
-            plugin_path = os.path.join(self._plugins_folder, filename)
-            for method in valid_plugin_methods:
-                try:
-                    plugin = PluginManager._load_module_from_file(plugin_path)
-                    plugin_method = getattr(plugin, method, None)
-                    if plugin_method:
-                        self.plugins[method].append((plugin_name, plugin_method))
-                except NotFoundException:
-                    self.output.warn("Plugin '%s' not found in %s folder. Please remove plugin "
-                                     "from conan.conf or include it inside the plugins folder."
-                                     % (filename, self._plugins_folder))
-                except Exception as e:
-                    raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
+        except Exception as e:
+            raise ConanException("Error loading plugin '%s': %s" % (plugin_path, str(e)))
 
     @staticmethod
     def _load_module_from_file(plugin_path):

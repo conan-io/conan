@@ -40,13 +40,13 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    conan_ref_str = str(reference)
     plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=str(reference))
+                           reference=conan_ref_str)
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
-    conan_ref_str = str(reference)
     # Maybe a platform check could be added, but depends on disk partition
     refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
     if refs and reference not in refs:
@@ -60,7 +60,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     conanfile_cache_path = client_cache.conanfile(reference)
     assert os.path.exists(conanfile_cache_path)
     plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
-                           reference=str(reference))
+                           reference=conan_ref_str)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
