@@ -56,14 +56,14 @@ class DepsGraphBuilder(object):
             if alias:
                 req.conan_reference = alias
 
-        if not hasattr(conanfile, "_evaluated_requires"):
-            conanfile._evaluated_requires = conanfile.requires.copy()
-        elif conanfile.requires != conanfile._evaluated_requires:
+        if not hasattr(conanfile, "_conan_eval_requires"):
+            conanfile._conan_eval_requires = conanfile.requires.copy()
+        elif conanfile.requires != conanfile._conan_eval_requires:
             raise ConanException("%s: Incompatible requirements obtained in different "
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile._evaluated_requires.values()),
+                                 % (conanref, list(conanfile._conan_eval_requires.values()),
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
@@ -179,10 +179,10 @@ class DepsGraphBuilder(object):
                     # So it is necessary to save the "requires" state and restore it before a second
                     # execution of requirements(). It is a shallow copy, if first iteration is
                     # RequireResolve'd or overridden, the inner requirements are modified
-                    if not hasattr(conanfile, "_original_requires"):
-                        conanfile._original_requires = conanfile.requires.copy()
+                    if not hasattr(conanfile, "_conan_original_requires"):
+                        conanfile._conan_original_requires = conanfile.requires.copy()
                     else:
-                        conanfile.requires = conanfile._original_requires.copy()
+                        conanfile.requires = conanfile._conan_original_requires.copy()
 
                     with conanfile_exception_formatter(str(conanfile), "requirements"):
                         conanfile.requirements()
