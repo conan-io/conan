@@ -163,7 +163,6 @@ class PluginTest(unittest.TestCase):
     def default_plugin_test(self):
         client = TestClient()
         self.assertTrue(client.client_cache.plugins_path.endswith("plugins"))
-        self.assertEqual(["attribute_checker"], client.client_cache.plugins)
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
         self.assertIn("[PLUGIN - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'url'",
@@ -181,7 +180,7 @@ class PluginTest(unittest.TestCase):
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         conanfile_cache_path = client.client_cache.conanfile(
             ConanFileReference("basic", "0.1", "danimtb", "testing"))
-        client.run("config set general.plugins='complete_plugin'")
+        client.run("config set plugins.complete_plugin")
 
         client.run("source .")
         self._check_source(conanfile_path, client.out)
@@ -342,6 +341,6 @@ class PluginTest(unittest.TestCase):
                      custom_path: custom_module,
                      plugin_path: my_plugin,
                      "conanfile.py": conanfile_basic})
-        client.run("config set general.plugins='my_plugin'")
+        client.run("config set plugins.my_plugin")
         client.run("export . danimtb/testing")
         self.assertIn("[PLUGIN - my_plugin] pre_export(): my_printer(): CUSTOM MODULE", client.out)

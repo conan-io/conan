@@ -385,7 +385,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                raise ConanException("Please specify 'key=value'")
+                key, value = args.item.split("=", 1)[0], None
             return self._conan.config_set(key, value)
         elif args.subcommand == "get":
             return self._conan.config_get(args.item)

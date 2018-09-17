@@ -74,13 +74,12 @@ class PluginManagerTest(unittest.TestCase):
         self.assertEqual({}, plugin_manager.plugins)
         self.assertEqual(["my_plugin"], plugin_manager._plugin_names)
         plugin_manager.load_plugins()
-        self.assertEqual(1, len(plugin_manager.plugins))
+        self.assertEqual(16, len(plugin_manager.plugins))  # Checks number of methods loaded
 
     def check_output_test(self):
         plugin_manager, output, _ = self._init()
         plugin_manager.load_plugins()
-        methods = [method for method in plugin_manager.plugins["my_plugin"].__dict__.keys()
-                   if method.startswith("pre") or method.startswith("post")]
+        methods = plugin_manager.plugins.keys()
         for method in methods:
             plugin_manager.execute(method)
             self.assertIn("[PLUGIN - my_plugin] %s(): %s()" % (method, method), output)

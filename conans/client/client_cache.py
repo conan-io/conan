@@ -3,8 +3,7 @@ import shutil
 from os.path import join, normpath
 from collections import OrderedDict
 
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml, \
-    attribute_checker_plugin
+from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -200,9 +199,6 @@ class ClientCache(SimplePaths):
     @property
     def plugins(self):
         """Returns a list of plugins inside the plugins folder"""
-        recipe_linter_path = os.path.join(self.plugins_path, "attribute_checker.py")
-        if not os.path.exists(recipe_linter_path):
-            save(recipe_linter_path, normalize(attribute_checker_plugin))
         plugins = []
         for plugin_name in os.listdir(self.plugins_path):
             if plugin_name.endswith(".py"):

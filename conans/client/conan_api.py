@@ -190,6 +190,7 @@ class ConanAPIV1(object):
             conans.util.log.logger = configure_logger()
 
             # Create Plugin Manager
+            print("CONAN PLUGINS", get_env("CONAN_PLUGINS", list()))
             plugin_manager = PluginManager(client_cache.plugins_path,
                                            get_env("CONAN_PLUGINS", list()), user_io.out)
 
@@ -875,9 +876,6 @@ def get_conan_runner():
 def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
     # Init paths
     client_cache = ClientCache(base_folder, storage_folder, out)
-
-    # Create default plugins
-    client_cache.plugins
 
     # Migration system
     migrator = ClientMigrator(client_cache, Version(client_version), out)
