@@ -4,6 +4,8 @@ import os
 import sys
 from argparse import ArgumentError
 
+import six
+
 from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
@@ -1302,6 +1304,17 @@ class Command(object):
             except IndexError:  # No parameters
                 self._show_help()
                 return False
+            if six.PY2:
+                self._user_io.out.writeln("*"*80, front=Color.BRIGHT_YELLOW)
+                self._user_io.out.writeln(" Python 2 will soon be deprecated by the Python "
+                                          "maintainers.", front=Color.BRIGHT_YELLOW)
+                self._user_io.out.writeln(" It is strongly recommended to use Python 3 with Conan.",
+                                          front=Color.BRIGHT_YELLOW)
+                self._user_io.out.writeln(" See Python 2 deprecation notice for more details:",
+                                          front=Color.BRIGHT_YELLOW)
+                self._user_io.out.writeln(" https://docs.conan.io/en/latest/installation.html"
+                                          "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
+                self._user_io.out.writeln("*"*80, front=Color.BRIGHT_YELLOW)
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
