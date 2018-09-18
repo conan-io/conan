@@ -1,53 +1,72 @@
 
 import os
+import logging
 from tqdm import tqdm
 from contextlib import contextmanager
+
+from conans.client.output import ConanOutput
+from conans.util.log import logger
+
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
+tqdm_file_defaults = {'unit': 'B',  # TODO: Move these defaults somewhere else
+                      'unit_scale': True,
+                      'unit_divisor': 1024,
+                      'ascii': False,  # Fancy output (forces unicode progress bar)
+                      }
 
-class BinaryFileWrapper(object):
 
-    tqdm_defaults = {'unit': 'B',
-                     'unit_scale': True,
-                     'unit_divisor': 1024,
-                     'ascii': False,  # Fancy output (forces unicode progress bar)
-                     }
+@contextmanager
+def progress_bar(output, *args, **kwargs):
+    assert isinstance(output, ConanOutput)
+    original_stream = output._stream
+    original_log_handlers = logger.handlers.copy()
 
-    def __init__(self, fileobj, output, desc=None):
-        pb_kwargs = self.tqdm_defaults.copy()
-        self.ori_output = output
-
-        # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
+    try:
+        # if not terminal, just output dots for progress bar
+        pb_stream = original_stream
         if not output.is_terminal:
-            output = _NoTerminalOutput(output)
-            pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
+            pb_stream = _NoTerminalOutput(original_stream)
+            kwargs.update({'mininterval': TIMEOUT_BEAT_SECONDS})
 
-        self._output = output
-        self._fileobj = fileobj
-        self.seek(0, os.SEEK_END)
-        self._pb = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
-        self.seek(0)
+        # Pipe output through progress bar in order no to interfere with it
+        class ForwardTqdm(object):
 
-    def seek(self, *args, **kwargs):
-        return self._fileobj.seek(*args, **kwargs)
+            def write(self, msg):
+                tqdm.write(msg.strip('\n\r'), file=original_stream)
 
-    def tell(self):
-        return self._fileobj.tell()
+            def flush(self):
+                original_stream.flush()
 
-    def read(self, size):
-        prev = self.tell()
-        ret = self._fileobj.read(size)
-        self._pb.update(self.tell() - prev)
-        return ret
+        output._stream = ForwardTqdm()
 
-    def pb_close(self):
-        self._pb.close()
+        # Pipe log through progress bar too
+        class TqdmHandler(logging.Handler):
+            def emit(self, record):
+                try:
+                    msg = self.format(record)  # TODO: Add conan formatting here
+                    tqdm.write(msg)
+                    self.flush()
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    self.handleError(record)
 
-    def pb_write(self, message):
-        """ Allow to write messages to output without interfering with the progress bar """
-        tqdm.write(message, file=self.ori_output)
+        for hdlr in logger.handlers[:]:  # remove all old handlers
+            logger.removeHandler(hdlr)
+        logger.addHandler(TqdmHandler())
+
+        pb = tqdm(file=pb_stream, position=1, leave=False, *args, **kwargs)
+        yield pb
+        pb.close()
+        output.writeln("")  # TODO: Check if needed
+    except Exception as exc:
+        raise exc
+    finally:
+        output._stream = original_stream
+        logger.handlers = original_log_handlers
 
 
 class _NoTerminalOutput(object):
@@ -62,11 +81,27 @@ class _NoTerminalOutput(object):
         self._output.flush()
 
 
-@contextmanager
-def open_binary(path, output, **kwargs):
-    with open(path, mode='rb') as f:
-        file_wrapped = BinaryFileWrapper(f, output=output, **kwargs)
-        yield file_wrapped
-        file_wrapped.pb_close()
-        if not output.is_terminal:
-            output.write("\n")
+if __name__ == '__main__':
+    import sys
+    import time
+
+    output = ConanOutput(sys.stdout, True)
+    output.writeln("This is ConanOutput")
+    output.info("Info message")
+    output.error("ERROR message")
+    logger.critical("critical before finished!")
+
+    with progress_bar(iterable=range(10), output=output) as pb:
+        for it in pb:
+            # print(it)
+            pb.update()
+            output.write("Up to {}".format(it))
+            output.info("Info inside")
+            output.error("ERROR inside")
+            logger.critical("critical")
+            time.sleep(0.5)
+    output.writeln("Finished!")
+    output.info("Info after")
+    output.error("Error after")
+    logger.critical("critical after finished!")
+
