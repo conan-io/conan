@@ -94,7 +94,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     # PARSING THE SCM field
     conanfile_path = os.path.join(destination_folder, "conanfile.py")
     content = load(conanfile_path)
-    lines = content.splitlines()
+    lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
     for item in tree.body:
@@ -114,7 +114,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
                                 break
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
-    new_text = "scm = " + ",\n          ".join(str(scm_data).split(","))
+    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     save(conanfile_path, content)
 
