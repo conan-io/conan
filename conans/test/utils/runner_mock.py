@@ -24,3 +24,13 @@ class RunnerOrderedMock(object):
         expected, ret = self.commands.pop(0)
         self._test_class.assertEqual(expected, command)
         return ret
+
+
+class RunnerMultipleMock(object):
+    def __init__(self, expected=None):
+        self.calls = 0
+        self.expected = expected
+
+    def __call__(self, command, output):  # @UnusedVariable
+        self.calls += 1
+        return 0 if command in self.expected else 1

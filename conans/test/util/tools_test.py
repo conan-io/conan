@@ -24,7 +24,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
-from conans.test.utils.runner_mock import RunnerMock, RunnerOrderedMock
+from conans.test.utils.runner_mock import RunnerMock, RunnerOrderedMock, RunnerMultipleMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
     StoppableThreadBottle
@@ -258,15 +258,6 @@ class SystemPackageToolTest(unittest.TestCase):
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, output):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMultipleMock(["dpkg -s another_package"])
