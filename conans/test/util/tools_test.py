@@ -260,21 +260,38 @@ class SystemPackageToolTest(unittest.TestCase):
     def system_package_tool_try_multiple_test(self):
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            # All packages are install (cmd call returns 0)
+            runner = RunnerOrderedMock(self)
+            for pck in packages:
+                runner.commands.append(("dpkg -s {}".format(pck), 0))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
-            self.assertEquals(2, runner.calls)
-            runner = RunnerMultipleMock(["sudo apt-get update",
-                                         "sudo apt-get install -y --no-install-recommends yet_another_package"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
-            spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertTrue(runner.is_empty())
 
-            runner = RunnerMultipleMock(["sudo apt-get update"])
+            # None is installed (cmd call returns 0)
+            runner = RunnerOrderedMock(self)
+            for pck in packages:
+                runner.commands.append(("dpkg -s {}".format(pck), 1))
+            runner.commands.append(("sudo apt-get update", 0))
+            for pck in packages:
+                runner.commands.append(("sudo apt-get install -y --no-install-recommends %s" %
+                                        pck, 0))
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt.install(packages)
+            self.assertTrue(runner.is_empty())
+
+            # Fails to install any
+            runner = RunnerOrderedMock(self)
+            for pck in packages:
+                runner.commands.append(("dpkg -s {}".format(pck), 1))
+            runner.commands.append(("sudo apt-get update", 0))
+            for pck in packages:
+                runner.commands.append(("sudo apt-get install -y --no-install-recommends %s" %
+                                        pck, 1))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             with self.assertRaises(ConanException):
                 spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertTrue(runner.is_empty())
 
     def system_package_tool_mode_test(self):
         """
