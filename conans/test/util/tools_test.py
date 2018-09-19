@@ -24,7 +24,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
-from conans.test.utils.runner_mock import RunnerMock, RunnerOrderedMock
+from conans.test.utils.runner_mock import RunnerOrderedMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
     StoppableThreadBottle

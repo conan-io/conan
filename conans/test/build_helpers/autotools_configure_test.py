@@ -10,7 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
-from conans.test.utils.runner_mock import RunnerMock
+from conans.test.utils.runner_mock import RunnerOrderedMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.utils.tools import TestClient
 
@@ -132,19 +132,19 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def test_mocked_methods(self):
 
-        runner = RunnerMock()
+        runner = RunnerOrderedMock(self)
+        runner.commands.append(("othermake -j%s" % cpu_count(), 0))
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.make(make_program="othermake")
-        self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
 
         with tools.environment_append({"CONAN_MAKE_PROGRAM": "mymake"}):
+            runner.commands.append(("mymake -j%s" % cpu_count(), 0))
             ab.make(make_program="othermake")
-            self.assertEquals(runner.command_called, "mymake -j%s" % cpu_count())
 
-        ab.make(args=["things"])
         things = "'things'" if platform.system() != "Windows" else "things"
-        self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
+        runner.commands.append(("make %s -j%s" % (things, cpu_count()), 0))
+        ab.make(args=["things"])
 
     def test_variables(self):
         # Visual Studio
@@ -437,24 +437,24 @@ class HelloConan(ConanFile):
             self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo:Some/value" % bf, client.out)
 
     def cross_build_command_test(self):
-        runner = RunnerMock()
+        runner = RunnerOrderedMock(self)
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         self.assertFalse(ab.build)
         self.assertFalse(ab.host)
         self.assertFalse(ab.target)
 
+        runner.commands.append(("./configure  ", 0))  # TODO: Blanks at he end?
         ab.configure()
-        self.assertEquals(runner.command_called, "./configure  ")
 
+        runner.commands.append(("./configure  --host=x86_64-apple-darwin", 0))
         ab.configure(host="x86_64-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --host=x86_64-apple-darwin")
 
+        runner.commands.append(("./configure  --build=arm-apple-darwin", 0))
         ab.configure(build="arm-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --build=arm-apple-darwin")
 
+        runner.commands.append(("./configure  --target=i686-apple-darwin", 0))
         ab.configure(target="i686-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
 
         conanfile = MockConanfile(MockSettings({"build_type": "Debug",
                                                 "arch": "x86_64",
@@ -463,79 +463,77 @@ class HelloConan(ConanFile):
                                                 "compiler.libcxx": "libstdc++"}),
                                   None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
-        ab.configure()
         if platform.system() == "Windows":
-            # Not crossbuilding
-            self.assertFalse(ab.host)
-            self.assertFalse(ab.build)
-            self.assertIn("./configure", runner.command_called)
-            self.assertNotIn("--build=x86_64-w64-mingw32 --host=x86_64-w64-mingw32",
-                             runner.command_called)
+            runner.commands.append(("./configure  --build=x86_64-apple-darwin "
+                                    "--host=x86_64-w64-mingw32", 0))
         elif platform.system() == "Linux":
-            self.assertIn("x86_64-w64-mingw32", ab.host)
-            self.assertIn("x86_64-linux-gnu", ab.build)
-            self.assertIn("./configure  --build=x86_64-linux-gnu --host=x86_64-w64-mingw32",
-                          runner.command_called)
+            runner.commands.append(("./configure  --build=x86_64-linux-gnu "
+                                    "--host=x86_64-w64-mingw32", 0))
         else:
-            self.assertIn("x86_64-w64-mingw32", ab.host)
-            self.assertIn("x86_64-apple-darwin", ab.build)
-            self.assertIn("./configure  --build=x86_64-apple-darwin --host=x86_64-w64-mingw32",
-                          runner.command_called)
+            runner.commands.append(("./configure  --build=x86_64-apple-darwin "
+                                    "--host=x86_64-w64-mingw32", 0))
+        ab.configure()
 
+        runner.commands.append(("./configure  --build=fake_build_triplet "
+                                "--host=fake_host_triplet", 0))
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")
-        self.assertIn("./configure  --build=fake_build_triplet --host=fake_host_triplet",
-                      runner.command_called)
 
+        runner.commands.append(("./configure  --build=superfake_build_triplet "
+                                "--host=superfake_host_triplet", 0))
         ab.build = "superfake_build_triplet"
         ab.host = "superfake_host_triplet"
         ab.configure()
-        self.assertIn("./configure  --build=superfake_build_triplet --host=superfake_host_triplet",
-                      runner.command_called)
+        self.assertTrue(runner.is_empty())
 
     def test_make_targets_install(self):
-        runner = RunnerMock()
+        runner = RunnerOrderedMock(self)
+        runner.commands.append(("./configure  ", 0))
+        runner.commands.append(("make install -j%s" % cpu_count(), 0))
+        runner.commands.append(("make install -j%s" % cpu_count(), 0))
+
         conanfile = MockConanfile(MockSettings({}), None, runner)
 
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
 
         ab.make(target="install")
-        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
         ab.install()
-        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
+        self.assertTrue(runner.is_empty())
 
     def autotools_prefix_test(self):
-        runner = RunnerMock()
+        runner = RunnerOrderedMock(self)
+
         conanfile = MockConanfile(MockSettings({}), None, runner)
         # Package folder is not defined
+        runner.commands.append(("./configure  ", 0))
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
-        self.assertNotIn("--prefix", runner.command_called)
+
         # package folder defined
         conanfile.package_folder = "/package_folder"
+        if platform.system() == "Windows":
+            runner.commands.append(("./configure --prefix=/package_folder ", 0))
+        else:
+            runner.commands.append(("./configure '--prefix=/package_folder' ", 0))
         ab.configure()
-        if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/package_folder", runner.command_called)
-        else:
-            self.assertIn("./configure '--prefix=/package_folder'", runner.command_called)
+
         # --prefix already used in args
-        ab.configure(args=["--prefix=/my_package_folder"])
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
-            self.assertNotIn("--prefix=/package_folder", runner.command_called)
+            runner.commands.append(("./configure '--prefix=/my_package_folder' ", 0))
         else:
-            self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
-            self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
+            runner.commands.append(("./configure '--prefix=/my_package_folder' ", 0))
+        ab.configure(args=["--prefix=/my_package_folder"])
+
+        self.assertTrue(runner.is_empty())
 
     def autotools_configure_vars_test(self):
         from mock import patch
 
-        runner = RunnerMock()
         settings = MockSettings({"build_type": "Debug",
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, None, runner)
+        conanfile = MockConanfile(settings, None, None)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
 
