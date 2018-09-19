@@ -13,9 +13,9 @@ class RunnerMock(object):
 
 
 class RunnerOrderedMock(object):
-    commands = []  # Command + return value
 
     def __init__(self, test_class):
+        self.commands = []
         self._test_class = test_class
 
     def __call__(self, command, output, win_bash=False, subsystem=None):
