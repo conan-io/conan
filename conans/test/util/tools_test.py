@@ -24,6 +24,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
+from conans.test.utils.runner_mock import RunnerMock, RunnerOrderedMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
     StoppableThreadBottle
@@ -72,19 +73,9 @@ class SystemPackageToolTest(unittest.TestCase):
                                repo_key=None)
 
     def add_repository_test(self):
-        class RunnerOrderedMock:
-            commands = []  # Command + return value
-
-            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
-                if not len(runner_self.commands):
-                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
-                expected, ret = runner_self.commands.pop(0)
-                self.assertEqual(expected, command)
-                return ret
-
         def _run_add_repository_test(repository, gpg_key, sudo, update):
             sudo_cmd = "sudo " if sudo else ""
-            runner = RunnerOrderedMock()
+            runner = RunnerOrderedMock(self)
             runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if gpg_key:
                 runner.commands.append(
@@ -413,18 +404,6 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
-
-
-class RunnerMock(object):
-    def __init__(self, return_ok=True):
-        self.command_called = None
-        self.return_ok = return_ok
-
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
-        self.command_called = command
-        self.win_bash = win_bash
-        self.subsystem = subsystem
-        return 0 if self.return_ok else 1
 
 
 class ReplaceInFileTest(unittest.TestCase):

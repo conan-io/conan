@@ -10,7 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
-from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.runner_mock import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.utils.tools import TestClient
 
