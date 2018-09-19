@@ -47,16 +47,6 @@ class B2GeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = B2Generator(conanfile)
 
-        #print("        content = {")
-        #for k,v in generator.content.items():
-        #    print("\'"+k+"\':")
-        #    print("\'\'\'"+v+"\'\'\',")
-        #print("        }")
-        #print "        content = {"
-        #for k,v in generator.content.items():
-        #    print "\'"+k+"\':"
-        #    print "\'\'\'"+v+"\'\'\',"
-        #print "        }"
         content = {
 'conanbuildinfo.jam':
 '''#|

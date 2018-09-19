@@ -205,15 +205,13 @@ class B2Generator(Generator):
             self._b2_variation_id = ",".join(vid)
         return self._b2_variation_id
 
-    _b2_variation = None
-
     @property
     def b2_variation(self):
         '''
         Returns a map of b2 features & values as translated from conan settings that
         can affect the link compatibility of libraries.
         '''
-        if not self._b2_variation:
+        if not getattr(self, "_b2_variation_key", None):
             self._b2_variation = {}
             self._b2_variation['toolset'] = {
                 'sun-cc': 'sun',
