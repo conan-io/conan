@@ -1458,12 +1458,12 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=tmp_folder)
         svn.clone(url=project_url)
 
-        self.assertEqual(os.path.realpath(tmp_folder).lower(), svn.get_repo_root().lower())
+        self.assertEqual(tmp_folder.replace('\\', '/').lower(), svn.get_repo_root().lower())
 
         # SVN instantiated in a subfolder
         svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
         self.assertFalse(svn2.folder == tmp_folder)
-        self.assertEqual(os.path.realpath(tmp_folder).lower(), svn2.get_repo_root().lower())
+        self.assertEqual(tmp_folder.replace('\\', '/').lower(), svn2.get_repo_root().lower())
 
     def test_is_local_repository(self):
         svn = SVN(folder=self.gimme_tmp())
