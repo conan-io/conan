@@ -17,13 +17,13 @@ class ConanControllerV2(Controller):
         @app.route(r.package, method=["GET"])
         @app.route(r.package_recipe_revision, method=["GET"])
         @app.route(r.package_revision, method=["GET"])
-        def get_package_snapshot(name, version, username, channel, package_id, auth_user,
-                                 revision=None, p_revision=None):
+        def get_package_file_list(name, version, username, channel, package_id, auth_user,
+                                  revision=None, p_revision=None):
 
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision)
-            snapshot = conan_service.get_package_snapshot(package_reference, auth_user)
-            return snapshot
+            ret = conan_service.get_package_file_list(package_reference, auth_user)
+            return ret
 
         @app.route(r.package_file, method=["GET"])
         @app.route(r.package_recipe_revision_file, method=["GET"])
@@ -35,6 +35,7 @@ class ConanControllerV2(Controller):
             file_generator = conan_service.get_package_file(package_reference, the_path, auth_user)
             return file_generator
 
+        @app.route(r.package_file, method=["PUT"])
         @app.route(r.package_revision_file, method=["PUT"])
         def upload_package_file(name, version, username, channel, package_id,
                                 the_path, auth_user, revision=None, p_revision=None):
@@ -48,11 +49,11 @@ class ConanControllerV2(Controller):
 
         @app.route(r.recipe, method=["GET"])
         @app.route(r.recipe_revision, method=["GET"])
-        def get_conanfile_snapshot(name, version, username, channel, auth_user, revision=None):
+        def get_recipe_file_list(name, version, username, channel, auth_user, revision=None):
 
             reference = ConanFileReference(name, version, username, channel, revision)
-            snapshot = conan_service.get_conanfile_snapshot(reference, auth_user)
-            return snapshot
+            ret = conan_service.get_recipe_file_list(reference, auth_user)
+            return ret
 
         @app.route(r.recipe_file, method=["GET"])
         @app.route(r.recipe_revision_file, method=["GET"])
@@ -61,6 +62,7 @@ class ConanControllerV2(Controller):
             file_generator = conan_service.get_conanfile_file(reference, the_path, auth_user)
             return file_generator
 
+        @app.route(r.recipe_file, method=["PUT"])
         @app.route(r.recipe_revision_file, method=["PUT"])
         def upload_recipe_file(name, version, username, channel, the_path, auth_user,
                                revision=None):
