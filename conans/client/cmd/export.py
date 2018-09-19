@@ -1,3 +1,4 @@
+import ast
 import os
 import shutil
 
@@ -9,7 +10,7 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
 
@@ -89,7 +90,33 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     # Generate the scm_folder.txt file pointing to the src_path
     src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+
+    # PARSING THE SCM field
+    conanfile_path = os.path.join(destination_folder, "conanfile.py")
+    content = load(conanfile_path)
+    lines = content.splitlines()
+    tree = ast.parse(content)
+    to_replace = []
+    for item in tree.body:
+        if isinstance(item, ast.ClassDef):
+            statements = item.body
+            for i, statement in enumerate(item.body):
+                if isinstance(statement, ast.Assign):
+                    if len(statement.targets) == 1:
+                        if isinstance(statement.targets[0], ast.Name):
+                            if statement.targets[0].id == "scm":
+                                try:
+                                    next_line = statements[i+1].lineno - 1
+                                except IndexError:
+                                    next_line = statement.lineno - 1
+                                replacement = "".join(lines[(statement.lineno-1):next_line]).lstrip()
+                                to_replace.append(replacement)
+                                break
+    if len(to_replace) != 1:
+        raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
+    new_text = "scm = " + ",\n          ".join(str(scm_data).split(","))
+    content = content.replace(to_replace[0], new_text)
+    save(conanfile_path, content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):

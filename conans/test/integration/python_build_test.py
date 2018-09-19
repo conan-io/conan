@@ -237,14 +237,18 @@ class MyConanfileBase(ConanFile):
 base = python_requires("MyConanfileBase/1.1@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     scm = base.scm
+    other = 123
+    def _my_method(self):
+        pass
 """
         create_local_git_repo({"conanfile.py": reuse}, branch="my_release",
                               folder=client.current_folder)
         client.run("export . Pkg/0.1@lasote/testing")
-        print client.out
         client.run("get Pkg/0.1@lasote/testing")
-        print client.out
         self.assertNotIn("scm = base.scm", client.out)
+        self.assertIn('scm = {"revision":', client.out)
+        self.assertIn('"type": "git",', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
 
 
 class PythonBuildTest(unittest.TestCase):
