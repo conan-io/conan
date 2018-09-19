@@ -11,7 +11,8 @@ from conans.util.log import logger
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
-tqdm_file_defaults = {'unit': 'B',  # TODO: Move these defaults somewhere else
+# TODO: Move these defaults somewhere else
+tqdm_file_defaults = {'unit': 'B',
                       'unit_scale': True,
                       'unit_divisor': 1024,
                       'ascii': False,  # Fancy output (forces unicode progress bar)
@@ -48,7 +49,6 @@ def progress_bar(output, *args, **kwargs):
                 try:
                     msg = self.format(record)  # TODO: Add conan formatting here
                     tqdm.write(msg)
-                    self.flush()
                 except (KeyboardInterrupt, SystemExit):
                     raise
                 except:
@@ -58,10 +58,11 @@ def progress_bar(output, *args, **kwargs):
             logger.removeHandler(hdlr)
         logger.addHandler(TqdmHandler())
 
-        pb = tqdm(file=pb_stream, position=1, leave=False, *args, **kwargs)
+        pb = tqdm(file=pb_stream, position=None, leave=False, *args, **kwargs)
         yield pb
+        output.success("{} done!".format(kwargs.get('desc', '')))
         pb.close()
-        output.writeln("")  # TODO: Check if needed
+        # output.writeln("")  # TODO: Check if needed
     except Exception as exc:
         raise exc
     finally:

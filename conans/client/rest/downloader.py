@@ -4,6 +4,7 @@ import io
 import time
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
+from conans.util.log import logger
 
 
 def download(requester, output, verify_ssl,
@@ -34,11 +35,12 @@ def download(requester, output, verify_ssl,
                 # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
                 # It will not send content-length or should be ignored
 
-                with progress_bar(total=int(total_length), output=output,
+                with progress_bar(total=int(total_length), output=output, desc=url,
                                   **tqdm_file_defaults) as pb:
                     for data in r.iter_content(chunk_size=1000):
-                        time.sleep(0.2)
-                        output.writeln("{}/{}".format(len(data), int(total_length)))
+                        time.sleep(0.5)
+                        output.writeln("{}/{}: {}".format(len(data), int(total_length), url))
+                        #logger.info("{}/{}: {}".format(len(data), int(total_length), url))
                         pb.update(len(data))
                         buffer.write(data)
 
