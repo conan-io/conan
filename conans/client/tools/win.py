@@ -237,7 +237,22 @@ def find_windows_10_sdk():
 def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
                    winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
-    compiler_version = compiler_version or settings.get_safe("compiler.version")
+
+    compiler = settings.get_safe("compiler")
+    if compiler == 'Visual Studio':
+        compiler_version = compiler_version or settings.get_safe("compiler.version")
+    else:
+        # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
+        # as they might be using Microsoft STL and other tools (e.g. resource compiler, manifest tool, etc)
+        # in this case, use the latest Visual Studio available on the machine
+        def visual_compiler_last():
+            last_version = None
+            for version in ["8", "9", "10", "11", "12", "14", "15"]:
+                vs = vs_installation_path(version)
+                last_version = version if vs else last_version
+            return last_version
+
+        compiler_version = compiler_version or visual_compiler_last()
     os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
