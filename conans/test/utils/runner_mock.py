@@ -27,13 +27,3 @@ class RunnerOrderedMock(object):
 
     def is_empty(self):
         return not self.commands
-
-
-class RunnerMultipleMock(object):
-    def __init__(self, expected=None):
-        self.calls = 0
-        self.expected = expected
-
-    def __call__(self, command, output):  # @UnusedVariable
-        self.calls += 1
-        return 0 if command in self.expected else 1
