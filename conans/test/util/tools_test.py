@@ -1479,10 +1479,10 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
                                                     'project2/subdir2/myfile': "content",
                                                     })
         prj1 = SVN(folder=self.gimme_tmp())
-        prj1.clone(url=os.path.join(project_url, "project1"))
+        prj1.clone(url='/'.join([project_url, 'project1']))
 
         prj2 = SVN(folder=self.gimme_tmp())
-        prj2.clone(url=os.path.join(project_url, "project2"))
+        prj2.clone(url='/'.join([project_url, 'project2']))
 
         self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
 
@@ -1511,19 +1511,19 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
                                                     'prj1/tags/v12.3.4/myfile': "",
                                                     })
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=os.path.join(project_url, 'prj1', 'trunk'))
+        svn.clone(url='/'.join([project_url, 'prj1', 'trunk']))
         self.assertEqual("trunk", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=os.path.join(project_url, 'prj1', 'branches', 'my_feature'))
+        svn.clone(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
         self.assertEqual("branches/my_feature", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=os.path.join(project_url, 'prj1', 'branches', 'issue3434'))
+        svn.clone(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
         self.assertEqual("branches/issue3434", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=os.path.join(project_url, 'prj1', 'tags', 'v12.3.4'))
+        svn.clone(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
 
