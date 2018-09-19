@@ -54,15 +54,17 @@ def progress_bar(output, *args, **kwargs):
                 except:
                     self.handleError(record)
 
-        for hdlr in logger.handlers[:]:  # remove all old handlers
+        for hdlr in logger.handlers[:]:  # TODO: Sólo hay que eliminar los handlers de consola
             logger.removeHandler(hdlr)
         logger.addHandler(TqdmHandler())
 
         pb = tqdm(file=pb_stream, position=None, leave=False, *args, **kwargs)
         yield pb
-        output.success("{} done!".format(kwargs.get('desc', '')))
+        output.success("{} [done!]".format(kwargs.get('desc', '')))
         pb.close()
-        # output.writeln("")  # TODO: Check if needed
+
+        if not output.is_terminal:
+            output.writeln("")
     except Exception as exc:
         raise exc
     finally:

@@ -59,28 +59,25 @@ class ProgressBarMixin(object):
 
 
 @contextmanager
-def open_binary(path, output=None, chunk_size=None, **kwargs):
+def open_binary(path, output=None, chunk_size=None, desc=None, **kwargs):
     base_classes = ()
 
-    # If output is given, then add a progress bar
-    if output:
-        base_classes += (ProgressBarMixin, )
-
-    # If chunk_size, then return file in chunks
-    if chunk_size:
-        base_classes += (ChunkedMixin, )
-
-    base_classes = base_classes + (BinaryFileWrapper, )
-    wrapper_class = type('WrapperClass', base_classes, {})
-
     with ExitStack() as stack:
-        total_size = os.stat(path).st_size
-        f = stack.enter_context(open(path, mode='rb'))
-
+        # If output is given, then add a progress bar
         if output:
-
-            pb = stack.enter_context(progress_bar(output=output, total=total_size, **tqdm_defaults))
+            base_classes += (ProgressBarMixin,)
+            total_size = os.stat(path).st_size
+            pb = stack.enter_context(progress_bar(output=output, total=total_size, desc=desc,
+                                                  **tqdm_file_defaults))
             kwargs.update({'pb': pb})
 
-        file_wrapper = wrapper_class(fileobj=f, chunk_size=chunk_size, **kwargs)
+        # If chunk_size, then return file in chunks
+        if chunk_size:
+            base_classes += (ChunkedMixin,)
+            kwargs.update({'chunk_size': chunk_size})
+
+        base_classes = base_classes + (BinaryFileWrapper,)
+        wrapper_class = type('WrapperClass', base_classes, {})
+        f = stack.enter_context(open(path, mode='rb'))
+        file_wrapper = wrapper_class(fileobj=f, **kwargs)
         yield file_wrapper

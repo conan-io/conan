@@ -29,7 +29,7 @@ from conans.client.source import merge_directories
 from conans.util.env_reader import get_env
 from conans.search.search import filter_packages
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.util import progress_bar as pb
+from conans.util.files.binary_wrapper import open_binary
 
 
 class RemoteManager(object):
@@ -402,8 +402,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with pb.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
-                            output=output) as file_handler:
+        with open_binary(src_path, desc="Decompressiong %s" % os.path.basename(src_path),
+                         output=output) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
