@@ -11,7 +11,7 @@ from conans.util.log import logger
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
-# TODO: Are these defaults here ok?
+
 tqdm_file_defaults = {'unit': 'B',
                       'unit_scale': True,
                       'unit_divisor': 1024,
@@ -113,4 +113,3 @@ if __name__ == '__main__':
     output.info("Info after")
     output.error("Error after")
     logger.critical("critical after finished!")
-
