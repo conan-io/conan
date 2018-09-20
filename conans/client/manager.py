@@ -1,6 +1,5 @@
 import os
 
-from conans import load
 from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import _execute_export
