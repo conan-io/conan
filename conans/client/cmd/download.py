@@ -16,7 +16,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     if not package:  # Search the reference first, and raise if it doesn't exist
         raise ConanException("'%s' not found in remote" % str(reference))
 
-    plugin_manager.execute("pre_download", reference=str(reference), remote=remote)
+    plugin_manager.execute("pre_download", reference=reference, remote=remote)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
     registry.set_ref(reference, remote.name)
@@ -41,8 +41,8 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
             else:
                 _download_binaries(reference, list(packages_props.keys()), client_cache,
                                    remote_manager, remote, output, recorder, loader)
-    plugin_manager.execute("post_download", conanfile_path=conan_file_path,
-                           reference=str(reference), remote=remote)
+    plugin_manager.execute("post_download", conanfile_path=conan_file_path, reference=reference,
+                           remote=remote)
 
 
 def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,

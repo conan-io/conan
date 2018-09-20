@@ -92,7 +92,7 @@ class CmdUpload(object):
 
         conanfile_path = self._client_cache.conanfile(conan_ref)
         self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
-                                     reference=str(conan_ref), remote=upload_remote)
+                                     reference=conan_ref, remote=upload_remote)
 
         if policy != UPLOAD_POLICY_FORCE:
             self._check_recipe_date(conan_ref, upload_remote)
@@ -120,7 +120,7 @@ class CmdUpload(object):
             self._registry.set_ref(conan_ref, upload_remote.name)
         
         self._plugin_manager.execute("post_upload", conanfile_path=conanfile_path,
-                                     reference=str(conan_ref), remote=upload_remote)
+                                     reference=conan_ref, remote=upload_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)

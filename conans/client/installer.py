@@ -91,7 +91,8 @@ class _ConanPackageBuilder(object):
         sources_pointer = self._client_cache.scm_folder(self._conan_ref)
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
-                      self._conan_file, self._out, conanfile_path, self._plugin_manager)
+                      self._conan_file, self._out, conanfile_path, self._conan_ref,
+                      self._plugin_manager)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -143,7 +144,7 @@ class _ConanPackageBuilder(object):
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
                            self.package_folder, install_folder, self._out, self._plugin_manager,
-                           conanfile_path, str(self._conan_ref))
+                           conanfile_path, self._conan_ref)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -171,7 +172,7 @@ class _ConanPackageBuilder(object):
             # This is necessary because it is different for user projects
             # than for packages
             self._plugin_manager.execute("pre_build", conanfile=self._conan_file,
-                                         reference=str(self._conan_ref),
+                                         reference=self._conan_ref,
                                          package_id=self._package_reference.package_id)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
@@ -182,7 +183,7 @@ class _ConanPackageBuilder(object):
             self._out.success("Package '%s' built" % self._conan_file.info.package_id())
             self._out.info("Build folder %s" % self.build_folder)
             self._plugin_manager.execute("post_build", conanfile=self._conan_file,
-                                         reference=str(self._conan_ref),
+                                         reference=self._conan_ref,
                                          package_id=self._package_reference.package_id)
         except Exception as exc:
             self._out.writeln("")

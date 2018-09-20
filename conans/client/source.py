@@ -7,6 +7,7 @@ from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.model.conan_file import get_env_context_manager
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
@@ -85,7 +86,7 @@ def get_scm_data(conanfile):
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
-                  conanfile, output, conanfile_path, plugin_manager, force=False):
+                  conanfile, output, conanfile_path, reference, plugin_manager, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
@@ -128,7 +129,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                     conanfile.build_folder = None
                     conanfile.package_folder = None
                     plugin_manager.execute("pre_source", conanfile=conanfile,
-                                           conanfile_path=conanfile_path, reference=str(conanfile))
+                                           conanfile_path=conanfile_path, reference=reference)
                     output.info('Configuring sources in %s' % src_folder)
                     scm_data = get_scm_data(conanfile)
                     if scm_data:
@@ -148,7 +149,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
 
                     conanfile.source()
                     plugin_manager.execute("post_source", conanfile=conanfile,
-                                           conanfile_path=conanfile_path,  reference=str(conanfile))
+                                           conanfile_path=conanfile_path,  reference=reference)
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)

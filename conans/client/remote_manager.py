@@ -43,7 +43,7 @@ class RemoteManager(object):
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy=None):
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._plugin_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                     reference=str(conan_reference), remote=remote)
+                                     reference=conan_reference, remote=remote)
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
 
@@ -76,7 +76,7 @@ class RemoteManager(object):
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
         self._plugin_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
-                                     reference=str(conan_reference), remote=remote)
+                                     reference=conan_reference, remote=remote)
         return new_ref
 
     def _package_integrity_check(self, package_reference, files, package_folder):
@@ -110,7 +110,7 @@ class RemoteManager(object):
         """Will upload the package to the first remote"""
         conanfile_path = self._client_cache.conanfile(package_reference.conan)
         self._plugin_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                     reference=str(package_reference.conan),
+                                     reference=package_reference.conan,
                                      package_id=package_reference.package_id,
                                      remote=remote)
         t1 = time.time()
@@ -155,9 +155,8 @@ class RemoteManager(object):
             self._output.writeln("")
 
         self._plugin_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                     reference=str(package_reference.conan),
-                                     package_id=package_reference.package_id,
-                                     remote=remote)
+                                     reference=package_reference.conan,
+                                     package_id=package_reference.package_id, remote=remote)
         return tmp
 
     def get_conan_manifest(self, conan_reference, remote):
@@ -190,7 +189,7 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        self._plugin_manager.execute("pre_download_recipe", reference=str(conan_reference), remote=remote)
+        self._plugin_manager.execute("pre_download_recipe", reference=conan_reference, remote=remote)
         dest_folder = self._client_cache.export(conan_reference)
         rmdir(dest_folder)
 
@@ -206,8 +205,7 @@ class RemoteManager(object):
         touch_folder(dest_folder)
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._plugin_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                     reference=str(conan_reference),
-                                     remote=remote)
+                                     reference=conan_reference, remote=remote)
         return conan_reference
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
@@ -234,7 +232,7 @@ class RemoteManager(object):
         package_id = package_reference.package_id
         conanfile_path = self._client_cache.conanfile(package_reference.conan)
         self._plugin_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                     reference=str(package_reference.conan), package_id=package_id,
+                                     reference=package_reference.conan, package_id=package_id,
                                      remote=remote)
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
@@ -263,7 +261,7 @@ class RemoteManager(object):
                                      "using it, and retry" % (str(e), dest_folder))
             raise
         self._plugin_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                     reference=str(package_reference.conan), package_id=package_id,
+                                     reference=package_reference.conan, package_id=package_id,
                                      remote=remote)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
