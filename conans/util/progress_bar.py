@@ -21,6 +21,10 @@ tqdm_file_defaults = {'unit': 'B',
 
 @contextmanager
 def progress_bar(output, *args, **kwargs):
+    if not output:  # Just fake it.
+        yield tqdm(disable=True)
+        return
+
     assert isinstance(output, ConanOutput)
     original_stream = output._stream
     original_log_handlers = logger.handlers.copy()
