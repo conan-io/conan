@@ -91,7 +91,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
 
-    # PARSING THE SCM field
+    # Parsing and replacing the SCM field
     conanfile_path = os.path.join(destination_folder, "conanfile.py")
     content = load(conanfile_path)
     lines = content.splitlines(True)
@@ -100,20 +100,20 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     for item in tree.body:
         if isinstance(item, ast.ClassDef):
             statements = item.body
-            for i, statement in enumerate(item.body):
-                if isinstance(statement, ast.Assign):
-                    if len(statement.targets) == 1:
-                        if isinstance(statement.targets[0], ast.Name):
-                            if statement.targets[0].id == "scm":
-                                try:
-                                    next_line = statements[i+1].lineno - 1
-                                except IndexError:
-                                    next_line = statement.lineno - 1
-                                replacement = "".join(lines[(statement.lineno-1):next_line]).lstrip()
-                                to_replace.append(replacement)
-                                break
+            for i, stmt in enumerate(item.body):
+                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                    if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
+                        try:
+                            next_line = statements[i+1].lineno
+                        except IndexError:
+                            next_line = stmt.lineno
+                        replace = [line for line in lines[(stmt.lineno-1):next_line]
+                                   if line.strip()]
+                        to_replace.append("".join(replace).lstrip())
+                        break
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
+
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     save(conanfile_path, content)

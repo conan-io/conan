@@ -229,10 +229,22 @@ scm = {"type" : "git",
        "revision" : "auto"}
 
 class MyConanfileBase(ConanFile):
-    pass
+    scm = scm
 """
-        client.save({"conanfile.py": conanfile})
+        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
+                              folder=client.current_folder)
         client.run("export . MyConanfileBase/1.1@lasote/testing")
+        client.run("get MyConanfileBase/1.1@lasote/testing")
+        # The global scm is left as-is
+        self.assertIn("""scm = {"type" : "git",
+       "url" : "somerepo",
+       "revision" : "auto"}""", client.out)
+        # but the class one is replaced
+        self.assertNotIn("scm = scm", client.out)
+        self.assertIn('    scm = {"revision":', client.out)
+        self.assertIn('"type": "git",', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
+
         reuse = """from conans import python_requires
 base = python_requires("MyConanfileBase/1.1@lasote/testing")
 class PkgTest(base.MyConanfileBase):
@@ -241,8 +253,7 @@ class PkgTest(base.MyConanfileBase):
     def _my_method(self):
         pass
 """
-        create_local_git_repo({"conanfile.py": reuse}, branch="my_release",
-                              folder=client.current_folder)
+        client.save({"conanfile.py": reuse})
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("get Pkg/0.1@lasote/testing")
         self.assertNotIn("scm = base.scm", client.out)
