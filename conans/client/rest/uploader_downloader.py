@@ -1,13 +1,9 @@
 import os
 import time
-import traceback
 
 import conans.tools
-from conans.errors import ConanException, ConanConnectionError, NotFoundException, \
-    AuthenticationException
-from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
-from conans.util.log import logger
-from conans.util.tracer import log_download
+from conans.errors import ConanException, NotFoundException
+from conans.util.files import sha1sum, exception_message_safe
 
 
 class Uploader(object):
@@ -105,118 +101,6 @@ def load_in_chunks(path, chunk_size=1024):
             if not data:
                 break
             yield data
-
-
-class Downloader(object):
-
-    def __init__(self, requester, output, verify, chunk_size=1000):
-        self.chunk_size = chunk_size
-        self.output = output
-        self.requester = requester
-        self.verify = verify
-
-    def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
-                 headers=None):
-
-        if file_path and not os.path.isabs(file_path):
-            file_path = os.path.abspath(file_path)
-
-        if file_path and os.path.exists(file_path):
-            if overwrite:
-                if self.output:
-                    self.output.warn("file '%s' already exists, overwriting" % file_path)
-            else:
-                # Should not happen, better to raise, probably we had to remove
-                # the dest folder before
-                raise ConanException("Error, the file to download already exists: '%s'" % file_path)
-
-        return call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth,
-                               headers, file_path)
-
-    def _download_file(self, url, auth, headers, file_path):
-        t1 = time.time()
-
-        try:
-            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
-                                          headers=headers)
-        except Exception as exc:
-            raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
-
-        if not response.ok:
-            if response.status_code == 404:
-                raise NotFoundException("Not found: %s" % url)
-            elif response.status_code == 401:
-                raise AuthenticationException()
-            raise ConanException("Error %d downloading file %s" % (response.status_code, url))
-
-        try:
-            data = self._download_data(response, file_path)
-            duration = time.time() - t1
-            log_download(url, duration)
-            return data
-        except Exception as e:
-            logger.debug(e.__class__)
-            logger.debug(traceback.format_exc())
-            # If this part failed, it means problems with the connection to server
-            raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
-                                       % str(e))
-
-    def _download_data(self, response, file_path):
-        ret = bytearray()
-        total_length = response.headers.get('content-length')
-
-        if total_length is None:  # no content length header
-            if not file_path:
-                ret += response.content
-            else:
-                total_length = len(response.content)
-                progress = human_readable_progress(total_length, total_length)
-                print_progress(self.output, 50, progress)
-                save_append(file_path, response.content)
-        else:
-            total_length = int(total_length)
-            encoding = response.headers.get('content-encoding')
-            gzip = (encoding == "gzip")
-            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-            # It will not send content-length or should be ignored
-
-            def download_chunks(file_handler=None, ret_buffer=None):
-                """Write to a buffer or to a file handler"""
-                chunk_size = 1024 if not file_path else 1024 * 100
-                download_size = 0
-                last_progress = None
-                for data in response.iter_content(chunk_size):
-                    download_size += len(data)
-                    if ret_buffer is not None:
-                        ret_buffer.extend(data)
-                    if file_handler is not None:
-                        file_handler.write(to_file_bytes(data))
-
-                    units = progress_units(download_size, total_length)
-                    progress = human_readable_progress(download_size, total_length)
-                    if last_progress != units:  # Avoid screen refresh if nothing has change
-                        if self.output:
-                            print_progress(self.output, units, progress)
-                        last_progress = units
-                return download_size
-
-            if file_path:
-                mkdir(os.path.dirname(file_path))
-                with open(file_path, 'wb') as handle:
-                    dl_size = download_chunks(file_handler=handle)
-            else:
-                dl_size = download_chunks(ret_buffer=ret)
-
-            response.close()
-
-            if dl_size != total_length and not gzip:
-                raise ConanException("Transfer interrupted before "
-                                     "complete: %s < %s" % (dl_size, total_length))
-
-        if not file_path:
-            return bytes(ret)
-        else:
-            return
 
 
 def progress_units(progress, total):

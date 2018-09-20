@@ -3,7 +3,7 @@ import time
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.rest_client_common import RestCommonMethods
-from conans.client.rest.uploader_downloader import Downloader, Uploader
+from conans.client.rest.uploader_downloader import Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -12,6 +12,7 @@ from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXP
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
+from conans.client.rest.downloader import download
 
 
 class RestV2Methods(RestCommonMethods):
@@ -34,8 +35,8 @@ class RestV2Methods(RestCommonMethods):
         return data
 
     def _get_remote_file_contents(self, url):
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
-        contents = downloader.download(url, auth=self.auth)
+        contents = download(requester=self.requester, output=self._output,
+                            verify_ssl=self.verify_ssl, url=url, auth=self.auth)
         return contents
 
     def _get_snapshot(self, url, reference):
@@ -195,15 +196,13 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, base_url, dest_folder, files):
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):
-            if self._output:
-                self._output.writeln("Downloading %s" % filename)
             resource_url = "%s/%s" % (base_url, filename)
             abs_path = os.path.join(dest_folder, filename)
-            downloader.download(resource_url, abs_path, auth=self.auth)
+            download(requester=self.requester, output=self._output, verify_ssl=self.verify_ssl,
+                     url=resource_url, file_path=abs_path, auth=self.auth)
 
     def _recipe_url(self, conan_reference):
         url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
