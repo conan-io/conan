@@ -163,7 +163,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "dpkg -s a_package")
+            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -278,7 +278,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
@@ -555,7 +555,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
-
+ 
         conanfile = """
 from conans import ConanFile, tools
 
