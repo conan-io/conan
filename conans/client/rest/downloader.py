@@ -22,31 +22,32 @@ def download(requester, output, verify_ssl,
     for _ in range(retry):
         buffer = open(file_path, 'wb') if file_path else io.BytesIO()
         try:
-            with requester.get(url, stream=True, verify=verify_ssl, auth=auth, headers=headers) as r:
-                if not r.ok:
-                    if r.status_code == 404:
-                        raise NotFoundException("Not found: %s" % url)
-                    elif r.status_code == 401:
-                        raise AuthenticationException()
-                    raise ConanException("Error %d downloading file %s" % (r.status_code, url))
+            r = requester.get(url, stream=True, verify=verify_ssl, auth=auth, headers=headers)
+            if not r.ok:
+                if r.status_code == 404:
+                    raise NotFoundException("Not found: %s" % url)
+                elif r.status_code == 401:
+                    raise AuthenticationException()
+                raise ConanException("Error %d downloading file %s" % (r.status_code, url))
 
-                total_length = r.headers.get('content-length')
-                # encoding = r.headers.get('content-encoding')
-                # gzip = (encoding == "gzip")
-                # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-                # It will not send content-length or should be ignored
+            total_length = r.headers.get('content-length')
+            # encoding = r.headers.get('content-encoding')
+            # gzip = (encoding == "gzip")
+            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+            # It will not send content-length or should be ignored
 
-                # TODO: May disable progress bar if file is not big enough
-                with progress_bar(total=int(total_length), output=output, desc=pb_description,
-                                  **tqdm_file_defaults) as pb:
-                    for data in r.iter_content(chunk_size=1000):
-                        pb.update(len(data))
-                        buffer.write(data)
+            # TODO: May disable progress bar if file is not big enough
+            with progress_bar(total=int(total_length), output=output, desc=pb_description,
+                              **tqdm_file_defaults) as pb:
+                for data in r.iter_content(chunk_size=1000):
+                    pb.update(len(data))
+                    buffer.write(data)
 
             return None if file_path else bytes(buffer.getbuffer())
         except ConanException as e:
             time.sleep(retry_wait)
         finally:
+            r.close()
             buffer.close()
 
     # TODO: log a "retries exhausted" error
