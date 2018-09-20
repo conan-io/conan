@@ -48,13 +48,16 @@ def download(requester, output, verify_ssl,
                 return None if file_path else bytes(buffer.getbuffer())
             finally:
                 r.close()
-        except (ConanException, ConnectionError) as e:
+        except NotFoundException:
+            raise
+        except (ConanException, ConnectionError, Exception) as e:
             msg = exception_message_safe(e)
             output.error(msg)
             if n_retry < (retry - 1):
                 output.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)
-
+            else:
+                raise ConanException("Error downloading file %s: '%s'" % (url, msg))
         finally:
             buffer.close()
 
