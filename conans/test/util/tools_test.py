@@ -266,7 +266,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 self.assertEquals(runner.command_called,
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
-    def system_package_tool_try_multiple_test(self):
+    def test_system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
             def __init__(self, expected=None):
                 self.calls = 0
@@ -278,10 +278,11 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            runner = RunnerMultipleMock(["dpkg -s another_package", "dpkg -s a_package",
+                                         "dpkg -s yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
-            self.assertEquals(2, runner.calls)
+            self.assertEquals(3, runner.calls)
             runner = RunnerMultipleMock(["sudo apt-get update",
                                          "sudo apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
