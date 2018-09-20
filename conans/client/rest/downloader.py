@@ -4,6 +4,7 @@ import io
 import time
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
+from conans.util.files import exception_message_safe
 
 
 def download(requester, output, verify_ssl,
@@ -19,7 +20,7 @@ def download(requester, output, verify_ssl,
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
     pb_description = "Downloading {}".format(os.path.basename(url))
-    for _ in range(retry):
+    for n_retry in range(retry):
         buffer = open(file_path, 'wb') if file_path else io.BytesIO()
         try:
             r = requester.get(url, stream=True, verify=verify_ssl, auth=auth, headers=headers)
@@ -30,24 +31,30 @@ def download(requester, output, verify_ssl,
                     raise AuthenticationException()
                 raise ConanException("Error %d downloading file %s" % (r.status_code, url))
 
-            total_length = r.headers.get('content-length')
-            # encoding = r.headers.get('content-encoding')
-            # gzip = (encoding == "gzip")
-            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-            # It will not send content-length or should be ignored
+            try:
+                total_length = r.headers.get('content-length')
+                # encoding = r.headers.get('content-encoding')
+                # gzip = (encoding == "gzip")
+                # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+                # It will not send content-length or should be ignored
 
-            # TODO: May disable progress bar if file is not big enough
-            with progress_bar(total=int(total_length), output=output, desc=pb_description,
-                              **tqdm_file_defaults) as pb:
-                for data in r.iter_content(chunk_size=1000):
-                    pb.update(len(data))
-                    buffer.write(data)
+                # TODO: May disable progress bar if file is not big enough
+                with progress_bar(total=int(total_length), output=output, desc=pb_description,
+                                  **tqdm_file_defaults) as pb:
+                    for data in r.iter_content(chunk_size=1000):
+                        pb.update(len(data))
+                        buffer.write(data)
 
-            return None if file_path else bytes(buffer.getbuffer())
+                return None if file_path else bytes(buffer.getbuffer())
+            finally:
+                r.close()
         except ConanException as e:
-            time.sleep(retry_wait)
+            msg = exception_message_safe(e)
+            output.error(msg)
+            if n_retry < (retry - 1):
+                output.info("Waiting %d seconds to retry..." % retry_wait)
+                time.sleep(retry_wait)
         finally:
-            r.close()
             buffer.close()
 
     # TODO: log a "retries exhausted" error
