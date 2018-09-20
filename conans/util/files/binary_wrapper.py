@@ -48,8 +48,6 @@ class ProgressBarMixin(object):
         super(ProgressBarMixin, self).__init__(*args, **kwargs)
 
     def read(self, size):
-        import time
-        time.sleep(0.2)
         self._pb.update(size)
         return super(ProgressBarMixin, self).read(size)
 
