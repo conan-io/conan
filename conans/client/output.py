@@ -1,6 +1,5 @@
 from colorama import Fore, Style
 import six
-from tqdm import tqdm
 from conans.util.files import decode_text
 from conans.util.env_reader import get_env
 
@@ -66,12 +65,10 @@ class ConanOutput(object):
                 data = "%s\n" % data
 
         try:
-            # tqdm.write(data.strip("\r\n"), file=self._stream)
             self._stream.write(data)
         except UnicodeError:
             data = data.encode("utf8").decode("ascii", "ignore")
             self._stream.write(data)
-            # tqdm.write(data.strip("\r\n"), file=self._stream)
         self._stream.flush()
 
     def info(self, data):
