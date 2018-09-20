@@ -43,11 +43,8 @@ def progress_bar(output, *args, **kwargs):
 
         pb = tqdm(file=pb_stream, position=None, leave=False, *args, **kwargs)
         yield pb
-        output.write("{} [done]".format(kwargs.get('desc', '')))
         pb.close()
-
-        if not original_is_terminal:
-            output.writeln("")  # TODO: Check it is needed
+        output.write("{} [done]".format(kwargs.get('desc', '')))
     except Exception as exc:
         raise exc
     finally:

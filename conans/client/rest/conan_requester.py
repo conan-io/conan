@@ -6,6 +6,7 @@ import platform
 from conans.util.files import save
 from conans import __version__ as client_version
 
+
 class ConanRequester(object):
 
     def __init__(self, requester, client_cache, timeout):
