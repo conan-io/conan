@@ -5,7 +5,8 @@ from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.rest_client_common import RestCommonMethods
-from conans.client.rest.uploader_downloader import Downloader, Uploader
+from conans.client.rest.uploader_downloader import Uploader
+from conans.client.rest.downloader import download
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -39,14 +40,13 @@ class RestV1Methods(RestCommonMethods):
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
-            contents = downloader.download(resource_url, auth=auth)
-            self._output.writeln("")
+            contents = download(requester=self.requester, output=self._output,
+                                verify_ssl=self.verify_ssl, url=resource_url, file_path=None,
+                                auth=auth)
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -164,18 +164,14 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if self._output:
-                self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
-            downloader.download(resource_url, abs_path, auth=auth)
-            if self._output:
-                self._output.writeln("")
+            download(requester=self.requester, output=self._output, verify_ssl=self.verify_ssl,
+                     url=resource_url, file_path=abs_path, auth=auth)
             ret[filename] = abs_path
         return ret
 
@@ -253,9 +249,9 @@ class RestV1Methods(RestCommonMethods):
                         ret.append(tmp)
             return sorted(ret)
         else:
-            downloader = Downloader(self.requester, None, self.verify_ssl)
             auth, _ = self._file_server_capabilities(urls[path])
-            content = downloader.download(urls[path], auth=auth)
+            content = download(requester=self.requester, output=None, verify_ssl=self.verify_ssl,
+                               url=urls[path], auth=auth)
 
             return decode_text(content)
 

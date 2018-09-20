@@ -4,11 +4,10 @@ import io
 import time
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
-from conans.util.log import logger
 
 
 def download(requester, output, verify_ssl,
-             url, file_path, auth, retry, retry_wait, overwrite, headers):
+             url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False, headers=None):
     if file_path:
         file_path = os.path.abspath(file_path)
         if os.path.exists(file_path):
@@ -17,7 +16,9 @@ def download(requester, output, verify_ssl,
             else:
                 raise ConanException("Error, the file to download already exists: '{}'".format(
                     file_path))
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
+    pb_description = "Downloading {}".format(os.path.basename(url))
     for _ in range(retry):
         buffer = open(file_path, 'wb') if file_path else io.BytesIO()
         try:
@@ -30,17 +31,15 @@ def download(requester, output, verify_ssl,
                     raise ConanException("Error %d downloading file %s" % (r.status_code, url))
 
                 total_length = r.headers.get('content-length')
-                encoding = r.headers.get('content-encoding')
-                gzip = (encoding == "gzip")
+                # encoding = r.headers.get('content-encoding')
+                # gzip = (encoding == "gzip")
                 # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
                 # It will not send content-length or should be ignored
 
-                with progress_bar(total=int(total_length), output=output, desc=url,
+                # TODO: May disable progress bar if file is not big enough
+                with progress_bar(total=int(total_length), output=output, desc=pb_description,
                                   **tqdm_file_defaults) as pb:
                     for data in r.iter_content(chunk_size=1000):
-                        time.sleep(0.5)
-                        output.writeln("{}/{}: {}".format(len(data), int(total_length), url))
-                        #logger.info("{}/{}: {}".format(len(data), int(total_length), url))
                         pb.update(len(data))
                         buffer.write(data)
 
@@ -49,6 +48,8 @@ def download(requester, output, verify_ssl,
             time.sleep(retry_wait)
         finally:
             buffer.close()
+
+    # TODO: log a "retries exhausted" error
 
 
 if __name__ == '__main__':
