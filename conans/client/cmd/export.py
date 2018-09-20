@@ -104,7 +104,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
                 if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
                     if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
                         try:
-                            next_line = statements[i+1].lineno
+                            next_line = statements[i+1].lineno - 1
                         except IndexError:
                             next_line = stmt.lineno
                         replace = [line for line in lines[(stmt.lineno-1):next_line]
