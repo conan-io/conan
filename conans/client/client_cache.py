@@ -201,7 +201,7 @@ class ClientCache(SimplePaths):
         """Returns a list of plugins inside the plugins folder"""
         plugins = []
         for plugin_name in os.listdir(self.plugins_path):
-            if plugin_name.endswith(".py"):
+            if os.path.isfile(plugin_name) and plugin_name.endswith(".py"):
                 plugins.append(plugin_name[:-3])
         return plugins
 

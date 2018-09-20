@@ -41,6 +41,10 @@ class ConfigTest(unittest.TestCase):
         self.assertIn("You can't set a full section, please specify a key=value",
                       self.client.user_io.out)
 
+        error = self.client.run('config set proxies.http:Value', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Please specify 'key=value'", self.client.user_io.out)
+
     def define_test(self):
         self.client.run("config set general.fakeos=Linux")
         conf_file = load(self.client.paths.conan_conf_path)
