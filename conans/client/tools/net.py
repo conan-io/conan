@@ -51,7 +51,6 @@ def ftp_download(ip, filename, login='', password=''):
 
 def download(url, filename, verify=True, out=None, retry=2, retry_wait=5, overwrite=False,
              auth=None, headers=None):
-    # TODO: Move code out of this function
     out = out or ConanOutput(sys.stdout, True)
     download_func(requester=_global_requester, output=out, verify_ssl=verify,
                   url=url, file_path=filename, retry=retry, retry_wait=retry_wait,
