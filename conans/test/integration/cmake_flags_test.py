@@ -1,10 +1,12 @@
 import platform
 import unittest
 import os
-
-from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
+from semver import SemVer, lt as semver_lt
+
+from conans.test.utils.tools import TestClient
+from conans.test.utils.build_helpers import get_cmake_version
 
 
 conanfile_py = """
@@ -367,13 +369,25 @@ conan_set_std()
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelists})
 
+        def conan_set_std_branch():
+            # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
+            cmake_version = get_cmake_version()
+            return semver_lt(cmake_version, SemVer("3.12", loose=True), loose=True)
+
+
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
-                   "-s compiler.libcxx=libstdc++11")
-        self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
+               "-s compiler.libcxx=libstdc++11")
+        if conan_set_std_branch():
+            self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
+        else:
+            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 
         client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
                    "-s compiler.libcxx=libstdc++11")
-        self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+        if conan_set_std_branch():
+            self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
+        else:
+            self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS OFF", client.out)
 
     def fpic_applied_test(self):
         conanfile = """
