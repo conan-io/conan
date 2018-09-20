@@ -7,7 +7,7 @@ TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
 
-class BinaryFileWrapper(object):
+class _FileReaderWithProgressBar(object):
 
     tqdm_defaults = {'unit': 'B',
                      'unit_scale': True,
@@ -17,7 +17,7 @@ class BinaryFileWrapper(object):
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
-        self.ori_output = output
+        self._ori_output = output
 
         # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
         if not output.is_terminal:
@@ -47,7 +47,7 @@ class BinaryFileWrapper(object):
 
     def pb_write(self, message):
         """ Allow to write messages to output without interfering with the progress bar """
-        tqdm.write(message, file=self.ori_output)
+        tqdm.write(message, file=self._ori_output)
 
 
 class _NoTerminalOutput(object):
@@ -65,7 +65,7 @@ class _NoTerminalOutput(object):
 @contextmanager
 def open_binary(path, output, **kwargs):
     with open(path, mode='rb') as f:
-        file_wrapped = BinaryFileWrapper(f, output=output, **kwargs)
+        file_wrapped = _FileReaderWithProgressBar(f, output=output, **kwargs)
         yield file_wrapped
         file_wrapped.pb_close()
         if not output.is_terminal:
