@@ -35,7 +35,21 @@ def cpu_count():
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
-    if "64" in machine:
+    if "ppc64le" in machine:
+        return "ppc64le"
+    elif "ppc64" in machine:
+        return "ppc64"
+    elif "mips64" in machine:
+        return "mips64"
+    elif "mips" in machine:
+        return "mips"
+    elif "sparc64" in machine:
+        return "sparcv9"
+    elif "sparc" in machine:
+        return "sparc"
+    elif "aarch64" in machine:
+        return "armv8"
+    elif "64" in machine:
         return "x86_64"
     elif "86" in machine:
         return "x86"
@@ -43,6 +57,8 @@ def detected_architecture():
         return "armv8"
     elif "armv7" in machine:
         return "armv7"
+    elif "arm" in machine:
+        return "armv6"
 
     return None
 
