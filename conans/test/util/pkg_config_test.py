@@ -5,7 +5,8 @@ import unittest
 import platform
 import os
 from nose.plugins.attrib import attr
-from conans.tools import PkgConfig, environment_append
+from conans.tools import PkgConfig, fill_cppinfo_from_pc_file, environment_append
+from conans.test.utils.conanfile import MockConanfile, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 
@@ -104,3 +105,21 @@ Cflags: -I${includedir}"""
                         "-Wl,-rpath=/my_prefix/path/lib2")
             pkg_config = PkgConfig("MyLib")
             self.assertIn(expected, " ".join(lib for lib in pkg_config.libs))
+
+    def add_libraries_from_pc_test(self):
+        if platform.system() == "Windows":
+            return
+        tmp_dir = temp_folder()
+        filename = os.path.join(tmp_dir, 'libastral.pc')
+        with open(filename, 'w') as f:
+            f.write(libastral_pc)
+        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+            conanfile = MockConanfile(MockSettings({}))
+            fill_cppinfo_from_pc_file(conanfile, 'libastral')
+
+            self.assertEqual(conanfile.cpp_info.libs, ['astral'])
+            self.assertEqual(conanfile.cpp_info.libdirs, ['/usr/local/lib/libastral'])
+            self.assertEqual(conanfile.cpp_info.sharedlinkflags, ['-Wl,--whole-archive'])
+            self.assertEqual(conanfile.cpp_info.exelinkflags, ['-Wl,--whole-archive'])
+
+        os.unlink(filename)

@@ -98,3 +98,14 @@ class PkgConfig(object):
             for name in variable_names:
                 self._variables[name] = self._parse_output('variable=%s' % name)
         return self._variables
+
+
+def fill_cppinfo_from_pc_file(conanfile, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False,
+                              variables=None, print_errors=True):
+    pkg_config = PkgConfig(library, pkg_config_executable, static, msvc_syntax, variables, print_errors)
+    libs = [lib[2:] for lib in pkg_config.libs_only_l]  # cut -l prefix
+    lib_paths = [lib[2:] for lib in pkg_config.libs_only_L]  # cut -L prefix
+    conanfile.cpp_info.libs.extend(libs)
+    conanfile.cpp_info.libdirs.extend(lib_paths)
+    conanfile.cpp_info.sharedlinkflags.extend(pkg_config.libs_only_other)
+    conanfile.cpp_info.exelinkflags.extend(pkg_config.libs_only_other)

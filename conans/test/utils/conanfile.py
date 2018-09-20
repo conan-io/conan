@@ -14,23 +14,39 @@ class MockSettings(object):
 MockOptions = MockSettings
 
 
-class MockDepsCppInfo(object):
+class MockCppInfo(object):
 
     def __init__(self):
-        self.include_paths = []
-        self.lib_paths = []
+        self.includedirs = []
+        self.libdirs = []
+        self.resdirs = []
+        self.bindirs = []
+        self.builddirs = []
         self.libs = []
         self.defines = []
         self.cflags = []
         self.cppflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
+        self.rootpath = ""
         self.sysroot = ""
+
+
+class MockDepsCppInfo(MockCppInfo):
+
+    def __init__(self):
+        super(MockDepsCppInfo, self).__init__()
+        self.include_paths = []
+        self.lib_paths = []
+        self.bin_paths = []
+        self.build_paths = []
+        self.res_paths = []
 
 
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.cpp_info = MockCppInfo()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
