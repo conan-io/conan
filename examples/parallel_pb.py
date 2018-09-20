@@ -24,9 +24,9 @@ if __name__ == '__main__':
 
     output = ConanOutput(stream=sys.stdout, color=True)
 
-    urls = ['http://httpbin.org/bytes/20000',
-            'http://httpbin.org/bytes/10000',
-            'http://httpbin.org/bytes/30000']
+    urls = ['http://httpbin.org/bytes/2000000',
+            'http://httpbin.org/bytes/1000000',
+            'http://httpbin.org/bytes/3000000']
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         # Start the load operations and mark each future with its URL
@@ -36,10 +36,10 @@ if __name__ == '__main__':
             try:
                 data = future.result()
             except Exception as exc:
-                output.write('%r generated an exception: %s' % (url, exc))
+                output.writeln('%r generated an exception: %s' % (url, exc))
             else:
                 pass
-                output.write('%r page is %d bytes' % (url, len(data)))
+                output.writeln('%r page is %d bytes' % (url, len(data)))
 
     """
     r = download(requests, output=output, verify_ssl=True,
