@@ -217,14 +217,14 @@ class SystemPackageToolTest(unittest.TestCase):
     def system_package_tool_try_multiple_test(self):
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            # All packages are install (cmd call returns 0)
+            # One package is installed (cmd call returns 0)
             runner = RunnerOrderedMock(self)
             runner.commands.append(("dpkg -s a_package", 0))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertTrue(runner.is_empty())
 
-            # None is installed (cmd call returns 0)
+            # None is installed (cmd call returns 1)
             runner = RunnerOrderedMock(self)
             for pck in packages:
                 runner.commands.append(("dpkg -s {}".format(pck), 1))
@@ -234,7 +234,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install(packages)
             self.assertTrue(runner.is_empty())
 
-            # Fails to install any
+            # Fails to install any of them
             runner = RunnerOrderedMock(self)
             for pck in packages:
                 runner.commands.append(("dpkg -s {}".format(pck), 1))
