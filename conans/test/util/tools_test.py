@@ -723,7 +723,8 @@ class HelloConan(ConanFile):
 
         # Set the env with a PATH containing the vcvars paths
         tmp = tools.vcvars_dict(settings, only_diff=False)
-        with tools.environment_append({"path": ";".join(tmp["Path"])}):
+        tmp = {key.lower(): value for key, value in tmp.items()}
+        with tools.environment_append({"path": ";".join(tmp["path"])}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
             with tools.vcvars(settings):
