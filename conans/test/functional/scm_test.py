@@ -9,6 +9,8 @@ from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 from conans.util.files import load, rmdir, save, to_file_bytes
+from conans.client.tools.win import get_cased_path
+
 
 base = '''
 import os
@@ -102,7 +104,7 @@ class ConanLib(ConanFile):
         self.assertIn("lib/0.1@user/channel: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
-        curdir = self.client.current_folder.replace("\\", "/")
+        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
         conanfile = base.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self._commit_contents()
@@ -121,6 +123,12 @@ class ConanLib(ConanFile):
         self.assertIn("Revision deduced by 'auto'", self.client.out)
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
+
+        # check blank lines are respected in replacement
+        self.client.run("get lib/0.1@user/channel")
+        self.assertIn("""}
+
+    def build(self):""", self.client.out)
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir)
@@ -153,7 +161,7 @@ class ConanLib(ConanFile):
         """
         Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
         """
-        curdir = self.client.current_folder
+        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
         conanfile = base.format(url="auto", revision="auto")
         self.client.save({"conan/conanfile.py": conanfile, "myfile.txt": "content of my file"})
         self._commit_contents()

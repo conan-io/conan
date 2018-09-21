@@ -11,6 +11,36 @@ from nose.plugins.attrib import attr
 
 
 class PrivateBinariesTest(unittest.TestCase):
+    def test_transitive_private(self):
+        # https://github.com/conan-io/conan/issues/3523
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+    def package_info(self):
+        self.cpp_info.libs = [self.name]
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.replace("pass", "requires='PkgC/0.1@user/channel'")})
+        client.run("create . PkgB/0.1@user/channel")
+        client.save({"conanfile.py":
+                     conanfile.replace("pass", "requires=('PkgB/0.1@user/channel', 'private'), "
+                                               "'PkgC/0.1@user/channel'")})
+        client.run("create . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.replace("pass", "requires='PkgA/0.1@user/channel'")})
+        client.run("install . -g=cmake")
+        self.assertIn("PkgC/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      client.out)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        self.assertIn("[libs];PkgA;PkgC", ";".join(conanbuildinfo.splitlines()))
+        self.assertIn("PkgC/0.1/user/channel/package", conanbuildinfo)
+        self.assertIn("[includedirs_PkgC]", conanbuildinfo)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
+        client.run("info . --graph=file.html")
+        html = load(os.path.join(client.current_folder, "file.html"))
+        self.assertEqual(2, html.count("label: 'PkgC/0.1', shape: 'box'"))
 
     def test_private_regression_skip(self):
         # https://github.com/conan-io/conan/issues/3166
