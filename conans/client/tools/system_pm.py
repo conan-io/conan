@@ -149,7 +149,7 @@ class AptTool(object):
         _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name))
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg -s %s" % package_name, None)
+        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
         return exit_code == 0
 
 
