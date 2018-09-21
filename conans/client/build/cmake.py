@@ -1,6 +1,7 @@
 import os
 import platform
 from itertools import chain
+import subprocess
 
 from conans import tools
 from conans.client import defs_to_string, join_arguments
@@ -13,7 +14,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path
+from conans.util.files import mkdir, get_abs_path, decode_text
 
 
 class CMake(object):
@@ -324,3 +325,13 @@ class CMake(object):
                             dep_str = "${CONAN_%s_ROOT}" % dep.upper()
                             self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
                             tools.replace_in_file(path, from_str, dep_str, strict=False)
+
+    @staticmethod
+    def get_version():
+        try:
+            out, err = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            version_line = decode_text(out).split('\n', 1)[0]
+            version_str = version_line.rsplit(' ', 1)[-1]
+            return Version(version_str)
+        except Exception as e:
+            raise ConanException("Error retrieving CMake version: '{}'".format(e))

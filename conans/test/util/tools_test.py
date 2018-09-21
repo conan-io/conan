@@ -145,7 +145,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
                 # Debian
                 os_info.linux_distro = "debian"
-                runner.commands.append(("dpkg -s a_package", 1))
+                runner.commands.append(('dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"', 1))
                 runner.commands.append((sudo + "apt-get update", 0))
                 runner.commands.append(
                     (sudo + "apt-get install -y --no-install-recommends a_package", 1))
@@ -153,7 +153,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 with self.assertRaises(ConanException):
                     spt.install("a_package")
 
-                runner.commands.append(("dpkg -s a_package", 0))
+                runner.commands.append(('dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"', 0))
                 spt.install("a_package", force=False)
 
                 # MACos
@@ -219,7 +219,7 @@ class SystemPackageToolTest(unittest.TestCase):
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             # One package is installed (cmd call returns 0)
             runner = RunnerOrderedMock(self)
-            runner.commands.append(("dpkg -s a_package", 0))
+            runner.commands.append(('dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"', 0))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertTrue(runner.is_empty())
@@ -227,7 +227,7 @@ class SystemPackageToolTest(unittest.TestCase):
             # None is installed (cmd call returns 1)
             runner = RunnerOrderedMock(self)
             for pck in packages:
-                runner.commands.append(("dpkg -s {}".format(pck), 1))
+                runner.commands.append(('dpkg-query -W -f=\'${{Status}}\' {} | grep -q "ok installed"'.format(pck), 1))
             runner.commands.append(("sudo apt-get update", 0))
             runner.commands.append(("sudo apt-get install -y --no-install-recommends a_package", 0))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
@@ -237,7 +237,7 @@ class SystemPackageToolTest(unittest.TestCase):
             # Fails to install any of them
             runner = RunnerOrderedMock(self)
             for pck in packages:
-                runner.commands.append(("dpkg -s {}".format(pck), 1))
+                runner.commands.append(('dpkg-query -W -f=\'${{Status}}\' {} | grep -q "ok installed"'.format(pck), 1))
             runner.commands.append(("sudo apt-get update", 0))
             for pck in packages:
                 runner.commands.append(("sudo apt-get install -y --no-install-recommends %s" %
@@ -276,7 +276,7 @@ class SystemPackageToolTest(unittest.TestCase):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
             runner = RunnerOrderedMock(self)
             for pck in packages:
-                runner.commands.append(("dpkg -s {}".format(pck), 1))
+                runner.commands.append(('dpkg-query -W -f=\'${{Status}}\' {} | grep -q "ok installed"'.format(pck), 1))
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
@@ -304,7 +304,7 @@ class SystemPackageToolTest(unittest.TestCase):
         }):
             runner = RunnerOrderedMock(self)
             for pck in packages:
-                runner.commands.append(("dpkg -s {}".format(pck), 1))
+                runner.commands.append(('dpkg-query -W -f=\'${{Status}}\' {} | grep -q "ok installed"'.format(pck), 1))
             runner.commands.append(("sudo apt-get update", 0))
             for pck in packages:
                 runner.commands.append(("sudo apt-get install -y --no-install-recommends "
@@ -493,7 +493,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
-
+ 
         conanfile = """
 from conans import ConanFile, tools
 
