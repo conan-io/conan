@@ -90,9 +90,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     # Generate the scm_folder.txt file pointing to the src_path
     src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
+                                   scm_data)
 
+
+def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
-    conanfile_path = os.path.join(destination_folder, "conanfile.py")
     content = load(conanfile_path)
     lines = content.splitlines(True)
     tree = ast.parse(content)
