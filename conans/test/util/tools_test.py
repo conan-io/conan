@@ -721,10 +721,11 @@ class HelloConan(ConanFile):
         settings.arch = "x86"
         settings.arch_build = "x86_64"
 
-        # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
+        # Set the env with a PATH containing the vcvars paths
         tmp = tools.vcvars_dict(settings, only_diff=False)
-        with tools.environment_append(tmp):
+        with tools.environment_append({"path": ";".join(tmp["Path"])}):
             previous_path = os.environ["PATH"].split(";")
+            # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
             with tools.vcvars(settings):
                 path = os.environ["PATH"].split(";")
                 new_values = []

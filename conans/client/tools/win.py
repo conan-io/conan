@@ -333,14 +333,17 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                 # new elements
                 if old_value and value.endswith(os.pathsep + old_value):
                     tmp = value[:-(len(old_value) + 1)].split(os.pathsep)
-                    # vcvars doesn't look if previous paths are already set so clean the repeated to avoid
-                    # max path (or any other list env var) len issues:
-                    new_env[name_var] = []
-                    uniques = []
-                    for i in tmp:
-                        if i and i.lower() not in uniques:
-                            uniques.append(i.lower())
-                            new_env[name_var].append(i)
+                    if name_var.lower() == "path":
+                        # vcvars doesn't look if previous paths are already set so clean the repeated to avoid
+                        # max path (or any other list env var) len issues:
+                        new_env[name_var] = []
+                        uniques = []
+                        for i in tmp:
+                            if i and i.lower() not in uniques:
+                                uniques.append(i.lower())
+                                new_env[name_var].append(i)
+                    else:
+                        new_env[name_var] = tmp
                 elif value != old_value:
                     # Only if the vcvars changed something, we return the variable,
                     # otherwise is not vcvars related
