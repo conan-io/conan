@@ -307,13 +307,13 @@ class TestConan(ConanFile):
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conanmanifest.txt",
-                                 "Uploading conanfile.py",
-                                 "Uploading conan_export.tgz",
+                                 "Uploading conanmanifest.txt [done]",
+                                 "Uploading conanfile.py [done]",
+                                 "Uploading conan_export.tgz [done]",
                                  "Uploading package 1/1: myfakeid",
-                                 "Uploading conanmanifest.txt",
-                                 "Uploading conaninfo.txt",
-                                 "Uploading conan_package.tgz",
+                                 "Uploading conanmanifest.txt [done]",
+                                 "Uploading conaninfo.txt [done]",
+                                 "Uploading conan_package.tgz [done]",
                                  ])
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))

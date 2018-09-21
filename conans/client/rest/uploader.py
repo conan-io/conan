@@ -4,6 +4,7 @@ import time
 
 from conans.util.files import sha1sum, exception_message_safe
 from conans.util.files.binary_wrapper import open_binary
+from conans.errors import ConanException
 
 
 def upload(requester, output, verify_ssl,  # These were in the constructor
@@ -15,23 +16,33 @@ def upload(requester, output, verify_ssl,  # These were in the constructor
         dedup_headers.update({"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)})
         response = requester.put(url, data="", verify=verify_ssl, headers=dedup_headers, auth=auth)
         if response.status_code != 404:
-            return response  # TODO: return a ConanFuture
+            return response
 
     headers = headers or {}
-    with open_binary(abs_path, chunk_size=250, output=output) as f:
-        file_size = os.stat(abs_path).st_size
-        for _ in range(retry):
+    filename = os.path.basename(abs_path)
+    pb_desc = "Uploading {}".format(filename)
+    file_size = os.stat(abs_path).st_size
+    for n_retry in range(retry):
+        with open_binary(abs_path, chunk_size=1000, output=output, desc=pb_desc) as f:
             try:
                 data = IterableToFileAdapter(f, file_size)
                 response = requester.put(url, data=data, verify=verify_ssl, headers=headers,
                                          auth=auth)
                 # TODO: Maybe check status code and retry?
+                if not response.ok:
+                    raise ConanException("Error uploading file: %s, '%s'" % (filename,
+                                                                             response.content))
+
                 return response
             except Exception as e:
                 msg = exception_message_safe(e)
                 output.error(msg)
-                output.info("Waiting %d seconds to retry..." % retry_wait)
-                time.sleep(retry_wait)
+                if n_retry < (retry - 1):
+                    output.info("Waiting %d seconds to retry..." % retry_wait)
+                    time.sleep(retry_wait)
+                else:
+                    raise ConanException("Error uploading file '%s' to %s" % (os.path.basename(
+                        abs_path), url))
     return None
 
 
@@ -45,6 +56,9 @@ class IterableToFileAdapter(object):
 
     def __len__(self):
         return self.length
+
+    def __iter__(self):
+        return self.iterator.__iter__()
 
 
 if __name__ == '__main__':

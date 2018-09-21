@@ -26,7 +26,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.rest.uploader import IterableToFileAdapter
 from conans.client.tools.scm import Git
 from conans.client.userio import UserIO
 from conans.model.version import Version

@@ -402,7 +402,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with open_binary(src_path, desc="Decompressiong %s" % os.path.basename(src_path),
+        with open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
                          output=output) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:

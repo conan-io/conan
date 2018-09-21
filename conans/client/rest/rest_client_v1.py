@@ -5,18 +5,16 @@ from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.rest_client_common import RestCommonMethods
-from conans.client.rest.uploader_downloader import Uploader
 from conans.client.rest.downloader import download
+from conans.client.rest.uploader import upload
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, load
+from conans.util.files import decode_text
 from conans.util.log import logger
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE,\
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 
 
 def complete_url(base_url, url):
@@ -132,17 +130,15 @@ class RestV1Methods(RestCommonMethods):
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
         t1 = time.time()
         failed = []
-        uploader = Uploader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
-                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait,
-                                           headers=self._put_headers)
-                output.writeln("")
+                response = upload(requester=self.requester, output=output,
+                                  verify_ssl=self.verify_ssl, url=resource_url,
+                                  abs_path=files[filename], auth=auth, dedup=dedup,
+                                  retry=retry, retry_wait=retry_wait, headers=self._put_headers)
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
                     failed.append(filename)

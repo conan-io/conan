@@ -3,7 +3,6 @@ import time
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.rest_client_common import RestCommonMethods
-from conans.client.rest.uploader_downloader import Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -13,6 +12,7 @@ from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXP
 from conans.util.files import decode_text
 from conans.util.log import logger
 from conans.client.rest.downloader import download
+from conans.client.rest.uploader import upload
 
 
 class RestV2Methods(RestCommonMethods):
@@ -167,18 +167,16 @@ class RestV2Methods(RestCommonMethods):
     def _upload_files(self, files, base_url, retry, retry_wait):
         t1 = time.time()
         failed = []
-        uploader = Uploader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):
-            self._output.rewrite_line("Uploading %s" % filename)
             resource_url = "%s/%s" % (base_url, filename)
             try:
-                response = uploader.upload(resource_url, files[filename], auth=self.auth,
-                                           dedup=self._checksum_deploy, retry=retry,
-                                           retry_wait=retry_wait,
-                                           headers=self._put_headers)
-                self._output.writeln("")
+                response = upload(requester=self.requester, output=self._output,
+                                  verify_ssl=self.verify_ssl, url=resource_url,
+                                  abs_path=files[filename], auth=self.auth,
+                                  dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                  headers=self._put_headers)
                 if not response.ok:
                     self._output.error("\nError uploading file: %s, '%s'" % (filename,
                                                                              response.content))
