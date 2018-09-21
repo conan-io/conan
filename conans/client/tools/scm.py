@@ -126,8 +126,8 @@ class Git(SCMBase):
             pass
         return None
 
-    def get_qualified_remote_url(self):
-        url = self.get_remote_url()
+    def get_qualified_remote_url(self, remote_name=None):
+        url = self.get_remote_url(remote_name=remote_name)
         if url and os.path.exists(url):
             url = url.replace("\\", "/")
         return url
@@ -145,6 +145,8 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
 
+    get_revision = get_commit
+
     def is_pristine(self):
         status = self.run("status --porcelain").strip()
         if not status:
@@ -152,8 +154,6 @@ class Git(SCMBase):
         else:
             return False
         
-    get_revision = get_commit
-
     def get_repo_root(self):
         return self.run("rev-parse --show-toplevel")
 
