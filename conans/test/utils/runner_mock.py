@@ -5,8 +5,10 @@ class RunnerOrderedMock(object):
     def __init__(self, test_class):
         self.commands = []
         self._test_class = test_class
+        self.last_command = None
 
     def __call__(self, command, output, win_bash=False, subsystem=None):
+        self.last_command = command
         if self.is_empty():
             self._test_class.fail("Commands list exhausted, but runner called with '%s'" % command)
         expected, ret = self.commands.pop(0)
