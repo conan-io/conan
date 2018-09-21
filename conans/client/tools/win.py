@@ -489,4 +489,4 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
-        return conanfile._runner(wincmd, output=conanfile.output, subprocess=True)
+        return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)

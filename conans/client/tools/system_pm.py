@@ -1,4 +1,5 @@
 import os
+from six import string_types
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -53,6 +54,11 @@ class SystemPackageTool(object):
             return ZypperTool()
         else:
             return NullTool()
+
+    def add_repository(self, repository, repo_key=None, update=True):
+        self._tool.add_repository(repository, repo_key=repo_key)
+        if update:
+            self.update()
 
     def update(self):
         """
@@ -115,6 +121,9 @@ class SystemPackageTool(object):
 
 
 class NullTool(object):
+    def add_repository(self, repository, repo_key=None):
+        pass
+
     def update(self):
         pass
 
@@ -127,6 +136,11 @@ class NullTool(object):
 
 
 class AptTool(object):
+    def add_repository(self, repository, repo_key=None):
+        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository))
+        if repo_key:
+            _run(self._runner, "wget -qO - %s | %sapt-key add -" % (repo_key, self._sudo_str))
+
     def update(self):
         _run(self._runner, "%sapt-get update" % self._sudo_str)
 
@@ -135,11 +149,14 @@ class AptTool(object):
         _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name))
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg -s %s" % package_name, None)
+        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
         return exit_code == 0
 
 
 class YumTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("YumTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
 
@@ -152,6 +169,9 @@ class YumTool(object):
 
 
 class BrewTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("BrewTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "brew update")
 
@@ -164,6 +184,9 @@ class BrewTool(object):
 
 
 class PkgTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("PkgTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "%spkg update" % self._sudo_str)
 
@@ -176,6 +199,9 @@ class PkgTool(object):
 
 
 class PkgUtilTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("PkgUtilTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
 
@@ -188,6 +214,9 @@ class PkgUtilTool(object):
 
 
 class ChocolateyTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("ChocolateyTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "choco outdated")
 
@@ -201,6 +230,9 @@ class ChocolateyTool(object):
 
 
 class PacManTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("PacManTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "%spacman -Syyu --noconfirm" % self._sudo_str)
 
@@ -213,6 +245,9 @@ class PacManTool(object):
 
 
 class ZypperTool(object):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("ZypperTool::add_repository not implemented")
+
     def update(self):
         _run(self._runner, "%szypper --non-interactive ref" % self._sudo_str)
 

@@ -4,6 +4,8 @@ import os
 import sys
 from argparse import ArgumentError
 
+import six
+
 from conans import __version__ as client_version
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
@@ -101,6 +103,7 @@ class Command(object):
         try:
             commands = self._commands()
             method = commands[args.command]
+            self._warn_python2()
             method(["--help"])
         except KeyError:
             raise ConanException("Unknown command '%s'" % args.command)
@@ -163,6 +166,7 @@ class Command(object):
                             help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
+        self._warn_python2()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
                         visual_versions=args.ci_appveyor_win,
@@ -197,6 +201,7 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
+        self._warn_python2()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
                                 args.options, args.env, args.remote, args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder)
@@ -234,7 +239,7 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
-
+        self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
 
         if args.test_folder == "None":
@@ -282,6 +287,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
+        self._warn_python2()
         return self._conan.download(reference=args.reference, package=args.package,
                                     remote_name=args.remote, recipe=args.recipe)
 
@@ -539,6 +545,7 @@ class Command(object):
         except ConanException:
             pass
 
+        self._warn_python2()
         return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
@@ -578,6 +585,8 @@ class Command(object):
                                  " folder. Also an absolute path is allowed.")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
+
+        self._warn_python2()
 
         if args.build or args.configure or args.install or args.test:
             build, config, install, test = (bool(args.build), bool(args.configure),
@@ -629,6 +638,7 @@ class Command(object):
         except ConanException:
             pass
 
+        self._warn_python2()
         return self._conan.package(path=args.path,
                                    build_folder=args.build_folder,
                                    package_folder=args.package_folder,
@@ -665,7 +675,7 @@ class Command(object):
                                           "containing a conanfile.py or conanfile.txt file.")
         except ConanException:
             pass
-
+        self._warn_python2()
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
@@ -705,8 +715,8 @@ class Command(object):
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
 
         args = parser.parse_args(*args)
+        self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
-
         return self._conan.export_pkg(conanfile_path=args.path,
                                       name=name,
                                       version=version,
@@ -735,9 +745,10 @@ class Command(object):
                                               "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        args = parser.parse_args(*args)
-        name, version, user, channel = get_reference_fields(args.reference)
 
+        args = parser.parse_args(*args)
+        self._warn_python2()
+        name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source)
@@ -769,6 +780,8 @@ class Command(object):
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
         args = parser.parse_args(*args)
+
+        self._warn_python2()
 
         # NOTE: returns the expanded pattern (if a pattern was given), and checks
         # that the query parameter wasn't abused
@@ -819,6 +832,8 @@ class Command(object):
 
         if args.all and args.package:
             raise ConanException("Cannot specify both --all and --package")
+
+        self._warn_python2()
 
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force, packages=args.package or args.all)
@@ -1006,6 +1021,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
+
         if args.query and args.package:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
@@ -1019,6 +1035,9 @@ class Command(object):
         if args.no_overwrite and args.skip_upload:
             raise ConanException("'--skip-upload' argument cannot be used together "
                                  "with '--no-overwrite'")
+
+        self._warn_python2()
+
         if args.force:
             policy = UPLOAD_POLICY_FORCE
         elif args.no_overwrite == "all":
@@ -1222,6 +1241,8 @@ class Command(object):
         parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
 
+        self._warn_python2()
+
         self._conan.export_alias(args.reference, args.target)
 
     def _show_help(self):
@@ -1271,6 +1292,16 @@ class Command(object):
                     result[method_name] = method
         return result
 
+    def _warn_python2(self):
+        if six.PY2:
+            self._user_io.out.writeln("")
+            self._user_io.out.writeln("Python 2 will soon be deprecated. It is strongly "
+                                      "recommended to use Python 3 with Conan:",
+                                      front=Color.BRIGHT_YELLOW)
+            self._user_io.out.writeln("https://docs.conan.io/en/latest/installation.html"
+                                      "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
+            self._user_io.out.writeln("")
+
     @staticmethod
     def _check_query_parameter_and_get_reference(pattern, query):
         reference = None
@@ -1298,6 +1329,7 @@ class Command(object):
                 if command in ["-v", "--version"]:
                     self._user_io.out.success("Conan version %s" % client_version)
                     return False
+                self._warn_python2()
                 self._show_help()
                 if command in ["-h", "--help"]:
                     return False
