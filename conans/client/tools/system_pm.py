@@ -100,19 +100,24 @@ class SystemPackageTool(object):
         self._install_any(packages)
 
     def _installed(self, packages):
-        return all([self._tool.installed(pkg) for pkg in packages])
+        if not packages:
+            return True
+
+        for pkg in packages:
+            if self._tool.installed(pkg):
+                _global_output.info("Package already installed: %s" % pkg)
+                return True
+        return False
 
     def _install_any(self, packages):
-        def try_install(pck):
+        if len(packages) == 1:
+            return self._tool.install(packages[0])
+        for pkg in packages:
             try:
-                self._tool.install(pck)
-                return True
+                return self._tool.install(pkg)
             except ConanException:
-                return False
-
-        any_success = any([try_install(pck) for pck in packages])
-        if not any_success:
-            raise ConanException("Could not install any of '{}'".format("', '".join(packages)))
+                pass
+        raise ConanException("Could not install any of %s" % packages)
 
 
 class NullTool(object):
