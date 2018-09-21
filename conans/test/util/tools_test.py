@@ -59,6 +59,60 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           tools.system_pm._global_output)
 
+    def add_repositories_exception_cases_test(self):
+        os_info = OSInfo()
+        os_info.is_macos = False
+        os_info.is_linux = True
+        os_info.is_windows = False
+        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+
+        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+            spt = SystemPackageTool(os_info=os_info)
+            spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
+                               repo_key=None)
+
+    def add_repository_test(self):
+        class RunnerOrderedMock:
+            commands = []  # Command + return value
+
+            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
+                if not len(runner_self.commands):
+                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
+                expected, ret = runner_self.commands.pop(0)
+                self.assertEqual(expected, command)
+                return ret
+
+        def _run_add_repository_test(repository, gpg_key, sudo, update):
+            sudo_cmd = "sudo " if sudo else ""
+            runner = RunnerOrderedMock()
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
+            if gpg_key:
+                runner.commands.append(
+                    ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            if update:
+                runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
+
+            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": str(sudo)}):
+                os_info = OSInfo()
+                os_info.is_macos = False
+                os_info.is_linux = True
+                os_info.is_windows = False
+                os_info.linux_distro = "debian"
+                spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+                spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
+                self.assertEqual(len(runner.commands), 0)
+
+        # Run several test cases
+        repository = "deb http://repo/url/ saucy universe multiverse"
+        gpg_key = 'http://one/key.gpg'
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=False)
+        _run_add_repository_test(repository, gpg_key=None, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key=None, sudo=False, update=False)
+
     def system_package_tool_test(self):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
@@ -109,7 +163,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "dpkg -s a_package")
+            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -224,7 +278,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
@@ -501,7 +555,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
-
+ 
         conanfile = """
 from conans import ConanFile, tools
 
@@ -810,9 +864,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def run_in_bash_test(self):
-        if platform.system() != "Windows":
-            return
 
         class MockConanfile(object):
             def __init__(self):
@@ -824,22 +877,22 @@ ProgramFiles(x86)=C:\Program Files (x86)
                     def __call__(self, command, output, log_filepath=None,
                                  cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
-                self._runner = MyRun()
+                self._conan_runner = MyRun()
 
         conanfile = MockConanfile()
         with patch.object(OSInfo, "bash_path", return_value='bash'):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn("bash", conanfile._runner.command)
-            self.assertIn("--login -c", conanfile._runner.command)
-            self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
+            self.assertIn("bash", conanfile._conan_runner.command)
+            self.assertIn("--login -c", conanfile._conan_runner.command)
+            self.assertIn("^&^& a_command.bat ^", conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._conan_runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
@@ -847,7 +900,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
                                       env={"PATH": "/other/path", "MYVAR": "34"})
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
+                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def download_retries_test(self):
         http_server = StoppableThreadBottle()

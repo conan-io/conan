@@ -100,8 +100,8 @@ class ConanServiceTest(unittest.TestCase):
         files = hello_source_files("package")
         save_files(self.server_store.package(self.package_reference), files)
 
-    def test_get_conanfile_snapshot(self):
-        snap = self.service.get_conanfile_snapshot(self.conan_reference)
+    def test_get_recipe_snapshot(self):
+        snap = self.service.get_recipe_snapshot(self.conan_reference)
         base_path = self.server_store.export(self.conan_reference)
 
         snap_expected = {'hello.cpp': md5sum(os.path.join(base_path, "hello.cpp")),
