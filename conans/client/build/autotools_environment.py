@@ -9,6 +9,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 build_type_flags, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_RES
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
@@ -144,11 +145,18 @@ class AutoToolsBuildEnvironment(object):
         if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
-            elif not any(["--prefix=" in arg for arg in args]):
+            elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
-
-            if not any(["--libdir=" in arg for arg in args]):
-                args.append("--libdir=${prefix}/lib")
+            for varname in ["bindir", "sbin", "libexec"]:
+                if not self._is_flag_in_args(varname, args):
+                    args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
+            if not self._is_flag_in_args("libdir", args):
+                args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
+            for varname in ["includedir", "oldincludedir"]:
+                if not self._is_flag_in_args(varname, args):
+                    args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
+            if not self._is_flag_in_args("datarootdir", args):
+                args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
@@ -164,6 +172,11 @@ class AutoToolsBuildEnvironment(object):
         if self._win_bash:
             path = unix_path(path, path_flavor=self.subsystem)
         return '"%s"' % path if " " in path else path
+
+    @staticmethod
+    def _is_flag_in_args(varname, args):
+        flag = "--%s=" % varname
+        return any([flag in arg for arg in args])
 
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
