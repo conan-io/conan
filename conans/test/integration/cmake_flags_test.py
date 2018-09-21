@@ -3,10 +3,10 @@ import unittest
 import os
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
-from semver import SemVer, lt as semver_lt
 
+from conans.model.version import Version
+from conans.client.build.cmake import CMake
 from conans.test.utils.tools import TestClient
-from conans.test.utils.build_helpers import get_cmake_version
 
 
 conanfile_py = """
@@ -371,9 +371,8 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = get_cmake_version()
-            return semver_lt(cmake_version, SemVer("3.12", loose=True), loose=True)
-
+            cmake_version = CMake.get_version()
+            return cmake_version < Version("3.12")
 
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
                "-s compiler.libcxx=libstdc++11")
