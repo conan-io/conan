@@ -288,6 +288,13 @@ def unserial_settings(data):
     return result
 
 
+def serial_lock_graph(graph):
+    result = {}
+    result["nodes"] = {str(id(n)): n.conan_ref.serial() for n in graph.nodes}
+    result["edges"] = [serial_edge(e) for n in graph.nodes for e in n.dependencies]
+    return result
+
+
 def serial_graph(graph):
     result = {}
     result["nodes"] = {str(id(n)): serial_node(n) for n in graph.nodes}

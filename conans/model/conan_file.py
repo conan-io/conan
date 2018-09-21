@@ -109,9 +109,9 @@ class ConanFile(object):
         # an output stream (writeln, info, warn error)
         self.output = output
         # something that can run commands, as os.sytem
-        self._runner = runner
-        self._user = user
-        self._channel = channel
+        self._conan_runner = runner
+        self._conan_user = user
+        self._conan_channel = channel
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -149,15 +149,15 @@ class ConanFile(object):
             pass
 
         # user specified env variables
-        self._env_values = env.copy()  # user specified -e
+        self._conan_env_values = env.copy()  # user specified -e
 
     @property
     def env(self):
-        """Apply the self.deps_env_info into a copy of self._env_values (will prioritize the
-        self._env_values, user specified from profiles or -e first, then inherited)"""
+        """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
+        self._conan_env_values, user specified from profiles or -e first, then inherited)"""
         # Cannot be lazy cached, because it's called in configure node, and we still don't have
         # the deps_env_info objects available
-        tmp_env_values = self._env_values.copy()
+        tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
 
         ret, multiple = tmp_env_values.env_dicts(self.name)
@@ -166,21 +166,21 @@ class ConanFile(object):
 
     @property
     def channel(self):
-        if not self._channel:
-            self._channel = os.getenv("CONAN_CHANNEL")
-            if not self._channel:
+        if not self._conan_channel:
+            self._conan_channel = os.getenv("CONAN_CHANNEL")
+            if not self._conan_channel:
                 raise ConanException("CONAN_CHANNEL environment variable not defined, "
                                      "but self.channel is used in conanfile")
-        return self._channel
+        return self._conan_channel
 
     @property
     def user(self):
-        if not self._user:
-            self._user = os.getenv("CONAN_USERNAME")
-            if not self._user:
+        if not self._conan_user:
+            self._conan_user = os.getenv("CONAN_USERNAME")
+            if not self._conan_user:
                 raise ConanException("CONAN_USERNAME environment variable not defined, "
                                      "but self.user is used in conanfile")
-        return self._user
+        return self._conan_user
 
     def collect_libs(self, folder="lib"):
         self.output.warn("Use 'self.collect_libs' is deprecated, "
@@ -241,14 +241,15 @@ class ConanFile(object):
             ignore_errors=False, run_environment=False):
         def _run():
             if not win_bash:
-                return self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw)
         if run_environment:
             with tools.run_environment(self):
                 if os_info.is_macos:
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''), command)
+                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                                                             command)
                 retcode = _run()
         else:
             retcode = _run()
@@ -270,7 +271,7 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        if self.name and self.version and self._channel and self._user:
+        if self.name and self.version and self._conan_channel and self._conan_user:
             return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
         elif self.name and self.version:
             return "%s/%s@PROJECT" % (self.name, self.version)

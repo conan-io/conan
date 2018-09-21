@@ -116,6 +116,8 @@ class ConanManager(object):
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
 
+        self._user_io.out.info("Configuration:")
+        self._user_io.out.writeln(profile.dumps())
         result = self._graph_manager.load_graph(reference, create_reference, profile,
                                                 build_modes, False, update, remote_name, self._recorder,
                                                 None)

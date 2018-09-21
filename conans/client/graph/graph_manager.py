@@ -106,8 +106,8 @@ class GraphManager(object):
                 require.conan_reference = require.range_reference = reference
             else:
                 conanfile.requires(str(reference))
-            conanfile._user = reference.user
-            conanfile._channel = reference.channel
+            conanfile._conan_user = reference.user
+            conanfile._conan_channel = reference.channel
 
         # Computing the full dependency graph
         cache_settings = self._client_cache.settings.copy()
