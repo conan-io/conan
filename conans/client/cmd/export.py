@@ -123,7 +123,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
-    new_text = "scm = {" + ",\n           ".join("'%s': '%s'" % (k, v) for k,v in scm_data.items()) + "}\n"
+    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     save(conanfile_path, content)
 
