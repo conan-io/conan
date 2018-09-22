@@ -2,6 +2,8 @@
 import os
 import shutil
 import unittest
+import six
+from collections import OrderedDict
 
 from conans.util.files import save, load
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
@@ -10,20 +12,20 @@ from conans.test.utils.test_files import temp_folder
 
 
 class ReplaceSCMDataInConanfileTest(unittest.TestCase):
-    conanfile = """
+    conanfile = six.u("""
 from conans import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
-    scm = {{'type': 'git',
-           'url': '{url}',
-           'revision': '{revision}'}}
+    scm = {{'revision': '{revision}',
+           'type': 'git',
+           'url': '{url}'}}
     
     {after_scm}
 
 {after_recipe}
-"""
+""")
 
     def run(self, *args, **kwargs):
         self.tmp_folder = temp_folder()
@@ -41,6 +43,7 @@ class ConanLib(ConanFile):
         save(self.conanfile_path, content=self.conanfile.format(url='auto', revision='auto',
                                                                 after_scm=after_scm,
                                                                 after_recipe=after_recipe))
+        scm_data = OrderedDict(sorted(scm_data.items(), key=lambda x: x[0]))  # py2, py3 same order
         _replace_scm_data_in_conanfile(self.conanfile_path, scm_data)
         self.assertEqual(load(self.conanfile_path), target_conanfile)
         _parse_file(self.conanfile_path)  # Check that the resulting file is valid python code.
