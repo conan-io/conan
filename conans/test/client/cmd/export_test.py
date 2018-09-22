@@ -5,6 +5,7 @@ import unittest
 
 from conans.util.files import save, load
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
+from conans.client.loader import _parse_file
 from conans.test.utils.test_files import temp_folder
 
 
@@ -41,8 +42,8 @@ class ConanLib(ConanFile):
                                                                 after_scm=after_scm,
                                                                 after_recipe=after_recipe))
         _replace_scm_data_in_conanfile(self.conanfile_path, scm_data)
-        print(load(self.conanfile_path))
         self.assertEqual(load(self.conanfile_path), target_conanfile)
+        _parse_file(self.conanfile_path)  # Check that the resulting file is valid python code.
 
     def test_conanfile_after_scm(self):
         scm_data = {'type': 'git',
