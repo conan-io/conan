@@ -411,7 +411,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": dep_conanfile})
         client.run("create . Consumer/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
-        self.assertNotIn("latest", client.out)
+        self.assertNotIn("latest@user", client.out)
 
     def repeated_alias_test(self):
         client = TestClient()

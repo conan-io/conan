@@ -1,3 +1,4 @@
+import ast
 import os
 import shutil
 
@@ -9,7 +10,7 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
 
@@ -60,7 +61,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
                           keep_source)
 
 
-def _capture_export_scm_data(conanfile, src_path, destination_folder, output, paths, conan_ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
 
     scm_src_file = paths.scm_folder(conan_ref)
     if os.path.exists(scm_src_file):
@@ -71,7 +72,7 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return
 
-    scm = SCM(scm_data, src_path)
+    scm = SCM(scm_data, conanfile_dir)
 
     if scm_data.url == "auto":
         origin = scm.get_remote_url()
@@ -87,8 +88,38 @@ def _capture_export_scm_data(conanfile, src_path, destination_folder, output, pa
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     # Generate the scm_folder.txt file pointing to the src_path
+    src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
+                                   scm_data)
+
+
+def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
+    # Parsing and replacing the SCM field
+    content = load(conanfile_path)
+    lines = content.splitlines(True)
+    tree = ast.parse(content)
+    to_replace = []
+    for item in tree.body:
+        if isinstance(item, ast.ClassDef):
+            statements = item.body
+            for i, stmt in enumerate(item.body):
+                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                    if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
+                        try:
+                            next_line = statements[i+1].lineno - 1
+                        except IndexError:
+                            next_line = stmt.lineno
+                        replace = [line for line in lines[(stmt.lineno-1):next_line]
+                                   if line.strip()]
+                        to_replace.append("".join(replace).lstrip())
+                        break
+    if len(to_replace) != 1:
+        raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
+
+    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
+    content = content.replace(to_replace[0], new_text)
+    save(conanfile_path, content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
