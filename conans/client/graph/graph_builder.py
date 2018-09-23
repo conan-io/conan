@@ -11,6 +11,80 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.model.workspace import WORKSPACE_FILE
 
 
+class DepsGraphLockBuilder(object):
+    def __init__(self, proxy, output, loader, resolver, workspace, recorder):
+        self._proxy = proxy
+        self._output = output
+        self._loader = loader
+        self._workspace = workspace
+        self._recorder = recorder
+
+    def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile,
+                   graph_lock):
+        """graph_lock: #NodeId: Pkg/version@user/channel#RR:#ID#BR
+        """
+        check_updates = check_updates or update
+        dep_graph = DepsGraph()
+        # compute the conanfile entry point for this dependency graph
+        root_node = Node(None, conanfile)
+        dep_graph.add_node(root_node)
+        # enter recursive computation
+        self._load_deps(root_node, dep_graph, check_updates, update, remote_name,
+                        processed_profile, graph_lock)
+        dep_graph.compute_package_ids_lock()
+        return dep_graph
+
+    def _load_deps(self, node, down_ref, down_options, dep_graph, check_updates, update,
+                   remote_name, processed_profile, graph_lock):
+        # basic node configuration
+        new_options = self._config_node(node, down_ref, down_options)
+
+        # Defining explicitly the requires
+        requires = Requirements()
+        for dependency, sub_graph_lock in graph_lock.dependencies():
+            requires.add(dependency.ref, dependency.private)
+
+            previous = public_deps.get(name)
+            if not previous:  # new node, must be added and expanded
+                new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
+                                                 check_updates, update, remote_name,
+                                                 processed_profile)
+                # RECURSION!
+                self._load_deps(new_node, dep_graph, new_public_deps, node.conan_ref,
+                                new_options, check_updates, update,
+                                remote_name, processed_profile)
+            else:
+                dep_graph.add_edge(node, previous_node)
+        
+        # Just in case someone is checking it
+        node.conanfile.requires = requires
+
+    def _config_node(self, node, down_ref, down_options):
+        try:
+            conanfile, conanref = node.conanfile, node.conan_ref
+            # Avoid extra time manipulating the sys.path for python
+            with get_env_context_manager(conanfile, without_python=True):
+                with conanfile_exception_formatter(str(conanfile), "config_options"):
+                    conanfile.config_options()
+                conanfile.options.propagate_upstream(down_options, down_ref, conanref)
+
+                with conanfile_exception_formatter(str(conanfile), "configure"):
+                    conanfile.configure()
+
+                conanfile.settings.validate()  # All has to be ok!
+                conanfile.options.validate()
+
+                new_options = conanfile.options.deps_package_values
+        except ConanExceptionInUserConanfileMethod:
+            raise
+        except ConanException as e:
+            raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
+        except Exception as e:
+            raise ConanException(e)
+
+        return new_options
+
+
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
@@ -23,6 +97,8 @@ class DepsGraphBuilder(object):
         self._recorder = recorder
 
     def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile):
+        """graph_lock: #NodeId: Pkg/version@user/channel#RR:#ID#BR
+        """
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
