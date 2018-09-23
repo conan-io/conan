@@ -2,8 +2,6 @@ import json
 
 from conans.client.tools.scm import Git
 from conans.errors import ConanException
-from conans.util.files import load, save
-import re
 
 
 class SCMData(object):
@@ -36,13 +34,6 @@ class SCMData(object):
              "subfolder": self.subfolder, "submodule": self.submodule}
         d = {k: v for k, v in d.items() if v}
         return json.dumps(d, sort_keys=True)
-
-    def replace_in_file(self, path):
-        content = load(path)
-        dumps = self.__repr__()
-        dumps = ",\n          ".join(dumps.split(","))
-        content = re.sub(r"scm\s*=\s*{[^}]*}", "scm = %s" % dumps, content)
-        save(path, content)
 
 
 class SCM(object):
