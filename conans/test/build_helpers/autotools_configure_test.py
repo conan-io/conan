@@ -513,12 +513,11 @@ class HelloConan(ConanFile):
     def autotools_prefix_libdir_test(self):
         runner = RunnerOrderedMock(self)
         conanfile = MockConanfile(MockSettings({}), None, runner)
+
         # Package folder is not defined
         runner.commands.append(("./configure  ", 0))
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
-        # self.assertNotIn("--prefix", runner.command_called)
-        # self.assertNotIn("--libdir", runner.command_called)
 
         # package folder defined
         conanfile.package_folder = "/package_folder"

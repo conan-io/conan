@@ -203,7 +203,7 @@ class SystemPackageToolTest(unittest.TestCase):
                     spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
                     spt.update()
 
-                    runner.commands.append(("choco insall --yes a_package", 0))
+                    runner.commands.append(("choco install --yes a_package", 0))
                     spt.install("a_package", force=True)
 
                     runner.commands.append(('choco search --local-only --exact a_package | '
