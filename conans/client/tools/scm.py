@@ -113,18 +113,12 @@ class Git(SCMBase):
     def get_remote_url(self, remote_name=None):
         self._check_git_repo()
         remote_name = remote_name or "origin"
-        try:
-            remotes = self.run("remote -v")
-            for remote in remotes.splitlines():
-                try:
-                    name, url = remote.split(None, 1)
-                    url, _ = url.rsplit(None, 1)
-                    if name == remote_name:
-                        return url
-                except Exception:
-                    pass
-        except subprocess.CalledProcessError:
-            pass
+        remotes = self.run("remote -v")
+        for remote in remotes.splitlines():
+            name, url = remote.split(None, 1)
+            if name == remote_name:
+                url, _ = url.rsplit(None, 1)
+                return url
         return None
 
     def is_local_repository(self):
