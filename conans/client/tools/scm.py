@@ -3,7 +3,7 @@ import os
 import sys
 import re
 import subprocess
-from six.moves.urllib.parse import urlparse, quote_plus
+from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
 
 from conans.client.tools.env import no_op, environment_append
@@ -134,6 +134,8 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git commit from '%s': %s" % (self.folder, str(e)))
 
+    get_revision = get_commit_hash
+
     def is_pristine(self):
         self._check_git_repo()
         status = self.run("status --porcelain").strip()
@@ -174,28 +176,28 @@ class SVN(SCMBase):
 
     def run(self, command):
         # Ensure we always pass some params
-        return super(SVN, self).run(command="{} --no-auth-cache --non-interactive".format(command))
+        return super(SVN, self).run(command="{} --no-auth-cache".format(command))
 
-    def clone(self, url, submodule=None):
-        assert submodule is None, "Argument not handled"
-        assert os.path.exists(self.folder), "It guaranteed to exists according to SCMBase::__init__"
-        params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
-
+    def checkout(self, url, revision="HEAD"):
         output = ""
-        if not os.path.exists(os.path.join(self.folder, '.svn')):
-            url = self.get_url_with_credentials(url)
-            command = 'co "{url}" . {params}'.format(url=url, params=params)
-            output += self.run(command)
-        output += self.run("revert . --recursive {params}".format(params=params))
-        # output += self.run("cleanup . --remove-unversioned --remove-ignored {params}".format(params=params))
-
+        try:
+            self._check_svn_repo()
+        except ConanException:
+            params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
+            output += self.run('co "{url}" . {params}'.format(url=url, params=params))
+        else:
+            assert url == self.get_remote_url(), "%s != %s" % (url, self.get_remote_url())
+            output += self.run("revert . --recursive")
+        finally:
+            output += self.update(revision=revision)
         return output
 
-    def checkout(self, element, submodule=None):
-        # Element can only be a revision number
-        return self.run("update -r {rev}".format(rev=element))
+    def update(self, revision='HEAD'):
+        self._check_svn_repo()
+        return self.run("update -r {rev}".format(rev=revision))
 
     def excluded_files(self):
+        self._check_svn_repo()
         excluded_list = []
         output = self.run("status --no-ignore")
         for it in output.splitlines():
@@ -216,7 +218,7 @@ class SVN(SCMBase):
         
     def is_local_repository(self):
         url = self.get_remote_url()
-        return url.startswith("file://")   
+        return url.startswith("file://") and os.path.exists(unquote(url[len('file://'):]))
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
@@ -256,3 +258,9 @@ class SVN(SCMBase):
                 return branch.group(0)
         except Exception as e:
             raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
+
+    def _check_svn_repo(self):
+        try:
+            self.run("info")
+        except Exception:
+            raise ConanException("Not a valid SVN repository")

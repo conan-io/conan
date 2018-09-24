@@ -67,11 +67,14 @@ class SCM(object):
     def excluded_files(self):
         return self.repo.excluded_files()
 
-    def clone(self):
-        return self.repo.clone(self._data.url)
-
     def checkout(self):
-        return self.repo.checkout(self._data.revision, submodule=self._data.submodule)
+        output= ""
+        if self._data.type == "git":
+            output += self.repo.clone(url=self._data.url)
+            output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
+        else:
+            output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
+        return output
 
     def get_remote_url(self):
         return self.repo.get_remote_url()
@@ -86,7 +89,10 @@ class SCM(object):
         return self.repo.get_repo_root()
 
     def get_qualified_remote_url(self):
-        return self.repo.get_qualified_remote_url()
+        if self._data.type == "git":
+            return self.repo.get_remote_url()
+        else:
+            return self.repo.get_qualified_remote_url()
 
     def is_local_repository(self):
         return self.repo.is_local_repository()

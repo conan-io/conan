@@ -190,6 +190,5 @@ def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir, output=output)
-        scm.clone()
         scm.checkout()
     _clean_source_folder(dest_dir)
