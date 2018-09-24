@@ -83,11 +83,11 @@ def _visual_compiler(output, version):
 
 
 def latest_visual_studio_version_installed(output):
-    last_version = None
-    for version in ["8", "9", "10", "11", "12", "14", "15"]:
+    for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
         vs = _visual_compiler(output, version)
-        last_version = vs or last_version
-    return last_version
+        if vs:
+            return vs
+    return None
 
 
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
