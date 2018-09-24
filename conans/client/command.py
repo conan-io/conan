@@ -11,7 +11,7 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 
-from conans.errors import ConanException, NoRemoteAvailable
+from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
@@ -19,6 +19,16 @@ from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
+
+
+# Exit codes for conan command:
+SUCCESS = 0                         # 0: Success (done)
+ERROR_GENERAL = 1                   # 1: General ConanException error (done)
+ERROR_MIGRATION = 2                 # 2: Migration error
+USER_CTRL_C = 3                     # 3: Ctrl+C
+USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
+ERROR_SIGTERM = 5                   # 5: SIGTERM
+ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
 
 
 class Extender(argparse.Action):
@@ -1316,7 +1326,7 @@ class Command(object):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods
         """
-        errors = False
+        ret_code = SUCCESS
         try:
             try:
                 command = args[0][0]
@@ -1337,24 +1347,28 @@ class Command(object):
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
-            errors = True
+            ret_code = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:
                 logger.error(exc)
                 self._user_io.out.error("Exiting with code: %d" % exc.code)
-            errors = exc.code
+            ret_code = exc.code
+        except ConanInvalidConfiguration as exc:
+            ret_code = ERROR_INVALID_CONFIGURATION
+            msg = exception_message_safe(exc)
+            self._user_io.out.error(msg)
         except ConanException as exc:
-            errors = True
+            ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
-            errors = True
+            ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
 
-        return errors
+        return ret_code
 
 
 def get_reference_fields(arg_reference):
@@ -1444,11 +1458,13 @@ def main(args):
         2: Migration error
         3: Ctrl+C
         4: Ctrl+Break
+        5: SIGTERM
+        6: Invalid configuration (done)
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
-        sys.exit(2)
+        sys.exit(ERROR_MIGRATION)
 
     outputer = CommandOutputer(user_io, client_cache)
     command = Command(conan_api, client_cache, user_io, outputer)
@@ -1458,15 +1474,15 @@ def main(args):
 
         def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
-            sys.exit(3)
+            sys.exit(USER_CTRL_C)
 
         def sigterm_handler(_, __):
             print('Received SIGTERM!')
-            sys.exit(5)
+            sys.exit(ERROR_SIGTERM)
 
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
-            sys.exit(4)
+            sys.exit(USER_CTRL_BREAK)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
         signal.signal(signal.SIGTERM, sigterm_handler)
