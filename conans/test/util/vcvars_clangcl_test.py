@@ -7,7 +7,9 @@ import unittest
 from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
+from conans.errors import ConanException
 from conans import tools
+from mock import mock
 
 
 @attr('visual_studio')
@@ -34,3 +36,14 @@ class VCVarsClangClTest(unittest.TestCase):
         command = tools.vcvars_command(settings)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('amd64', command)
+
+    def test_no_msvc(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = 'clang'
+        settings.arch = 'x86_64'
+        settings.os = 'Windows'
+
+        with mock.patch('conans.client.tools.win.latest_visual_studio_version_installed',
+                        mock.MagicMock(return_value=(None, None))):
+            with self.assertRaises(ConanException):
+                tools.vcvars_command(settings)
