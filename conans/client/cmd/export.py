@@ -58,7 +58,6 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
-    assert os.path.exists(conanfile_cache_path)
     plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
 
