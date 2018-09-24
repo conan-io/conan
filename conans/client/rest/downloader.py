@@ -32,9 +32,10 @@ def download(requester, output, verify_ssl,
                 raise ConanException("Error %d downloading file %s" % (r.status_code, url))
 
             try:
-                total_length = r.headers.get('content-length')
+                total_length = r.headers.get('content-length') or len(r.content)
                 # encoding = r.headers.get('content-encoding')
                 # gzip = (encoding == "gzip")
+
                 # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
                 # It will not send content-length or should be ignored
 
