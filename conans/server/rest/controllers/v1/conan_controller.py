@@ -47,13 +47,13 @@ class ConanController(Controller):
             return urls_norm
 
         @app.route(r.recipe, method=["GET"])
-        def get_conanfile_snapshot(name, version, username, channel, auth_user):
+        def get_recipe_snapshot(name, version, username, channel, auth_user):
             """
             Get a dictionary with all files and their each md5s
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
-            snapshot = conan_service.get_conanfile_snapshot(reference)
+            snapshot = conan_service.get_recipe_snapshot(reference)
             snapshot_norm = {filename.replace("\\", "/"): the_md5
                              for filename, the_md5 in snapshot.items()}
             return snapshot_norm
