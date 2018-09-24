@@ -1,6 +1,9 @@
 
 import os
-from contextlib import contextmanager, ExitStack
+try:
+    from contextlib import contextmanager, ExitStack
+except ImportError:
+    from contextlib2 import contextmanager, ExitStack
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
 
 
