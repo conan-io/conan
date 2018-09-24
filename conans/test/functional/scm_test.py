@@ -123,6 +123,12 @@ class ConanLib(ConanFile):
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
 
+        # check blank lines are respected in replacement
+        self.client.run("get lib/0.1@user/channel")
+        self.assertIn("""}
+
+    def build(self):""", self.client.out)
+
         # Export again but now with absolute reference, so no pointer file is created nor kept
         git = Git(curdir)
         self.client.save({"conanfile.py": base.format(url=curdir, revision=git.get_revision())})
