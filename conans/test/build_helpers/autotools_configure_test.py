@@ -454,7 +454,7 @@ class HelloConan(ConanFile):
         self.assertFalse(ab.host)
         self.assertFalse(ab.target)
 
-        runner.commands.append(("./configure  ", 0))  # TODO: Blanks at he end?
+        runner.commands.append(("./configure  ", 0))
         ab.configure()
 
         runner.commands.append(("./configure  --host=x86_64-apple-darwin", 0))
@@ -474,8 +474,7 @@ class HelloConan(ConanFile):
                                   None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         if platform.system() == "Windows":
-            runner.commands.append(("./configure  --build=x86_64-apple-darwin "
-                                    "--host=x86_64-w64-mingw32", 0))
+            runner.commands.append(("./configure  ", 0))
         elif platform.system() == "Linux":
             runner.commands.append(("./configure  --build=x86_64-linux-gnu "
                                     "--host=x86_64-w64-mingw32", 0))
@@ -523,7 +522,7 @@ class HelloConan(ConanFile):
         conanfile.package_folder = "/package_folder"
         if platform.system() == "Windows":
             runner.commands.append(
-                ("./configure --prefix=/package_folder --libdir=${prefix}/lib", 0))
+                ("./configure --prefix=/package_folder --libdir=${prefix}/lib ", 0))
         else:
             runner.commands.append(
                 ("./configure '--prefix=/package_folder' '--libdir=${prefix}/lib' ", 0))
@@ -532,7 +531,7 @@ class HelloConan(ConanFile):
         # --prefix already used in args
         if platform.system() == "Windows":
             runner.commands.append(
-                ("./configure --prefix=/my_package_folder --libdir=${prefix}/lib", 0))
+                ("./configure --prefix=/my_package_folder --libdir=${prefix}/lib ", 0))
         else:
             runner.commands.append(
                 ("./configure '--prefix=/my_package_folder' '--libdir=${prefix}/lib' ", 0))
@@ -541,7 +540,7 @@ class HelloConan(ConanFile):
         # --libdir already used in args
         if platform.system() == "Windows":
             runner.commands.append(
-                ("./configure --libdir=/my_package_folder/superlibdir --prefix=/package_folder", 0))
+                ("./configure --libdir=/my_package_folder/superlibdir --prefix=/package_folder ", 0))
         else:
             runner.commands.append(
                 ("./configure '--libdir=/my_package_folder/superlibdir' "
