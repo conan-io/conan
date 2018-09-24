@@ -920,6 +920,26 @@ ProgramFiles(x86)=C:\Program Files (x86)
             host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
             return build, host
 
+        build, host = get_values("Linux", "armv6", "Linux", "armv6")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
+        self.assertEquals(build, "sparc-linux-gnu")
+        self.assertEquals(host, "sparc64-linux-gnu")
+
+        build, host = get_values("Linux", "mips", "Linux", "mips64")
+        self.assertEquals(build, "mips-linux-gnu")
+        self.assertEquals(host, "mips64-linux-gnu")
+
+        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
+        self.assertEquals(build, "powerpc64le-linux-gnu")
+        self.assertEquals(host, "powerpc64-linux-gnu")
+
+        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "arm-linux-gnueabihf")
@@ -1012,18 +1032,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
 
-        for os in ["Windows", "Linux"]:
+        for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
 
                 output = ""
                 if arch == "x86_64":
                     output += "x86_64"
                 else:
-                    output += "i686" if os != "Linux" else "x86"
+                    output += "i686" if _os != "Linux" else "x86"
 
                 output += "-"
-                if os == "Windows":
+                if _os == "Windows":
                     output += "w64-mingw32"
                 else:
                     output += "linux-gnu"
