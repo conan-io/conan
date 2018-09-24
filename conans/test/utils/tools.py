@@ -331,7 +331,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
         repo_url = os.path.join(self._tmp_folder, 'repo_server')
         subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
         protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-        return protocol + quote(repo_url.replace("\\", "/"))
+        return protocol + quote(repo_url.replace("\\", "/"), safe='/:')
 
     def gimme_tmp(self, create=True):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
