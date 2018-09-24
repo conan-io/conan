@@ -4,12 +4,14 @@ import mock
 import os
 import platform
 import unittest
+import uuid
 
 from collections import namedtuple
 
 import six
 from mock.mock import patch, mock_open
 from six import StringIO
+from six.moves.urllib.parse import unquote
 
 from conans.client.client_cache import CONAN_CONF
 
@@ -18,7 +20,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
 from conans.client.tools.win import vcvars_dict, vswhere
-from conans.client.tools.scm import Git
+from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
@@ -26,7 +28,7 @@ from conans.model.settings import Settings
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
-    StoppableThreadBottle
+    SVNLocalRepoTestCase, StoppableThreadBottle
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -1186,6 +1188,29 @@ class GitToolTest(unittest.TestCase):
         git = Git(subfolder)
         self.assertEqual(root_path, git.get_repo_root())
 
+    def test_is_pristine(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(root_path)
+        self.assertTrue(git.is_pristine())
+
+        save(os.path.join(root_path, "other_file"), "content")
+        self.assertFalse(git.is_pristine())
+
+        git.run("add .")
+        self.assertFalse(git.is_pristine())
+
+        git.run('commit -m "commit"')
+        self.assertTrue(git.is_pristine())
+
+    def test_is_local_repository(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(temp_folder())
+        git.clone(root_path)
+        self.assertTrue(git.is_local_repository())
+        # TODO: Check that with remote one it is working too
+
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
         tmp = temp_folder()
@@ -1388,6 +1413,272 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
+
+class SVNToolTestsBasic(SVNLocalRepoTestCase):
+
+    def test_clone(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
+
+    def test_revision_number(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        rev = int(svn.get_revision())
+        self.create_project(files={'another_file': "content"})
+        svn.run("update")
+        rev2 = int(svn.get_revision())
+        self.assertEqual(rev2, rev + 1)
+
+    def test_repo_url(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        remote_url = svn.get_remote_url()
+        self.assertEqual(remote_url.lower(), self.repo_url.lower())
+
+        svn2 = SVN(folder=self.gimme_tmp(create=False))
+        svn2.checkout(url=remote_url)  # clone using quoted url
+        self.assertEqual(svn2.get_remote_url().lower(), self.repo_url.lower())
+
+    def test_repo_project_url(self):
+        project_url, _ = self.create_project(files={"myfile": "content"})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        self.assertEqual(svn.get_remote_url().lower(), project_url.lower())
+
+    def test_checkout(self):
+        # Ensure we have several revisions in the repository
+        self.create_project(files={'file': "content"})
+        self.create_project(files={'file': "content"})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        rev = int(svn.get_revision())
+        svn.update(revision=rev - 1)  # Checkout previous revision
+        self.assertTrue(int(svn.get_revision()), rev-1)
+
+    def test_clone_over_dirty_directory(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+
+        new_file = os.path.join(tmp_folder, "new_file")
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        mod_file = os.path.join(tmp_folder, "myfile")
+        with open(mod_file, "a") as f:
+            f.write("new content")
+
+        self.assertFalse(svn.is_pristine())
+        svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
+        self.assertTrue(svn.is_pristine())
+        # self.assertFalse(os.path.exists(new_file))
+
+    def test_excluded_files(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+
+        # Add untracked file
+        new_file = os.path.join(tmp_folder, str(uuid.uuid4()))
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        # Add ignore file
+        file_to_ignore = str(uuid.uuid4())
+        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
+            f.write("content")
+        svn.run("propset svn:ignore {} .".format(file_to_ignore))
+        svn.run('commit -m "add ignored file"')
+
+        excluded_files = svn.excluded_files()
+        self.assertIn(file_to_ignore, excluded_files)
+        self.assertIn('.svn', excluded_files)
+        self.assertEqual(len(excluded_files), 2)
+
+    def test_credentials(self):
+        svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
+        url_credentials = svn.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://ada:lovelace@some.url.com")
+
+    def test_verify_ssl(self):
+        class MyRunner(object):
+            def __init__(self, svn):
+                self.calls = []
+                self._runner = svn._runner
+                svn._runner = self
+
+            def __call__(self, command, *args, **kwargs):
+                self.calls.append(command)
+                return self._runner(command, *args, **kwargs)
+
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
+
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=True)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        self.assertNotIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+
+    def test_repo_root(self):
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+
+        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
+        self.assertEqual(path, svn.get_repo_root().lower())
+
+        # SVN instantiated in a subfolder
+        svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
+        self.assertFalse(svn2.folder == tmp_folder)
+        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
+        self.assertEqual(path, svn2.get_repo_root().lower())
+
+    def test_is_local_repository(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        self.assertTrue(svn.is_local_repository())
+
+        # TODO: Test not local repository
+
+    def test_last_changed_revision(self):
+        project_url, _ = self.create_project(files={'project1/myfile': "contents",
+                                                    'project2/myfile': "content",
+                                                    'project2/subdir1/myfile': "content",
+                                                    'project2/subdir2/myfile': "content",
+                                                    })
+        prj1 = SVN(folder=self.gimme_tmp())
+        prj1.checkout(url='/'.join([project_url, 'project1']))
+
+        prj2 = SVN(folder=self.gimme_tmp())
+        prj2.checkout(url='/'.join([project_url, 'project2']))
+
+        self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+
+        # Modify file in one subfolder of prj2
+        with open(os.path.join(prj2.folder, "subdir1", "myfile"), "a") as f:
+            f.write("new content")
+        prj2.run('commit -m "add to file"')
+        prj2.run('update')
+        prj1.run('update')
+
+        self.assertNotEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+        self.assertEqual(prj1.get_revision(), prj2.get_revision())
+
+        # Instantiate a SVN in the other subfolder
+        prj2_subdir2 = SVN(folder=os.path.join(prj2.folder, "subdir2"))
+        prj2_subdir2.run('update')
+        self.assertEqual(prj2.get_last_changed_revision(),
+                         prj2_subdir2.get_last_changed_revision())
+        self.assertNotEqual(prj2.get_last_changed_revision(use_wc_root=False),
+                            prj2_subdir2.get_last_changed_revision(use_wc_root=False))
+
+    def test_branch(self):
+        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
+                                                    'prj1/branches/my_feature/myfile': "",
+                                                    'prj1/branches/issue3434/myfile': "",
+                                                    'prj1/tags/v12.3.4/myfile': "",
+                                                    })
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
+        self.assertEqual("trunk", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
+        self.assertEqual("branches/my_feature", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
+        self.assertEqual("branches/issue3434", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
+        self.assertEqual("tags/v12.3.4", svn.get_branch())
+
+
+class SVNToolTestsPristine(SVNLocalRepoTestCase):
+
+    def test_checkout(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        self.assertTrue(svn.is_pristine())
+
+    def test_checkout_project(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        self.assertTrue(svn.is_pristine())
+
+    def test_modified_file(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        with open(os.path.join(tmp_folder, "myfile"), "a") as f:
+            f.write("new content")
+        self.assertFalse(svn.is_pristine())
+
+    def test_untracked_file(self):
+        self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=self.repo_url)
+        with open(os.path.join(tmp_folder, "not_tracked.txt"), "w") as f:
+            f.write("content")
+        self.assertTrue(svn.is_pristine())
+
+    def test_ignored_file(self):
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        file_to_ignore = "secret.txt"
+        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
+            f.write("content")
+        svn.run("propset svn:ignore {} .".format(file_to_ignore))
+        self.assertFalse(svn.is_pristine())  # Folder properties have been modified
+        svn.run('commit -m "add ignored file"')
+        self.assertTrue(svn.is_pristine())
+
+    def test_conflicted_file(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+
+        def work_on_project(tmp_folder):
+            svn = SVN(folder=tmp_folder)
+            svn.checkout(url=project_url)
+            self.assertTrue(svn.is_pristine())
+            with open(os.path.join(tmp_folder, "myfile"), "a") as f:
+                f.write("random content: {}".format(uuid.uuid4()))
+            return svn
+
+        # Two users working on the same project
+        svn1 = work_on_project(self.gimme_tmp())
+        svn2 = work_on_project(self.gimme_tmp())
+
+        # User1 is faster
+        svn1.run('commit -m "user1 commit"')
+        self.assertFalse(svn1.is_pristine())
+        svn1.run('update')  # Yes, we need to update local copy in order to have the same revision everywhere.
+        self.assertTrue(svn1.is_pristine())
+
+        # User2 updates and get a conflicted file
+        svn2.run('update')
+        self.assertFalse(svn2.is_pristine())
+        svn2.run('revert . -R')
+        self.assertTrue(svn2.is_pristine())
+
     def unix_to_dos_unit_test(self):
 
         def save_file(contents):
@@ -1455,4 +1746,51 @@ class HelloConan(ConanFile):
         assert("\\r\\n" in tools.load("file.txt"))
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
+        client.run("create . user/channel")
+
+
+class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
+
+    conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "other"
+
+    def source(self):
+        svn = tools.SVN({svn_folder})
+        svn.checkout(url="{svn_url}")
+
+    def build(self):
+        assert(os.path.exists("{file_path}"))
+        assert(os.path.exists("other"))
+"""
+
+    def test_clone_root_folder(self):
+        tmp_folder = self.gimme_tmp()
+        client = TestClient()
+        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        save(os.path.join(tmp_folder, "file.h"), "contents")
+        client.runner("svn add file.h", cwd=tmp_folder)
+        client.runner('svn commit -m "message"', cwd=tmp_folder)
+
+        conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
+                                          file_path="file.h")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+    def test_clone_subfolder(self):
+        tmp_folder = self.gimme_tmp()
+        client = TestClient()
+        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        save(os.path.join(tmp_folder, "file.h"), "contents")
+        client.runner("svn add file.h", cwd=tmp_folder)
+        client.runner('svn commit -m "message"', cwd=tmp_folder)
+
+        conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
+                                          file_path="src/file.h")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")

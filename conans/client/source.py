@@ -192,12 +192,11 @@ def config_source_local(dest_dir, conanfile, conanfile_folder, output, conanfile
 
 def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     if local_sources_path:
-        excluded = SCM(scm_data, local_sources_path).excluded_files
+        excluded = SCM(scm_data, local_sources_path, output=output).excluded_files
         output.info("Getting sources from folder: %s" % local_sources_path)
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir)
-        scm.clone()
+        scm = SCM(scm_data, dest_dir, output=output)
         scm.checkout()
     _clean_source_folder(dest_dir)
