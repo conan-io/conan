@@ -1,6 +1,5 @@
-import os
 
-import re
+import os
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus
 from subprocess import CalledProcessError, PIPE, STDOUT
