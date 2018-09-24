@@ -20,7 +20,7 @@ import requests
 import six
 import time
 from mock import Mock
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
@@ -34,7 +34,7 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools.scm import Git
+from conans.client.tools.scm import Git, SVN
 from conans.client.userio import UserIO
 from conans.client.tools.files import chdir
 from conans.model.version import Version
@@ -330,8 +330,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     def _create_local_svn_repo(self):
         repo_url = os.path.join(self._tmp_folder, 'repo_server')
         subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
-        protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-        return protocol + repo_url.replace("\\", "/")
+        return SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
 
     def gimme_tmp(self, create=True):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
@@ -352,7 +351,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
                 rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
-            project_url = self.repo_url + "/" + rel_project_path.replace("\\", "/")  # If os.path.join, then change '\\' with '/'
+            project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
             return project_url, rev
         finally:
             if delete_checkout:
