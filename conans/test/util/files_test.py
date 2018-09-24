@@ -40,8 +40,6 @@ class SaveTestCase(unittest.TestCase):
         badfilename = "\xE3\x81\x82badfile.txt"
         folder = temp_folder()
         filepath = os.path.join(folder, badfilename)
-        if six.PY2:
-            folder = unicode(folder)
         save(to_file_bytes(filepath), "contents")
-        file = [f[0] for _, _, f in walk(folder)][0]
-        self.assertTrue(file.endswith("badfile.txt"))
+        a_file = [f[0] for _, _, f in walk(six.u(folder))][0]
+        self.assertTrue(a_file.endswith("badfile.txt"))
