@@ -5,6 +5,7 @@ import re
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
+import platform
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -167,6 +168,7 @@ class Git(SCMBase):
 
 class SVN(SCMBase):
     cmd_command = "svn"
+    file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
@@ -186,7 +188,8 @@ class SVN(SCMBase):
             params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
             output += self.run('co "{url}" . {params}'.format(url=url, params=params))
         else:
-            assert url == self.get_remote_url(), "%s != %s" % (url, self.get_remote_url())
+            assert url.lower() == self.get_remote_url().lower(), \
+                "%s != %s" % (url, self.get_remote_url())
             output += self.run("revert . --recursive")
         finally:
             output += self.update(revision=revision)
@@ -218,7 +221,8 @@ class SVN(SCMBase):
         
     def is_local_repository(self):
         url = self.get_remote_url()
-        return url.startswith("file://") and os.path.exists(unquote(url[len('file://'):]))
+        return url.startswith(self.file_protocol) and \
+               os.path.exists(unquote(url[len(self.file_protocol):]))
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent

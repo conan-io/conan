@@ -34,7 +34,7 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools.scm import Git
+from conans.client.tools.scm import Git, SVN
 from conans.client.userio import UserIO
 from conans.client.tools.files import chdir
 from conans.model.version import Version
@@ -330,8 +330,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     def _create_local_svn_repo(self):
         repo_url = os.path.join(self._tmp_folder, 'repo_server')
         subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
-        protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-        return protocol + quote(repo_url.replace("\\", "/"), safe='/:')
+        return SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
 
     def gimme_tmp(self, create=True):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
