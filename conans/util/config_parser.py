@@ -4,7 +4,7 @@ from conans.errors import ConanException
 
 def get_bool_from_text_value(value):
     """ to be deprecated
-    It has issues, as accepting into the registry whatever=value, as False, withoug
+    It has issues, as accepting into the registry whatever=value, as False, without
     complaining
     """
     return (value == "1" or value.lower() == "yes" or value.lower() == "y" or

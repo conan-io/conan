@@ -147,6 +147,9 @@ class AutoToolsBuildEnvironment(object):
             elif not any(["--prefix=" in arg for arg in args]):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
+            if not any(["--libdir=" in arg for arg in args]):
+                args.append("--libdir=${prefix}/lib")
+
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
                 configure_dir = self._adjust_path(configure_dir)

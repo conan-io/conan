@@ -51,7 +51,7 @@ def path_shortener(path, short_paths):
     short_home = os.getenv("CONAN_USER_HOME_SHORT")
     if not short_home:
         drive = os.path.splitdrive(path)[0]
-        short_home = drive + "/.conan"
+        short_home = os.path.join(drive, os.sep, ".conan")
     mkdir(short_home)
 
     # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
