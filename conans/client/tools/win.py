@@ -14,8 +14,80 @@ from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
 from conans.unicode import get_cwd
+from conans.model.version import Version
 
 _global_output = None
+
+
+def _visual_compiler_cygwin(output, version):
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+        is_64bits = True
+    else:
+        is_64bits = False
+
+    if is_64bits:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
+        return None
+
+    installed_version = Version(version).major(fill=False)
+    compiler = "Visual Studio"
+    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
+    return compiler, installed_version
+
+
+def _visual_compiler(output, version):
+    """"version have to be 8.0, or 9.0 or... anything .0"""
+    if platform.system().startswith("CYGWIN"):
+        return _visual_compiler_cygwin(output, version)
+
+    if version == "15":
+        vs_path = os.getenv('vs150comntools')
+        path = vs_path or vs_installation_path("15")
+        if path:
+            compiler = "Visual Studio"
+            output.success("Found %s %s" % (compiler, "15"))
+            return compiler, "15"
+        return None
+
+    version = "%s.0" % version
+    from six.moves import winreg  # @UnresolvedImport
+    try:
+        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
+        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
+        is_64bits = True
+    except EnvironmentError:
+        is_64bits = False
+    finally:
+        winreg.CloseKey(hKey)
+
+    if is_64bits:
+        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
+        winreg.QueryValueEx(key, version)
+
+        installed_version = Version(version).major(fill=False)
+        compiler = "Visual Studio"
+        output.success("Found %s %s" % (compiler, installed_version))
+        return compiler, installed_version
+    except EnvironmentError:
+        return None
+
+
+def latest_visual_studio_version_installed(output):
+    last_version = None
+    for version in ["8", "9", "10", "11", "12", "14", "15"]:
+        vs = _visual_compiler(output, version)
+        last_version = vs or last_version
+    return last_version
 
 
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
@@ -245,14 +317,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools (e.g. resource compiler, manifest tool, etc)
         # in this case, use the latest Visual Studio available on the machine
-        def visual_compiler_last():
-            last_version = None
-            for version in ["8", "9", "10", "11", "12", "14", "15"]:
-                vs = vs_installation_path(version)
-                last_version = version if vs else last_version
-            return last_version
+        _, last_version = latest_visual_studio_version_installed(output=_global_output)
 
-        compiler_version = compiler_version or visual_compiler_last()
+        compiler_version = compiler_version or last_version
     os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
