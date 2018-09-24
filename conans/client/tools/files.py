@@ -264,7 +264,7 @@ def collect_libs(conanfile, folder=None):
         if not os.path.exists(lib_folder):
             conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
                                   "{0}".format(lib_folder))
-            return []
+            continue
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
