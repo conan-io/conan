@@ -53,6 +53,7 @@ class Git(SCMBase):
     cmd_command = "git"
 
     def _configure_ssl_verify(self):
+        # TODO: This should be a context manager
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
     def clone(self, url, branch=None):
@@ -126,28 +127,21 @@ class Git(SCMBase):
             pass
         return None
 
-    def get_qualified_remote_url(self, remote_name=None):
-        url = self.get_remote_url(remote_name=remote_name)
-        if url and os.path.exists(url):
-            url = url.replace("\\", "/")
-        return url
-
     def is_local_repository(self):
         url = self.get_remote_url()
         return os.path.exists(url)   
 
-    def get_commit(self):
+    def get_commit_hash(self):
         self._check_git_repo()
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
             return commit
         except Exception as e:
-            raise ConanException("Unable to get git commit from %s\n%s" % (self.folder, str(e)))
-
-    get_revision = get_commit
+            raise ConanException("Unable to get git commit from '%s': %s" % (self.folder, str(e)))
 
     def is_pristine(self):
+        self._check_git_repo()
         status = self.run("status --porcelain").strip()
         if not status:
             return True
@@ -155,13 +149,8 @@ class Git(SCMBase):
             return False
         
     def get_repo_root(self):
+        self._check_git_repo()
         return self.run("rev-parse --show-toplevel")
-
-    def _check_git_repo(self):
-        try:
-            self.run("status")
-        except Exception:
-            raise ConanException("Not a valid git repository")
 
     def get_branch(self):
         self._check_git_repo()
@@ -172,6 +161,12 @@ class Git(SCMBase):
             return branch
         except Exception as e:
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
+
+    def _check_git_repo(self):
+        try:
+            self.run("status")
+        except Exception:
+            raise ConanException("Not a valid git repository")
 
 
 class SVN(SCMBase):
