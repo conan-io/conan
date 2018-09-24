@@ -422,6 +422,9 @@ class ConanLib(ConanFile):
         "url": "auto",
         "revision": "auto"
     }
+    
+    def build(self):
+        pass
 '''
         self.client.current_folder = path
         self.client.save({"conanfile.py": conanfile})

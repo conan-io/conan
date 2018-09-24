@@ -41,5 +41,5 @@ class SaveTestCase(unittest.TestCase):
         folder = temp_folder()
         filepath = os.path.join(folder, badfilename)
         save(to_file_bytes(filepath), "contents")
-        a_file = [f[0] for _, _, f in walk(six.u(folder))][0]
+        a_file = [f[0] for _, _, f in os.walk(six.u(folder))][0]
         self.assertTrue(a_file.endswith("badfile.txt"))
