@@ -125,7 +125,7 @@ class Git(SCMBase):
         url = self.get_remote_url()
         return os.path.exists(url)   
 
-    def get_commit_hash(self):
+    def get_commit(self):
         self._check_git_repo()
         try:
             commit = self.run("rev-parse HEAD")
@@ -134,7 +134,7 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git commit from '%s': %s" % (self.folder, str(e)))
 
-    get_revision = get_commit_hash
+    get_revision = get_commit
 
     def is_pristine(self):
         self._check_git_repo()
