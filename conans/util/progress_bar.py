@@ -41,7 +41,7 @@ def progress_bar(output, *args, **kwargs):
         output._stream = _ForwardTqdm(original_stream)
 
         # Pipe log through progress bar too
-        for hdlr in logger.handlers[:]:  # TODO: Sólo hay que eliminar los handlers de consola
+        for hdlr in logger.handlers[:]:  # TODO: Remove only console handlers
             logger.removeHandler(hdlr)
         logger.addHandler(_TqdmHandler())
 
