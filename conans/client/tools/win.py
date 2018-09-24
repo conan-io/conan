@@ -39,6 +39,16 @@ def _visual_compiler_cygwin(output, version):
     return compiler, installed_version
 
 
+@contextmanager
+def system_registry_key(key, subkey):
+    from six.moves import winreg  # @UnresolvedImport
+    hkey = winreg.OpenKey(key, subkey)
+    try:
+        yield hkey
+    finally:
+        winreg.CloseKey(hkey)
+
+
 def _visual_compiler(output, version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
     if platform.system().startswith("CYGWIN"):
@@ -56,29 +66,30 @@ def _visual_compiler(output, version):
     version = "%s.0" % version
     from six.moves import winreg  # @UnresolvedImport
     try:
-        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
-        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
-        is_64bits = True
-    except EnvironmentError:
-        is_64bits = False
-    finally:
-        winreg.CloseKey(hKey)
+        try:
+            with system_registry_key(winreg.HKEY_LOCAL_MACHINE,
+                                     r"SOFTWARE\Microsoft\Windows\CurrentVersion") as hKey:
+                winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
+            is_64bits = True
+        except EnvironmentError:
+            is_64bits = False
 
-    if is_64bits:
-        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+        if is_64bits:
+            key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+        else:
+            key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
-    try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
-        winreg.QueryValueEx(key, version)
+        try:
+            with system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name) as key:
+                winreg.QueryValueEx(key, version)
 
-        installed_version = Version(version).major(fill=False)
-        compiler = "Visual Studio"
-        output.success("Found %s %s" % (compiler, installed_version))
-        return compiler, installed_version
-    except EnvironmentError:
+            installed_version = Version(version).major(fill=False)
+            compiler = "Visual Studio"
+            output.success("Found %s %s" % (compiler, installed_version))
+            return compiler, installed_version
+        except EnvironmentError:
+            return None
+    except (WindowsError, EnvironmentError):
         return None
 
 
@@ -287,20 +298,18 @@ def find_windows_10_sdk():
     ]
     for key, subkey in hives:
         try:
-            hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
-            try:
-                installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
-                if os.path.isdir(installation_folder):
-                    include_dir = os.path.join(installation_folder, 'include')
-                    for sdk_version in os.listdir(include_dir):
-                        if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
-                            windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
-                            if os.path.isfile(windows_h):
-                                return sdk_version
-            except EnvironmentError:
-                pass
-            finally:
-                winreg.CloseKey(hkey)
+            with system_registry_key(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey) as hkey:
+                try:
+                    installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
+                    if os.path.isdir(installation_folder):
+                        include_dir = os.path.join(installation_folder, 'include')
+                        for sdk_version in os.listdir(include_dir):
+                            if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                                windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                                if os.path.isfile(windows_h):
+                                    return sdk_version
+                except EnvironmentError:
+                    pass
         except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2).
             pass
     return None
