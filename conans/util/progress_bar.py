@@ -90,28 +90,3 @@ class _NoTerminalOutput(object):
 
     def flush(self):
         self._output.flush()
-
-
-if __name__ == '__main__':
-    import sys
-    import time
-
-    output = ConanOutput(sys.stdout, True)
-    output.writeln("This is ConanOutput")
-    output.info("Info message")
-    output.error("ERROR message")
-    logger.critical("critical before finished!")
-
-    with progress_bar(iterable=range(10), output=output) as pb:
-        for it in pb:
-            # print(it)
-            pb.update()
-            output.write("Up to {}".format(it))
-            output.info("Info inside")
-            output.error("ERROR inside")
-            logger.critical("critical")
-            time.sleep(0.5)
-    output.writeln("Finished!")
-    output.info("Info after")
-    output.error("Error after")
-    logger.critical("critical after finished!")
