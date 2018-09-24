@@ -401,7 +401,10 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                raise ConanException("Please specify 'key=value'")
+                if "plugins." in args.item:
+                    key, value = args.item.split("=", 1)[0], None
+                else:
+                    raise ConanException("Please specify 'key=value'")
             return self._conan.config_set(key, value)
         elif args.subcommand == "get":
             return self._conan.config_get(args.item)

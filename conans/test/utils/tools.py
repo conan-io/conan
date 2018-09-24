@@ -24,6 +24,7 @@ from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_req
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
+from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -461,10 +462,15 @@ class TestClient(object):
             self.requester = ConanRequester(requester, self.client_cache,
                                             get_request_timeout())
 
+            self.plugin_manager = PluginManager(self.client_cache.plugins_path,
+                                                get_env("CONAN_PLUGINS", list()),
+                                                self.user_io.out)
+
             self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                             self.requester, self.client_cache,
                                                             self.user_io, self.client_version,
-                                                            self.min_server_compatible_version)
+                                                            self.min_server_compatible_version,
+                                                            self.plugin_manager)
             set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
@@ -485,7 +491,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          interactive=interactive)
+                          self.plugin_manager, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
