@@ -1400,12 +1400,12 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
         self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
 
     def test_revision_number(self):
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         rev = int(svn.get_revision())
         self.create_project(files={'another_file': "content"})
         svn.run("update")
@@ -1414,35 +1414,35 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     def test_repo_url(self):
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         remote_url = svn.get_remote_url()
-        self.assertEqual(unquote(remote_url).lower(), self.repo_url.lower())
+        self.assertEqual(remote_url.lower(), self.repo_url.lower())
 
         svn2 = SVN(folder=self.gimme_tmp(create=False))
-        svn2.clone(url=remote_url)  # clone using quoted url
-        self.assertEqual(unquote(svn2.get_remote_url()).lower(), self.repo_url.lower())
+        svn2.checkout(url=remote_url)  # clone using quoted url
+        self.assertEqual(svn2.get_remote_url().lower(), self.repo_url.lower())
 
     def test_repo_project_url(self):
         project_url, _ = self.create_project(files={"myfile": "content"})
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=project_url)
-        self.assertEqual(unquote(svn.get_remote_url()).lower(), project_url.lower())
+        svn.checkout(url=project_url)
+        self.assertEqual(svn.get_remote_url().lower(), project_url.lower())
 
     def test_checkout(self):
         # Ensure we have several revisions in the repository
         self.create_project(files={'file': "content"})
         self.create_project(files={'file': "content"})
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         rev = int(svn.get_revision())
-        svn.checkout(rev - 1)  # Checkout previous revision
+        svn.update(revision=rev - 1)  # Checkout previous revision
         self.assertTrue(int(svn.get_revision()), rev-1)
 
     def test_clone_over_dirty_directory(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
 
         new_file = os.path.join(tmp_folder, "new_file")
         with open(new_file, "w") as f:
@@ -1453,7 +1453,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
             f.write("new content")
 
         self.assertFalse(svn.is_pristine())
-        svn.clone(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
+        svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
         self.assertTrue(svn.is_pristine())
         # self.assertFalse(os.path.exists(new_file))
 
@@ -1461,7 +1461,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
 
         # Add untracked file
         new_file = os.path.join(tmp_folder, str(uuid.uuid4()))
@@ -1487,29 +1487,34 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     def test_verify_ssl(self):
         class MyRunner(object):
-            def __init__(self):
+            def __init__(self, svn):
                 self.calls = []
+                self._runner = svn._runner
+                svn._runner = self
 
-            def __call__(self, *args, **kwargs):
-                self.calls.append(args[0])
-                return ""
+            def __call__(self, command, *args, **kwargs):
+                self.calls.append(command)
+                return self._runner(command, *args, **kwargs)
 
-        runner = MyRunner()
-        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=True, runner=runner)
-        svn.clone(url="https://myrepo")
-        self.assertNotIn("--trust-server-cert-failures=unknown-ca", runner.calls[0])
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
 
-        runner = MyRunner()
-        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False, runner=runner)
-        svn.clone(url="https://myrepo")
-        self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[0])
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=True)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        self.assertNotIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
 
     def test_repo_root(self):
         project_url, _ = self.create_project(files={'myfile': "contents",
                                                     'subdir/otherfile': "content"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
 
         path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
         self.assertEqual(path, svn.get_repo_root().lower())
@@ -1522,7 +1527,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     def test_is_local_repository(self):
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         self.assertTrue(svn.is_local_repository())
 
         # TODO: Test not local repository
@@ -1534,10 +1539,10 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
                                                     'project2/subdir2/myfile': "content",
                                                     })
         prj1 = SVN(folder=self.gimme_tmp())
-        prj1.clone(url='/'.join([project_url, 'project1']))
+        prj1.checkout(url='/'.join([project_url, 'project1']))
 
         prj2 = SVN(folder=self.gimme_tmp())
-        prj2.clone(url='/'.join([project_url, 'project2']))
+        prj2.checkout(url='/'.join([project_url, 'project2']))
 
         self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
 
@@ -1566,19 +1571,19 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
                                                     'prj1/tags/v12.3.4/myfile': "",
                                                     })
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url='/'.join([project_url, 'prj1', 'trunk']))
+        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
         self.assertEqual("trunk", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
         self.assertEqual("branches/my_feature", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
         self.assertEqual("branches/issue3434", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
+        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
 
@@ -1586,7 +1591,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def test_checkout(self):
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         self.assertTrue(svn.is_pristine())
 
     def test_checkout_project(self):
@@ -1594,14 +1599,14 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
         self.assertTrue(svn.is_pristine())
 
     def test_modified_file(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=project_url)
+        svn.checkout(url=project_url)
         with open(os.path.join(tmp_folder, "myfile"), "a") as f:
             f.write("new content")
         self.assertFalse(svn.is_pristine())
@@ -1610,7 +1615,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         with open(os.path.join(tmp_folder, "not_tracked.txt"), "w") as f:
             f.write("content")
         self.assertTrue(svn.is_pristine())
@@ -1618,7 +1623,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
     def test_ignored_file(self):
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=self.gimme_tmp())
-        svn.clone(url=self.repo_url)
+        svn.checkout(url=self.repo_url)
         file_to_ignore = "secret.txt"
         with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
             f.write("content")
@@ -1632,7 +1637,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         def work_on_project(tmp_folder):
             svn = SVN(folder=tmp_folder)
-            svn.clone(url=project_url)
+            svn.checkout(url=project_url)
             self.assertTrue(svn.is_pristine())
             with open(os.path.join(tmp_folder, "myfile"), "a") as f:
                 f.write("random content: {}".format(uuid.uuid4()))
@@ -1737,7 +1742,7 @@ class HelloConan(ConanFile):
 
     def source(self):
         svn = tools.SVN({svn_folder})
-        svn.clone("{svn_url}")
+        svn.checkout(url="{svn_url}")
 
     def build(self):
         assert(os.path.exists("{file_path}"))
