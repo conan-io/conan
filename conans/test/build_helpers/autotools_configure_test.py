@@ -504,28 +504,43 @@ class HelloConan(ConanFile):
         ab.install()
         self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
 
-    def autotools_prefix_test(self):
+    def autotools_prefix_libdir_test(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         # Package folder is not defined
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         self.assertNotIn("--prefix", runner.command_called)
+        self.assertNotIn("--libdir", runner.command_called)
         # package folder defined
         conanfile.package_folder = "/package_folder"
         ab.configure()
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/package_folder", runner.command_called)
+            self.assertIn("./configure --prefix=/package_folder --libdir=${prefix}/lib",
+                          runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/package_folder'", runner.command_called)
+            self.assertIn("./configure '--prefix=/package_folder' '--libdir=${prefix}/lib'",
+                          runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
+            self.assertIn("./configure --prefix=/my_package_folder --libdir=${prefix}/lib",
+                          runner.command_called)
             self.assertNotIn("--prefix=/package_folder", runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
+            self.assertIn("./configure '--prefix=/my_package_folder' '--libdir=${prefix}/lib'",
+                          runner.command_called)
             self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
+        # --libdir already used in args
+        ab.configure(args=["--libdir=/my_package_folder/superlibdir"])
+        if platform.system() == "Windows":
+            self.assertIn("./configure --libdir=/my_package_folder/superlibdir "
+                          "--prefix=/package_folder", runner.command_called)
+            self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
+        else:
+            self.assertIn("./configure '--libdir=/my_package_folder/superlibdir' "
+                          "'--prefix=/package_folder'", runner.command_called)
+            self.assertNotIn("'--libdir=${prefix}/lib'", runner.command_called)
 
     def autotools_configure_vars_test(self):
         from mock import patch

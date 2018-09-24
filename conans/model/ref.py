@@ -1,44 +1,56 @@
 from collections import namedtuple
 import re
+from six import string_types
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
 class ConanName(object):
-    _max_chars = 50
+    _max_chars = 51
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
-                                     % (_min_chars - 1, _max_chars))
+                                     % (_min_chars - 1, _max_chars - 1))
 
     @staticmethod
-    def invalid_name_message(name):
-        if len(name) > ConanName._max_chars:
-            message = ("'%s' is too long. Valid names must contain at most %s characters."
-                       % (name, ConanName._max_chars))
-        elif len(name) < ConanName._min_chars:
-            message = ("'%s' is too short. Valid names must contain at least %s characters."
-                       % (name, ConanName._min_chars))
+    def invalid_name_message(value, reference_token=None):
+        if len(value) > ConanName._max_chars:
+            reason = "is too long. Valid names must contain at most %s characters."\
+                     % ConanName._max_chars
+        elif len(value) < ConanName._min_chars:
+            reason = "is too short. Valid names must contain at least %s characters."\
+                     % ConanName._min_chars
         else:
-            message = ("'%s' is an invalid name. Valid names MUST begin with a "
-                       "letter or number, have between %s-%s chars, including "
-                       "letters, numbers, underscore, dot and dash"
-                       % (name, ConanName._min_chars, ConanName._max_chars))
+            reason = ("is an invalid name. Valid names MUST begin with a "
+                      "letter, number or underscore, have between %s-%s chars, including "
+                      "letters, numbers, underscore, dot and dash"
+                      % (ConanName._min_chars, ConanName._max_chars))
+        message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
+            ref_token=" for {}".format(reference_token) if reference_token else "",
+            value=value, type=type(value).__name__, reason=reason
+        )
         raise InvalidNameException(message)
 
     @staticmethod
-    def validate_user(username):
-        if ConanName._validation_pattern.match(username) is None:
-            ConanName.invalid_name_message(username)
+    def validate_string(value, reference_token=None):
+        """Check for string"""
+        if not isinstance(value, string_types):
+            message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
+                ref_token=" for {}".format(reference_token) if reference_token else "",
+                value=value, type=type(value).__name__,
+                reason="is not a string"
+            )
+            raise InvalidNameException(message)
 
     @staticmethod
-    def validate_name(name, version=False):
+    def validate_name(name, version=False, reference_token=None):
         """Check for name compliance with pattern rules"""
+        ConanName.validate_string(name, reference_token=reference_token)
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and name.startswith("[") and name.endswith("]"):
                 return
-            ConanName.invalid_name_message(name)
+            ConanName.invalid_name_message(name, reference_token=reference_token)
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
@@ -52,16 +64,19 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def __new__(cls, name, version, user, channel, revision=None):
         """Simple name creation.
         @param name:        string containing the desired name
-        @param validate:    checks for valid complex name. default True
+        @param version:     string containing the desired version
+        @param user:        string containing the user name
+        @param channel:     string containing the user channel
+        @param revision:    string containing the revision (optional)
         """
-        ConanName.validate_name(name)
-        ConanName.validate_name(version, True)
-        ConanName.validate_name(user)
-        ConanName.validate_name(channel)
+        ConanName.validate_name(name, reference_token="package name")
+        ConanName.validate_name(version, True, reference_token="package version")
+        ConanName.validate_name(user, reference_token="user name")
+        ConanName.validate_name(channel, reference_token="channel")
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
         if revision:
-            ConanName.validate_name(revision)
+            ConanName.validate_name(revision, reference_token="revision")
         obj.revision = revision
         return obj
 
@@ -123,7 +138,7 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         revision = None
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-            ConanName.validate_name(revision)
+            ConanName.validate_name(revision, reference_token="revision")
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
         return obj

@@ -1,3 +1,4 @@
+import ast
 import os
 import shutil
 
@@ -9,9 +10,10 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir
+from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
+from conans.client.plugin_manager import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -32,23 +34,20 @@ class AliasConanfile(ConanFile):
     digest.save(export_path)
 
 
-def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache):
+def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
+               plugin_manager):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                           reference=reference)
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
-    for field in ["url", "license", "description"]:
-        field_value = getattr(conanfile, field, None)
-        if not field_value:
-            output.warn("Conanfile doesn't have '%s'.\n"
-                        "It is recommended to add it as attribute" % field)
-
-    conan_ref_str = str(reference)
     # Maybe a platform check could be added, but depends on disk partition
+    conan_ref_str = str(reference)
     refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
     if refs and reference not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
@@ -58,6 +57,9 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
+    conanfile_cache_path = client_cache.conanfile(reference)
+    plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
+                           reference=reference)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
@@ -90,7 +92,36 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     # Generate the scm_folder.txt file pointing to the src_path
     src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
-    scm_data.replace_in_file(os.path.join(destination_folder, "conanfile.py"))
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
+                                   scm_data)
+
+
+def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
+    # Parsing and replacing the SCM field
+    content = load(conanfile_path)
+    lines = content.splitlines(True)
+    tree = ast.parse(content)
+    to_replace = []
+    for item in tree.body:
+        if isinstance(item, ast.ClassDef):
+            statements = item.body
+            for i, stmt in enumerate(item.body):
+                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                    if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
+                        try:
+                            next_line = statements[i+1].lineno - 1
+                        except IndexError:
+                            next_line = stmt.lineno
+                        replace = [line for line in lines[(stmt.lineno-1):next_line]
+                                   if line.strip()]
+                        to_replace.append("".join(replace).lstrip())
+                        break
+    if len(to_replace) != 1:
+        raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
+
+    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
+    content = content.replace(to_replace[0], new_text)
+    save(conanfile_path, content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):

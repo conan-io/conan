@@ -389,11 +389,15 @@ def get_cased_path(name):
         parent, child = os.path.split(current)
         if parent == current:
             break
-        children = os.listdir(parent)
-        for c in children:
-            if c.upper() == child.upper():
-                result.append(c)
-                break
+
+        child_cased = child
+        if os.path.exists(parent):
+            children = os.listdir(parent)
+            for c in children:
+                if c.upper() == child.upper():
+                    child_cased = c
+                    break
+        result.append(child_cased)
         current = parent
     drive, _ = os.path.splitdrive(current)
     result.append(drive)
@@ -485,4 +489,4 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
-        return conanfile._runner(wincmd, output=conanfile.output, subprocess=True)
+        return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
