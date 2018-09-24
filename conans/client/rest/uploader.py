@@ -28,7 +28,6 @@ def upload(requester, output, verify_ssl,  # These were in the constructor
                 data = IterableToFileAdapter(f, file_size)
                 response = requester.put(url, data=data, verify=verify_ssl, headers=headers,
                                          auth=auth)
-                # TODO: Maybe check status code and retry?
                 if not response.ok:
                     raise ConanException("Error uploading file: %s, '%s'" % (filename,
                                                                              response.content))
@@ -59,18 +58,3 @@ class IterableToFileAdapter(object):
 
     def __iter__(self):
         return self.iterator.__iter__()
-
-
-if __name__ == '__main__':
-    import requests
-    import sys
-    from conans.client.output import ConanOutput
-
-    output = ConanOutput(stream=sys.stdout, color=True)
-
-    abs_path = os.path.abspath(__file__)
-    r = upload(requests, output=output, verify_ssl=True,
-           url='http://httpbin.org/put', abs_path=abs_path, auth=None, dedup=False, retry=2,
-           retry_wait=0, headers=None)
-    output.writeln(r)
-

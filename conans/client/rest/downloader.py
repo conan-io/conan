@@ -60,20 +60,3 @@ def download(requester, output, verify_ssl,
                 raise ConanException("Error downloading file %s: '%s'" % (url, msg))
         finally:
             buffer.close()
-
-    # TODO: log a "retries exhausted" error
-
-
-if __name__ == '__main__':
-    import requests
-    import sys
-    from conans.client.output import ConanOutput
-
-    output = ConanOutput(stream=sys.stdout, color=True)
-
-    abs_path = os.path.abspath(__file__)
-    r = download(requests, output=output, verify_ssl=True,
-           url='http://httpbin.org/bytes/1200', file_path=None, auth=None, retry=2,
-           retry_wait=0, overwrite=True, headers=None)
-    output.info("Done!")
-    print(r)
