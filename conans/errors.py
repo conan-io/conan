@@ -22,6 +22,9 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     """
     try:
         yield
+    except ConanInvalidConfiguration as exc:
+        msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)  # TODO: Move from here?
+        raise ConanInvalidConfiguration(msg)
     except Exception as exc:
         msg = _format_conanfile_exception(conanfile_name, func_name, exc)
         raise ConanExceptionInUserConanfileMethod(msg)
@@ -92,6 +95,10 @@ class ConanOutdatedClient(ConanException):
 
 
 class ConanExceptionInUserConanfileMethod(ConanException):
+    pass
+
+
+class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
