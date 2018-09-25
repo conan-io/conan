@@ -7,6 +7,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans import tools
+from conans.errors import ConanException
 from conans.client.client_cache import PROFILES_FOLDER
 
 
@@ -162,14 +163,17 @@ class MyConanfile(ConanFile):
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use relative path defined in environment variable
-        env_variable = "env_variable=relative_environment"
-        profiles_folder = os.path.dirname(client.client_cache.default_profile_path)
-        profile_path = os.path.join(profiles_folder, '..', 'other', 'rel_profile')
-        save(profile_path, "[env]\n" + env_variable)
-        relative_profile_path = os.path.relpath(profile_path, profiles_folder)
-        self.assertFalse(os.path.isabs(relative_profile_path))
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': relative_profile_path}):
-            client.run("create . name/version@user/channel")
-            self.assertIn(">>> " + env_variable, client.out)
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE': '../whatever'}):
+            client.run("create . name/version@user/channel", ignore_error=True)
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE' must point to an absolute "
+                          "path", client.out)
+
+        # Use non existing path
+        profile_path = os.path.join(tmp, "this", "is", "a", "path")
+        self.assertTrue(os.path.isabs(profile_path))
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE': profile_path}):
+            client.run("create . name/version@user/channel", ignore_error=True)
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE' must point to "
+                          "an existing profile file.", client.out)
 
 
