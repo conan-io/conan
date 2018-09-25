@@ -125,3 +125,9 @@ class HelloConan(ConanFile):
 
         num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
         self.assertEquals(num_get, 10)
+
+        # Check masked signature
+        for action in actions:
+            doc = json.loads(action)
+            if doc.get("url") and "signature" in doc.get("url"):
+                self.assertIn("signature=*****", doc.get("url"))
