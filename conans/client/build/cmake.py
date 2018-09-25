@@ -1,18 +1,20 @@
 import os
 import platform
 from itertools import chain
+import subprocess
 
 from conans import tools
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name, \
+    cmake_in_local_cache_var_name, in_local_cache_definition
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path
+from conans.util.files import mkdir, get_abs_path, decode_text
 
 
 class CMake(object):
@@ -47,18 +49,17 @@ class CMake(object):
         self._cmake_system_name = cmake_system_name
         self._make_program = make_program
 
-        self.definitions = self._def_builder.get_definitions()
-        self._build_type = self._settings.get_safe("build_type")
-        if build_type and build_type != self._build_type:
-            # Call the setter to warn and update the definitions if needed
-            self.build_type = build_type
+        # Initialize definitions (won't be updated if conanfile or any of these variables change)
+        builder = CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
+                                          make_program=self._make_program, parallel=self.parallel,
+                                          generator=self.generator,
+                                          set_cmake_flags=self._set_cmake_flags)
+        self.definitions = builder.get_definitions()
 
-    @property
-    def _def_builder(self):
-        return CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
-                                       make_program=self._make_program, parallel=self.parallel,
-                                       generator=self.generator,
-                                       set_cmake_flags=self._set_cmake_flags)
+        if build_type is None:
+            self.build_type = self._settings.get_safe("build_type")
+        else:
+            self.build_type = build_type
 
     @property
     def build_folder(self):
@@ -80,7 +81,7 @@ class CMake(object):
                 'Set CMake build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
-        self.definitions.update(build_type_definition(build_type, self.generator))
+        self.definitions.update(build_type_definition(self._build_type, self.generator))
 
     @property
     def flags(self):
@@ -186,6 +187,9 @@ class CMake(object):
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
             return
+        self._build(args, build_dir, target)
+
+    def _build(self, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
@@ -220,14 +224,14 @@ class CMake(object):
             raise ConanException("%s not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is "
                                  "defined" % cmake_install_prefix_var_name)
-        self.build(args=args, build_dir=build_dir, target="install")
+        self._build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
-        self.build(args=args, build_dir=build_dir, target=target)
+        self._build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):
@@ -240,6 +244,14 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions.update(verbose_definition(value))
+
+    @property
+    def in_local_cache(self):
+        try:
+            in_local_cache = self.definitions[cmake_in_local_cache_var_name]
+            return get_bool_from_text(str(in_local_cache))
+        except KeyError:
+            return False
 
     def patch_config_paths(self):
         """
@@ -321,5 +333,12 @@ class CMake(object):
                             self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
                             tools.replace_in_file(path, from_str, dep_str, strict=False)
 
-    
-
+    @staticmethod
+    def get_version():
+        try:
+            out, err = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            version_line = decode_text(out).split('\n', 1)[0]
+            version_str = version_line.rsplit(' ', 1)[-1]
+            return Version(version_str)
+        except Exception as e:
+            raise ConanException("Error retrieving CMake version: '{}'".format(e))

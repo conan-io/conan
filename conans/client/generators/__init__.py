@@ -26,6 +26,7 @@ from .boostbuild import BoostBuildGenerator
 from .json_generator import JsonGenerator
 import traceback
 from conans.util.env_reader import get_env
+from .b2 import B2Generator
 
 
 class _GeneratorManager(object):
@@ -70,6 +71,7 @@ registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
 registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
 registered_generators.add("json", JsonGenerator)
+registered_generators.add("b2", B2Generator)
 
 
 def write_generators(conanfile, path, output):
@@ -98,11 +100,11 @@ def write_generators(conanfile, path, output):
                 for k, v in content.items():
                     v = normalize(v)
                     output.info("Generator %s created %s" % (generator_name, k))
-                    save(join(path, k), v)
+                    save(join(path, k), v, only_if_modified=True)
             else:
                 content = normalize(content)
                 output.info("Generator %s created %s" % (generator_name, generator.filename))
-                save(join(path, generator.filename), content)
+                save(join(path, generator.filename), content, only_if_modified=True)
         except Exception as e:
             if get_env("CONAN_VERBOSE_TRACEBACK", False):
                 output.error(traceback.format_exc())

@@ -47,6 +47,16 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be.make()
         self.assertIsNone(conan_file.command)
 
+    def warn_when_no_triplet_test(self):
+        conan_file = ConanFileMock()
+        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
+                                   "cppflags, sharedlinkflags, exelinkflags, sysroot")
+        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.settings = MockSettings({"arch": "UNKNOWN_ARCH", "os": "Linux"})
+        AutoToolsBuildEnvironment(conan_file)
+        self.assertIn("Unknown 'UNKNOWN_ARCH' machine, Conan doesn't know "
+                      "how to translate it to the GNU triplet", conan_file.output)
+
     def test_cppstd(self):
         options = MockOptions({})
         # Valid one for GCC
@@ -413,17 +423,28 @@ class HelloConan(ConanFile):
         client.run("create . conan/testing")
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 
+        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
+        builds_folder = client.client_cache.builds(ref)
+        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
+
         client.save({CONANFILE: conanfile % ("'pkg_config'", "")})
         client.run("create . conan/testing")
-        self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
+        self.assertIn("PKG_CONFIG_PATH=%s" % bf, client.out)
+
+        # The previous values in the environment should be kept too
+        with tools.environment_append({"PKG_CONFIG_PATH": "Some/value"}):
+            client.run("create . conan/testing")
+            self.assertIn("PKG_CONFIG_PATH=%s:Some/value" % bf, client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'",
                                              "pkg_config_paths=['/tmp/hello', 'foo']")})
         client.run("create . conan/testing")
-        ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
-        builds_folder = client.client_cache.builds(ref)
-        bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
         self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo" % bf, client.out)
+
+        # The previous values in the environment should be kept too
+        with tools.environment_append({"PKG_CONFIG_PATH": "Some/value"}):
+            client.run("create . conan/testing")
+            self.assertIn("PKG_CONFIG_PATH=/tmp/hello:%s/foo:Some/value" % bf, client.out)
 
     def cross_build_command_test(self):
         runner = RunnerMock()
@@ -493,28 +514,43 @@ class HelloConan(ConanFile):
         ab.install()
         self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
 
-    def autotools_prefix_test(self):
+    def autotools_prefix_libdir_test(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         # Package folder is not defined
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         self.assertNotIn("--prefix", runner.command_called)
+        self.assertNotIn("--libdir", runner.command_called)
         # package folder defined
         conanfile.package_folder = "/package_folder"
         ab.configure()
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/package_folder", runner.command_called)
+            self.assertIn("./configure --prefix=/package_folder --libdir=${prefix}/lib",
+                          runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/package_folder'", runner.command_called)
+            self.assertIn("./configure '--prefix=/package_folder' '--libdir=${prefix}/lib'",
+                          runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/my_package_folder", runner.command_called)
+            self.assertIn("./configure --prefix=/my_package_folder --libdir=${prefix}/lib",
+                          runner.command_called)
             self.assertNotIn("--prefix=/package_folder", runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/my_package_folder'", runner.command_called)
+            self.assertIn("./configure '--prefix=/my_package_folder' '--libdir=${prefix}/lib'",
+                          runner.command_called)
             self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
+        # --libdir already used in args
+        ab.configure(args=["--libdir=/my_package_folder/superlibdir"])
+        if platform.system() == "Windows":
+            self.assertIn("./configure --libdir=/my_package_folder/superlibdir "
+                          "--prefix=/package_folder", runner.command_called)
+            self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
+        else:
+            self.assertIn("./configure '--libdir=/my_package_folder/superlibdir' "
+                          "'--prefix=/package_folder'", runner.command_called)
+            self.assertNotIn("'--libdir=${prefix}/lib'", runner.command_called)
 
     def autotools_configure_vars_test(self):
         from mock import patch

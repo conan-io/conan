@@ -84,11 +84,13 @@ class AutoToolsBuildEnvironment(object):
 
         try:
             build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             build = None
         try:
             host = get_gnu_triplet(self._os, self._arch, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             host = None
         return build, host, None
 
@@ -133,12 +135,12 @@ class AutoToolsBuildEnvironment(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
-                                       for f in pkg_config_paths)}
+                       [os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)]}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} \
+            pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else {}
 
         if self._conanfile.package_folder is not None:
@@ -146,6 +148,9 @@ class AutoToolsBuildEnvironment(object):
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
             elif not any(["--prefix=" in arg for arg in args]):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
+
+            if not any(["--libdir=" in arg for arg in args]):
+                args.append("--libdir=${prefix}/lib")
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
