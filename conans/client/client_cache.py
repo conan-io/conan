@@ -152,7 +152,6 @@ class ClientCache(SimplePaths):
     @property
     def default_profile(self):
         if self._default_profile is None:
-            # TODO: self.default_profile is used, what if CONAN_ENV_DEFAULT_PROFILE exists?
             if not os.path.exists(self.default_profile_path):
                 self._output.writeln("Auto detecting your dev setup to initialize the "
                                      "default profile (%s)" % self.default_profile_path,
