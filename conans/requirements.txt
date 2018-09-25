@@ -12,4 +12,4 @@ future==0.16.0
 pygments>=2.0, <3.0
 astroid>=1.6.5
 deprecation>=2.0, <2.1
-tqdm==4.26.0
+tqdm==4.20.0
