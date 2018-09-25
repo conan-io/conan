@@ -287,7 +287,20 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def default_profile(self):
-        return self._env_c("general.default_profile", "CONAN_DEFAULT_PROFILE", DEFAULT_PROFILE_NAME)
+        ret = os.environ.get("CONAN_DEFAULT_PROFILE", None)
+        if ret:
+            if not os.path.isabs(ret):
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE' must point "
+                                     "to an absolute path.")
+            if not os.path.exists(ret):
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE' must point to "
+                                     "an existing profile file.")
+            return ret
+        else:
+            try:
+                return unquote(self.get_item("general.default_profile"))
+            except ConanException:
+                return DEFAULT_PROFILE_NAME
 
     @property
     def cache_no_locks(self):
