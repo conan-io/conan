@@ -21,7 +21,9 @@ from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
+from conans.test.build_helpers.cmake_test import ConanFileMock
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
@@ -31,7 +33,7 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_lo
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load, md5
+from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
@@ -58,6 +60,60 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEquals(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           tools.system_pm._global_output)
+
+    def add_repositories_exception_cases_test(self):
+        os_info = OSInfo()
+        os_info.is_macos = False
+        os_info.is_linux = True
+        os_info.is_windows = False
+        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+
+        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+            spt = SystemPackageTool(os_info=os_info)
+            spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
+                               repo_key=None)
+
+    def add_repository_test(self):
+        class RunnerOrderedMock:
+            commands = []  # Command + return value
+
+            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
+                if not len(runner_self.commands):
+                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
+                expected, ret = runner_self.commands.pop(0)
+                self.assertEqual(expected, command)
+                return ret
+
+        def _run_add_repository_test(repository, gpg_key, sudo, update):
+            sudo_cmd = "sudo " if sudo else ""
+            runner = RunnerOrderedMock()
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
+            if gpg_key:
+                runner.commands.append(
+                    ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            if update:
+                runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
+
+            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": str(sudo)}):
+                os_info = OSInfo()
+                os_info.is_macos = False
+                os_info.is_linux = True
+                os_info.is_windows = False
+                os_info.linux_distro = "debian"
+                spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+                spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
+                self.assertEqual(len(runner.commands), 0)
+
+        # Run several test cases
+        repository = "deb http://repo/url/ saucy universe multiverse"
+        gpg_key = 'http://one/key.gpg'
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=False)
+        _run_add_repository_test(repository, gpg_key=None, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key=None, sudo=False, update=False)
 
     def system_package_tool_test(self):
 
@@ -109,7 +165,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "dpkg -s a_package")
+            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -224,7 +280,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
@@ -501,7 +557,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
-
+ 
         conanfile = """
 from conans import ConanFile, tools
 
@@ -810,9 +866,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def run_in_bash_test(self):
-        if platform.system() != "Windows":
-            return
 
         class MockConanfile(object):
             def __init__(self):
@@ -824,28 +879,30 @@ ProgramFiles(x86)=C:\Program Files (x86)
                     def __call__(self, command, output, log_filepath=None,
                                  cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
-                self._runner = MyRun()
+                self._conan_runner = MyRun()
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile._runner.command)
-        self.assertIn("--login -c", conanfile._runner.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn("bash", conanfile._conan_runner.command)
+            self.assertIn("--login -c", conanfile._conan_runner.command)
+            self.assertIn("^&^& a_command.bat ^", conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._conan_runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
-                                                                                       "MYVAR": "34"})
-        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
+                                      env={"PATH": "/other/path", "MYVAR": "34"})
+            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -926,6 +983,26 @@ ProgramFiles(x86)=C:\Program Files (x86)
             build = tools.get_gnu_triplet(this_os, this_arch, compiler)
             host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
             return build, host
+
+        build, host = get_values("Linux", "armv6", "Linux", "armv6")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
+        self.assertEquals(build, "sparc-linux-gnu")
+        self.assertEquals(host, "sparc64-linux-gnu")
+
+        build, host = get_values("Linux", "mips", "Linux", "mips64")
+        self.assertEquals(build, "mips-linux-gnu")
+        self.assertEquals(host, "mips64-linux-gnu")
+
+        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
+        self.assertEquals(build, "powerpc64le-linux-gnu")
+        self.assertEquals(host, "powerpc64-linux-gnu")
+
+        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
@@ -1019,18 +1096,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
 
-        for os in ["Windows", "Linux"]:
+        for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
 
                 output = ""
                 if arch == "x86_64":
                     output += "x86_64"
                 else:
-                    output += "i686" if os != "Linux" else "x86"
+                    output += "i686" if _os != "Linux" else "x86"
 
                 output += "-"
-                if os == "Windows":
+                if _os == "Windows":
                     output += "w64-mingw32"
                 else:
                     output += "linux-gnu"
@@ -1044,7 +1121,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
     def detect_windows_subsystem_test(self):
         # Dont raise test
         result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path or platform.system() != "Windows":
+        if not tools.os_info.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1097,6 +1174,19 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 
 class GitToolTest(unittest.TestCase):
+
+    def test_repo_root(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        # Initialized in the root folder
+        git = Git(root_path)
+        self.assertEqual(root_path, git.get_repo_root())
+
+        # Initialized elsewhere
+        subfolder = os.path.join(root_path, 'subfolder')
+        os.makedirs(subfolder)
+        git = Git(subfolder)
+        self.assertEqual(root_path, git.get_repo_root())
 
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
@@ -1202,12 +1292,15 @@ class GitToolTest(unittest.TestCase):
 
     def git_to_capture_branch_test(self):
         conanfile = """
+import re
 from conans import ConanFile, tools
 
 def get_version():
     git = tools.Git()
     try:
-        return "%s_%s" % (git.get_branch(), git.get_revision())
+        branch = git.get_branch()
+        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+        return "%s_%s" % (branch, git.get_revision())
     except:
         return None
 
@@ -1365,3 +1458,66 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
+
+    def collect_libs_test(self):
+        conanfile = ConanFileMock()
+        # Without package_folder
+        conanfile.package_folder = None
+        result = tools.collect_libs(conanfile)
+        self.assertEqual([], result)
+
+        # Default behavior
+        conanfile.package_folder = temp_folder()
+        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(mylib_path, "")
+        conanfile.cpp_info = CppInfo("")
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+
+        # Custom folder
+        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+        save(customlib_path, "")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Custom folder doesn't exist
+        result = tools.collect_libs(conanfile, folder="fake_folder")
+        self.assertEqual([], result)
+        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+
+        # Use cpp_info.libdirs
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "customlib"], result)
+
+        # Custom folder with multiple libdirs should only collect from custom folder
+        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Warn same lib different folders
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(custom_mylib_path, "")
+        save(lib_mylib_path, "")
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("Library 'mylib' already found in a previous 'conanfile.cpp_info.libdirs' "
+                      "folder", conanfile.output)
+
+        # Warn lib folder does not exist with correct result
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(lib_mylib_path, "")
+        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                      % no_folder_path, conanfile.output)

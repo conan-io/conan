@@ -111,9 +111,9 @@ class ConanFileLoader(object):
 
             if consumer:
                 conanfile.develop = True
-                processed_profile._user_options[conanfile.name].update(processed_profile._user_options["*"])
                 processed_profile._user_options.descope_options(conanfile.name)
-                conanfile.options.initialize_upstream(processed_profile._user_options, local=local)
+                conanfile.options.initialize_upstream(processed_profile._user_options, local=local,
+                                                      name=conanfile.name)
                 processed_profile._user_options.clear_unscoped_options()
 
             return conanfile
@@ -159,7 +159,7 @@ class ConanFileLoader(object):
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        conanfile._env_values.update(processed_profile._env_values)
+        conanfile._conan_env_values.update(processed_profile._env_values)
         return conanfile
 
     def load_virtual(self, references, processed_profile, scope_options=True,

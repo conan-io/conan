@@ -338,6 +338,11 @@ class TestConan(ConanFile):
         self.assertIn("Uploading %s" % str(self.conan_ref),
                       self.client.user_io.out)
 
+        # Repeat transfer, to make sure it is uploading again
+        self.client.run('upload %s --force' % str(self.conan_ref))
+        self.assertIn("Uploading conan_export.tgz", self.client.out)
+        self.assertIn("Uploading conanfile.py", self.client.out)
+
     def upload_json_test(self):
         conanfile = """
 from conans import ConanFile

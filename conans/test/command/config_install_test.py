@@ -4,7 +4,7 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput
 import os
 import zipfile
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save_files, save
+from conans.util.files import load, save_files, save, mkdir
 from conans.client.remote_registry import RemoteRegistry, Remote
 from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
@@ -220,6 +220,36 @@ class Pkg(ConanFile):
             self.client.runner('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % folder)
+        self._check("%s/.git" % folder)
+
+    def install_repo_relative_test(self):
+        relative_folder = "./config"
+        absolute_folder = os.path.join(self.client.current_folder, "config")
+        mkdir(absolute_folder)
+        folder = self._create_profile_folder(absolute_folder)
+        with tools.chdir(folder):
+            self.client.runner('git init .')
+            self.client.runner('git add .')
+            self.client.runner('git config user.name myname')
+            self.client.runner('git config user.email myname@mycompany.com')
+            self.client.runner('git commit -m "mymsg"')
+
+        self.client.run('config install "%s/.git"' % relative_folder)
+        self._check(os.path.join("%s" % folder, ".git"))
+
+    def install_custom_args_test(self):
+        """ should install from a git repo
+        """
+
+        folder = self._create_profile_folder()
+        with tools.chdir(folder):
+            self.client.runner('git init .')
+            self.client.runner('git add .')
+            self.client.runner('git config user.name myname')
+            self.client.runner('git config user.email myname@mycompany.com')
+            self.client.runner('git commit -m "mymsg"')
+
+        self.client.run('config install "%s/.git" --args="-c init.templateDir=\"\""' % folder)
         self._check("%s/.git" % folder)
 
     def force_git_type_test(self):
