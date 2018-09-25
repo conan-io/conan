@@ -156,22 +156,22 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[env]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': default_profile_path}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': default_profile_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use relative path defined in environment variable
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': '../whatever'}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': '../whatever'}):
             client.run("create . name/version@user/channel", ignore_error=True)
-            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE' must point to an absolute "
-                          "path", client.out)
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
+                          "an absolute path", client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': profile_path}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': profile_path}):
             client.run("create . name/version@user/channel", ignore_error=True)
-            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE' must point to "
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                           "an existing profile file.", client.out)
 
 
