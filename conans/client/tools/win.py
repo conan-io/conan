@@ -40,7 +40,7 @@ def _visual_compiler_cygwin(output, version):
 
 
 @contextmanager
-def system_registry_key(key, subkey):
+def _system_registry_key(key, subkey):
     from six.moves import winreg  # @UnresolvedImport
     hkey = winreg.OpenKey(key, subkey)
     try:
@@ -67,7 +67,7 @@ def _visual_compiler(output, version):
     from six.moves import winreg  # @UnresolvedImport
     try:
         try:
-            with system_registry_key(winreg.HKEY_LOCAL_MACHINE,
+            with _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
                                      r"SOFTWARE\Microsoft\Windows\CurrentVersion") as hKey:
                 winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
             is_64bits = True
@@ -80,7 +80,7 @@ def _visual_compiler(output, version):
             key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
         try:
-            with system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name) as key:
+            with _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name) as key:
                 winreg.QueryValueEx(key, version)
 
             installed_version = Version(version).major(fill=False)
@@ -298,7 +298,7 @@ def find_windows_10_sdk():
     ]
     for key, subkey in hives:
         try:
-            with system_registry_key(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey) as hkey:
+            with _system_registry_key(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey) as hkey:
                 try:
                     installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
                     if os.path.isdir(installation_folder):
