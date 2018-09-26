@@ -102,14 +102,20 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
-    for item in tree.body:
+    for i_body, item in enumerate(tree.body):
         if isinstance(item, ast.ClassDef):
             statements = item.body
             for i, stmt in enumerate(item.body):
                 if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
                     if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
                         try:
-                            next_line = statements[i+1].lineno - 1
+                            if i + 1 == len(statements):  # Last statement in my ClassDef
+                                if i_body + 1 == len(tree.body):  # Last statement over all
+                                    next_line = len(lines)
+                                else:
+                                    next_line = tree.body[i_body+1].lineno - 1
+                            else:
+                                next_line = statements[i+1].lineno - 1
                         except IndexError:
                             next_line = stmt.lineno
                         replace = [line for line in lines[(stmt.lineno-1):next_line]
