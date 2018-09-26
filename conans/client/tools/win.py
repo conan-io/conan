@@ -43,12 +43,16 @@ def _system_registry_key(key, subkey, query):
     from six.moves import winreg  # @UnresolvedImport
     try:
         hkey = winreg.OpenKey(key, subkey)
-        value, _ = winreg.QueryValueEx(hkey, query)
-        return value
-    except (WindowsError, EnvironmentError):
+    except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2)
         return None
-    finally:
-        winreg.CloseKey(hkey)
+    else:
+        try:
+            value, _ = winreg.QueryValueEx(hkey, query)
+            return value
+        except EnvironmentError:
+            return None
+        finally:
+            winreg.CloseKey(hkey)
 
 
 def _visual_compiler(output, version):
