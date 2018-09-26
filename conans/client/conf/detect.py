@@ -102,7 +102,7 @@ def _get_default_compiler(output):
         return None
 
     if detected_os() == "Windows":
-        vs = latest_visual_studio_version_installed(output)
+        vs = ('Visual Studio', latest_visual_studio_version_installed(output))
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
     if platform.system() == "SunOS":
