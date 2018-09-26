@@ -80,10 +80,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
             the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
+            txt_msg = "Unzipping %d %%"
             if the_size > print_progress.last_size + 1:
-                txt_msg = "Unzipping %d %%" % the_size
-                _global_output.rewrite_line(txt_msg)
+                _global_output.rewrite_line(txt_msg % the_size)
                 print_progress.last_size = the_size
+                if int(the_size) == 99:
+                    _global_output.rewrite_line(txt_msg % 100)
+                    _global_output.writeln("")
     else:
         def print_progress(_, __):
             pass
