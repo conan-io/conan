@@ -26,7 +26,7 @@ class MSBuild(object):
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
-              vcvars_ver=None, winsdk_version=None, properties=None):
+              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=False):
 
         self.build_env.parallel = parallel
 
@@ -40,13 +40,13 @@ class MSBuild(object):
                                            targets=targets, upgrade_project=upgrade_project,
                                            build_type=build_type, arch=arch, parallel=parallel,
                                            toolset=toolset, platforms=platforms,
-                                           use_env=use_env, properties=properties)
+                                           use_env=use_env, properties=properties, output_binary_log=output_binary_log)
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None):
+                    use_env=False, properties=None, output_binary_log=False):
 
         targets = targets or []
         properties = properties or {}
@@ -86,6 +86,9 @@ class MSBuild(object):
             if config not in "".join(lines):
                 self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
+
+        if output_binary_log:
+            command.append(' /bl ')
 
         if use_env:
             command.append('/p:UseEnv=true')

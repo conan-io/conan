@@ -144,3 +144,25 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
         self.assertIn("<AdditionalOptions>-Zi -Ob0 -Od /std:c++17 %(AdditionalOptions)</AdditionalOptions>",
                       contents)
+
+    def binary_logging_on_test(self):
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, output_binary_log=True)
+        self.assertIn("/bl", command)
+
+    def binary_logging_off_test(self):
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, output_binary_log=False)
+        self.assertNotIn("/bl", command)
