@@ -23,7 +23,9 @@ from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
+from conans.test.build_helpers.cmake_test import ConanFileMock
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
@@ -33,7 +35,7 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_lo
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load, md5
+from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
@@ -984,6 +986,26 @@ ProgramFiles(x86)=C:\Program Files (x86)
             host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
             return build, host
 
+        build, host = get_values("Linux", "armv6", "Linux", "armv6")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
+        self.assertEquals(build, "sparc-linux-gnu")
+        self.assertEquals(host, "sparc64-linux-gnu")
+
+        build, host = get_values("Linux", "mips", "Linux", "mips64")
+        self.assertEquals(build, "mips-linux-gnu")
+        self.assertEquals(host, "mips64-linux-gnu")
+
+        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
+        self.assertEquals(build, "powerpc64le-linux-gnu")
+        self.assertEquals(host, "powerpc64-linux-gnu")
+
+        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "arm-linux-gnueabihf")
@@ -1076,18 +1098,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
 
-        for os in ["Windows", "Linux"]:
+        for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
 
                 output = ""
                 if arch == "x86_64":
                     output += "x86_64"
                 else:
-                    output += "i686" if os != "Linux" else "x86"
+                    output += "i686" if _os != "Linux" else "x86"
 
                 output += "-"
-                if os == "Windows":
+                if _os == "Windows":
                     output += "w64-mingw32"
                 else:
                     output += "linux-gnu"
@@ -1774,3 +1796,69 @@ class HelloConan(ConanFile):
                                           file_path="src/file.h")
         client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")
+
+
+class CollectLibTestCase(unittest.TestCase):
+    def collect_libs_test(self):
+        conanfile = ConanFileMock()
+        # Without package_folder
+        conanfile.package_folder = None
+        result = tools.collect_libs(conanfile)
+        self.assertEqual([], result)
+
+        # Default behavior
+        conanfile.package_folder = temp_folder()
+        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(mylib_path, "")
+        conanfile.cpp_info = CppInfo("")
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+
+        # Custom folder
+        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+        save(customlib_path, "")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Custom folder doesn't exist
+        result = tools.collect_libs(conanfile, folder="fake_folder")
+        self.assertEqual([], result)
+        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+
+        # Use cpp_info.libdirs
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "customlib"], result)
+
+        # Custom folder with multiple libdirs should only collect from custom folder
+        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Warn same lib different folders
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(custom_mylib_path, "")
+        save(lib_mylib_path, "")
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("Library 'mylib' already found in a previous 'conanfile.cpp_info.libdirs' "
+                      "folder", conanfile.output)
+
+        # Warn lib folder does not exist with correct result
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(lib_mylib_path, "")
+        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                      % no_folder_path, conanfile.output)
+
