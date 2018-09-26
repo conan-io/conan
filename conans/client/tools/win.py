@@ -39,7 +39,6 @@ def _visual_compiler_cygwin(output, version):
     return compiler, installed_version
 
 
-@contextmanager
 def _system_registry_key(key, subkey, query):
     from six.moves import winreg  # @UnresolvedImport
     try:
