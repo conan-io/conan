@@ -6,7 +6,7 @@ from collections import namedtuple
 from conans import tools
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.tools.oss import cpu_count
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
@@ -620,3 +620,82 @@ class HelloConan(ConanFile):
         self.assertFalse(ab.fpic)
         ab.fpic = True
         self.assertIn("-fPIC", ab.vars["CXXFLAGS"])
+
+    @unittest.skipUnless(platform.system() != "Linux", "Requires make")
+    def autotools_real_install_dirs_test(self):
+        body = r"""#include "hello.h"
+#include <iostream>
+using namespace std;
+
+void hello()
+{
+    cout << "Hola Mundo!";
+}
+"""
+        header = """
+#pragma once
+void hello();
+"""
+        main = """
+#include "hello.h"
+
+int main()
+{
+    hello();
+    return 0;
+}
+"""
+        conanfile = """
+from conans import ConanFile, AutoToolsBuildEnvironment, tools
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+    settings = "os", "compiler", "arch", "build_type"
+    exports_sources = "*"
+
+    def build(self):
+        makefile_am = '''
+bin_PROGRAMS = main
+lib_LIBRARIES = libhello.a
+libhello_a_SOURCES = hello.cpp
+main_SOURCES = main.cpp
+main_LDADD = libhello.a
+'''
+        configure_ac = '''
+AC_INIT([main], [1.0], [luism@jfrog.com])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PROG_CXX
+AC_PROG_RANLIB
+AM_PROG_AR
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+'''
+        tools.save("Makefile.am", makefile_am)
+        tools.save("configure.ac", configure_ac)
+        self.run("aclocal")
+        self.run("autoconf")
+        self.run("automake --add-missing --foreign")
+        autotools = AutoToolsBuildEnvironment(self)
+        autotools.configure()
+        autotools.make()
+        autotools.install()
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "main.cpp": main,
+                     "hello.h": header,
+                     "hello.cpp": body})
+        client.run("create . danimtb/testing")
+        pkg_path = client.client_cache.package(
+            PackageReference.loads(
+                "test/1.0@danimtb/testing:0ab9fcf606068d4347207cc29edd400ceccbc944"))
+
+        [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
+
+        new_conanfile = conanfile.replace("autotools.configure()",
+                                           "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
+        client.save({"conanfile.py": new_conanfile})
+        client.run("create . danimtb/testing")
+        [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
+        [self.assertNotIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
