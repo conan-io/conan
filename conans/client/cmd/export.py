@@ -134,7 +134,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output,
+                    paths)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
     _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
@@ -194,7 +195,7 @@ def _init_export_folder(destination_folder, destination_src_folder):
 
 
 def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
-                    output):
+                    output, client_cache):
 
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
@@ -221,6 +222,15 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
     except OSError:
         pass
 
+    for python_require in conanfile.python_requires:
+        copier = FileCopier(python_require.path, destination_folder)
+        for pattern in included_exports:
+            copier(pattern, links=True, excludes=excluded_exports)
+        python_req_sources = client_cache.export_sources(python_require.conan_ref,
+                                                         short_paths=None)
+        copier = FileCopier(python_req_sources, destination_source_folder)
+        for pattern in included_sources:
+            copier(pattern, links=True, excludes=excluded_sources)
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)

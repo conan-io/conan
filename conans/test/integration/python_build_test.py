@@ -300,6 +300,31 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
+    def reuse_exports_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    exports = "*.txt"
+    exports_sources = "*.h"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "my file contents",
+                     "header.h": "my header"})
+        client.run("export . Base/0.1@user/testing")
+        conanfile = """from conans import python_requires, load
+base = python_requires("Base/0.1@user/testing")
+class Pkg(base.ConanFile):
+    exports = "*.txt"
+    exports_sources = "*.h"
+    def build(self):
+        self.output.info("FILE CONTENT!: %s" % load("myfile.txt"))
+        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+"""
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: FILE CONTENT!: my file contents", client.out)
+        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header", client.out)
+
 
 class PythonBuildTest(unittest.TestCase):
 

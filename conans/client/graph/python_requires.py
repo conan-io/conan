@@ -5,26 +5,28 @@ import os
 from conans.model.ref import ConanFileReference
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.requires import Requirement
+from collections import namedtuple
+
+
+PythonRequire = namedtuple("PythonRequire", "conan_ref module path")
 
 
 class ConanPythonRequire(object):
     def __init__(self, proxy, range_resolver):
-        self._modules = {}
+        self._cached_requires = {}  # {conan_ref: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
-        self._references = []
+        self._requires = []
 
     @property
-    def references(self):
-        result = self._references
-        self._references = []
+    def requires(self):
+        result = self._requires
+        self._requires = []
         return result
 
     def __call__(self, require):
         try:
-            m, reference = self._modules[require]
-            self._references.append(reference)
-            return m
+            python_require = self._cached_requires[require]
         except KeyError:
             r = ConanFileReference.loads(require)
             requirement = Requirement(r)
@@ -34,11 +36,13 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            self._references.append(reference)
             try:
-                sys.path.append(os.path.dirname(path))
+                dirname = os.path.dirname(path)
+                sys.path.append(dirname)
                 module = imp.load_source(str(r), path)
             finally:
                 sys.path.pop()
-            self._modules[require] = module, reference
-        return module
+            python_require = PythonRequire(reference, module, dirname)
+            self._cached_requires[require] = python_require
+        self._requires.append(python_require)
+        return python_require.module
