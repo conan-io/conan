@@ -680,6 +680,10 @@ AC_OUTPUT
         autotools.configure()
         autotools.make()
         autotools.install()
+        
+    def package_id(self):
+        # easier to have same package_id for the test
+        self.info.header_only()
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile,
@@ -689,7 +693,7 @@ AC_OUTPUT
         client.run("create . danimtb/testing")
         pkg_path = client.client_cache.package(
             PackageReference.loads(
-                "test/1.0@danimtb/testing:0ab9fcf606068d4347207cc29edd400ceccbc944"))
+                "test/1.0@danimtb/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"))
 
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 
