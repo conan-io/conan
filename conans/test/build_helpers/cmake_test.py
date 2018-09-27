@@ -35,12 +35,11 @@ class CMakeTest(unittest.TestCase):
         self.tempdir2 = temp_folder(path_with_spaces=False)
 
     def tearDown(self):
-        pass
         shutil.rmtree(self.tempdir)
         shutil.rmtree(self.tempdir2)
 
     def config_patch_test(self):
-        
+
         conan_file = ConanFileMock()
         conan_file.name = "MyPkg"
         conan_file.settings = Settings()
@@ -50,7 +49,6 @@ class CMakeTest(unittest.TestCase):
         conan_file.deps_cpp_info = DepsCppInfo()
 
         msg = "FOLDER: " + _format_cmake_config_path(conan_file.package_folder)
-        print("msg: %s" % msg)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
