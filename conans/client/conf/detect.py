@@ -102,7 +102,7 @@ def _get_default_compiler(output):
         return None
 
     if detected_os() == "Windows":
-        version = latest_visual_studio_version_installed(output)
+        version = latest_visual_studio_version_installed()
         vs = ('Visual Studio', version) if version else None
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
