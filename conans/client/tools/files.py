@@ -14,8 +14,6 @@ from conans.unicode import get_cwd
 import six
 
 
-_global_output = None
-
 UNIT_SIZE = 1000.0
 
 

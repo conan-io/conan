@@ -11,8 +11,6 @@ from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.tools import which
 
-_global_output = None
-
 
 def args_to_string(args):
     if not args:

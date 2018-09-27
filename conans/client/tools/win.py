@@ -15,8 +15,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
 from conans.unicode import get_cwd
 
-_global_output = None
-
 
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")

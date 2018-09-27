@@ -5,8 +5,6 @@ from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 
-_global_output = None
-
 
 class SystemPackageTool(object):
 
