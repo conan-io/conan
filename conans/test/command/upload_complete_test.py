@@ -12,7 +12,7 @@ from conans.util.files import load, mkdir, save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
-from conans.tools import untargz
+from conans.client.tools.files import untargz
 from requests.packages.urllib3.exceptions import ConnectionError
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 

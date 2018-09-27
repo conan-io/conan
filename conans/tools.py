@@ -29,13 +29,10 @@ from conans.client.tools import system_pm as tools_system_pm
 from conans.client.tools import win as tools_win
 
 # Tools form conans.util
-
-
 from conans.util.env_reader import get_env
-# noinspection PyUnresolvedReferences
 from conans.util.files import (_generic_algorithm_sum, load, sha256sum,
                                sha1sum, md5sum, md5, touch, relative_dirs,
-                               rmdir, mkdir, to_file_bytes, save, save_append)
+                               rmdir, mkdir, to_file_bytes, save as files_save, save_append)
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -47,9 +44,13 @@ def set_global_instances(the_output, the_requester):
     global _global_output
     global _global_requester
 
+    old_output, old_requester = _global_output, _global_requester
+
     # TODO: pass here the configuration file, and make the work here (explicit!)
     _global_output = the_output
     _global_requester = the_requester
+
+    return old_output, old_requester
 
 
 # Assign a default, will be overwritten in the factory of the ConanAPI
@@ -66,7 +67,7 @@ def save(path, content, append=False):
     if append:
         save_append(path=path, content=content)
     else:
-        save(path=path, content=content, only_if_modified=False)
+        files_save(path=path, content=content, only_if_modified=False)
 
 
 # From conans.client.tools.net
@@ -98,7 +99,7 @@ def unzip(*args, **kwargs):
 
 
 def replace_in_file(*args, **kwargs):
-    return replace_in_file(output=_global_output, *args, **kwargs)
+    return tools_files.replace_in_file(output=_global_output, *args, **kwargs)
 
 
 # from conans.client.tools.oss

@@ -3,7 +3,6 @@ import shutil
 
 import six
 
-from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.model.conan_file import get_env_context_manager
@@ -12,6 +11,7 @@ from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
 from conans.model.scm import SCMData
+from conans.client import tools
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):

@@ -4,7 +4,6 @@ import platform
 import re
 import subprocess
 
-from conans import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.paths import CONANFILE

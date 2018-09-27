@@ -1,9 +1,9 @@
 import unittest
 import os
 
-from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.test.utils.test_files import temp_folder
+from conans.client import tools
 
 
 class CurdirKeptTest(unittest.TestCase):

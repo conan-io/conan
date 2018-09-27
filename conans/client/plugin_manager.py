@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
-from conans.tools import chdir
+from conans.client.tools.files import chdir
 from conans.util.files import save
 
 

@@ -3,7 +3,6 @@ Server's configuration variables
 """
 import six
 
-from conans import tools
 from conans.server.store.server_store import ServerStore
 from conans.server.store.server_store_revisions import ServerStoreRevisions
 from conans.util.env_reader import get_env
@@ -18,6 +17,7 @@ from conans.paths import conan_expand_user
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.util.log import logger
 from conans.server.conf.default_server_conf import default_server_conf
+from conans.client import tools
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 

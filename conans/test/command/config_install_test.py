@@ -8,10 +8,10 @@ from conans.util.files import load, save_files, save, mkdir
 from conans.client.remote_registry import RemoteRegistry, Remote
 from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
-from conans import tools
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
 import shutil
+from conans.client import tools
 
 
 win_profile = """[settings]

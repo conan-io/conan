@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from conans.client.output import Color
 from conans.model.version import Version
-from conans.tools import vs_installation_path
+from conans.client.tools.win import vs_installation_path
 
 
 def _execute(command):

@@ -1,10 +1,10 @@
 import os
 
-from conans import tools
 from conans.client import join_arguments, defs_to_string
 from conans.errors import ConanException
-from conans.tools import args_to_string
+from conans.client.tools.oss import args_to_string
 from conans.util.files import mkdir, get_abs_path
+from conans.client import tools
 
 
 class Meson(object):

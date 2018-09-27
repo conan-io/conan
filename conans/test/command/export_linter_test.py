@@ -3,7 +3,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 import six
 import os
-from conans import tools
+from conans.client import tools
 
 
 conanfile = """

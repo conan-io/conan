@@ -4,9 +4,9 @@
 import unittest
 
 
-from conans import tools
 from conans.test.utils.conanfile import MockSettings
-from conans.tools import build_sln_command, cpu_count
+from conans.client.tools.win import build_sln_command
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from nose.plugins.attrib import attr
@@ -15,6 +15,7 @@ from six import StringIO
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
 import os
+from conans.client import tools
 
 
 @attr('visual_studio')

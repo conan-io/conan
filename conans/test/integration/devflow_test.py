@@ -1,10 +1,10 @@
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import mkdir, load, rmdir
 from conans.model.ref import ConanFileReference
+from conans.client import tools
 
 
 conanfile = '''

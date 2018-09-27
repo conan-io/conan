@@ -1,7 +1,6 @@
 import copy
 import re
 
-from conans import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
 from conans.client.tools.oss import cpu_count

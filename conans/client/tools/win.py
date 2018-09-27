@@ -9,7 +9,7 @@ import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import detected_architecture, os_info
+from conans.client.tools.oss import detected_architecture, OSInfo
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp

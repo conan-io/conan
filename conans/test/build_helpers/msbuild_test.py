@@ -3,7 +3,6 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans import tools
 from conans.client.build.msbuild import MSBuild
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockSettings, MockConanfile

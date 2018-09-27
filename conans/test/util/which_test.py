@@ -5,9 +5,9 @@ import unittest
 import os
 import stat
 import platform
-from conans import tools
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
+from conans.client import tools
 
 
 class WhichTest(unittest.TestCase):

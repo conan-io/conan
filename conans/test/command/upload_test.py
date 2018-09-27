@@ -1,5 +1,5 @@
 import unittest
-from conans.tools import environment_append
+from conans.client.tools.env import environment_append
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference, PackageReference

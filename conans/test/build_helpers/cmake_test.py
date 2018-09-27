@@ -7,7 +7,6 @@ import platform
 
 from collections import namedtuple
 
-from conans import tools
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.build_info import CppInfo, DepsCppInfo
@@ -16,11 +15,12 @@ from conans.client.conf import default_settings_yml
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.tools import cpu_count
+from conans.client.tools.oss import cpu_count
 from conans.util.files import save, load
 from conans.test.utils.test_files import temp_folder
 from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
+from conans.client import tools
 
 
 class CMakeTest(unittest.TestCase):

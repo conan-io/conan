@@ -1,6 +1,5 @@
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 import platform

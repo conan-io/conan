@@ -1,6 +1,5 @@
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -10,6 +9,7 @@ from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
 from conans.test.utils.test_files import scan_folder
+from conans.client import tools
 
 
 conanfile_py = """

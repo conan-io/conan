@@ -13,7 +13,6 @@ from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
 
-from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
@@ -30,19 +29,19 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
     StoppableThreadBottle
 
-from conans.tools import which
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
-    set_global_instances
+from conans.client.tools.files import which, replace_in_file
+from conans.client.tools.system_pm import OSInfo, AptTool, ChocolateyTool, SystemPackageTool
+from conans.client import tools
 from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
+from conans.tools import set_global_instances, os_info as global_os_info, _global_requester, _global_output
 
 
 class SystemPackageToolTest(unittest.TestCase):
     def setUp(self):
-        out = TestBufferConanOutput()
-        set_global_instances(out, requests)
+        self.out = TestBufferConanOutput()
 
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
@@ -55,11 +54,11 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_linux = True
             os_info.is_windows = False
             os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
-                          tools.system_pm._global_output)
+                          self.out)
 
     def add_repositories_exception_cases_test(self):
         os_info = OSInfo()
@@ -566,8 +565,8 @@ class HelloConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        assert(tools.net._global_requester != None)
-        assert(tools.files._global_output != None)
+        assert(tools._global_requester != None)
+        assert(tools._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
 
@@ -582,8 +581,8 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(tools.files._global_output.warn)
+        self.assertEquals(_global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(_global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
@@ -1120,8 +1119,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
     def detect_windows_subsystem_test(self):
         # Dont raise test
-        result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path() or platform.system() != "Windows":
+        result = global_os_info.detect_windows_subsystem()
+        if not global_os_info.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1399,7 +1398,7 @@ class HelloConan(ConanFile):
             return filepath
 
         fp = save_file(b"a line\notherline\n")
-        if not tools.os_info.is_windows:
+        if not global_os_info.is_windows:
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
@@ -1419,7 +1418,7 @@ class HelloConan(ConanFile):
         self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
-        if not tools.os_info.is_windows:
+        if not global_os_info.is_windows:
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
