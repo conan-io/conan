@@ -22,6 +22,11 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
 
+def _format_cmake_config_path(pathstr):
+   if platform.system() == "Windows":
+       drive,path = os.path.splitdrive(pathstr)
+       return drive.upper() + path.replace(os.path.sep,"/")
+   return pathstr
 
 class CMakeTest(unittest.TestCase):
 
@@ -30,10 +35,12 @@ class CMakeTest(unittest.TestCase):
         self.tempdir2 = temp_folder(path_with_spaces=False)
 
     def tearDown(self):
+        pass
         shutil.rmtree(self.tempdir)
         shutil.rmtree(self.tempdir2)
 
     def config_patch_test(self):
+        
         conan_file = ConanFileMock()
         conan_file.name = "MyPkg"
         conan_file.settings = Settings()
@@ -42,7 +49,8 @@ class CMakeTest(unittest.TestCase):
         conan_file.package_folder = os.path.join(self.tempdir, "pkg")
         conan_file.deps_cpp_info = DepsCppInfo()
 
-        msg = "FOLDER: " + conan_file.package_folder
+        msg = "FOLDER: " + _format_cmake_config_path(conan_file.package_folder)
+        print("msg: %s" % msg)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
@@ -79,7 +87,7 @@ class CMakeTest(unittest.TestCase):
         self.assertEqual(conan_file.deps_cpp_info['MyPkg1'].rootpath,
                          self.tempdir2)
 
-        msg = "FOLDER: " + self.tempdir2
+        msg = "FOLDER: " + _format_cmake_config_path(self.tempdir2)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
