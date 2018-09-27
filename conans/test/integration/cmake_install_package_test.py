@@ -20,8 +20,10 @@ class AConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     def build(self):
         cmake = CMake(self)
-        save("file1.cmake", "FOLDER " + _format_cmake_config_path(self.package_folder))
-        save("sub/file1.cmake", "FOLDER " + _format_cmake_config_path(self.package_folder))
+        pth = _format_cmake_config_path(self.package_folder)
+        self.output.info("output path: %s" % pth)
+        save("file1.cmake", "FOLDER " + pth)
+        save("sub/file1.cmake", "FOLDER " + pth)
         cmake.patch_config_paths()
     def package(self):
         self.copy("*")
