@@ -35,7 +35,7 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None):
+                      arch=None, parallel=True, toolset=None, platforms=None, output=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -44,7 +44,14 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     """
     from conans.client.build.msbuild import MSBuild
     tmp = MSBuild(settings)
-    tmp._output = _global_output
+
+    if output is None:
+        import warnings
+        warnings.warn("Provide the output argument explicitly")
+        from conans.tools import _global_output
+        output = _global_output
+
+    tmp._output = output
 
     # Generate the properties file
     props_file_contents = tmp._get_props_file_contents()
@@ -233,7 +240,13 @@ def find_windows_10_sdk():
 
 
 def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
-                   winsdk_version=None):
+                   winsdk_version=None, output=None):
+    if output is None:
+        import warnings
+        warnings.warn("Provide the output argument explicitly")
+        from conans.tools import _global_output
+        output = _global_output
+
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -267,7 +280,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
             if not force:
                 raise ConanException("Error, %s" % message)
             else:
-                _global_output.warn(message)
+                output.warn(message)
     else:
         vs_path = vs_installation_path(str(compiler_version))
 

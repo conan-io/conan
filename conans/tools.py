@@ -12,14 +12,25 @@
 
 from __future__ import print_function
 
-import requests
 import sys
+import requests
 
 from conans.client.output import ConanOutput
 
-# noinspection PyUnresolvedReferences
-from conans.client import tools as client_tools
-# noinspection PyUnresolvedReferences
+# Tools from conans.client.tools
+from conans.client.tools.apple import *  # pylint: disable=unused-import
+from conans.client.tools.env import *  # pylint: disable=unused-import
+from conans.client.tools import files as tools_files
+from conans.client.tools import net as tools_net
+from conans.client.tools import oss as tools_oss
+from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
+from conans.client.tools.scm import *  # pylint: disable=unused-import
+from conans.client.tools import system_pm as tools_system_pm
+from conans.client.tools import win as tools_win
+
+# Tools form conans.util
+
+
 from conans.util.env_reader import get_env
 # noinspection PyUnresolvedReferences
 from conans.util.files import (_generic_algorithm_sum, load, sha256sum,
@@ -52,13 +63,139 @@ From here onwards only currification is expected, no logic
 
 def save(path, content, append=False):
     # TODO: All this three functions: save, save_append and this one should be merged into one.
-    # TODO: This function is not currified, should be moved out of here
     if append:
         save_append(path=path, content=content)
     else:
         save(path=path, content=content, only_if_modified=False)
 
 
-def download(*args, **kwargs):
-    return client_tools.download(out=_global_output, requester=_global_requester, *args, **kwargs)
+# From conans.client.tools.net
+get = tools_net.get
+ftp_download = tools_net.ftp_download
 
+def download(*args, **kwargs):
+    return tools_net.download(out=_global_output, requester=_global_requester, *args, **kwargs)
+
+
+# from conans.client.tools.files
+chdir = tools_files.chdir
+human_size = tools_files.human_size
+untargz = tools_files.untargz
+check_with_algorithm_sum = tools_files.check_with_algorithm_sum
+check_sha1 = tools_files.check_sha1
+check_md5 = tools_files.check_md5
+check_sha256 = tools_files.check_sha256
+patch = tools_files.patch
+replace_prefix_in_pc_file = tools_files.replace_prefix_in_pc_file
+collect_libs = tools_files.collect_libs
+which = tools_files.which
+unix2dos = tools_files.unix2dos
+dos2unix = tools_files.dos2unix
+
+
+def unzip(*args, **kwargs):
+    return tools_files.unzip(output=_global_output, *args, **kwargs)
+
+
+def replace_in_file(*args, **kwargs):
+    return replace_in_file(output=_global_output, *args, **kwargs)
+
+
+# from conans.client.tools.oss
+args_to_string = tools_oss.args_to_string
+detected_architecture = tools_oss.detected_architecture
+OSInfo = tools_oss.OSInfo
+cross_building = tools_oss.cross_building
+get_cross_building_settings = tools_oss.get_cross_building_settings
+get_gnu_triplet = tools_oss.get_gnu_triplet
+
+
+def cpu_count(*args, **kwargs):
+    return tools_oss.cpu_count(output=_global_output, *args, **kwargs)
+
+
+# from conans.client.tools.system_pm
+class SystemPackageTool(tools_system_pm.SystemPackageTool):
+    def __init__(self, *args, **kwargs):
+        super(SystemPackageTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class NullTool(tools_system_pm.NullTool):
+    def __init__(self, *args, **kwargs):
+        super(NullTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class AptTool(tools_system_pm.AptTool):
+    def __init__(self, *args, **kwargs):
+        super(AptTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class YumTool(tools_system_pm.YumTool):
+    def __init__(self, *args, **kwargs):
+        super(YumTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class BrewTool(tools_system_pm.BrewTool):
+    def __init__(self, *args, **kwargs):
+        super(BrewTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PkgTool(tools_system_pm.PkgTool):
+    def __init__(self, *args, **kwargs):
+        super(PkgTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class ChocolateyTool(tools_system_pm.ChocolateyTool):
+    def __init__(self, *args, **kwargs):
+        super(ChocolateyTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PkgUtilTool(tools_system_pm.PkgUtilTool):
+    def __init__(self, *args, **kwargs):
+        super(PkgUtilTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PacManTool(tools_system_pm.PacManTool):
+    def __init__(self, *args, **kwargs):
+        super(PacManTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class ZypperTool(tools_system_pm.ZypperTool):
+    def __init__(self, *args, **kwargs):
+        super(ZypperTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+# from conans.client.tools.win
+msvc_build_command = tools_win.msvc_build_command
+vs_installation_path = tools_win.vs_installation_path
+vswhere = tools_win.vswhere
+vs_comntools = tools_win.vs_comntools
+find_windows_10_sdk = tools_win.find_windows_10_sdk
+vcvars_dict = tools_win.vcvars_dict
+vcvars = tools_win.vcvars
+escape_windows_cmd = tools_win.escape_windows_cmd
+get_cased_path = tools_win.get_cased_path
+MSYS2 = tools_win.MSYS2
+MSYS = tools_win.MSYS
+CYGWIN = tools_win.CYGWIN
+WSL = tools_win.WSL
+SFU = tools_win.SFU
+unix_path = tools_win.unix_path
+run_in_windows_bash = tools_win.run_in_windows_bash
+
+
+def build_sln_command(*args, **kwargs):
+    return tools_win.build_sln_command(output=_global_output, *args, **kwargs)
+
+
+def vcvars_command(*args, **kwargs):
+    return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
+
+
+
+# Ready to use objects.
+try:
+    os_info = OSInfo()
+except Exception as exc:
+    logger.error(exc)
+    _global_output.error("Error detecting os_info")
