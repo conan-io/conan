@@ -37,7 +37,7 @@ class ConanPythonRequire(object):
             self._references.append(reference)
             try:
                 sys.path.append(os.path.dirname(path))
-                module = imp.load_source("python_require", path)
+                module = imp.load_source(str(r), path)
             finally:
                 sys.path.pop()
             self._modules[require] = module, reference
