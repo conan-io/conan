@@ -621,7 +621,7 @@ class HelloConan(ConanFile):
         ab.fpic = True
         self.assertIn("-fPIC", ab.vars["CXXFLAGS"])
 
-    @unittest.skipUnless(platform.system() != "Linux", "Requires make")
+    @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     def autotools_real_install_dirs_test(self):
         body = r"""#include "hello.h"
 #include <iostream>
