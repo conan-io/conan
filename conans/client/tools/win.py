@@ -389,7 +389,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
                 vcvars_ver=None, winsdk_version=None, only_diff=True):
-    known_path_lists = ("INCLUDE", "LIB", "LIBPATH", "PATH")
+    known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
@@ -407,14 +407,17 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             continue
         try:
             name_var, value = line.split("=", 1)
-            new_value = value.split(os.pathsep) if name_var in known_path_lists else value
+            new_value = value.split(os.pathsep) if name_var.lower() in known_path_lists else value
             # Return only new vars & changed ones, but only with the changed elements if the var is
             # a list
             if only_diff:
                 old_value = os.environ.get(name_var)
-                # The new value ends with separator and the old value, is a list, get only the
-                # new elements
-                if old_value and value.endswith(os.pathsep + old_value):
+                if name_var.lower() == "path":
+                    old_values_lower = [v.lower() for v in old_value.split(os.pathsep)]
+                    # Clean all repeated entries, not append if the element was already there
+                    new_env[name_var] = [v for v in new_value if v.lower() not in old_values_lower]
+                elif old_value and value.endswith(os.pathsep + old_value):
+                    # The new value ends with separator and the old value, is a list, get only the new elements
                     new_env[name_var] = value[:-(len(old_value) + 1)].split(os.pathsep)
                 elif value != old_value:
                     # Only if the vcvars changed something, we return the variable,
@@ -437,7 +440,6 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
         new_env["PATH"] = ";".join(path)
 
     return new_env
-
 
 @contextmanager
 def vcvars(*args, **kwargs):
