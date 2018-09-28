@@ -207,7 +207,6 @@ class SVN(SCMBase):
             if it[0] == 'I':  # Only ignored files
                 filepath = it[8:].strip()
                 excluded_list.append(os.path.normpath(filepath))
-        excluded_list.append(".svn")
         return excluded_list
 
     def get_remote_url(self):
