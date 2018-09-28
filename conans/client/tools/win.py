@@ -516,7 +516,7 @@ def unix_path(path, path_flavor=None):
     if os.path.exists(path):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
 
-    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path_flavor = path_flavor or OSInfo.detect_windows_subsystem() or MSYS2
     path = path.replace(":/", ":\\")
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
     path = pattern.sub('/\\1/', path).replace('\\', '/')
@@ -539,7 +539,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     env = env or {}
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
-    subsystem = subsystem or os_info.detect_windows_subsystem()
+    subsystem = subsystem or OSInfo.detect_windows_subsystem()
 
     if not subsystem:
         raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require "
@@ -580,7 +580,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         curdir = unix_path(cwd or get_cwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        bash_path = os_info.bash_path()
+        bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)

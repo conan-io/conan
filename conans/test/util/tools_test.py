@@ -783,18 +783,18 @@ compiler:
             tools.vcvars_command(settings)
 
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
+        output = ConanOutput(new_out)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            tools.vcvars_command(settings)
+            tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
-                    tools.vcvars_command(settings)
+                    tools.vcvars_command(settings, output=output)
 
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 # Not raising
-                tools.vcvars_command(settings, force=True)
+                tools.vcvars_command(settings, force=True, output=output)
 
     def vcvars_context_manager_test(self):
         conanfile = """

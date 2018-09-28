@@ -8,6 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.client import tools
 
 
 conanfile_py = """
