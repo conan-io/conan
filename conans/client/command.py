@@ -210,7 +210,7 @@ class Command(object):
                 self._user_io.out.writeln("options:")
                 self._user_io.out.writeln(str(v))
             else:
-                self._user_io.out.write("%s: %s" % (k, str(v)))
+                self._user_io.out.writeln("%s: %s" % (k, str(v)))
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method.
