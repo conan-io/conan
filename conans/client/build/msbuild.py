@@ -80,7 +80,7 @@ class MSBuild(object):
             lines = solution_global.splitlines()
             lines = [s.split("=")[0].strip() for s in lines]
         except Exception:
-            pass
+            pass  # TODO: !!! what are we catching here? tools.load? .group(1)? .splitlines?
         else:
             config = "%s|%s" % (build_type, msvc_arch)
             if config not in "".join(lines):
