@@ -54,6 +54,7 @@ from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
+from collections import OrderedDict
 
 
 default_manifest_folder = '.conan_manifests'
@@ -267,7 +268,7 @@ class ConanAPIV1(object):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def display(self, path, attribute, remote_name=None):
+    def inspect(self, path, attributes, remote_name=None):
         if remote_name:
             remote = self.get_remote_by_name(remote_name)
             reference = ConanFileReference.loads(path)
@@ -284,18 +285,18 @@ class ConanAPIV1(object):
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
         # To make sure it captures the name and version of local
-        if reference is None and hasattr(conanfile, "preexport") and callable(conanfile.preexport):
-            conanfile.recipe_folder = os.path.dirname(conanfile_path)
-            conanfile.preexport()
-        try:
-            if attribute == "options":
-                options = create_options(conanfile)
-                return options._package_options
-
-            attr = getattr(conanfile, attribute)
-            return attr
-        except AttributeError as e:
-            raise ConanException(str(e))
+        result = OrderedDict()
+        for attribute in attributes:
+            try:
+                if attribute == "options":
+                    options = create_options(conanfile)
+                    attr = options._package_options
+                else:
+                    attr = getattr(conanfile, attribute)
+                result[attribute] = attr
+            except AttributeError as e:
+                raise ConanException(str(e))
+        return result
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
