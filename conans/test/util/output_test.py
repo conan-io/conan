@@ -67,13 +67,7 @@ class PkgConan(ConanFile):
 
         output_dir = os.path.join(tmp_dir, "output_dir")
         new_out = StringIO()
-
-        import requests
-        old_output, old_requester = set_global_instances(ConanOutput(new_out), requests)
-        try:
-            tools.unzip(zip_path, output_dir)
-        finally:
-            set_global_instances(old_output, old_requester)
+        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
         self.assertRegexpMatches(output, "Unzipping [\d]+B")
