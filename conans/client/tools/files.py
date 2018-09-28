@@ -238,7 +238,7 @@ def replace_in_file(file_path, search, replace, strict=True):
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None):
     if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
-        return replace_in_file(file_path, search, replace, strict=True)
+        return replace_in_file(file_path, search, replace, strict=strict)
 
     def normalized_text(text):
         return text.replace("\\", "/").lower()
