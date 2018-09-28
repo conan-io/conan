@@ -1500,7 +1500,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         excluded_files = svn.excluded_files()
         self.assertIn(file_to_ignore, excluded_files)
         self.assertNotIn('.svn', excluded_files)
-        self.assertEqual(len(excluded_files), 2)
+        self.assertEqual(len(excluded_files), 1)
 
     def test_credentials(self):
         svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
