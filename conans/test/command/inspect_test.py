@@ -14,22 +14,22 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect . -a=name")
-        self.assertEquals(client.out, "name: MyPkg")
+        self.assertIn("name: MyPkg", client.out)
         client.run("inspect . -a=version")
-        self.assertEquals(client.out, "version: 1.2.3")
+        self.assertIn("version: 1.2.3", client.out)
 
         client.run("export . lasote/testing")
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=name")
-        self.assertEquals(client.out, "name: MyPkg")
+        self.assertIn("name: MyPkg", client.out)
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=version")
-        self.assertEquals(client.out, "version: 1.2.3")
+        self.assertIn("version: 1.2.3", client.out)
 
         client.run("upload MyPkg* --confirm")
         client.run('remove "*" -f')
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=name -r=default")
-        self.assertEqual(client.out, "name: MyPkg")
+        self.assertIn("name: MyPkg", client.out)
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=version -r=default")
-        self.assertEquals(client.out, "version: 1.2.3")
+        self.assertIn("version: 1.2.3", client.out)
 
     def attributes_display_test(self):
         client = TestClient()
@@ -40,13 +40,13 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect . -a=short_paths")
-        self.assertEquals(client.out, "short_paths: False")
+        self.assertIn("short_paths: False", client.out)
         client.run("inspect . -a=name")
-        self.assertEquals(client.out, "name: None")
+        self.assertIn("name: None", client.out)
         client.run("inspect . -a=version")
-        self.assertEquals(client.out, "version: None")
+        self.assertIn("version: None", client.out)
         client.run("inspect . -a=settings")
-        self.assertEquals(client.out, "settings: ('os', 'compiler', 'arch')")
+        self.assertIn("settings: ('os', 'compiler', 'arch')", client.out)
 
         error = client.run("inspect . -a=unexisting_attr", ignore_error=True)
         self.assertTrue(error)

@@ -55,6 +55,7 @@ from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 from collections import OrderedDict
+import shutil
 
 
 default_manifest_folder = '.conan_manifests'
@@ -273,8 +274,11 @@ class ConanAPIV1(object):
             remote = self.get_remote_by_name(remote_name)
             reference = ConanFileReference.loads(path)
             conanfile = self._remote_manager.get_path(reference, None, "conanfile.py", remote)
-            path = os.path.join(mkdir_tmp(), "conanfile.py")
+            tmp_folder = mkdir_tmp()
+            path = os.path.join(tmp_folder, "conanfile.py")
             save(path, conanfile)
+        else:
+            tmp_folder = None
 
         cwd = get_cwd()
         try:
@@ -284,6 +288,8 @@ class ConanAPIV1(object):
             reference = None
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
+        if tmp_folder:
+            shutil.rmtree(tmp_folder)
         # To make sure it captures the name and version of local
         result = OrderedDict()
         for attribute in attributes:
