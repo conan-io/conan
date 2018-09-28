@@ -586,7 +586,7 @@ class ConanLib(ConanFile):
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
-        self.assertFalse(os.path.exists(os.path.join(bf, ".svn")))
+        self.assertTrue(os.path.exists(os.path.join(bf, ".svn")))
         self.assertFalse(os.path.exists(os.path.join(bf, "ignored.pyc")))
 
     def test_local_source(self):
