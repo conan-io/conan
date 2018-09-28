@@ -178,15 +178,17 @@ class SVN(SCMBase):
 
     def run(self, command):
         # Ensure we always pass some params
-        return super(SVN, self).run(command="{} --no-auth-cache".format(command))
+        extra_options = " --no-auth-cache --non-interactive"
+        if not self._verify_ssl:
+            extra_options += " --trust-server-cert-failures=unknown-ca"
+        return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def checkout(self, url, revision="HEAD"):
         output = ""
         try:
             self._check_svn_repo()
         except ConanException:
-            params = " --trust-server-cert-failures=unknown-ca" if not self._verify_ssl else ""
-            output += self.run('co "{url}" . {params}'.format(url=url, params=params))
+            output += self.run('co "{url}" .'.format(url=url))
         else:
             assert url.lower() == self.get_remote_url().lower(), \
                 "%s != %s" % (url, self.get_remote_url())
