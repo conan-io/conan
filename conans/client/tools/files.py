@@ -225,10 +225,13 @@ def replace_in_file(file_path, search, replace, strict=True):
             raise ConanException(message)
         else:
             _global_output.warn(message)
+            return False
     content = content.replace(search, replace)
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+    return True
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):

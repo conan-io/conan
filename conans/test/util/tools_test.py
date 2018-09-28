@@ -458,6 +458,32 @@ class ReplaceInFileTest(unittest.TestCase):
 
 class ToolsTest(unittest.TestCase):
 
+    def replace_paths_in_file_windows_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        replace_with = "MYPATH"
+        expected = 'Some other contentsMYPATH"finally all text'
+
+        save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_windows_paths_in_file(path, "C:/Path/to/file.txt", replace_with)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_windows_paths_in_file(path, "C:/PATH/to/FILE.txt", replace_with)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_windows_paths_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False)
+        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertFalse(ret)
+
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_windows_paths_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
+        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertTrue(ret)
+
     def load_save_test(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
