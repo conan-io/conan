@@ -458,6 +458,42 @@ class ReplaceInFileTest(unittest.TestCase):
 
 class ToolsTest(unittest.TestCase):
 
+    def replace_paths_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        replace_with = "MYPATH"
+        expected = 'Some other contentsMYPATH"finally all text'
+
+        save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertFalse(ret)
+
+        # Multiple matches
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertTrue(ret)
+
+        # Automatic windows_paths
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
+        if platform.system() == "Windows":
+            self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+            self.assertTrue(ret)
+        else:
+            self.assertFalse(ret)
+
     def load_save_test(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")

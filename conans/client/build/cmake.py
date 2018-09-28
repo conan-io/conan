@@ -14,7 +14,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path, decode_text
+from conans.util.files import mkdir, get_abs_path, decode_text, load
 
 
 class CMake(object):
@@ -302,36 +302,28 @@ class CMake(object):
                 cmake.patch_config_paths()
         """
 
-        def _format_cmake_config_path(pathstr):
-            if platform.system() == "Windows":
-                drive,path = os.path.splitdrive(pathstr)
-                return drive.upper() + path.replace(os.path.sep,"/")
-            return pathstr
-
         if not self._conanfile.should_install:
             return
         if not self._conanfile.name:
             raise ConanException("cmake.patch_config_paths() can't work without package name. "
                                  "Define name in your recipe")
-        pf = _format_cmake_config_path(self.definitions.get(cmake_install_prefix_var_name))
+        pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
         allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
                     path = os.path.join(root, f)
-                    tools.replace_in_file(path, pf, replstr, strict=False)
+                    tools.replace_path_in_file(path, pf, replstr, strict=False)
 
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
-                    path_content = tools.load(path)
                     for dep in self._conanfile.deps_cpp_info.deps:
-                        from_str = _format_cmake_config_path(self._conanfile.deps_cpp_info[dep].rootpath)
-                        # try to replace only if from str is found
-                        if path_content.find(from_str) != -1:
-                            dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
-                            tools.replace_in_file(path, from_str, dep_str, strict=False)
+                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
+                        dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
+                        if ret:
+                            self._conanfile.output.info("Patched paths for %s: %s to %s" % (dep, from_str, dep_str))
 
     @staticmethod
     def get_version():
