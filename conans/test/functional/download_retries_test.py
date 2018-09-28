@@ -1,10 +1,25 @@
 import unittest
 
+from conans import API_V2
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
 
 
 class DownloadRetriesTest(unittest.TestCase):
+
+    def test_do_not_retry_when_missing_file(self):
+
+        test_server = TestServer(server_capabilities=[API_V2])
+        client = TestClient(servers={"default": test_server},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = '''from conans import ConanFile
+class MyConanfile(ConanFile):
+    pass
+'''
+        client.save({CONANFILE: conanfile})
+        client.run("create . Pkg/0.1@lasote/stable")
+        client.run("upload '*' -c --all")
+        self.assertEquals(str(client.out).count("seconds to retry..."), 0)
 
     def test_recipe_download_retry(self):
         test_server = TestServer()
