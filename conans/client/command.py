@@ -19,6 +19,8 @@ from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
+import json
+from conans.tools import save
 
 
 # Exit codes for conan command:
@@ -203,6 +205,9 @@ class Command(object):
                             nargs="?", action=Extender)
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json output file')
+
         args = parser.parse_args(*args)
         result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
         for k, v in result.items():
@@ -211,6 +216,13 @@ class Command(object):
                 self._user_io.out.writeln(str(v))
             else:
                 self._user_io.out.writeln("%s: %s" % (k, str(v)))
+        if args.json:
+            json_output = json.dumps(result)
+            if not os.path.isabs(args.json):
+                json_output_file = os.path.join(get_cwd(), args.json)
+            else:
+                json_output_file = args.json
+            save(json_output_file, json_output)
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method.

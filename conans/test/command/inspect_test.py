@@ -1,5 +1,7 @@
 from conans.test.utils.tools import TestClient, TestServer
 import unittest
+from conans.util.files import load
+import os
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -17,6 +19,13 @@ class Pkg(ConanFile):
         self.assertIn("name: MyPkg", client.out)
         client.run("inspect . -a=version")
         self.assertIn("version: 1.2.3", client.out)
+        client.run("inspect . -a=version -a=name")
+        self.assertIn("name: MyPkg", client.out)
+        self.assertIn("version: 1.2.3", client.out)
+        client.run("inspect . -a=version -a=name --json=file.json")
+        contents = load(os.path.join(client.current_folder, "file.json"))
+        self.assertIn('"version": "1.2.3"', contents)
+        self.assertIn('"name": "MyPkg"', contents)
 
         client.run("export . lasote/testing")
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=name")
