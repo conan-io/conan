@@ -12,6 +12,7 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
 from conans.client.output import ConanOutput
+from conans.model.version import Version
 
 
 class SCMBase(object):
@@ -176,11 +177,31 @@ class SVN(SCMBase):
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
+        try:
+            self.version = SVN.get_version()
+        except ConanException:
+            self.version = Version("1.10")  # TODO: Go for a modern one, or raise?
+
+    @staticmethod
+    def get_version():
+        try:
+            out, err = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
+            version_line = decode_text(out).split('\n', 1)[0]
+            version_str = version_line.split(' ', 3)[2]
+            return Version(version_str)
+        except Exception as e:
+            raise ConanException("Error retrieving SVN version: '{}'".format(e))
+
     def run(self, command):
         # Ensure we always pass some params
         extra_options = " --no-auth-cache --non-interactive"
         if not self._verify_ssl:
-            extra_options += " --trust-server-cert-failures=unknown-ca"
+            if self.version >= Version("1.10"):
+                # This parameter appears in 1.9.x
+                extra_options += " --trust-server-cert-failures=unknown-ca"
+            else:
+
+                extra_options += " --trust-server-cert"
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def checkout(self, url, revision="HEAD"):
