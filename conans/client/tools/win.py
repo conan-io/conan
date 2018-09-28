@@ -329,7 +329,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools (e.g. resource compiler, manifest tool, etc)
         # in this case, use the latest Visual Studio available on the machine
-        last_version = latest_visual_studio_version_installed(output=_global_output)
+        last_version = latest_visual_studio_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
     os_setting = settings.get_safe("os")
