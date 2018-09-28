@@ -330,15 +330,19 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_MODE": "VeRiFy",
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
-            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
-            with self.assertRaises(ConanException) as exc:
-                spt.install(packages)
-            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
-            global_output, _ = get_global_instances()
-            self.assertIn('\n'.join(packages), global_output)
-            self.assertEquals(3, runner.calls)
+            old_output, old_requester = set_global_instances(self.out, requests)
+            try:
+                packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+                runner = RunnerMultipleMock(["sudo apt-get update"])
+                spt = SystemPackageTool(runner=runner, tool=AptTool())
+                with self.assertRaises(ConanException) as exc:
+                    spt.install(packages)
+                self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+                global_output, _ = get_global_instances()
+                self.assertIn('\n'.join(packages), global_output)
+                self.assertEquals(3, runner.calls)
+            finally:
+                set_global_instances(old_output, old_requester)
 
         # Check disabled mode, a package report should be displayed in output.
         # No system packages are installed
@@ -346,13 +350,17 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_MODE": "DiSaBlEd",
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
-            packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
-            spt.install(packages)
-            global_output, _ = get_global_instances()
-            self.assertIn('\n'.join(packages), global_output)
-            self.assertEquals(0, runner.calls)
+            old_output, old_requester = set_global_instances(self.out, requests)
+            try:
+                packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
+                runner = RunnerMultipleMock(["sudo apt-get update"])
+                spt = SystemPackageTool(runner=runner, tool=AptTool())
+                spt.install(packages)
+                global_output, _ = get_global_instances()
+                self.assertIn('\n'.join(packages), global_output)
+                self.assertEquals(0, runner.calls)
+            finally:
+                set_global_instances(old_output, old_requester)
 
         # Check enabled, default mode, system packages must be installed.
         with tools.environment_append({
