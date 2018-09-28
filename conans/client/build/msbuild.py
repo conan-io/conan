@@ -9,6 +9,7 @@ from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import tmp_file
 from conans.model.conan_file import ConanFile
+from conans.client import tools
 
 
 class MSBuild(object):
