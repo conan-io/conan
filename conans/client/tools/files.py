@@ -217,19 +217,66 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
-def replace_in_file(file_path, search, replace, strict=True):
+def replace_in_file(file_path, search, replace, strict=True, case_sensitive=True, pathsep_sensitive=True):
+    def normalized_text(text):
+        if not case_sensitive:
+            text = text.lower()
+        if not pathsep_sensitive:
+            text = text.replace("\\", "/")
+        return text
+
     content = load(file_path)
-    if -1 == content.find(search):
+    normalized_content = normalized_text(content)
+    normalized_search = normalized_text(search)
+    index = normalized_content.find(normalized_search)
+    if -1 == index:
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
             raise ConanException(message)
         else:
             _global_output.warn(message)
             return False
-    content = content.replace(search, replace)
+
+    if case_sensitive and pathsep_sensitive:  # Regular replace in file
+        content = content.replace(search, replace)
+    else:  # Iterate replacing the normalized strings
+        while index != -1:
+            content = content[:index] + replace + content[index + len(search):]
+            normalized_content = normalized_text(content)
+            index = normalized_content.find(normalized_search)
+
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+    return True
+
+
+def __replace_windows_paths_in_file(file_path, path_search, replace, strict=True):
+    """ Non case-sensitive nor "path separator sensitive" replace in file """
+    def normalized_text(text):
+        return text.replace("\\", "/").lower()
+
+    real_content = load(file_path)
+    normalized_content = normalized_text(real_content)
+    normalized_path = normalized_text(path_search)
+    index = normalized_content.find(normalized_path)
+    if -1 == index:
+        message = "replace_paths_in_file didn't find pattern '%s' in '%s' file." % (normalized_path, file_path)
+        if strict:
+            raise ConanException(message)
+        else:
+            _global_output.warn(message)
+            return False
+    else:
+        while index != -1:
+            real_content = real_content[:index] + replace + real_content[index + len(normalized_path):]
+            normalized_content = normalized_text(real_content)
+            index = normalized_content.find(normalized_path)
+
+        real_content = real_content.encode("utf-8")
+        with open(file_path, "wb") as handle:
+            handle.write(real_content)
 
     return True
 

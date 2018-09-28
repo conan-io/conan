@@ -490,32 +490,3 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
         return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
-
-
-def replace_windows_paths_in_file(file_path, path_search, replace, strict=True):
-    """ Non case-sensitive nor "path separator sensitive" replace in file """
-    def normalized_text(text):
-        return text.replace("\\", "/").lower()
-
-    real_content = load(file_path)
-    normalized_content = normalized_text(real_content)
-    normalized_path = normalized_text(path_search)
-    index = normalized_content.find(normalized_path)
-    if -1 == index:
-        message = "replace_paths_in_file didn't find pattern '%s' in '%s' file." % (normalized_path, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            _global_output.warn(message)
-            return False
-    else:
-        while index != -1:
-            real_content = real_content[:index] + replace + real_content[index + len(normalized_path):]
-            normalized_content = normalized_text(real_content)
-            index = normalized_content.find(normalized_path)
-
-        real_content = real_content.encode("utf-8")
-        with open(file_path, "wb") as handle:
-            handle.write(real_content)
-
-    return True
