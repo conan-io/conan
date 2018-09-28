@@ -505,8 +505,6 @@ class TestClient(object):
         old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
-        except Exception as e:
-            print(e)
         finally:
             set_global_instances(old_output, old_requester)
             sys.path = old_path
