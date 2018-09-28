@@ -1499,7 +1499,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         excluded_files = svn.excluded_files()
         self.assertIn(file_to_ignore, excluded_files)
-        self.assertIn('.svn', excluded_files)
+        self.assertNotIn('.svn', excluded_files)
         self.assertEqual(len(excluded_files), 2)
 
     def test_credentials(self):
