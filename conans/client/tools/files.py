@@ -252,35 +252,6 @@ def replace_in_file(file_path, search, replace, strict=True, case_sensitive=True
     return True
 
 
-def __replace_windows_paths_in_file(file_path, path_search, replace, strict=True):
-    """ Non case-sensitive nor "path separator sensitive" replace in file """
-    def normalized_text(text):
-        return text.replace("\\", "/").lower()
-
-    real_content = load(file_path)
-    normalized_content = normalized_text(real_content)
-    normalized_path = normalized_text(path_search)
-    index = normalized_content.find(normalized_path)
-    if -1 == index:
-        message = "replace_paths_in_file didn't find pattern '%s' in '%s' file." % (normalized_path, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            _global_output.warn(message)
-            return False
-    else:
-        while index != -1:
-            real_content = real_content[:index] + replace + real_content[index + len(normalized_path):]
-            normalized_content = normalized_text(real_content)
-            index = normalized_content.find(normalized_path)
-
-        real_content = real_content.encode("utf-8")
-        with open(file_path, "wb") as handle:
-            handle.write(real_content)
-
-    return True
-
-
 def replace_prefix_in_pc_file(pc_file, new_prefix):
     content = load(pc_file)
     lines = []
