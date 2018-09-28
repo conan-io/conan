@@ -16,6 +16,7 @@ import sys
 import requests
 
 from conans.client.output import ConanOutput
+from conans.util.log import logger
 
 # Tools from conans.client.tools
 from conans.client.tools.apple import *  # pylint: disable=unused-import
@@ -30,9 +31,9 @@ from conans.client.tools import win as tools_win
 
 # Tools form conans.util
 from conans.util.env_reader import get_env
-from conans.util.files import (_generic_algorithm_sum, load, sha256sum,
-                               sha1sum, md5sum, md5, touch, relative_dirs,
-                               rmdir, mkdir, to_file_bytes, save as files_save, save_append)
+from conans.util.files import _generic_algorithm_sum, load, sha256sum, \
+            sha1sum, md5sum, md5, touch, relative_dirs, \
+                              rmdir, mkdir, to_file_bytes, save as files_save, save_append
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -53,6 +54,10 @@ def set_global_instances(the_output, the_requester):
     return old_output, old_requester
 
 
+def get_global_instances():
+    return _global_output, _global_requester
+
+
 # Assign a default, will be overwritten in the factory of the ConanAPI
 set_global_instances(the_output=ConanOutput(sys.stdout, True), the_requester=requests)
 
@@ -71,11 +76,15 @@ def save(path, content, append=False):
 
 
 # From conans.client.tools.net
-get = tools_net.get
 ftp_download = tools_net.ftp_download
+
 
 def download(*args, **kwargs):
     return tools_net.download(out=_global_output, requester=_global_requester, *args, **kwargs)
+
+
+def get(*args, **kwargs):
+    return tools_net.get(output=_global_output, requester=_global_requester, *args, **kwargs)
 
 
 # from conans.client.tools.files

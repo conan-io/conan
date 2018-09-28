@@ -16,6 +16,7 @@ from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
 import os
 from conans.client import tools
+from conans.tools import set_global_instances
 
 
 @attr('visual_studio')
@@ -35,20 +36,27 @@ class BuildSLNCommandTest(unittest.TestCase):
         path = os.path.join(folder, "dummy.sln")
         save(path, dummy)
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
-        command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
-                                    build_type='Debug', arch="x86", parallel=False)
-        self.assertIn('/p:Configuration="Debug" /p:Platform="x86"', command)
-        self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
-                      new_out.getvalue())
+        old_output, old_requester = set_global_instances(ConanOutput(new_out), None)
+        try:
+            command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
+                                        build_type='Debug', arch="x86", parallel=False)
+            self.assertIn('/p:Configuration="Debug" /p:Platform="x86"', command)
+            self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
+                          new_out.getvalue())
+        finally:
+            set_global_instances(old_output, old_requester)
+
         # use platforms
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
-        command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
-                                    build_type='Debug', arch="x86", parallel=False, platforms={"x86": "Win32"})
-        self.assertIn('/p:Configuration="Debug" /p:Platform="Win32"', command)
-        self.assertNotIn("WARN", new_out.getvalue())
-        self.assertNotIn("ERROR", new_out.getvalue())
+        old_output, old_requester = set_global_instances(ConanOutput(new_out), None)
+        try:
+            command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
+                                        build_type='Debug', arch="x86", parallel=False, platforms={"x86": "Win32"})
+            self.assertIn('/p:Configuration="Debug" /p:Platform="Win32"', command)
+            self.assertNotIn("WARN", new_out.getvalue())
+            self.assertNotIn("ERROR", new_out.getvalue())
+        finally:
+            set_global_instances(old_output, old_requester)
 
     def no_arch_test(self):
         with self.assertRaises(ConanException):
@@ -121,7 +129,6 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     sln_path='dummy.sln', targets=None,
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False, toolset="v110")
-        print(command)
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
                                            '/p:PlatformToolset="v110" '

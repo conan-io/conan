@@ -36,7 +36,7 @@ from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
-from conans.tools import set_global_instances, os_info as global_os_info, _global_requester, _global_output
+from conans.tools import set_global_instances, os_info as global_os_info, get_global_instances
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -336,7 +336,8 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
-            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            global_output, _ = get_global_instances()
+            self.assertIn('\n'.join(packages), global_output)
             self.assertEquals(3, runner.calls)
 
         # Check disabled mode, a package report should be displayed in output.
@@ -349,7 +350,8 @@ class SystemPackageToolTest(unittest.TestCase):
             runner = RunnerMultipleMock(["sudo apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
-            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            global_output, _ = get_global_instances()
+            self.assertIn('\n'.join(packages), global_output)
             self.assertEquals(0, runner.calls)
 
         # Check enabled, default mode, system packages must be installed.
@@ -581,8 +583,9 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertEquals(_global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(_global_output.warn)
+        global_output, global_requester = get_global_instances()
+        self.assertEquals(global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
@@ -930,11 +933,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
         http_server.run_server()
 
         out = TestBufferConanOutput()
-        set_global_instances(out, requests)
+
         # Connection error
         with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests,
                            retry=3, retry_wait=0)
 
         # Not found error
@@ -942,23 +946,24 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
+                           requester=requests,
                            retry=3, retry_wait=0)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
-                       retry_wait=0)
+                       retry_wait=0, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
-                           retry=3, retry_wait=0, overwrite=False)
+                           retry=3, retry_wait=0, overwrite=False, requester=requests)
 
         # overwrite = True
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
-                       retry_wait=0, overwrite=True)
+                       retry_wait=0, overwrite=True, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
@@ -966,15 +971,16 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True)
+                           overwrite=True, requester=requests)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True)
+                       auth=("user", "passwd"), overwrite=True, requester=requests)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+                       headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
+                       requester=requests)
         http_server.stop()
 
     def get_gnu_triplet_test(self):
@@ -1131,7 +1137,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with tools.chdir(tools.mkdir_tmp()):
             import tarfile
             tar_file = tarfile.open("sample.tar.gz", "w:gz")
-            tools.mkdir("test_folder")
+            mkdir("test_folder")
             tar_file.add(os.path.abspath("test_folder"), "test_folder")
             tar_file.close()
             file_path = os.path.abspath("sample.tar.gz")
@@ -1158,16 +1164,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
-            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz")
+            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
+                      requester=requests)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
         with tools.chdir(tools.mkdir_tmp()):
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
-                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port)
+                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
+                          requester=requests)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz")
+                      filename="sample.tar.gz", requester=requests)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
