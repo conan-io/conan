@@ -92,7 +92,7 @@ class _ConanPackageBuilder(object):
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out, conanfile_path, self._conan_ref,
-                      self._plugin_manager)
+                      self._plugin_manager, self._client_cache)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):

@@ -7,7 +7,6 @@ from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.model.conan_file import get_env_context_manager
-from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
@@ -86,7 +85,8 @@ def get_scm_data(conanfile):
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
-                  conanfile, output, conanfile_path, reference, plugin_manager, force=False):
+                  conanfile, output, conanfile_path, reference, plugin_manager,
+                  client_cache):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
@@ -105,10 +105,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    if force:
-        output.warn("Forced removal of source folder")
-        remove_source()
-    elif is_dirty(src_folder):
+    if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
     elif conanfile.build_policy_always:
@@ -137,6 +134,10 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                         captured = local_sources_path and os.path.exists(local_sources_path)
                         local_sources_path = local_sources_path if captured else None
                         _fetch_scm(scm_data, dest_dir, local_sources_path, output)
+
+                    for python_require in conanfile.python_requires:
+                        src = client_cache.export_sources(python_require.conan_ref)
+                        merge_directories(src, src_folder)
 
                     merge_directories(export_folder, src_folder)
                     # Now move the export-sources to the right location
