@@ -4,6 +4,7 @@ import stat
 import sys
 import unittest
 import platform
+import mock
 
 from collections import namedtuple
 
@@ -1001,6 +1002,43 @@ build_type: [ Release]
             conan_file.settings = settings
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
+    @mock.patch('platform.system', return_value="Macos")
+    def test_cmake_system_version_osx(self, _):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Macos"
+
+        # No version defined
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertFalse("CMAKE_OSX_DEPLOYMENT_TARGET" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_VERSION" in cmake.definitions)
+
+        # Version defined using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
+
+        # Version defined in settings
+        settings.os.version = "10.9"
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "10.9")
+        self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "10.9")
+
+        # Version defined in settings AND using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
     @staticmethod
     def scape(args):
