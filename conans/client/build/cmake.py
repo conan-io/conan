@@ -14,7 +14,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path, decode_text
+from conans.util.files import mkdir, get_abs_path, decode_text, load
 
 
 class CMake(object):
@@ -310,22 +310,18 @@ class CMake(object):
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
         allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
-        case_sensitive = platform.system() != "Windows"
-        pathsep_sensitive = platform.system() != "Windows"
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
                     path = os.path.join(root, f)
-                    tools.replace_in_file(path, pf, replstr, strict=False, pathsep_sensitive=pathsep_sensitive,
-                                          case_sensitive=case_sensitive)
+                    tools.replace_path_in_file(path, pf, replstr, strict=False)
+
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
                     for dep in self._conanfile.deps_cpp_info.deps:
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                        ret = tools.replace_in_file(path, from_str, dep_str, strict=False,
-                                                    pathsep_sensitive=pathsep_sensitive,
-                                                    case_sensitive=case_sensitive)
+                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
                         if ret:
                             self._conanfile.output.info("Patched paths for %s: %s to %s" % (dep, from_str, dep_str))
 

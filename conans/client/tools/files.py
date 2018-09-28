@@ -217,33 +217,43 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
-def replace_in_file(file_path, search, replace, strict=True, case_sensitive=True, pathsep_sensitive=True):
+def _manage_text_not_found(search, file_path, strict, function_name):
+    message = "%s didn't find pattern '%s' in '%s' file." % (function_name, search, file_path)
+    if strict:
+        raise ConanException(message)
+    else:
+        _global_output.warn(message)
+        return False
+
+
+def replace_in_file(file_path, search, replace, strict=True):
+    content = load(file_path)
+    if -1 == content.find(search):
+        _manage_text_not_found(search, file_path, strict, "replace_in_file")
+    content = content.replace(search, replace)
+    content = content.encode("utf-8")
+    with open(file_path, "wb") as handle:
+        handle.write(content)
+
+
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None):
+    if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
+        return replace_in_file(file_path, search, replace, strict=True)
+
     def normalized_text(text):
-        if not case_sensitive:
-            text = text.lower()
-        if not pathsep_sensitive:
-            text = text.replace("\\", "/")
-        return text
+        return text.replace("\\", "/").lower()
 
     content = load(file_path)
     normalized_content = normalized_text(content)
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
-    if -1 == index:
-        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            _global_output.warn(message)
-            return False
+    if index == -1:
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file")
 
-    if case_sensitive and pathsep_sensitive:  # Regular replace in file
-        content = content.replace(search, replace)
-    else:  # Iterate replacing the normalized strings
-        while index != -1:
-            content = content[:index] + replace + content[index + len(search):]
-            normalized_content = normalized_text(content)
-            index = normalized_content.find(normalized_search)
+    while index != -1:
+        content = content[:index] + replace + content[index + len(search):]
+        normalized_content = normalized_text(content)
+        index = normalized_content.find(normalized_search)
 
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
