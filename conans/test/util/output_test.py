@@ -90,12 +90,7 @@ class PkgConan(ConanFile):
 
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
         new_out = StringIO()
-
-        old_output, old_requester = set_global_instances(ConanOutput(new_out), None)
-        try:
-            tools.unzip(zip_path, output_dir)
-        finally:
-            set_global_instances(old_output, old_requester)
+        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)
