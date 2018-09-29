@@ -1529,7 +1529,10 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
         runner = MyRunner(svn)
         svn.checkout(url=project_url)
-        self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+        if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+            self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+        else:
+            self.assertIn("--trust-server-cert", runner.calls[1])
 
     def test_repo_root(self):
         project_url, _ = self.create_project(files={'myfile': "contents",

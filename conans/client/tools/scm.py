@@ -170,6 +170,7 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
+    API_CHANGE_VERSION = Version("1.10")  # CLI changes in 1.9.x
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
@@ -180,7 +181,7 @@ class SVN(SCMBase):
         try:
             self.version = SVN.get_version()
         except ConanException:
-            self.version = Version("1.10")  # TODO: Go for a modern one, or raise?
+            self.version = SVN.API_CHANGE_VERSION  # TODO: raise?
 
     @staticmethod
     def get_version():
@@ -196,8 +197,7 @@ class SVN(SCMBase):
         # Ensure we always pass some params
         extra_options = " --no-auth-cache --non-interactive"
         if not self._verify_ssl:
-            if self.version >= Version("1.10"):
-                # This parameter appears in 1.9.x
+            if self.version >= SVN.API_CHANGE_VERSION:
                 extra_options += " --trust-server-cert-failures=unknown-ca"
             else:
 
