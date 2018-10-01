@@ -1749,7 +1749,6 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         # User2 updates and get a conflicted file
         svn2.run('update')
-        print(svn2.run("status -u -r {} --xml".format(svn2.get_revision())))
         self.assertFalse(svn2.is_pristine())
         svn2.run('revert . -R')
         self.assertTrue(svn2.is_pristine())

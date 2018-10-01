@@ -252,9 +252,23 @@ class SVN(SCMBase):
         # Check if working copy is pristine/consistent
         output = self.run("status -u -r {} --xml".format(self.get_revision()))
         root = ET.fromstring(output)
-        item_status = set([item.get('item', 'none') for item in root.findall('.//wc-status')])
-        return all([i in ['external', 'ignored', 'none', 'normal', 'unversioned']
-                    for i in item_status])
+
+        pristine_item_list = ['external', 'ignored', 'none', 'normal', 'unversioned']
+        pristine_props_list = ['normal', 'none']
+        for item in root.findall('.//wc-status'):
+            if item.get('item', 'none') not in pristine_item_list:
+                return False
+            if item.get('props', 'none') not in pristine_props_list:
+                return False
+
+        pristine_repos_item_list = ['none']
+        for item in root.findall('.//repos-status'):
+            if item.get('item', 'none') not in pristine_item_list:
+                return False
+            if item.get('props', 'none') not in pristine_props_list:
+                return False
+
+        return True
 
     def get_revision(self):
         return self.run("info --show-item revision").strip()
