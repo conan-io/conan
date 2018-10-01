@@ -3,7 +3,6 @@ from conans.errors import ConanException
 travis = """
 env:
    global:
-     - CONAN_REFERENCE: "{name}/{version}"
      - CONAN_USERNAME: "{user}"
      - CONAN_LOGIN_USERNAME: "{user}"
      - CONAN_CHANNEL: "{channel}"
@@ -107,7 +106,6 @@ environment:
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
 
-    CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
     CONAN_LOGIN_USERNAME: "{user}"
     CONAN_CHANNEL: "{channel}"
@@ -128,7 +126,6 @@ test_script:
 gitlab = """
 variables:
     CONAN_USERNAME: "{user}"
-    CONAN_REFERENCE: "{name}/{version}"
     CONAN_CHANNEL: "{channel}"
     CONAN_LOGIN_USERNAME: "{user}"
     {upload}
@@ -173,7 +170,6 @@ version: 2
           chmod +x .circleci/run.sh
           .circleci/run.sh
         environment:
-          CONAN_REFERENCE: "{name}/{version}"
           CONAN_USERNAME: "{user}"
           CONAN_CHANNEL: "{channel}"
           {upload}
@@ -361,8 +357,8 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
             gitlab_gcc_versions or gitlab_clang_versions or circleci_gcc_versions or
             circleci_clang_versions or circleci_osx_versions):
         return {}
-    gcc_versions = ["4.9", "5", "6", "7"]
-    clang_versions = ["3.9", "4.0"]
+    gcc_versions = ["4.9", "5", "6", "7", "8"]
+    clang_versions = ["3.9", "4.0", "5.0", "6.0"]
     if visual_versions is True:
         visual_versions = ["12", "14", "15"]
     if linux_gcc_versions is True:
