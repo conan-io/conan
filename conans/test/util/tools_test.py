@@ -1759,7 +1759,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url=project_url)
-        svn.run("propset svn:externals 'subrepo {}' .".format(project2_url))
+        svn.run('propset svn:externals "subrepo {}" .'.format(project2_url))
         svn.run('commit -m "add external"')
         svn.update()
         self.assertTrue(svn.is_pristine())
