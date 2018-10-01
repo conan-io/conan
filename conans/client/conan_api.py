@@ -36,7 +36,7 @@ from conans.util.files import save_files, exception_message_safe, mkdir,\
     mkdir_tmp
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.tools import set_global_instances, save
+from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
@@ -229,7 +229,8 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager, registry=self._registry)
+        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
+                                 registry=self._registry)
         resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
@@ -271,26 +272,29 @@ class ConanAPIV1(object):
     @api_method
     def inspect(self, path, attributes, remote_name=None):
         if remote_name:
-            remote = self.get_remote_by_name(remote_name)
-            reference = ConanFileReference.loads(path)
-            conanfile = self._remote_manager.get_path(reference, None, "conanfile.py", remote)
             tmp_folder = mkdir_tmp()
-            path = os.path.join(tmp_folder, "conanfile.py")
-            save(path, conanfile)
+            old_store_folder = self._client_cache._store_folder
+            self._client_cache._store_folder = tmp_folder
         else:
             tmp_folder = None
 
-        cwd = get_cwd()
         try:
-            reference = ConanFileReference.loads(path)
-            conanfile_path = self._client_cache.conanfile(reference)
-        except ConanException:
-            reference = None
-            conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
-        if tmp_folder:
-            shutil.rmtree(tmp_folder)
-        # To make sure it captures the name and version of local
+            try:
+                reference = ConanFileReference.loads(path)
+            except ConanException:
+                reference = None
+                cwd = get_cwd()
+                conanfile_path = _get_conanfile_path(path, cwd, py=True)
+            else:
+                result = self._proxy.get_recipe(reference, False, False, remote_name,
+                                                ActionRecorder())
+                conanfile_path, _, _, reference = result
+            conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
+        finally:
+            if tmp_folder:
+                self._client_cache._store_folder = old_store_folder
+                shutil.rmtree(tmp_folder)
+
         result = OrderedDict()
         for attribute in attributes:
             try:
