@@ -91,8 +91,12 @@ def _visual_compiler(output, version):
 
 
 def latest_visual_studio_version_installed():
+    return _latest_visual_studio_version_installed(_global_output)
+
+
+def _latest_visual_studio_version_installed(output):
     for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
-        vs = _visual_compiler(_global_output, version)
+        vs = _visual_compiler(output, version)
         if vs:
             return vs[1]
     return None
