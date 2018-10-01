@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from conans.client.output import Color
 from conans.model.version import Version
-from conans.tools import vs_installation_path
+from conans.client.tools import latest_visual_studio_version_installed
 
 
 def _execute(command):
@@ -68,78 +68,6 @@ def _clang_compiler(output, compiler_exe="clang"):
     except:
         return None
 
-
-def _visual_compiler_cygwin(output, version):
-    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
-        is_64bits = True
-    else:
-        is_64bits = False
-
-    if is_64bits:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
-
-    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
-        return None
-
-    installed_version = Version(version).major(fill=False)
-    compiler = "Visual Studio"
-    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
-    return compiler, installed_version
-
-
-def _visual_compiler(output, version):
-    'version have to be 8.0, or 9.0 or... anything .0'
-    if platform.system().startswith("CYGWIN"):
-        return _visual_compiler_cygwin(output, version)
-
-    if version == "15":
-        vs_path = os.getenv('vs150comntools')
-        path = vs_path or vs_installation_path("15")
-        if path:
-            compiler = "Visual Studio"
-            output.success("Found %s %s" % (compiler, "15"))
-            return compiler, "15"
-        return None
-
-    version = "%s.0" % version
-    from six.moves import winreg  # @UnresolvedImport
-    try:
-        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
-        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
-        is_64bits = True
-    except EnvironmentError:
-        is_64bits = False
-    finally:
-        winreg.CloseKey(hKey)
-
-    if is_64bits:
-        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
-
-    try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
-        winreg.QueryValueEx(key, version)
-
-        installed_version = Version(version).major(fill=False)
-        compiler = "Visual Studio"
-        output.success("Found %s %s" % (compiler, installed_version))
-        return compiler, installed_version
-    except EnvironmentError:
-        return None
-
-
-def _visual_compiler_last(output):
-    last_version = None
-    for version in ["8", "9", "10", "11", "12", "14", "15"]:
-        vs = _visual_compiler(output, version)
-        last_version = vs or last_version
-    return last_version
-
-
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
         _, out = _execute('%s -V' % compiler_exe)
@@ -174,7 +102,8 @@ def _get_default_compiler(output):
         return None
 
     if detected_os() == "Windows":
-        vs = _visual_compiler_last(output)
+        version = latest_visual_studio_version_installed(output)
+        vs = ('Visual Studio', version) if version else None
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
     if platform.system() == "SunOS":

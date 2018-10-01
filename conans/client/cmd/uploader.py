@@ -1,5 +1,6 @@
 import time
 
+from conans import load
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
@@ -24,12 +25,13 @@ UPLOAD_POLICY_SKIP = "skip-upload"
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry, loader):
+    def __init__(self, client_cache, user_io, remote_manager, registry, loader, plugin_manager):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
         self._loader = loader
+        self._plugin_manager = plugin_manager
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
@@ -88,6 +90,10 @@ class CmdUpload(object):
         else:  # Or use the default otherwise
             upload_remote = self._registry.default_remote
 
+        conanfile_path = self._client_cache.conanfile(conan_ref)
+        self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
+                                     reference=conan_ref, remote=upload_remote)
+
         if policy != UPLOAD_POLICY_FORCE:
             self._check_recipe_date(conan_ref, upload_remote)
 
@@ -112,6 +118,9 @@ class CmdUpload(object):
 
         if not defined_remote and policy != UPLOAD_POLICY_SKIP:
             self._registry.set_ref(conan_ref, upload_remote.name)
+        
+        self._plugin_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                     reference=conan_ref, remote=upload_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote):
         conan_file_path = self._client_cache.conanfile(conan_reference)
