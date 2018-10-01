@@ -167,6 +167,10 @@ class OptionsValues(object):
         if isinstance(values, tuple):
             values = [item.split("=", 1) for item in values]
 
+        # convert dict {"Pkg:option": "value", "..": "..", ...} to list of tuples (name, value)
+        if isinstance(values, dict):
+            values = [(k, v) for k, v in values.items()]
+
         # handle list of tuples (name, value)
         for (k, v) in values:
             k = k.strip()
