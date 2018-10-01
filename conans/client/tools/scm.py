@@ -251,7 +251,6 @@ class SVN(SCMBase):
         # Check if working copy is pristine/consistent
         output = self.run("status -u -r {}".format(self.get_revision()))
         offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
-
         for item in output.splitlines()[:-1]:
             if item[0] == '?':  # Untracked file
                 continue
