@@ -122,18 +122,6 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                 migrate_c_src_export_source(self.client_cache, self.out)
 
 
-def _add_build_cross_settings(client_cache, out):
-    out.warn("Migration: Adding `os_build` and `arch_build` to default settings")
-    try:
-        default_profile = client_cache.default_profile
-        default_profile.settings["arch_build"] = default_profile.settings["arch"]
-        default_profile.settings["os_build"] = default_profile.settings["os"]
-        save(client_cache.default_profile_path, default_profile.dumps())
-    except Exception:
-        out.error("Something went wrong adding 'os_build' and 'arch_build' to your default."
-                  " You can add it manually adjusting them with the same value as 'os' and 'arch'")
-
-
 def _migrate_lock_files(client_cache, out):
     out.warn("Migration: Removing old lock files")
     base_dir = client_cache.store
