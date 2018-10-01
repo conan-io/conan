@@ -1,3 +1,4 @@
+import six
 import unittest
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
@@ -300,39 +301,31 @@ class OptionsValuesTest(unittest.TestCase):
                          "2442d43f1d558621069a15ff5968535f818939b5")
 
     def test_loads_exceptions(self):
-        with self.assertRaisesRegexp(
-                ConanException,
-                "Please define a default value for 'config' in 'default_options'"):
+        emsg = "not enough values to unpack" if six.PY3 else "need more than 1 value to unpack"
+        with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues.loads("a=2\nconfig\nb=3")
 
-        with self.assertRaisesRegexp(
-                ConanException,
-                "Please define a default value for 'config', 'commit' in 'default_options'"):
+        with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues.loads("config\na=2\ncommit\nb=3")
 
     def test_exceptions_empty_value(self):
-        with self.assertRaisesRegexp(AssertionError, "String type not expected"):
+        emsg = "not enough values to unpack" if six.PY3 else "need more than 1 value to unpack"
+        with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues("a=2\nconfig\nb=3")
 
-        with self.assertRaisesRegexp(
-                ConanException,
-                "Please define a default value for 'config' in 'default_options'"):
+        with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues(("a=2", "config"))
 
-        with self.assertRaisesRegexp(
-                ConanException,
-                "Please define a default value for 'config' in 'default_options'"):
+        with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues([('a', 2), ('config', ), ])
 
     def test_exceptions_repeated_value(self):
-        with self.assertRaisesRegexp(ConanException, "repeated element"):
+        try:
             OptionsValues.loads("a=2\na=12\nb=3").dumps()
-
-        with self.assertRaisesRegexp(ConanException, "repeated element"):
             OptionsValues(("a=2", "b=23", "a=12"))
-
-        with self.assertRaisesRegexp(ConanException, "repeated element"):
             OptionsValues([('a', 2), ('b', True), ('a', '12')])
+        except Exception as e:
+            self.fail("Not expected exception: {}".format(e))
 
     def test_package_with_spaces(self):
         self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
