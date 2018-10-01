@@ -14,8 +14,88 @@ from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
 from conans.unicode import get_cwd
+from conans.model.version import Version
 
 _global_output = None
+
+
+def _visual_compiler_cygwin(output, version):
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+        is_64bits = True
+    else:
+        is_64bits = False
+
+    if is_64bits:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
+        return None
+
+    installed_version = Version(version).major(fill=False)
+    compiler = "Visual Studio"
+    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
+    return compiler, installed_version
+
+
+def _system_registry_key(key, subkey, query):
+    from six.moves import winreg  # @UnresolvedImport
+    try:
+        hkey = winreg.OpenKey(key, subkey)
+    except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2)
+        return None
+    else:
+        try:
+            value, _ = winreg.QueryValueEx(hkey, query)
+            return value
+        except EnvironmentError:
+            return None
+        finally:
+            winreg.CloseKey(hkey)
+
+
+def _visual_compiler(output, version):
+    """"version have to be 8.0, or 9.0 or... anything .0"""
+    if platform.system().startswith("CYGWIN"):
+        return _visual_compiler_cygwin(output, version)
+
+    if version == "15":
+        vs_path = os.getenv('vs150comntools')
+        path = vs_path or vs_installation_path("15")
+        if path:
+            compiler = "Visual Studio"
+            output.success("Found %s %s" % (compiler, "15"))
+            return compiler, "15"
+        return None
+
+    version = "%s.0" % version
+
+    from six.moves import winreg  # @UnresolvedImport
+    is_64bits = _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
+                                     r"SOFTWARE\Microsoft\Windows\CurrentVersion",
+                                     "ProgramFilesDir (x86)") is not None
+
+    if is_64bits:
+        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    if _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name, version):
+        installed_version = Version(version).major(fill=False)
+        compiler = "Visual Studio"
+        output.success("Found %s %s" % (compiler, installed_version))
+        return compiler, installed_version
+
+    return None
+
+
+def latest_visual_studio_version_installed(output):
+    for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
+        vs = _visual_compiler(output, version)
+        if vs:
+            return vs[1]
+    return None
 
 
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
@@ -214,30 +294,33 @@ def find_windows_10_sdk():
         (winreg.HKEY_CURRENT_USER, r'SOFTWARE')
     ]
     for key, subkey in hives:
-        try:
-            hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
-            try:
-                installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
-                if os.path.isdir(installation_folder):
-                    include_dir = os.path.join(installation_folder, 'include')
-                    for sdk_version in os.listdir(include_dir):
-                        if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
-                            windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
-                            if os.path.isfile(windows_h):
-                                return sdk_version
-            except EnvironmentError:
-                pass
-            finally:
-                winreg.CloseKey(hkey)
-        except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2).
-            pass
+        installation_folder = _system_registry_key(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey,
+                                                   'InstallationFolder')
+        if installation_folder:
+            if os.path.isdir(installation_folder):
+                include_dir = os.path.join(installation_folder, 'include')
+                for sdk_version in os.listdir(include_dir):
+                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                        if os.path.isfile(windows_h):
+                            return sdk_version
     return None
 
 
 def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
                    winsdk_version=None):
     arch_setting = arch or settings.get_safe("arch")
-    compiler_version = compiler_version or settings.get_safe("compiler.version")
+
+    compiler = settings.get_safe("compiler")
+    if compiler == 'Visual Studio':
+        compiler_version = compiler_version or settings.get_safe("compiler.version")
+    else:
+        # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
+        # as they might be using Microsoft STL and other tools (e.g. resource compiler, manifest tool, etc)
+        # in this case, use the latest Visual Studio available on the machine
+        last_version = latest_visual_studio_version_installed(output=_global_output)
+
+        compiler_version = compiler_version or last_version
     os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
@@ -306,7 +389,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
                 vcvars_ver=None, winsdk_version=None, only_diff=True):
-    known_path_lists = ("INCLUDE", "LIB", "LIBPATH", "PATH")
+    known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
@@ -324,14 +407,17 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             continue
         try:
             name_var, value = line.split("=", 1)
-            new_value = value.split(os.pathsep) if name_var in known_path_lists else value
+            new_value = value.split(os.pathsep) if name_var.lower() in known_path_lists else value
             # Return only new vars & changed ones, but only with the changed elements if the var is
             # a list
             if only_diff:
                 old_value = os.environ.get(name_var)
-                # The new value ends with separator and the old value, is a list, get only the
-                # new elements
-                if old_value and value.endswith(os.pathsep + old_value):
+                if name_var.lower() == "path":
+                    old_values_lower = [v.lower() for v in old_value.split(os.pathsep)]
+                    # Clean all repeated entries, not append if the element was already there
+                    new_env[name_var] = [v for v in new_value if v.lower() not in old_values_lower]
+                elif old_value and value.endswith(os.pathsep + old_value):
+                    # The new value ends with separator and the old value, is a list, get only the new elements
                     new_env[name_var] = value[:-(len(old_value) + 1)].split(os.pathsep)
                 elif value != old_value:
                     # Only if the vcvars changed something, we return the variable,
@@ -354,7 +440,6 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
         new_env["PATH"] = ";".join(path)
 
     return new_env
-
 
 @contextmanager
 def vcvars(*args, **kwargs):

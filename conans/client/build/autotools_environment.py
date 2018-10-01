@@ -85,11 +85,13 @@ class AutoToolsBuildEnvironment(object):
 
         try:
             build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             build = None
         try:
             host = get_gnu_triplet(self._os, self._arch, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             host = None
         return build, host, None
 
