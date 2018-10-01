@@ -1760,36 +1760,14 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url=project_url)
-        print("*"*10)
-        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
-        print("*"*10)
-        print(svn.run("status -u -r {}".format(svn.get_revision())))
-        print("*"*10)
         svn.run("propset svn:externals 'subrepo {}' .".format(project2_url))
         svn.run('commit -m "add external"')
-        print("---")
-        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
-        print("---")
-        print(svn.run("status -u -r {}".format(svn.get_revision())))
-        print("---")
         svn.update()
-        print("---")
-        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
-        print("---")
-        print(svn.run("status -u -r {}".format(svn.get_revision())))
-        print("---")
+        self.assertTrue(svn.is_pristine())
 
         with open(os.path.join(svn.folder, "subrepo", "nestedfile"), "a") as f:
             f.write("cosass")
-        print("---")
-        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
-        print("---")
-        print(svn.run("status -u -r {}".format(svn.get_revision())))
-        print("---")
-
-
-        self.assertTrue(svn.is_pristine())
-        self.fail("NNNN")
+        self.assertFalse(svn.is_pristine())
 
 
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):

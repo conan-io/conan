@@ -6,6 +6,7 @@ import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
 import platform
+import xml.etree.ElementTree as ET
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -249,15 +250,11 @@ class SVN(SCMBase):
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
-        output = self.run("status -u -r {}".format(self.get_revision()))
-        offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
-        for item in output.splitlines()[:-1]:
-            if item[0] == '?':  # Untracked file
-                continue
-            if any(item[i] != ' ' for i in offending_columns):
-                return False
-
-        return True
+        output = self.run("status -u -r {} --xml".format(self.get_revision()))
+        root = ET.fromstring(output)
+        item_status = set([item.get('item', 'none') for item in root.findall('.//wc-status')])
+        return all([i in ['external', 'ignored', 'none', 'normal', 'unversioned']
+                    for i in item_status])
 
     def get_revision(self):
         return self.run("info --show-item revision").strip()
