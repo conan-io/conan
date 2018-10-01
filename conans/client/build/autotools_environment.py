@@ -158,9 +158,6 @@ class AutoToolsBuildEnvironment(object):
             if not self._is_flag_in_args("datarootdir", args):
                 args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
 
-            if not any(["--libdir=" in arg for arg in args]):
-                args.append("--libdir=${prefix}/lib")
-
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
                 configure_dir = self._adjust_path(configure_dir)
