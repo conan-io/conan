@@ -1749,9 +1749,47 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         # User2 updates and get a conflicted file
         svn2.run('update')
+        print(svn2.run("status -u -r {} --xml".format(svn2.get_revision())))
         self.assertFalse(svn2.is_pristine())
         svn2.run('revert . -R')
         self.assertTrue(svn2.is_pristine())
+
+    def test_external_repo(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, _ = self.create_project(files={'nestedfile': "contents"})
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        print("*"*10)
+        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
+        print("*"*10)
+        print(svn.run("status -u -r {}".format(svn.get_revision())))
+        print("*"*10)
+        svn.run("propset svn:externals 'subrepo {}' .".format(project2_url))
+        svn.run('commit -m "add external"')
+        print("---")
+        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
+        print("---")
+        print(svn.run("status -u -r {}".format(svn.get_revision())))
+        print("---")
+        svn.update()
+        print("---")
+        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
+        print("---")
+        print(svn.run("status -u -r {}".format(svn.get_revision())))
+        print("---")
+
+        with open(os.path.join(svn.folder, "subrepo", "nestedfile"), "a") as f:
+            f.write("cosass")
+        print("---")
+        print(svn.run("status -u -r {} --xml".format(svn.get_revision())))
+        print("---")
+        print(svn.run("status -u -r {}".format(svn.get_revision())))
+        print("---")
+
+
+        self.assertTrue(svn.is_pristine())
+        self.fail("NNNN")
 
 
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
