@@ -65,7 +65,7 @@ zlib/0.1@lasote/testing
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertNotIn("zlib:shared=True", conaninfo)
 
-    def default_options_test(self):
+    def test_default_options(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -88,7 +88,7 @@ class MyConanFile(ConanFile):
         client.save({"conanfile.py": conanfile % ("\"ANY\"", "")})
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Please define a default value for 'config' in 'default_options'", client.out)
+        self.assertIn("Error while initializing options.", client.out)
         client.save({"conanfile.py": conanfile % ("\"ANY\"", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
@@ -99,7 +99,7 @@ class MyConanFile(ConanFile):
         client.save({"conanfile.py": conanfile % ("[None]", "")})
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Please define a default value for 'config' in 'default_options'", client.out)
+        self.assertIn("Error while initializing options.", client.out)
         client.save({"conanfile.py": conanfile % ("[None]", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
@@ -110,7 +110,7 @@ class MyConanFile(ConanFile):
         client.save({"conanfile.py": conanfile % ("[\"None\"]", "")})
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Please define a default value for 'config' in 'default_options'", client.out)
+        self.assertIn("Error while initializing options.", client.out)
         client.save({"conanfile.py": conanfile % ("[\"None\"]", "=None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
@@ -125,7 +125,7 @@ class MyConanFile(ConanFile):
         client.save({"conanfile.py": conanfile % ("[\"otherstringvalue\"]", "")})
         error = client.run("create . danimtb/testing", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Please define a default value for 'config' in 'default_options'", client.out)
+        self.assertIn("Error while initializing options.", client.out)
         client.save({"conanfile.py": conanfile % ("\"ANY\"", "=otherstringvalue")})
         client.run("create . danimtb/testing")
         self.assertIn("Boolean evaluation", client.out)
