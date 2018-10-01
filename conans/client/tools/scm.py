@@ -178,11 +178,6 @@ class SVN(SCMBase):
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
-        try:
-            self.version = SVN.get_version()
-        except ConanException:
-            self.version = SVN.API_CHANGE_VERSION  # TODO: raise?
-
     @staticmethod
     def get_version():
         try:
@@ -193,6 +188,13 @@ class SVN(SCMBase):
         except Exception as e:
             raise ConanException("Error retrieving SVN version: '{}'".format(e))
 
+    @property
+    def version(self):
+        if not hasattr(self, '_version'):
+            version = SVN.get_version()
+            setattr(self, '_version', version)
+        return getattr(self, '_version')
+
     def run(self, command):
         # Ensure we always pass some params
         extra_options = " --no-auth-cache --non-interactive"
@@ -200,7 +202,6 @@ class SVN(SCMBase):
             if self.version >= SVN.API_CHANGE_VERSION:
                 extra_options += " --trust-server-cert-failures=unknown-ca"
             else:
-
                 extra_options += " --trust-server-cert"
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
