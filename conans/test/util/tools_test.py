@@ -1768,6 +1768,15 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
             f.write("cosass")
         self.assertFalse(svn.is_pristine())
 
+    def test_mixed_revisions(self):
+        project_url, _ = self.create_project(files={'myfile': "cc", 'another': 'aa'})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        with open(os.path.join(svn.folder, 'myfile'), "a") as f:
+            f.write('more')
+        svn.run('commit -m "up version"')
+        self.assertFalse(svn.is_pristine())
+
 
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
