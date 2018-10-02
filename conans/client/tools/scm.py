@@ -253,7 +253,7 @@ class SVN(SCMBase):
         output = self.run("status -u -r {} --xml".format(self.get_revision()))
         root = ET.fromstring(output)
 
-        pristine_item_list = ['external', 'ignored', 'none', 'normal', 'unversioned']
+        pristine_item_list = ['external', 'ignored', 'none', 'normal']
         pristine_props_list = ['normal', 'none']
         for item in root.findall('.//wc-status'):
             if item.get('item', 'none') not in pristine_item_list:
@@ -261,7 +261,6 @@ class SVN(SCMBase):
             if item.get('props', 'none') not in pristine_props_list:
                 return False
 
-        pristine_repos_item_list = ['none']
         for item in root.findall('.//repos-status'):
             if item.get('item', 'none') not in pristine_item_list:
                 return False
