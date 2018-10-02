@@ -133,7 +133,9 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    origin_folder = os.path.dirname(conanfile_path)
+    _export(conanfile, origin_folder, exports_folder, output)
+    export_source(conanfile, origin_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
     _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
@@ -192,28 +194,34 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
-                    output):
+def _classify_patterns(patterns):
+    patterns = patterns or []
+    included, excluded = [], []
+    for p in patterns:
+        if p.startswith("!"):
+            excluded.append(p[1:])
+        else:
+            included.append(p)
+    return included, excluded
 
-    if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
+
+def export_source(conanfile, origin_folder, destination_source_folder, output):
     if isinstance(conanfile.exports_sources, str):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
-    origin_folder = os.path.dirname(conanfile_path)
+    included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
+    copier = FileCopier(origin_folder, destination_source_folder)
+    for pattern in included_sources:
+        copier(pattern, links=True, excludes=excluded_sources)
+    package_output = ScopedOutput("%s exports_sources" % output.scope, output)
+    copier.report(package_output)
 
-    def classify_patterns(patterns):
-        patterns = patterns or []
-        included, excluded = [], []
-        for p in patterns:
-            if p.startswith("!"):
-                excluded.append(p[1:])
-            else:
-                included.append(p)
-        return included, excluded
 
-    included_exports, excluded_exports = classify_patterns(conanfile.exports)
-    included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
+def _export(conanfile, origin_folder, destination_folder, output):
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+
+    included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
@@ -223,8 +231,5 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    copier = FileCopier(origin_folder, destination_source_folder)
-    for pattern in included_sources:
-        copier(pattern, links=True, excludes=excluded_sources)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)

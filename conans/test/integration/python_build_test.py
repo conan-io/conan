@@ -6,6 +6,7 @@ from conans.util.files import load, save
 import os
 from conans.test.utils.test_files import temp_folder
 from conans.model.info import ConanInfo
+from conans.model.ref import ConanFileReference
 
 
 conanfile = """from conans import ConanFile
@@ -311,7 +312,7 @@ class Pkg(ConanFile):
         client.run("export . Base/0.1@user/testing")
         conanfile = """from conans import python_requires, load
 base = python_requires("Base/0.1@user/testing")
-class Pkg2(base.ConanFile):
+class Pkg2(base.Pkg):
     def build(self):
         self.output.info("Exports sources: %s" % self.exports_sources)
         self.output.info("HEADER CONTENT!: %s" % load("header.h"))
@@ -319,6 +320,45 @@ class Pkg2(base.ConanFile):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header", client.out)
+
+    def reuse_class_members_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyConanfileBase(ConanFile):
+    license = "MyLicense"
+    author = "author@company.com"
+    exports = "*.txt"
+    exports_sources = "*.h"
+    short_paths = True
+    generators = "cmake"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Base/1.1@lasote/testing")
+
+        reuse = """from conans import python_requires
+import os
+base = python_requires("Base/1.1@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    def build(self):
+        self.output.info("Exports sources! %s" % self.exports_sources)
+        self.output.info("Short paths! %s" % self.short_paths)
+        self.output.info("License! %s" % self.license)
+        self.output.info("Author! %s" % self.author)
+        assert os.path.exists("conanbuildinfo.cmake")
+"""
+        client.save({"conanfile.py": reuse,
+                     "file.h": "header",
+                     "other.txt": "text"})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Exports sources! *.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing export: Copied 1 '.h' file: file.h",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Short paths! True", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: License! MyLicense", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Author! author@company.com", client.out)
+        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        self.assertTrue(os.path.exists(os.path.join(client.client_cache.export(ref),
+                                                    "other.txt")))
 
 
 class PythonBuildTest(unittest.TestCase):

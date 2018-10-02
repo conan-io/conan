@@ -2,7 +2,6 @@ import os
 
 from conans.client import packager
 from conans.client.client_cache import ClientCache
-from conans.client.cmd.export import _execute_export
 from conans.client.generators import write_generators
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import ConanInstaller, call_system_requirements
@@ -197,6 +196,7 @@ class ConanManager(object):
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
             _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
+            _export_source(conanfile, source_folder, output)
         config_source_local(source_folder, conanfile, conanfile_folder, output, conanfile_path,
                             self._plugin_manager)
 

@@ -368,6 +368,7 @@ class ConanInstaller(object):
             output.info("Won't be built as specified by --keep-build")
 
         t1 = time.time()
+        # It is necessary to complete the sources of python requires, which might be used
         for python_require in conan_file.python_requires:
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conan_file, python_require.conan_ref)
