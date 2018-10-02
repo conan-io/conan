@@ -1,18 +1,18 @@
 import os
 import random
 import shlex
-import shutil
 import sys
-import threading
-import uuid
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
 import requests
+import shutil
 import six
+import threading
 import time
+import uuid
 from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
@@ -25,11 +25,14 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.plugin_manager import PluginManager
-from conans.client.remote_registry import RemoteRegistry
+from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools.scm import Git
+from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
@@ -40,9 +43,6 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.client.tools.win import get_cased_path
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -390,8 +390,12 @@ class TestClient(object):
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def update_servers(self, servers):
+
         self.servers = servers or {}
-        save(self.client_cache.registry, "")
+
+        if not os.path.exists(self.client_cache.registry):
+            save(self.client_cache.registry, dump_registry({}, {}))
+
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
         def add_server_to_registry(name, server):
