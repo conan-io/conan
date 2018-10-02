@@ -84,11 +84,13 @@ class AutoToolsBuildEnvironment(object):
 
         try:
             build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             build = None
         try:
             host = get_gnu_triplet(self._os, self._arch, self._compiler)
-        except ConanException:
+        except ConanException as exc:
+            self._conanfile.output.warn(str(exc))
             host = None
         return build, host, None
 
@@ -146,6 +148,9 @@ class AutoToolsBuildEnvironment(object):
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
             elif not any(["--prefix=" in arg for arg in args]):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
+
+            if not any(["--libdir=" in arg for arg in args]):
+                args.append("--libdir=${prefix}/lib")
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
