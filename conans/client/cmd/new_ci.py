@@ -47,7 +47,7 @@ osx_config = """
         env: CONAN_APPLE_CLANG_VERSIONS={version}
 """
 
-build_py = """from conan.packager import ConanMultiPackager
+build_py = """from cpt.packager import ConanMultiPackager
 
 
 if __name__ == "__main__":
