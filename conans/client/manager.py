@@ -18,6 +18,7 @@ from conans.util.files import save, rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.graph.printer import print_graph
+from conans.client.cmd.export import export_source, _export
 
 
 class ConanManager(object):
@@ -195,8 +196,8 @@ class ConanManager(object):
         conanfile_folder = os.path.dirname(conanfile_path)
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
-            _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
-            _export_source(conanfile, source_folder, output)
+            _export(conanfile, conanfile_folder, source_folder, output)
+            export_source(conanfile, conanfile_folder, source_folder, output)
         config_source_local(source_folder, conanfile, conanfile_folder, output, conanfile_path,
                             self._plugin_manager)
 
