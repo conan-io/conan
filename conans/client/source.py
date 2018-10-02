@@ -11,6 +11,7 @@ from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
 from conans.model.scm import SCMData
+from conans.client.file_copier import FileCopier
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
@@ -84,6 +85,29 @@ def get_scm_data(conanfile):
         return None
 
 
+def _python_require_source_export(conanfile, origin_folder, destination_source_folder):
+
+    print "exports_sources ", conanfile.exports_sources
+    if isinstance(conanfile.exports_sources, str):
+        conanfile.exports_sources = (conanfile.exports_sources, )
+
+    def classify_patterns(patterns):
+        patterns = patterns or []
+        included, excluded = [], []
+        for p in patterns:
+            if p.startswith("!"):
+                excluded.append(p[1:])
+            else:
+                included.append(p)
+        return included, excluded
+
+    included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
+    print "INCLUIDE SOURCES ", conanfile.exports_sources, included_sources
+    copier = FileCopier(origin_folder, destination_source_folder)
+    for pattern in included_sources:
+        print "PROCESSING PATTERN ", pattern
+        copier(pattern, links=True, excludes=excluded_sources)
+
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
                   conanfile, output, conanfile_path, reference, plugin_manager,
                   client_cache):
@@ -137,7 +161,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
 
                     for python_require in conanfile.python_requires:
                         src = client_cache.export_sources(python_require.conan_ref)
-                        merge_directories(src, src_folder)
+                        _python_require_source_export(conanfile, src, src_folder)
 
                     merge_directories(export_folder, src_folder)
                     # Now move the export-sources to the right location

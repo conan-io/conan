@@ -310,10 +310,10 @@ class Pkg(ConanFile):
                      "header.h": "my header"})
         client.run("export . Base/0.1@user/testing")
         conanfile = """from conans import python_requires, load
-import os
 base = python_requires("Base/0.1@user/testing")
-class Pkg(base.ConanFile):
+class Pkg2(base.ConanFile):
     def build(self):
+        self.output.info("Exports sources: %s" % self.exports_sources)
         self.output.info("HEADER CONTENT!: %s" % load("header.h"))
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
