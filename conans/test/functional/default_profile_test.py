@@ -6,6 +6,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
+from conans import tools
 
 
 class DefaultProfileTest(unittest.TestCase):
@@ -129,3 +130,48 @@ class MyConanfile(ConanFile):
         client.save({CONANFILE: cf % "23"}, clean_first=True)
         client.run("export . lasote/stable")
         client.run('install mypackage/0.1@lasote/stable --build missing')
+
+    def test_env_default_profile(self):
+        conanfile = '''
+import os
+from conans import ConanFile
+
+class MyConanfile(ConanFile):
+
+    def build(self):
+        self.output.info(">>> env_variable={}".format(os.environ.get('env_variable'))) 
+'''
+
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+
+        # Test with the 'default' profile
+        env_variable = "env_variable=profile_default"
+        save(client.client_cache.default_profile_path, "[env]\n" + env_variable)
+        client.run("create . name/version@user/channel")
+        self.assertIn(">>> " + env_variable, client.out)
+
+        # Test with a profile set using and environment variable
+        tmp = temp_folder()
+        env_variable = "env_variable=profile_environment"
+        default_profile_path = os.path.join(tmp, 'env_profile')
+        save(default_profile_path, "[env]\n" + env_variable)
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': default_profile_path}):
+            client.run("create . name/version@user/channel")
+            self.assertIn(">>> " + env_variable, client.out)
+
+        # Use relative path defined in environment variable
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': '../whatever'}):
+            client.run("create . name/version@user/channel", ignore_error=True)
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
+                          "an absolute path", client.out)
+
+        # Use non existing path
+        profile_path = os.path.join(tmp, "this", "is", "a", "path")
+        self.assertTrue(os.path.isabs(profile_path))
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': profile_path}):
+            client.run("create . name/version@user/channel", ignore_error=True)
+            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
+                          "an existing profile file.", client.out)
+
+

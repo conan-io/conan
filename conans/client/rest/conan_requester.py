@@ -3,8 +3,12 @@ import os
 import requests
 import platform
 
+import time
+
 from conans.util.files import save
 from conans import __version__ as client_version
+from conans.util.tracer import log_client_rest_api_call
+
 
 class ConanRequester(object):
 
@@ -58,7 +62,7 @@ class ConanRequester(object):
         if self._timeout_seconds:
             kwargs["timeout"] = self._timeout_seconds
         if not kwargs.get("headers"):
-            kwargs["headers"]  = {}
+            kwargs["headers"] = {}
         kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,
                                                                        platform.python_version(),
                                                                        requests.utils.default_user_agent())
@@ -85,7 +89,12 @@ class ConanRequester(object):
                 popped = popped or os.environ.pop(var_name, None)
                 popped = popped or os.environ.pop(var_name.upper(), None)
         try:
-            return getattr(self._requester, method)(url, **self._add_kwargs(url, kwargs))
+            t1 = time.time()
+            all_kwargs = self._add_kwargs(url, kwargs)
+            tmp = getattr(self._requester, method)(url, **all_kwargs)
+            duration = time.time() - t1
+            log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
+            return tmp
         finally:
             if popped:
                 os.environ.clear()
