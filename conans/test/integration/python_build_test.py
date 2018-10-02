@@ -320,6 +320,7 @@ import os
 base = python_requires("Base/1.1@lasote/testing")
 class PkgTest(base.MyConanfileBase):
     def build(self):
+        self.output.info("Exports sources! %s" % self.exports_sources)
         self.output.info("Short paths! %s" % self.short_paths)
         self.output.info("License! %s" % self.license)
         self.output.info("Author! %s" % self.author)
@@ -329,6 +330,7 @@ class PkgTest(base.MyConanfileBase):
                      "file.h": "header",
                      "other.txt": "text"})
         client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Exports sources! *.h", client.out)
         self.assertIn("Pkg/0.1@lasote/testing export: Copied 1 '.h' file: file.h",
                       client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Short paths! True", client.out)
