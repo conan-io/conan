@@ -300,7 +300,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
-        
+
     def reuse_class_members_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
