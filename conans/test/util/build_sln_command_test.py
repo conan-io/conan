@@ -156,7 +156,22 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     parallel=False, output_binary_log=True)
         self.assertIn("/bl", command)
 
-    def binary_logging_off_test(self):
+    def binary_logging_on_with_filename(self):
+        bl_filename = "a_special_log.log"
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, output_binary_log=bl_filename)
+        
+        expected_command = '/bl:"%s"'.format(bl_filename)
+
+        self.assertIn(expected_command, command)
+
+    def binary_logging_off_explicit_test(self):
         command = build_sln_command(MockSettings({"compiler": "Visual Studio",
                                                   "compiler.version": "17",
                                                   "build_type": "Debug",
@@ -165,4 +180,15 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     sln_path='dummy.sln', targets=None,
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False, output_binary_log=False)
+        self.assertNotIn("/bl", command)
+
+    def binary_logging_off_implicit_test(self):
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False)
         self.assertNotIn("/bl", command)

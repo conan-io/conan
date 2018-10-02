@@ -26,7 +26,7 @@ class MSBuild(object):
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
-              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=False):
+              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None):
 
         self.build_env.parallel = parallel
 
@@ -46,7 +46,7 @@ class MSBuild(object):
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None, output_binary_log=False):
+                    use_env=False, properties=None, output_binary_log=None):
 
         targets = targets or []
         properties = properties or {}
@@ -87,8 +87,12 @@ class MSBuild(object):
                 self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
-        if output_binary_log:
-            command.append(' /bl ')
+        if output_binary_log not None:
+            if isinstance(output_binary_log, bool):
+                if output_binary_log:
+                    command.append(' /bl ')
+            else:
+                command.append(' /bl:"%s" '.format(output_binary_log))
 
         if use_env:
             command.append('/p:UseEnv=true')
