@@ -13,6 +13,7 @@ from .cmake import CMakeGenerator
 from .cmake_paths import CMakePathsGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .qmake import QmakeGenerator
+from .qmake_subdirs import QmakeSubDirsGenerator
 from .qbs import QbsGenerator
 from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
@@ -58,6 +59,7 @@ registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("cmake_paths", CMakePathsGenerator)
 registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
 registered_generators.add("qmake", QmakeGenerator)
+registered_generators.add("qmake_subdirs", QmakeSubDirsGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
 registered_generators.add("visual_studio", VisualStudioGenerator)
