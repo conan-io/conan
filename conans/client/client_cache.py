@@ -7,6 +7,7 @@ from conans.client.conf import ConanClientConfigParser, default_client_conf, def
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
+from conans.client.remote_registry import load_registry_txt, dump_registry, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
@@ -23,6 +24,7 @@ CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
+REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 PLUGINS_FOLDER = "plugins"
 
@@ -108,7 +110,13 @@ class ClientCache(SimplePaths):
 
     @property
     def registry(self):
-        return join(self.conan_folder, REGISTRY)
+        reg_json = join(self.conan_folder, REGISTRY_JSON)
+        if not os.path.exists(reg_json):
+            # Load the txt if exists and convert to json
+            reg_txt = join(self.conan_folder, REGISTRY)
+            if os.path.exists(reg_txt):
+                migrate_registry_file(reg_txt, reg_json)
+        return reg_json
 
     @property
     def conan_config(self):

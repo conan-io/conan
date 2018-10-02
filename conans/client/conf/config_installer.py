@@ -1,13 +1,14 @@
 import os
+
 import shutil
+import subprocess
 from six.moves.urllib.parse import urlparse
 
+from conans import tools, load
+from conans.client.remote_registry import RemoteRegistry, load_registry_txt
+from conans.errors import ConanException
 from conans.tools import unzip
 from conans.util.files import rmdir, mkdir
-from conans.client.remote_registry import RemoteRegistry
-from conans import tools
-from conans.errors import ConanException
-import subprocess
 
 
 def _hide_password(resource):
@@ -22,9 +23,10 @@ def _hide_password(resource):
 
 
 def _handle_remotes(registry_path, remote_file, output):
+    # FIXME: Should we encourage to pass the remotes in json?
+    remotes, _ = load_registry_txt(load(remote_file))
     registry = RemoteRegistry(registry_path, output)
-    new_registry = RemoteRegistry(remote_file, output)
-    registry.define_remotes(new_registry.remotes)
+    registry.define_remotes(remotes)
 
 
 def _handle_profiles(source_folder, target_folder, output):
