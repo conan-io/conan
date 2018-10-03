@@ -231,5 +231,5 @@ def _export(conanfile, origin_folder, destination_folder, output):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    package_output = ScopedOutput("%s export" % output.scope, output)
+    package_output = ScopedOutput("%s exports" % output.scope, output)
     copier.report(package_output)

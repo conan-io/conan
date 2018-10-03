@@ -351,7 +351,9 @@ class PkgTest(base.MyConanfileBase):
                      "other.txt": "text"})
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Exports sources! *.h", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing export: Copied 1 '.h' file: file.h",
+        self.assertIn("Pkg/0.1@lasote/testing exports: Copied 1 '.txt' file: other.txt",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing exports_sources: Copied 1 '.h' file: file.h",
                       client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Short paths! True", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: License! MyLicense", client.out)
