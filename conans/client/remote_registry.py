@@ -51,14 +51,8 @@ def load_registry_txt(contents):
 
 def dump_registry(remotes, refs):
     """To json"""
-    ret = {"remotes": [],
-           "references": {}}
-
-    for remote_name, (url, verify_ssl) in remotes.items():
-        ret["remotes"].append({"name": remote_name, "url": url, "verify_ssl": verify_ssl})
-
-    for ref, remote_name in refs.items():
-        ret["references"][ref] = remote_name
+    ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v} for r, (u, v) in remotes.items()],
+           "references": refs}
 
     return json.dumps(ret, indent=True)
 
@@ -75,10 +69,8 @@ def load_registry(contents):
 
 def migrate_registry_file(path, new_path):
     try:
-        contents = load(path)
-        remotes, refs = load_registry_txt(contents)
-        new_contents = dump_registry(remotes, refs)
-        save(new_path, new_contents)
+        remotes, refs = load_registry_txt(load(path))
+        save(new_path, dump_registry(remotes, refs))
     except Exception as e:
         raise ConanException("Cannot migrate registry.txt to registry.json: %s" % str(e))
     else:
@@ -99,9 +91,9 @@ class RemoteRegistry(object):
         try:
             contents = load(self._filename)
         except IOError:
+            contents = dump_registry(default_remotes, {})
             self._output.warn("Remotes registry file missing, creating default one in %s"
                               % self._filename)
-            contents = dump_registry(default_remotes, {})
             save(self._filename, contents)
 
         return load_registry(contents)
