@@ -18,7 +18,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client.client_cache import ClientCache
+from conans.client.client_cache import ClientCache, REGISTRY_JSON
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
 from conans.client.conan_command_output import CommandOutputer
@@ -383,18 +383,18 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        self.update_servers(servers)
+        self.servers = servers or {}
+        if servers is not False:  # Do not mess with registry remotes
+            self.update_servers()
+
         self.init_dynamic_vars()
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
-    def update_servers(self, servers):
+    def update_servers(self):
 
-        self.servers = servers or {}
-
-        if not os.path.exists(self.client_cache.registry):
-            save(self.client_cache.registry, dump_registry({}, {}))
+        save(self.client_cache.registry, dump_registry({}, {}))
 
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
@@ -445,7 +445,7 @@ class TestClient(object):
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-
+        self.client_cache = ClientCache(self.base_folder, self.storage_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real

@@ -115,7 +115,7 @@ class ConanProxy(object):
                 raise exc
 
         output.info("Not found in local cache, looking in remotes...")
-        remotes = self._registry.remotes
+        remotes = self._registry.remotes_list
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
@@ -139,7 +139,7 @@ class ConanProxy(object):
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             return search_result
 
-        for remote in self._registry.remotes:
+        for remote in self._registry.remotes_list:
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             if search_result:
                 return search_result

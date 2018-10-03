@@ -19,7 +19,7 @@ class Search(object):
             return references
 
         if remote_name == 'all':
-            remotes = self._registry.remotes
+            remotes = self._registry.remotes_list
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
@@ -71,7 +71,7 @@ class Search(object):
 
     def _search_packages_in_all(self, reference=None, query=None, outdated=False):
         references = OrderedDict()
-        remotes = self._registry.remotes
+        remotes = self._registry.remotes_list
         # We have to check if there is a remote called "all"
         # Deprecate: 2.0 can remove this check
         if 'all' not in (r.name for r in remotes):
