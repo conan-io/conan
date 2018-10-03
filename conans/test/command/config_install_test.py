@@ -133,7 +133,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry_path = self.client.client_cache.registry
         registry = RemoteRegistry(registry_path, TestBufferConanOutput())
-        self.assertEqual(registry.remotes,
+        self.assertEqual(registry.remotes_list,
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])

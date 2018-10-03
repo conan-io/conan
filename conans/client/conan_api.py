@@ -749,7 +749,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._registry.remotes
+        return self._registry.remotes_list
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):

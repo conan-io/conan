@@ -77,6 +77,12 @@ def migrate_registry_file(path, new_path):
         os.unlink(path)
 
 
+class _RemotesManager(object):
+
+    def __init__(self, remotes):
+        self._remotes = remotes
+
+
 class RemoteRegistry(object):
     """ conan_ref: remote
     remote is (name, url)
@@ -88,14 +94,7 @@ class RemoteRegistry(object):
         self._remotes = None
 
     def _load(self):
-        try:
-            contents = load(self._filename)
-        except IOError:
-            contents = dump_registry(default_remotes, {})
-            self._output.warn("Remotes registry file missing, creating default one in %s"
-                              % self._filename)
-            save(self._filename, contents)
-
+        contents = load(self._filename)
         return load_registry(contents)
 
     def _save(self, remotes, refs):
@@ -104,12 +103,12 @@ class RemoteRegistry(object):
     @property
     def default_remote(self):
         try:
-            return self.remotes[0]
+            return self.remotes_list[0]
         except IndexError:
             raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
 
     @property
-    def remotes(self):
+    def remotes_list(self):
         return list(self._remote_dict.values())
 
     def remote(self, remote_name):
@@ -141,7 +140,7 @@ class RemoteRegistry(object):
             remote_name = refs.get(str(conan_reference))
             try:
                 return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
-            except:
+            except KeyError:
                 return None
 
     def remove_ref(self, conan_reference, quiet=False):
