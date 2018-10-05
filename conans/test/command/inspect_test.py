@@ -1,7 +1,8 @@
-from conans.test.utils.tools import TestClient, TestServer
-import unittest
-from conans.util.files import load
 import os
+import unittest
+
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -17,18 +18,19 @@ class Pkg(ConanFile):
         client.run("export . Base/0.1@lasote/testing")
         conanfile = """from conans import python_requires
 base = python_requires("Base/0.1@lasote/testing")
-class Pkg(base.ConanFile):
+class Pkg(base.Pkg):
     pass
 """
         client.save({"conanfile.py": conanfile})
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("upload * --all --confirm")
         client.run("remove * -f")
-        client.run("inspect Base/0.1@lasote/testing -a=_my_var -r=default")
+        client.run("inspect Pkg/0.1@lasote/testing -a=_my_var -r=default")
         self.assertIn("_my_var: 123", client.out)
-        # Check that nothing was installed in the local cache, as the inspect put them in temps
+        # Inspect fetch recipes into local cache
         client.run("search")
-        self.assertIn("There are no packages", client.out)
+        self.assertIn("Base/0.1@lasote/testing", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
     def name_version_test(self):
         server = TestServer()

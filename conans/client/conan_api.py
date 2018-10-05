@@ -271,29 +271,17 @@ class ConanAPIV1(object):
 
     @api_method
     def inspect(self, path, attributes, remote_name=None):
-        if remote_name:
-            tmp_folder = mkdir_tmp()
-            old_store_folder = self._client_cache._store_folder
-            self._client_cache._store_folder = tmp_folder
-        else:
-            tmp_folder = None
-
         try:
-            try:
-                reference = ConanFileReference.loads(path)
-            except ConanException:
-                reference = None
-                cwd = get_cwd()
-                conanfile_path = _get_conanfile_path(path, cwd, py=True)
-            else:
-                result = self._proxy.get_recipe(reference, False, False, remote_name,
-                                                ActionRecorder())
-                conanfile_path, _, _, reference = result
-            conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
-        finally:
-            if tmp_folder:
-                self._client_cache._store_folder = old_store_folder
-                shutil.rmtree(tmp_folder)
+            reference = ConanFileReference.loads(path)
+        except ConanException:
+            reference = None
+            cwd = get_cwd()
+            conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        else:
+            result = self._proxy.get_recipe(reference, False, False, remote_name,
+                                            ActionRecorder())
+            conanfile_path, _, _, reference = result
+        conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
 
         result = OrderedDict()
         for attribute in attributes:
