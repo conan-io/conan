@@ -3,7 +3,7 @@ import shutil
 from six.moves.urllib.parse import urlparse
 
 from conans.tools import unzip
-from conans.util.files import rmdir, mkdir
+from conans.util.files import rmdir, mkdir, walk
 from conans.client.remote_registry import RemoteRegistry
 from conans import tools
 from conans.errors import ConanException
@@ -29,7 +29,7 @@ def _handle_remotes(registry_path, remote_file, output):
 
 def _handle_profiles(source_folder, target_folder, output):
     mkdir(target_folder)
-    for root, _, files in os.walk(source_folder):
+    for root, _, files in walk(source_folder):
         relative_path = os.path.relpath(root, source_folder)
         if relative_path == ".":
             relative_path = ""
@@ -69,7 +69,7 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
 
 
 def _process_folder(folder, client_cache, output):
-    for root, dirs, files in os.walk(folder):
+    for root, dirs, files in walk(folder):
         for f in files:
             if f == "settings.yml":
                 output.info("Installing settings.yml")
