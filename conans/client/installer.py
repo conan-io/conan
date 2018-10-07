@@ -319,6 +319,8 @@ class ConanInstaller(object):
                         self._registry.set_ref(conan_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
+                    _handle_system_requirements(conan_file, package_ref, self._client_cache,
+                                                self._out)
                     log_package_got_from_local_cache(package_ref)
                     self._recorder.package_fetched_from_cache(package_ref)
                 clean_dirty(package_folder)
