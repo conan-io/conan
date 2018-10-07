@@ -90,7 +90,7 @@ default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
-# sysrequires_mode = enabled            # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
+# sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
@@ -137,6 +137,8 @@ path = ~/.conan/data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
+[plugins]  # environment CONAN_PLUGINS
+attribute_checker
 
 # Default settings now declared in the default profile
 
@@ -147,7 +149,7 @@ path = ~/.conan/data
 class ConanClientConfigParser(ConfigParser, object):
 
     def __init__(self, filename):
-        ConfigParser.__init__(self)
+        ConfigParser.__init__(self, allow_no_value=True)
         self.read(filename)
         self.filename = filename
 
@@ -198,7 +200,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
-               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False")
+               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
+               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None)
                }
 
         # Filter None values
@@ -225,9 +228,14 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("'%s' is not a section of conan.conf" % section_name)
         if len(tokens) == 1:
             result = []
-            for item in section:
-                result.append(" = ".join(item))
-            return "\n".join(result)
+            if section_name == "plugins":
+                for key, _ in section:
+                    result.append(key)
+                return ",".join(result)
+            else:
+                for section_item in section:
+                    result.append(" = ".join(section_item))
+                return "\n".join(result)
         else:
             key = tokens[1]
             try:
@@ -279,10 +287,20 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def default_profile(self):
-        try:
-            return self.get_item("general.default_profile")
-        except ConanException:
-            return DEFAULT_PROFILE_NAME
+        ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
+        if ret:
+            if not os.path.isabs(ret):
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point "
+                                     "to an absolute path.")
+            if not os.path.exists(ret):
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
+                                     "an existing profile file.")
+            return ret
+        else:
+            try:
+                return unquote(self.get_item("general.default_profile"))
+            except ConanException:
+                return DEFAULT_PROFILE_NAME
 
     @property
     def cache_no_locks(self):
