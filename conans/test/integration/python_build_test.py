@@ -1,5 +1,6 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer,\
+    create_local_git_repo
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.util.files import load, save
 import os
@@ -173,6 +174,45 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
+    def multiple_requires_error_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+myvar = 123
+def myfunct():
+    return 123
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Pkg1/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile
+myvar = 234
+def myfunct():
+    return 234
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Pkg2/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+pkg1 = python_requires("Pkg1/1.0@user/channel")
+pkg2 = python_requires("Pkg2/1.0@user/channel")
+class MyConanfileBase(ConanFile):
+    def build(self):
+        self.output.info("PKG1 : %s" % pkg1.myvar)
+        self.output.info("PKG2 : %s" % pkg2.myvar)
+        self.output.info("PKG1F : %s" % pkg1.myfunct())
+        self.output.info("PKG2F : %s" % pkg2.myfunct())
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Consumer/0.1@lasote/testing")
+        self.assertIn("Consumer/0.1@lasote/testing: PKG1 : 123", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG2 : 234", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG1F : 123", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG2F : 234", client.out)
+
     def local_import_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
@@ -218,6 +258,47 @@ class PkgTest(base.MyConanfileBase):
         client.run("download Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                       client.out)
+
+    def reuse_scm_test(self):
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile
+scm = {"type" : "git",
+       "url" : "somerepo",
+       "revision" : "auto"}
+
+class MyConanfileBase(ConanFile):
+    scm = scm
+"""
+        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
+                              folder=client.current_folder)
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
+        client.run("get MyConanfileBase/1.1@lasote/testing")
+        # The global scm is left as-is
+        self.assertIn("""scm = {"type" : "git",
+       "url" : "somerepo",
+       "revision" : "auto"}""", client.out)
+        # but the class one is replaced
+        self.assertNotIn("scm = scm", client.out)
+        self.assertIn('    scm = {"revision":', client.out)
+        self.assertIn('"type": "git",', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
+
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/1.1@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    scm = base.scm
+    other = 123
+    def _my_method(self):
+        pass
+"""
+        client.save({"conanfile.py": reuse})
+        client.run("export . Pkg/0.1@lasote/testing")
+        client.run("get Pkg/0.1@lasote/testing")
+        self.assertNotIn("scm = base.scm", client.out)
+        self.assertIn('scm = {"revision":', client.out)
+        self.assertIn('"type": "git",', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
 
 
 class PythonBuildTest(unittest.TestCase):
