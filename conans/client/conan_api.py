@@ -1,7 +1,8 @@
 import os
 import sys
-
 import requests
+
+from collections import OrderedDict
 
 import conans
 from conans import __version__ as client_version, tools
@@ -52,7 +53,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
-from collections import OrderedDict
 
 
 default_manifest_folder = '.conan_manifests'
@@ -282,6 +282,10 @@ class ConanAPIV1(object):
         conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
 
         result = OrderedDict()
+        if not attributes:
+            attributes = ['name', 'version', 'url', 'license', 'author', 'description',
+                          'generators', 'exports', 'exports_sources', 'short_paths',
+                          'apply_env',  'build_policy']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)

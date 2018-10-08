@@ -118,3 +118,28 @@ default_options: ('option1=False', 'option2=2', 'option3=randomANY')
         self.assertEqual(json_contents["default_options"], ['option1=False',
                                                             'option2=2',
                                                             'option3=randomANY'])
+
+    def inspect_all_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    name = "MyPkg"
+    version = "1.2.3"
+    _private = "Nothing"
+    def build(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertIn("""name: MyPkg
+version: 1.2.3
+url: None
+license: None
+author: None
+description: None
+generators: ['txt']
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None""", client.out)
