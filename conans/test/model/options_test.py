@@ -1,4 +1,5 @@
 import six
+import sys
 import unittest
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
@@ -329,7 +330,8 @@ class OptionsValuesTest(unittest.TestCase):
                          "2442d43f1d558621069a15ff5968535f818939b5")
 
     def test_loads_exceptions(self):
-        emsg = "not enough values to unpack" if six.PY3 else "need more than 1 value to unpack"
+        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
+            else "need more than 1 value to unpack"
         with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues.loads("a=2\nconfig\nb=3")
 
@@ -337,7 +339,8 @@ class OptionsValuesTest(unittest.TestCase):
             OptionsValues.loads("config\na=2\ncommit\nb=3")
 
     def test_exceptions_empty_value(self):
-        emsg = "not enough values to unpack" if six.PY3 else "need more than 1 value to unpack"
+        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
+            else "need more than 1 value to unpack"
         with self.assertRaisesRegexp(ValueError, emsg):
             OptionsValues("a=2\nconfig\nb=3")
 
