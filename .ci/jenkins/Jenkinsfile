@@ -1,6 +1,6 @@
 // ########## CONFIGURATION ##################
-def full_py_vers = false
-def test_v2 = false
+def full_py_vers = true
+def test_v2 = true
 // ############################
 
 
