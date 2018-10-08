@@ -276,7 +276,8 @@ class ConanAPIV1(object):
             cwd = get_cwd()
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
         else:
-            result = self._proxy.get_recipe(reference, False, False, remote_name,
+            update = True if remote_name else False
+            result = self._proxy.get_recipe(reference, update, update, remote_name,
                                             ActionRecorder())
             conanfile_path, _, _, reference = result
         conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
