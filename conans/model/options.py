@@ -123,7 +123,7 @@ class PackageOptionValues(object):
         assert isinstance(down_package_values, PackageOptionValues)
         for (name, value) in down_package_values.items():
             current_value = self._dict.get(name)
-            if value == current_value:
+            if value != 'None' and value == current_value:
                 continue
 
             modified = self._modified.get(name)
