@@ -123,8 +123,9 @@ def configuration_install(item, client_cache, output, verify_ssl, config_type=No
 
         if item.endswith(".git") or config_type == "git":
             _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl, args)
-        elif os.path.exists(item):
-            # is a local file
+        elif os.path.isdir(item):
+            _process_folder(item, client_cache, output)
+        elif os.path.isfile(item):
             _process_zip_file(item, client_cache, output, tmp_folder)
         elif item.startswith("http"):
             _process_download(item, client_cache, output, tmp_folder, verify_ssl)
