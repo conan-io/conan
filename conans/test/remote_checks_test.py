@@ -1,7 +1,8 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer,\
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from collections import OrderedDict
+
+from conans.test.utils.tools import TestClient, TestServer, \
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -97,9 +98,10 @@ class Pkg(ConanFile):
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server1'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server1'", client.out)
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
 
