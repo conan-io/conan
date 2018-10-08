@@ -290,8 +290,8 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point "
-                                     "to an absolute path.")
+                ret = os.path.abspath(os.path.join(os.path.dirname(self.filename), ret))
+
             if not os.path.exists(ret):
                 raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                                      "an existing profile file.")
