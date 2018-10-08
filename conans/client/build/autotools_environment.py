@@ -96,7 +96,7 @@ class AutoToolsBuildEnvironment(object):
         return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
-                  pkg_config_paths=None, vars=None):
+                  pkg_config_paths=None, vars=None, default_install_dirs=True):
         """
         :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
@@ -107,10 +107,10 @@ class AutoToolsBuildEnvironment(object):
                        "False" skips the --target flag
                        When the tool chain generates executable program, in which target system
                        the program will run.
-        :return: None
 
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+        :param default_install_dirs: Use or not the defaulted installation dirs
 
         """
         if not self._conanfile.should_configure:
@@ -149,16 +149,18 @@ class AutoToolsBuildEnvironment(object):
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
             elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
-            for varname in ["bindir", "sbin", "libexec"]:
-                if not self._is_flag_in_args(varname, args):
-                    args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
-            if not self._is_flag_in_args("libdir", args):
-                args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
-            for varname in ["includedir", "oldincludedir"]:
-                if not self._is_flag_in_args(varname, args):
-                    args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
-            if not self._is_flag_in_args("datarootdir", args):
-                args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
+
+            if default_install_dirs:
+                for varname in ["bindir", "sbin", "libexec"]:
+                    if not self._is_flag_in_args(varname, args):
+                        args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
+                if not self._is_flag_in_args("libdir", args):
+                    args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
+                for varname in ["includedir", "oldincludedir"]:
+                    if not self._is_flag_in_args(varname, args):
+                        args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
+                if not self._is_flag_in_args("datarootdir", args):
+                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):

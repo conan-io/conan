@@ -560,6 +560,12 @@ class HelloConan(ConanFile):
                           "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' "
                           "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res'",
                           runner.command_called)
+        # opt-out from default installation dirs
+        ab.configure(default_install_dirs=False)
+        self.assertIn("--prefix=/package_folder", runner.command_called)
+        self.assertNotIn("--bindir=${prefix}/bin", runner.command_called)
+        self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
+        self.assertNotIn("--includedir=${prefix}/lib", runner.command_called)
 
     def autotools_configure_vars_test(self):
         from mock import patch
@@ -708,7 +714,7 @@ AC_OUTPUT
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 
         new_conanfile = conanfile.replace("autotools.configure()",
-                                           "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
+                                          "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
         client.save({"conanfile.py": new_conanfile})
         client.run("create . danimtb/testing")
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
