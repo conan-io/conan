@@ -3,6 +3,7 @@ from conans.errors import ConanException
 travis = """
 env:
    global:
+     - CONAN_REFERENCE: "{name}/{version}"
      - CONAN_USERNAME: "{user}"
      - CONAN_LOGIN_USERNAME: "{user}"
      - CONAN_CHANNEL: "{channel}"
@@ -106,6 +107,7 @@ environment:
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
 
+    CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
     CONAN_LOGIN_USERNAME: "{user}"
     CONAN_CHANNEL: "{channel}"
@@ -126,6 +128,7 @@ test_script:
 gitlab = """
 variables:
     CONAN_USERNAME: "{user}"
+    CONAN_REFERENCE: "{name}/{version}"
     CONAN_CHANNEL: "{channel}"
     CONAN_LOGIN_USERNAME: "{user}"
     {upload}
@@ -170,6 +173,7 @@ version: 2
           chmod +x .circleci/run.sh
           .circleci/run.sh
         environment:
+          CONAN_REFERENCE: "{name}/{version}"
           CONAN_USERNAME: "{user}"
           CONAN_CHANNEL: "{channel}"
           {upload}
