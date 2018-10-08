@@ -560,6 +560,17 @@ class HelloConan(ConanFile):
 """
         _assert_conanfile(hello_content_tuple)
 
+        hello_content_dict = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    requires = "Say/0.1@user/testing"
+    default_options = {"Say:myoption" : 234, }  # To test dict definition
+"""
+        _assert_conanfile(hello_content_dict)
+
     def test_transitive_two_levels_options(self):
         say_content = """
 from conans import ConanFile
