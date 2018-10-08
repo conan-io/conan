@@ -1,14 +1,14 @@
 import os
 
-from conans.util.files import rmdir, is_dirty
-from conans.model.ref import PackageReference
-from conans.client.output import ScopedOutput
-from conans.errors import NotFoundException, NoRemoteAvailable
-from conans.model.manifest import FileTreeManifest
-from conans.model.info import ConanInfo
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
                                        BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
                                        BINARY_WORKSPACE)
+from conans.client.output import ScopedOutput
+from conans.errors import NotFoundException, NoRemoteAvailable
+from conans.model.info import ConanInfo
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference
+from conans.util.files import rmdir, is_dirty
 
 
 class GraphBinariesAnalyzer(object):

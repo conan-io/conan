@@ -36,6 +36,7 @@ class ConanProxy(object):
         if not os.path.exists(conanfile_path):
             remote, new_ref = self._download_recipe(reference, output, remote_name, recorder)
             status = RECIPE_DOWNLOADED
+            self._registry.refs.set(reference, remote_name)
             return conanfile_path, status, remote, new_ref
 
         remote = self._registry.refs.get(reference)
