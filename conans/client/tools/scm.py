@@ -11,7 +11,6 @@ import platform
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.client.output import ConanOutput
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
 
@@ -20,7 +19,7 @@ class SCMBase(object):
     cmd_command = None
 
     def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None, output=None):
+                 runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -29,7 +28,6 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
-        self.output = output or ConanOutput(sys.stdout, True)
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
