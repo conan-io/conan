@@ -220,8 +220,7 @@ project(MyHello C)
 cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(KEEP_RPATHS)
-add_executable(say_hello main.c)
-target_link_libraries(say_hello ${CONAN_LIBS})       
+add_executable(say_hello main.c)    
 """
 
         main = """
