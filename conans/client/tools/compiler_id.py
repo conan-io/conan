@@ -7,20 +7,27 @@ from conans.client.tools import which
 from conans.model.version import Version
 from six import StringIO
 import os
+import tempfile
+import re
 
+MSVC = 'Visual Studio'
 GCC = 'gcc'
 CLANG = 'clang'
 APPLE_CLANG = 'apple-clang'
 
+MODE_GCC = 'g++'
+MODE_CL = 'cl'
+
 
 class CompilerId(object):
-    def __init__(self, compiler, major, minor, patch):
-        # type: (str, int, int, int) -> object
+    def __init__(self, compiler, major, minor, patch, mode=MODE_GCC):
+        # type: (str, int, int, int, str) -> None
         self._compiler = compiler
         self._major = major
         self._minor = minor
         self._patch = patch
         self._version = Version('%s.%s.%s' % (major, minor, patch))
+        self._mode = mode
 
     def check_settings(self, settings):
         compiler = settings.get_safe('compiler')
@@ -48,6 +55,10 @@ class CompilerId(object):
     def patch(self):
         return self._patch
 
+    @property
+    def mode(self):
+        return self._mode
+
     def __str__(self):
         return '%s %s.%s.%s' % (self.compiler, self.major, self.minor, self.patch)
 
@@ -63,10 +74,12 @@ class CompilerId(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 UNKWNON_COMPILER = CompilerId(None, None, None, None)
 
 
 def compiler_id(compiler, runner=None):
+
     try:
         from subprocess import DEVNULL
     except ImportError:
@@ -74,13 +87,45 @@ def compiler_id(compiler, runner=None):
     runner = runner or ConanRunner()
     result = StringIO()
     command = compiler
+    mode = MODE_GCC
     # -E run only preprocessor
     # -dM generate list of #define directives
-    # - read input file from standard input
-    command += ' -E -dM -'
-    exit_code = runner(command, output=result, the_input=DEVNULL)
-    if 0 != exit_code:
-        return UNKWNON_COMPILER
+    # -x c compiler as C code
+    f = tempfile.NamedTemporaryFile()
+    command += ' -E -dM -x c %s' % f.name
+    if 0 != runner(command, output=result, the_input=DEVNULL):
+        # detect clang-cl
+        command += ' --driver-mode=g++'
+        result = StringIO()
+        exit_code = runner(command, output=result, the_input=DEVNULL)
+        if 0 != exit_code:
+            # detect MSVC
+            command = ' /nologo /E /c %s' % f.name
+            result = StringIO()
+            if 0 != runner(command, output=result, the_input=DEVNULL):
+                return UNKWNON_COMPILER
+            command = ' /E /c %s' % f.name
+            result = StringIO()
+            if 0 != runner(command, output=result, the_input=DEVNULL):
+                return UNKWNON_COMPILER
+            version_string = result.getvalue().split('\n')[0]
+            version = re.search('[0-9]+\.[0-9]+\.[0-9]+', version_string).group()
+            major, minor, _ = version.split('.')
+            msc_ver = major + minor
+            major, minor, patch = {'1400': (8, 0, 0),
+                                   '1500': (9, 0, 0),
+                                   '1600': (10, 0, 0),
+                                   '1700': (11, 0, 0),
+                                   '1800': (12, 0, 0),
+                                   '1900': (14, 0, 0),
+                                   '1910': (15, 0, 0),
+                                   '1911': (15, 3, 0),
+                                   '1912': {15, 5, 0},
+                                   '1913': (15, 6, 0),
+                                   '1914': (15, 7, 0),
+                                   '1915': (15, 8, 0)}.get(msc_ver)
+            return CompilerId(MSVC, major, minor, patch, MODE_CL)
+        mode = MODE_CL
     output = result.getvalue()
     defines = dict()
     for line in output.split('\n'):
@@ -108,7 +153,7 @@ def compiler_id(compiler, runner=None):
     except ValueError:
         # macro was defined, but wasn't parsed as an integer
         return UNKWNON_COMPILER
-    return CompilerId(compiler, major, minor, patch)
+    return CompilerId(compiler, major, minor, patch, mode)
 
 
 def guess_compiler(settings, language):

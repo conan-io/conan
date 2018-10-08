@@ -7,6 +7,8 @@ import unittest
 from conans import tools
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockSettings
+from mock import mock
+from parameterized import parameterized
 
 
 class CompilerIdTest(unittest.TestCase):
@@ -60,6 +62,42 @@ class CompilerIdTest(unittest.TestCase):
 
         compiler_id = tools.compiler_id('clang', runner=runner)
         self.assertEqual(compiler_id, tools.CompilerId(tools.APPLE_CLANG, 9, 1, 0))
+
+    def test_clang_cl(self):
+        def side_effect(*args, **kwargs):
+            if ' --driver-mode=g++' in args[0]:
+                kwargs['output'].write("#define __clang_major__ 6\n"
+                                       "#define __clang_minor__ 0\n"
+                                       "#define __clang_patchlevel__ 1\n")
+                return 0
+            return 1
+
+        runner_mock = mock.MagicMock(side_effect=side_effect)
+        compiler_id = tools.compiler_id('clang-cl.exe', runner=runner_mock)
+        self.assertEqual(compiler_id, tools.CompilerId(tools.CLANG, 6, 0, 1, tools.MODE_CL))
+
+    @parameterized.expand([('19.15.26726', 15, 8, 0),
+                           ('14.00.50727.762', 8, 0, 0),
+                           ('15.00.21022.08', 9, 0, 0),
+                           ('16.00.40219.01', 10, 0, 0),
+                           ('17.00.60610.1', 11, 0, 0),
+                           ('18.00.40629', 12, 0, 0),
+                           ('19.00.24210', 14, 0, 0)])
+    def test_msvc(self, msc_ver, major, minor, patch):
+        def side_effect(*args, **kwargs):
+            if ' -E -dM -x c' in args[0]:
+                return 1
+            elif ' /E /c' in args[0]:
+                kwargs['output'].write('Microsoft (R) C/C++ Optimizing Compiler Version %s for x64\n'
+                                       'Copyright (C) Microsoft Corporation.  All rights reserved.\n'
+                                       'main.cpp\n'
+                                       '#line 1 "C:\\bincrafters\\main.cpp"\n'
+                                       'int main() {}' % msc_ver)
+            return 0
+
+        runner_mock = mock.MagicMock(side_effect=side_effect)
+        compiler_id = tools.compiler_id('clang-cl.exe', runner=runner_mock)
+        self.assertEqual(compiler_id, tools.CompilerId(tools.MSVC, major, minor, patch, tools.MODE_CL))
 
     def test_check_version_no_compiler(self):
         compiler_id = tools.CompilerId('gcc', 4, 8, 1)
