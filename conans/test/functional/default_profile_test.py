@@ -161,10 +161,15 @@ class MyConanfile(ConanFile):
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use relative path defined in environment variable
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': '../whatever'}):
-            client.run("create . name/version@user/channel", ignore_error=True)
-            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                          "an absolute path", client.out)
+        env_variable = "env_variable=relative_profile"
+        rel_path = os.path.join('..', 'env_rel_profile')
+        self.assertFalse(os.path.isabs(rel_path))
+        default_profile_path = os.path.join(os.path.dirname(client.client_cache.conan_conf_path),
+                                            rel_path)
+        save(default_profile_path, "[env]\n" + env_variable)
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):
+            client.run("create . name/version@user/channel")
+            self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
