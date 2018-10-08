@@ -3,7 +3,7 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
-from conans.util.files import mkdir
+from conans.util.files import mkdir, walk
 
 
 def report_copied_files(copied, output):
@@ -91,6 +91,7 @@ class FileCopier(object):
         """
         filenames = []
         linked_folders = []
+
         if excludes:
             if not isinstance(excludes, (tuple, list)):
                 excludes = (excludes, )
@@ -99,7 +100,7 @@ class FileCopier(object):
         else:
             excludes = []
 
-        for root, subfolders, files in os.walk(src, followlinks=True):
+        for root, subfolders, files in walk(src, followlinks=True):
             if root in self._excluded:
                 subfolders[:] = []
                 continue
