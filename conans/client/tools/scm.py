@@ -1,6 +1,5 @@
-import os
 
-import re
+import os
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus
 from subprocess import CalledProcessError, PIPE, STDOUT
@@ -8,7 +7,7 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.util.files import decode_text, to_file_bytes
+from conans.util.files import decode_text, to_file_bytes, walk
 
 
 class Git(object):
@@ -93,7 +92,7 @@ class Git(object):
         try:
 
             file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
-                          for folder, dirpaths, fs in os.walk(self.folder)
+                          for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
