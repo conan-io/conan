@@ -1,7 +1,8 @@
 import os
 import sys
-
 import requests
+
+from collections import OrderedDict
 
 import conans
 from conans import __version__ as client_version, tools
@@ -52,8 +53,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
-from collections import OrderedDict
-import inspect
 
 
 default_manifest_folder = '.conan_manifests'
