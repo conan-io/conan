@@ -462,8 +462,7 @@ class PackageOptions(object):
             return
 
         for (name, value) in package_values.items():
-            current_value = self._data.get(name)
-            if value == current_value:
+            if name in self._data and self._data.get(name) == value:
                 continue
 
             modified = self._modified.get(name)
