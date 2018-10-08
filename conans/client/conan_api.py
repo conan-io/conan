@@ -47,7 +47,6 @@ from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
-from conans.model.conan_file import create_options
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.loader import ConanFileLoader
 from conans.client.graph.proxy import ConanProxy
@@ -285,11 +284,7 @@ class ConanAPIV1(object):
         result = OrderedDict()
         for attribute in attributes:
             try:
-                if attribute == "options":
-                    options = create_options(conanfile)
-                    attr = options._package_options
-                else:
-                    attr = getattr(conanfile, attribute)
+                attr = getattr(conanfile, attribute)
                 result[attribute] = attr
             except AttributeError as e:
                 raise ConanException(str(e))
