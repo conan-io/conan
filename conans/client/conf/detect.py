@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from conans.client.output import Color
 from conans.model.version import Version
-from conans.client.tools.win import _latest_visual_studio_version_installed
+from conans.client.tools.win import latest_visual_studio_version_installed
 
 
 def _execute(command):
@@ -102,7 +102,7 @@ def _get_default_compiler(output):
         return None
 
     if detected_os() == "Windows":
-        version = _latest_visual_studio_version_installed(output)
+        version = latest_visual_studio_version_installed(output)
         vs = ('Visual Studio', version) if version else None
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)

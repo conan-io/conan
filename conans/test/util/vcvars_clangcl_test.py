@@ -43,7 +43,7 @@ class VCVarsClangClTest(unittest.TestCase):
         settings.arch = 'x86_64'
         settings.os = 'Windows'
 
-        with mock.patch('conans.client.tools.win.latest_visual_studio_version_installed',
+        with mock.patch('conans.client.tools.win.latest_vs_version_installed',
                         mock.MagicMock(return_value=None)):
             with self.assertRaises(ConanException):
                 tools.vcvars_command(settings)
