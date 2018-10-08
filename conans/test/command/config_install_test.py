@@ -133,11 +133,11 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry_path = self.client.client_cache.registry
         registry = RemoteRegistry(registry_path, TestBufferConanOutput())
-        self.assertEqual(registry.remotes_list,
+        self.assertEqual(registry.remotes.list,
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
-        self.assertEqual(registry.refs, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),

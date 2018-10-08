@@ -400,9 +400,9 @@ class TestClient(object):
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
-                registry.add(name, server.fake_url)
+                registry.remotes.add(name, server.fake_url)
             else:
-                registry.add(name, server)
+                registry.remotes.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
