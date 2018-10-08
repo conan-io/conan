@@ -1003,6 +1003,32 @@ build_type: [ Release]
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
 
+    def install_definitions_test(self):
+        conanfile = ConanFileMock()
+        conanfile.package_folder = None
+        conanfile.settings = Settings.loads(default_settings_yml)
+        install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.package_folder,
+                              "CMAKE_INSTALL_BINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_LIBEXECDIR": "bin",
+                              "CMAKE_INSTALL_LIBDIR": "lib",
+                              "CMAKE_INSTALL_INCLUDEDIR": "include",
+                              "CMAKE_INSTALL_OLDINCLUDEDIR": "include",
+                              "CMAKE_INSTALL_DATAROOTDIR": "res"}
+
+        # Without package_folder
+        cmake = CMake(conanfile)
+        for key, value in cmake.definitions.items():
+            self.assertNotIn(key, install_defintions.keys())
+
+        # With package_folder
+        conanfile.package_folder = "my_package_folder"
+        install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
+        cmake = CMake(conanfile)
+        for key, value in install_defintions.items():
+            self.assertEquals(cmake.definitions[key], value)
+
     @mock.patch('platform.system', return_value="Macos")
     def test_cmake_system_version_osx(self, _):
         settings = Settings.loads(default_settings_yml)
