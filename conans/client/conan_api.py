@@ -32,8 +32,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, exception_message_safe, mkdir,\
-    mkdir_tmp
+from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.tools import set_global_instances
@@ -55,7 +54,6 @@ from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 from collections import OrderedDict
-import shutil
 
 
 default_manifest_folder = '.conan_manifests'
@@ -340,7 +338,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
+                                                            channel)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
@@ -390,7 +389,8 @@ class ConanAPIV1(object):
 
         if package_folder:
             if build_folder or source_folder:
-                raise ConanException("package folder definition incompatible with build and source folders")
+                raise ConanException("package folder definition incompatible with build "
+                                     "and source folders")
             package_folder = _make_abs_path(package_folder, cwd)
 
         build_folder = _make_abs_path(build_folder, cwd)

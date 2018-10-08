@@ -21,6 +21,7 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 import json
 from conans.tools import save
+from conans.client.printer import Printer
 
 
 # Exit codes for conan command:
@@ -210,12 +211,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
-        for k, v in result.items():
-            if k == "options":
-                self._user_io.out.writeln("options:")
-                self._user_io.out.writeln(str(v))
-            else:
-                self._user_io.out.writeln("%s: %s" % (k, str(v)))
+        Printer(self._user_io.out).print_inspect(result)
         if args.json:
             json_output = json.dumps(result)
             if not os.path.isabs(args.json):
