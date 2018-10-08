@@ -561,7 +561,7 @@ class HelloConan(ConanFile):
                           "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res'",
                           runner.command_called)
         # opt-out from default installation dirs
-        ab.configure(default_install_dirs=False)
+        ab.configure(use_default_install_dirs=False)
         self.assertIn("--prefix=/package_folder", runner.command_called)
         self.assertNotIn("--bindir=${prefix}/bin", runner.command_called)
         self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)

@@ -96,7 +96,7 @@ class AutoToolsBuildEnvironment(object):
         return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
-                  pkg_config_paths=None, vars=None, default_install_dirs=True):
+                  pkg_config_paths=None, vars=None, use_default_install_dirs=True):
         """
         :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
@@ -110,7 +110,7 @@ class AutoToolsBuildEnvironment(object):
 
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
-        :param default_install_dirs: Use or not the defaulted installation dirs
+        :param use_default_install_dirs: Use or not the defaulted installation dirs
 
         """
         if not self._conanfile.should_configure:
@@ -150,7 +150,7 @@ class AutoToolsBuildEnvironment(object):
             elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
-            if default_install_dirs:
+            if use_default_install_dirs:
                 for varname in ["bindir", "sbin", "libexec"]:
                     if not self._is_flag_in_args(varname, args):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
