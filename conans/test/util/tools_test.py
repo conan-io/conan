@@ -749,6 +749,31 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_env_not_duplicated_path_test(self):
+        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
+        can already have set some of the vars and accumulate unnecessary entries."""
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+
+        # Set the env with a PATH containing the vcvars paths
+        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = {key.lower(): value for key, value in tmp.items()}
+        with tools.environment_append({"path": tmp["path"]}):
+            previous_path = os.environ["PATH"].split(";")
+            # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
+            with tools.vcvars(settings):
+                path = os.environ["PATH"].split(";")
+                values_count = {value: path.count(value) for value in path}
+                for value, counter in values_count.items():
+                    if value and counter > 1 and previous_path.count(value) != counter:
+                        # If the entry was already repeated before calling "tools.vcvars" we keep it
+                        self.fail("The key '%s' has been repeated" % value)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)

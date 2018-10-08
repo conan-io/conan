@@ -61,7 +61,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     sep_pattern = re.compile("@|/|#")
     revision = None
 
-    def __new__(cls, name, version, user, channel, revision=None):
+    def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
         @param version:     string containing the desired version
@@ -69,16 +69,20 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        ConanName.validate_name(name, reference_token="package name")
-        ConanName.validate_name(version, True, reference_token="package version")
-        ConanName.validate_name(user, reference_token="user name")
-        ConanName.validate_name(channel, reference_token="channel")
         version = Version(version)
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
-        if revision:
-            ConanName.validate_name(revision, reference_token="revision")
         obj.revision = revision
+        if validate:
+            obj.validate()
         return obj
+
+    def validate(self):
+        ConanName.validate_name(self.name, reference_token="package name")
+        ConanName.validate_name(self.version, True, reference_token="package version")
+        ConanName.validate_name(self.user, reference_token="user name")
+        ConanName.validate_name(self.channel, reference_token="channel")
+        if self.revision:
+            ConanName.validate_name(self.revision, reference_token="revision")
 
     def __eq__(self, value):
         if not value:
@@ -93,7 +97,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return hash((self.name, self.version, self.user, self.channel, self.revision))
 
     @staticmethod
-    def loads(text):
+    def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
         text = ConanFileReference.whitespace_pattern.sub("", text)
@@ -106,8 +110,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@user/stable" % text)
-        obj = ConanFileReference(name, version, user, channel)
-        obj.revision = revision
+        obj = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return obj
 
     def __repr__(self):
@@ -134,17 +137,22 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
     """
     revision = None
 
-    def __new__(cls, conan, package_id):
+    def __new__(cls, conan, package_id, validate=True):
         revision = None
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-            ConanName.validate_name(revision, reference_token="revision")
         obj = super(cls, PackageReference).__new__(cls, conan, package_id)
         obj.revision = revision
+        if validate:
+            obj.validate()
         return obj
 
+    def validate(self):
+        if self.revision:
+            ConanName.validate_name(self.revision, reference_token="revision")
+
     @staticmethod
-    def loads(text):
+    def loads(text, validate=True):
         text = text.strip()
         tmp = text.split(":")
         try:
@@ -152,7 +160,7 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
             package_id = tmp[1].strip()
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
-        return PackageReference(conan, package_id)
+        return PackageReference(conan, package_id, validate=validate)
 
     def __repr__(self):
         return "%s:%s" % (self.conan, self.package_id)

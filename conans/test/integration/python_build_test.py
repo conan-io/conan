@@ -174,6 +174,45 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
+    def multiple_requires_error_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+myvar = 123
+def myfunct():
+    return 123
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Pkg1/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile
+myvar = 234
+def myfunct():
+    return 234
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Pkg2/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+pkg1 = python_requires("Pkg1/1.0@user/channel")
+pkg2 = python_requires("Pkg2/1.0@user/channel")
+class MyConanfileBase(ConanFile):
+    def build(self):
+        self.output.info("PKG1 : %s" % pkg1.myvar)
+        self.output.info("PKG2 : %s" % pkg2.myvar)
+        self.output.info("PKG1F : %s" % pkg1.myfunct())
+        self.output.info("PKG2F : %s" % pkg2.myfunct())
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Consumer/0.1@lasote/testing")
+        self.assertIn("Consumer/0.1@lasote/testing: PKG1 : 123", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG2 : 234", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG1F : 123", client.out)
+        self.assertIn("Consumer/0.1@lasote/testing: PKG2F : 234", client.out)
+
     def local_import_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
