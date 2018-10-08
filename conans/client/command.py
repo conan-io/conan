@@ -72,9 +72,10 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
-_REFERENCE_EXAMPLE =  ("MyPackage/1.2@user/channel")
+_REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")

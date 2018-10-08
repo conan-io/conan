@@ -366,13 +366,6 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
-    def __str__(self):
-        result = []
-        for field, package_option in sorted(list(self._data.items())):
-            valid_range = package_option._possible_values
-            result.append("%s: %s, default=%s" % (field, valid_range, package_option))
-        return "\n".join(result)
-
     def __contains__(self, option):
         return str(option) in self._data
 

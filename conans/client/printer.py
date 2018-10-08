@@ -25,9 +25,10 @@ class Printer(object):
 
     def print_inspect(self, inspect):
         for k, v in inspect.items():
-            if k == "options":
-                self._out.writeln("options:")
-                self._out.writeln(str(v))
+            if isinstance(v, dict):
+                self._out.writeln("%s" % k)
+                for sk, sv in sorted(v.items()):
+                    self._out.writeln("    %s: %s" % (sk, str(sv)))
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 

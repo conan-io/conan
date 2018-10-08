@@ -3,6 +3,7 @@ import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
+import json
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -91,13 +92,29 @@ class Pkg(ConanFile):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
-    options = {"option1": [True, False], "option2": [1, 2, 3], "option3": "ANY"}
+    options = {"option1": [True, False], "option2": [1, 2, 3], "option3": "ANY",
+               "option4": [1, 2]}
     default_options = "option1=False", "option2=2", "option3=randomANY"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("inspect . -a=options")
-        self.assertEquals(client.out, """options:
-option1: ['False', 'True'], default=False
-option2: ['1', '2', '3'], default=2
-option3: ANY, default=randomANY
+        client.run("inspect . -a=options -a=default_options")
+        self.assertEquals(client.out, """options
+    option1: [True, False]
+    option2: [1, 2, 3]
+    option3: ANY
+    option4: [1, 2]
+default_options: ('option1=False', 'option2=2', 'option3=randomANY')
 """)
+
+        client.run("inspect . -a=version -a=name -a=options -a=default_options --json=file.json")
+        contents = load(os.path.join(client.current_folder, "file.json"))
+        json_contents = json.loads(contents)
+        self.assertEqual(json_contents["version"], None)
+        self.assertEqual(json_contents["name"], None)
+        self.assertEqual(json_contents["options"], {'option4': [1, 2],
+                                                    'option2': [1, 2, 3],
+                                                    'option3': 'ANY',
+                                                    'option1': [True, False]})
+        self.assertEqual(json_contents["default_options"], ['option1=False',
+                                                            'option2=2',
+                                                            'option3=randomANY'])
