@@ -1,11 +1,10 @@
 import os
+import platform
 import unittest
 
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
-import platform
 
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 conanfile_py = """
@@ -139,7 +138,7 @@ class Alpha(ConanFile):
         client = TestClient()
         lib_c = r"""
 #include <stdio.h>
-#include "mylib.h"
+#include "MyFramework.h"
 
 void hello(){
     printf("HELLO FRAMEWORK!");
@@ -167,8 +166,7 @@ class MyFrameworkConan(ConanFile):
         cmake.build()
     
     def package(self):
-        self.copy(pattern="*.h", dst="MyFramework.framework/Headers", keep_path=False)
-        copyfile("lib/libmylib.dylib", os.path.join(self.package_folder, "MyFramework.framework", "MyFramework"))
+        self.copy(pattern="*", src="lib", keep_path=True)
     
     def package_info(self):
         flag_f_location = '-F "%s"' % self.package_folder
@@ -184,10 +182,18 @@ project(MyHello C)
 cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(KEEP_RPATHS)
-add_library(mylib mylib.c)
+add_library(MyFramework MyFramework.c MyFramework.h)
+
+set_target_properties(MyFramework PROPERTIES
+  FRAMEWORK TRUE
+  FRAMEWORK_VERSION C
+  MACOSX_FRAMEWORK_IDENTIFIER MyFramework
+  PUBLIC_HEADER MyFramework.h
+)
+
  """
 
-        files = {"mylib.c": lib_c, "conanfile.py": conanfile, "mylib.h": lib_h,
+        files = {"MyFramework.c": lib_c, "conanfile.py": conanfile, "MyFramework.h": lib_h,
                  "CMakeLists.txt": cmake}
         client.save(files, clean_first=True)
         client.run("create . MyFramework/1.0@user/testing")
@@ -219,7 +225,7 @@ target_link_libraries(say_hello ${CONAN_LIBS})
 """
 
         main = """
-#include "MyFramework/mylib.h"
+#include "MyFramework/MyFramework.h"
 int main(){
     hello();
 }     
