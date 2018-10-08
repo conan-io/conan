@@ -19,6 +19,9 @@ from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
+import json
+from conans.tools import save
+from conans.client.printer import Printer
 
 
 # Exit codes for conan command:
@@ -69,9 +72,10 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
-_REFERENCE_EXAMPLE =  ("MyPackage/1.2@user/channel")
+_REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -190,6 +194,32 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx)
+
+    def inspect(self, *args):
+        """Displays conanfile attributes, like name, version, options
+        Works both locally, in local cache and remote
+        """
+        parser = argparse.ArgumentParser(description=self.inspect.__doc__, prog="conan inspect")
+        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                            " (conanfile.py) or to a recipe file. e.g., "
+                            "./my_project/conanfile.py. It could also be a reference")
+        parser.add_argument("-a", "--attribute", help='The attribute to be displayed, e.g "name"',
+                            nargs="?", action=Extender)
+        parser.add_argument("-r", "--remote", help='look in the specified remote server',
+                            action=OnceArgument)
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json output file')
+
+        args = parser.parse_args(*args)
+        result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
+        Printer(self._user_io.out).print_inspect(result)
+        if args.json:
+            json_output = json.dumps(result)
+            if not os.path.isabs(args.json):
+                json_output_file = os.path.join(get_cwd(), args.json)
+            else:
+                json_output_file = args.json
+            save(json_output_file, json_output)
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method.
@@ -1262,7 +1292,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "help"))]
+                                   "alias", "download", "inspect", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
