@@ -224,6 +224,23 @@ Poco:deps_bundled=True""")
                                                      ("OpenSSL.*:fake_option", "FuzzBuzz"),
                                                      ])
 
+    def test_propagate_none_upstream(self):
+        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
+        values = PackageOptionValues()
+        values.add_option("opt", "a")
+        package_options.values = values
+        sut = Options(package_options)
+
+        other_options = PackageOptionValues()
+        other_options.add_option("opt", None)
+        options = {"whatever.*": other_options}
+        down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        sut.propagate_upstream(options, down_ref, own_ref)
+        self.assertEqual(sut.values.as_list(), [("opt", "a"),
+                                                ("whatever.*:opt", "None"),
+                                                ])
+
 
 class OptionsValuesTest(unittest.TestCase):
 
