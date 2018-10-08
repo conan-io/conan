@@ -7,6 +7,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans import tools
+from conans.client.client_cache import PROFILES_FOLDER
 
 
 class DefaultProfileTest(unittest.TestCase):
@@ -164,8 +165,8 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=relative_profile"
         rel_path = os.path.join('..', 'env_rel_profile')
         self.assertFalse(os.path.isabs(rel_path))
-        default_profile_path = os.path.join(os.path.dirname(client.client_cache.conan_conf_path),
-                                            rel_path)
+        default_profile_path = os.path.join(client.client_cache.conan_folder,
+                                            PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[env]\n" + env_variable)
         with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):
             client.run("create . name/version@user/channel")
