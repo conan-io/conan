@@ -224,7 +224,10 @@ Poco:deps_bundled=True""")
                                                      ("OpenSSL.*:fake_option", "FuzzBuzz"),
                                                      ])
 
-    def test_propagate_none_upstream(self):
+
+class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
+
+    def test_propagate_in_options(self):
         package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
         values = PackageOptionValues()
         values.add_option("opt", "a")
@@ -240,6 +243,14 @@ Poco:deps_bundled=True""")
         self.assertEqual(sut.values.as_list(), [("opt", "a"),
                                                 ("whatever.*:opt", "None"),
                                                 ])
+
+    def test_propagate_in_pacakge_options(self):
+        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
+        values = PackageOptionValues()
+        package_options.values = values
+
+        package_options.propagate_upstream({'opt': None}, None, None, [])
+        self.assertEqual(package_options.values.items(), [('opt', 'None'), ])
 
 
 class OptionsValuesTest(unittest.TestCase):
