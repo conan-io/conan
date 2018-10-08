@@ -394,7 +394,7 @@ class TestClient(object):
 
     def update_servers(self):
 
-        save(self.client_cache.registry, dump_registry({}, {}))
+        save(self.client_cache.registry, dump_registry({}, {}, {}))
 
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
