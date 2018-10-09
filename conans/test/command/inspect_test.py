@@ -137,13 +137,14 @@ url: None
 license: None
 author: None
 description: None
+tags: None
 generators: ['txt']
 exports: None
 exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
-tags: None""", client.out)
+""", client.out)
 
     def test_inspect_filled_attributes(self):
         client = TestClient()
@@ -169,10 +170,10 @@ url: https://john.doe.com
 license: MIT
 author: John Doe
 description: Yet Another Test
+tags: ['foo', 'bar', 'qux']
 generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
 apply_env: True
-build_policy: None
-tags: ['foo', 'bar', 'qux']""", client.out)
+build_policy: None""", client.out)
