@@ -154,7 +154,7 @@ class AutoToolsBuildEnvironment(object):
 
             all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]
-            help_output = self._help_output(configure_dir)
+            help_output = self._configure_help_output(configure_dir)
             available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
 
             if use_default_install_dirs:
@@ -176,7 +176,7 @@ class AutoToolsBuildEnvironment(object):
                 self._conanfile.output.info("Calling:\n > %s" % command)
                 self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 
-    def _help_output(self, configure_path):
+    def _configure_help_output(self, configure_path):
         from six import StringIO  # Python 2 and 3 compatible
         mybuf = StringIO()
         try:
