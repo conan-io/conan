@@ -473,3 +473,55 @@ class AConan(ConanFile):
 
         self.client.run("info conanfile.txt", ignore_error=True)
         self.assertIn("ERROR: Conanfile not found", self.client.out)
+
+    def test_common_attributes(self):
+        self.client = TestClient()
+
+        conanfile = """from conans import ConanFile
+from conans.util.files import load, save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+    settings = "build_type"
+
+"""
+
+        self.client.save({"subfolder/conanfile.py": conanfile})
+        self.client.run("export ./subfolder lasote/testing")
+
+        self.client.run("info ./subfolder")
+
+        self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
+        self.assertNotIn("License: MIT", self.client.user_io.out)
+        self.assertNotIn("Author: John Doe", self.client.user_io.out)
+        self.assertNotIn("Tags: foo, bar, qux", self.client.user_io.out)
+        self.assertNotIn("URL: https://foo.bar.baz", self.client.user_io.out)
+
+    def test_full_attributes(self):
+        self.client = TestClient()
+
+        conanfile = """from conans import ConanFile
+from conans.util.files import load, save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.2"
+    settings = "build_type"
+    author = "John Doe"
+    license = "MIT"
+    url = "https://foo.bar.baz"
+    tags = ["foo", "bar", "qux"]
+
+"""
+
+        self.client.save({"subfolder/conanfile.py": conanfile})
+        self.client.run("export ./subfolder lasote/testing")
+
+        self.client.run("info ./subfolder")
+
+        self.assertIn("Pkg/0.2@PROJECT", self.client.user_io.out)
+        self.assertIn("License: MIT", self.client.user_io.out)
+        self.assertIn("Author: John Doe", self.client.user_io.out)
+        self.assertIn("Tags: foo, bar, qux", self.client.user_io.out)
+        self.assertIn("URL: https://foo.bar.baz", self.client.user_io.out)
