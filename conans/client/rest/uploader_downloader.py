@@ -169,9 +169,10 @@ class Downloader(object):
             if not file_path:
                 ret += response.content
             else:
-                total_length = len(response.content)
-                progress = human_readable_progress(total_length, total_length)
-                print_progress(self.output, 50, progress)
+                if self.output:
+                    total_length = len(response.content)
+                    progress = human_readable_progress(total_length, total_length)
+                    print_progress(self.output, 50, progress)
                 save_append(file_path, response.content)
         else:
             total_length = int(total_length)
@@ -191,13 +192,12 @@ class Downloader(object):
                         ret_buffer.extend(data)
                     if file_handler is not None:
                         file_handler.write(to_file_bytes(data))
-
-                    units = progress_units(download_size, total_length)
-                    progress = human_readable_progress(download_size, total_length)
-                    if last_progress != units:  # Avoid screen refresh if nothing has change
-                        if self.output:
+                    if self.output:
+                        units = progress_units(download_size, total_length)
+                        progress = human_readable_progress(download_size, total_length)
+                        if last_progress != units:  # Avoid screen refresh if nothing has change
                             print_progress(self.output, units, progress)
-                        last_progress = units
+                            last_progress = units
                 return download_size
 
             if file_path:
@@ -239,11 +239,14 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry):
         try:
             return method(*args, **kwargs)
+        except NotFoundException:
+            raise
         except ConanException as exc:
             if counter == (retry - 1):
                 raise
             else:
-                msg = exception_message_safe(exc)
-                out.error(msg)
-                out.info("Waiting %d seconds to retry..." % retry_wait)
+                if out:
+                    msg = exception_message_safe(exc)
+                    out.error(msg)
+                    out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)

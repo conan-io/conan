@@ -100,6 +100,9 @@ class ConanOutput(object):
         self._stream.flush()
         self._color = tmp_color
 
+    def flush(self):
+        self._stream.flush()
+
 
 class ScopedOutput(ConanOutput):
     def __init__(self, scope, output):

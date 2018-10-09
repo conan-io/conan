@@ -281,4 +281,4 @@ class MyConan(ConanFile):
         abs_paths[CONAN_MANIFEST] = os.path.join(tmp_dir, CONAN_MANIFEST)
         conan_digest.save(tmp_dir)
 
-        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False, None)
+        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, None, None)
