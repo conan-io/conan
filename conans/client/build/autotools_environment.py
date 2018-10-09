@@ -144,38 +144,57 @@ class AutoToolsBuildEnvironment(object):
             pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else {}
 
+        configure_dir = self._adjust_path(configure_dir)
+
         if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
             elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
+            all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
+                         "datarootdir"]
+            help_output = self._configure_help_output(configure_dir)
+            available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
+
             if use_default_install_dirs:
                 for varname in ["bindir", "sbin", "libexec"]:
-                    if not self._is_flag_in_args(varname, args):
+                    if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
-                if not self._is_flag_in_args("libdir", args):
+                if self._valid_configure_flag("libdir", args, available_flags):
                     args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
                 for varname in ["includedir", "oldincludedir"]:
-                    if not self._is_flag_in_args(varname, args):
+                    if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
-                if not self._is_flag_in_args("datarootdir", args):
+                if self._valid_configure_flag("datarootdir", args, available_flags):
                     args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
-                configure_dir = self._adjust_path(configure_dir)
-                command = '%s/configure %s %s' % (configure_dir,
-                                                  args_to_string(args), " ".join(triplet_args))
+                command = '%s/configure %s %s' % (configure_dir, args_to_string(args),
+                                                  " ".join(triplet_args))
                 self._conanfile.output.info("Calling:\n > %s" % command)
-                self._conanfile.run(command,
-                                    win_bash=self._win_bash,
-                                    subsystem=self.subsystem)
+                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+
+    def _configure_help_output(self, configure_path):
+        from six import StringIO  # Python 2 and 3 compatible
+        mybuf = StringIO()
+        try:
+            self._conanfile.run("%s/configure --help" % configure_path, output=mybuf)
+        except ConanException as e:
+            self._conanfile.output.warn("Error running `configure --help`: %s" % e)
+            return ""
+        return mybuf.getvalue()
 
     def _adjust_path(self, path):
         if self._win_bash:
             path = unix_path(path, path_flavor=self.subsystem)
         return '"%s"' % path if " " in path else path
+
+    @staticmethod
+    def _valid_configure_flag(varname, args, available_flags):
+        return not AutoToolsBuildEnvironment._is_flag_in_args(varname, args) and \
+               varname in available_flags
 
     @staticmethod
     def _is_flag_in_args(varname, args):
