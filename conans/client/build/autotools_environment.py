@@ -155,18 +155,18 @@ class AutoToolsBuildEnvironment(object):
             all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]
             help_output = self._help_output(configure_dir)
-            not_available = [flag for flag in all_flags if "--%s" % flag not in help_output]
+            available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
 
             if use_default_install_dirs:
                 for varname in ["bindir", "sbin", "libexec"]:
-                    if self._valid_configure_flag(varname, args, not_available):
+                    if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
-                if self._valid_configure_flag("libdir", args, not_available):
+                if self._valid_configure_flag("libdir", args, available_flags):
                     args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
                 for varname in ["includedir", "oldincludedir"]:
-                    if self._valid_configure_flag(varname, args, not_available):
+                    if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
-                if self._valid_configure_flag("datarootdir", args, not_available):
+                if self._valid_configure_flag("datarootdir", args, available_flags):
                     args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
 
         with environment_append(pkg_env):
@@ -192,9 +192,9 @@ class AutoToolsBuildEnvironment(object):
         return '"%s"' % path if " " in path else path
 
     @staticmethod
-    def _valid_configure_flag(varname, args, not_available_flags):
+    def _valid_configure_flag(varname, args, available_flags):
         return not AutoToolsBuildEnvironment._is_flag_in_args(varname, args) and \
-               varname not in not_available_flags
+               varname in available_flags
 
     @staticmethod
     def _is_flag_in_args(varname, args):
