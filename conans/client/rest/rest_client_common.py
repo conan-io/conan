@@ -141,7 +141,8 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy,
+                      remote_manifest):
         """
         the_files: dict with relative_path: content
         """
@@ -151,7 +152,7 @@ class RestCommonMethods(object):
         remote_snapshot, conan_reference = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = self.get_conan_manifest(conan_reference)
+            remote_manifest = remote_manifest or self.get_conan_manifest(conan_reference)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:

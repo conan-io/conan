@@ -1,7 +1,8 @@
 import os
 import sys
-
 import requests
+
+from collections import OrderedDict
 
 import conans
 from conans import __version__ as client_version, tools
@@ -225,7 +226,8 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager, registry=self._registry)
+        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
+                                 registry=self._registry)
         resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
@@ -263,6 +265,34 @@ class ConanAPIV1(object):
         save_files(cwd, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
+
+    @api_method
+    def inspect(self, path, attributes, remote_name=None):
+        try:
+            reference = ConanFileReference.loads(path)
+        except ConanException:
+            reference = None
+            cwd = get_cwd()
+            conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        else:
+            update = True if remote_name else False
+            result = self._proxy.get_recipe(reference, update, update, remote_name,
+                                            ActionRecorder())
+            conanfile_path, _, _, reference = result
+        conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
+
+        result = OrderedDict()
+        if not attributes:
+            attributes = ['name', 'version', 'url', 'license', 'author', 'description',
+                          'generators', 'exports', 'exports_sources', 'short_paths',
+                          'apply_env',  'build_policy']
+        for attribute in attributes:
+            try:
+                attr = getattr(conanfile, attribute)
+                result[attribute] = attr
+            except AttributeError as e:
+                raise ConanException(str(e))
+        return result
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
@@ -308,7 +338,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
+                                                            channel)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
@@ -358,7 +389,8 @@ class ConanAPIV1(object):
 
         if package_folder:
             if build_folder or source_folder:
-                raise ConanException("package folder definition incompatible with build and source folders")
+                raise ConanException("package folder definition incompatible with build "
+                                     "and source folders")
             package_folder = _make_abs_path(package_folder, cwd)
 
         build_folder = _make_abs_path(build_folder, cwd)
