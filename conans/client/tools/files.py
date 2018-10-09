@@ -80,10 +80,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
             the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
+            txt_msg = "Unzipping %d %%"
             if the_size > print_progress.last_size + 1:
-                txt_msg = "Unzipping %d %%" % the_size
-                _global_output.rewrite_line(txt_msg)
+                _global_output.rewrite_line(txt_msg % the_size)
                 print_progress.last_size = the_size
+                if int(the_size) == 99:
+                    _global_output.rewrite_line(txt_msg % 100)
+                    _global_output.writeln("")
     else:
         def print_progress(_, __):
             pass
@@ -217,18 +220,49 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
+def _manage_text_not_found(search, file_path, strict, function_name):
+    message = "%s didn't find pattern '%s' in '%s' file." % (function_name, search, file_path)
+    if strict:
+        raise ConanException(message)
+    else:
+        _global_output.warn(message)
+        return False
+
+
 def replace_in_file(file_path, search, replace, strict=True):
     content = load(file_path)
     if -1 == content.find(search):
-        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            _global_output.warn(message)
+        _manage_text_not_found(search, file_path, strict, "replace_in_file")
     content = content.replace(search, replace)
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None):
+    if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
+        return replace_in_file(file_path, search, replace, strict=strict)
+
+    def normalized_text(text):
+        return text.replace("\\", "/").lower()
+
+    content = load(file_path)
+    normalized_content = normalized_text(content)
+    normalized_search = normalized_text(search)
+    index = normalized_content.find(normalized_search)
+    if index == -1:
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file")
+
+    while index != -1:
+        content = content[:index] + replace + content[index + len(search):]
+        normalized_content = normalized_text(content)
+        index = normalized_content.find(normalized_search)
+
+    content = content.encode("utf-8")
+    with open(file_path, "wb") as handle:
+        handle.write(content)
+
+    return True
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):

@@ -6,7 +6,7 @@ from collections import namedtuple
 from conans import tools
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.tools.oss import cpu_count
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
@@ -514,43 +514,58 @@ class HelloConan(ConanFile):
         ab.install()
         self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
 
-    def autotools_prefix_libdir_test(self):
+    def autotools_install_dirs_test(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         # Package folder is not defined
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         self.assertNotIn("--prefix", runner.command_called)
+        self.assertNotIn("--bindir", runner.command_called)
         self.assertNotIn("--libdir", runner.command_called)
+        self.assertNotIn("--includedir", runner.command_called)
+        self.assertNotIn("--dataroot", runner.command_called)
         # package folder defined
         conanfile.package_folder = "/package_folder"
         ab.configure()
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/package_folder --libdir=${prefix}/lib",
-                          runner.command_called)
+            self.assertIn("./configure --prefix=/package_folder --bindir=${prefix}/bin "
+                          "--sbin=${prefix}/bin --libexec=${prefix}/bin --libdir=${prefix}/lib "
+                          "--includedir=${prefix}/include --oldincludedir=${prefix}/include "
+                          "--datarootdir=${prefix}/res", runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/package_folder' '--libdir=${prefix}/lib'",
-                          runner.command_called)
+            self.assertIn("./configure '--prefix=/package_folder' '--bindir=${prefix}/bin' "
+                          "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' '--libdir=${prefix}/lib' "
+                          "'--includedir=${prefix}/include' '--oldincludedir=${prefix}/include' "
+                          "'--datarootdir=${prefix}/res'", runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
+        self.assertIn("--prefix=/my_package_folder", runner.command_called)
+        self.assertNotIn("--prefix=/package_folder", runner.command_called)
+        # --bindir, --libdir, --includedir already used in args
+        ab.configure(args=["--bindir=/pf/superbindir", "--libdir=/pf/superlibdir",
+                           "--includedir=/pf/superincludedir"])
+        self.assertNotIn("--bindir=${prefix}/bin", runner.command_called)
+        self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
+        self.assertNotIn("--includedir=${prefix}/lib", runner.command_called)
         if platform.system() == "Windows":
-            self.assertIn("./configure --prefix=/my_package_folder --libdir=${prefix}/lib",
+            self.assertIn("./configure --bindir=/pf/superbindir --libdir=/pf/superlibdir "
+                          "--includedir=/pf/superincludedir --prefix=/package_folder "
+                          "--sbin=${prefix}/bin --libexec=${prefix}/bin "
+                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/res",
                           runner.command_called)
-            self.assertNotIn("--prefix=/package_folder", runner.command_called)
         else:
-            self.assertIn("./configure '--prefix=/my_package_folder' '--libdir=${prefix}/lib'",
+            self.assertIn("./configure '--bindir=/pf/superbindir' '--libdir=/pf/superlibdir' "
+                          "'--includedir=/pf/superincludedir' '--prefix=/package_folder' "
+                          "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' "
+                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res'",
                           runner.command_called)
-            self.assertNotIn("'--prefix=/package_folder'", runner.command_called)
-        # --libdir already used in args
-        ab.configure(args=["--libdir=/my_package_folder/superlibdir"])
-        if platform.system() == "Windows":
-            self.assertIn("./configure --libdir=/my_package_folder/superlibdir "
-                          "--prefix=/package_folder", runner.command_called)
-            self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
-        else:
-            self.assertIn("./configure '--libdir=/my_package_folder/superlibdir' "
-                          "'--prefix=/package_folder'", runner.command_called)
-            self.assertNotIn("'--libdir=${prefix}/lib'", runner.command_called)
+        # opt-out from default installation dirs
+        ab.configure(use_default_install_dirs=False)
+        self.assertIn("--prefix=/package_folder", runner.command_called)
+        self.assertNotIn("--bindir=${prefix}/bin", runner.command_called)
+        self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
+        self.assertNotIn("--includedir=${prefix}/lib", runner.command_called)
 
     def autotools_configure_vars_test(self):
         from mock import patch
@@ -621,3 +636,86 @@ class HelloConan(ConanFile):
         self.assertFalse(ab.fpic)
         ab.fpic = True
         self.assertIn("-fPIC", ab.vars["CXXFLAGS"])
+
+    @unittest.skipUnless(platform.system() == "Linux", "Requires make")
+    def autotools_real_install_dirs_test(self):
+        body = r"""#include "hello.h"
+#include <iostream>
+using namespace std;
+
+void hello()
+{
+    cout << "Hola Mundo!";
+}
+"""
+        header = """
+#pragma once
+void hello();
+"""
+        main = """
+#include "hello.h"
+
+int main()
+{
+    hello();
+    return 0;
+}
+"""
+        conanfile = """
+from conans import ConanFile, AutoToolsBuildEnvironment, tools
+
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+    settings = "os", "compiler", "arch", "build_type"
+    exports_sources = "*"
+
+    def build(self):
+        makefile_am = '''
+bin_PROGRAMS = main
+lib_LIBRARIES = libhello.a
+libhello_a_SOURCES = hello.cpp
+main_SOURCES = main.cpp
+main_LDADD = libhello.a
+'''
+        configure_ac = '''
+AC_INIT([main], [1.0], [luism@jfrog.com])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PROG_CXX
+AC_PROG_RANLIB
+AM_PROG_AR
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+'''
+        tools.save("Makefile.am", makefile_am)
+        tools.save("configure.ac", configure_ac)
+        self.run("aclocal")
+        self.run("autoconf")
+        self.run("automake --add-missing --foreign")
+        autotools = AutoToolsBuildEnvironment(self)
+        autotools.configure()
+        autotools.make()
+        autotools.install()
+        
+    def package_id(self):
+        # easier to have same package_id for the test
+        self.info.header_only()
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "main.cpp": main,
+                     "hello.h": header,
+                     "hello.cpp": body})
+        client.run("create . danimtb/testing")
+        pkg_path = client.client_cache.package(
+            PackageReference.loads(
+                "test/1.0@danimtb/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"))
+
+        [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
+
+        new_conanfile = conanfile.replace("autotools.configure()",
+                                          "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
+        client.save({"conanfile.py": new_conanfile})
+        client.run("create . danimtb/testing")
+        [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
+        [self.assertNotIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]

@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
@@ -11,16 +12,15 @@ import xml.etree.ElementTree as ET
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.util.files import decode_text, to_file_bytes
-from conans.client.output import ConanOutput
 from conans.model.version import Version
+from conans.util.files import decode_text, to_file_bytes, walk
 
 
 class SCMBase(object):
     cmd_command = None
 
     def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None, output=None):
+                 runner=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -29,7 +29,6 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
-        self.output = output or ConanOutput(sys.stdout, True)
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -102,7 +101,7 @@ class Git(SCMBase):
         try:
 
             file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
-                          for folder, dirpaths, fs in os.walk(self.folder)
+                          for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                  stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)

@@ -4,6 +4,7 @@ import stat
 import sys
 import unittest
 import platform
+import mock
 
 from collections import namedtuple
 
@@ -23,6 +24,13 @@ from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
 
 
+def _format_path_as_cmake(pathstr):
+    if platform.system() == "Windows":
+        drive,path = os.path.splitdrive(pathstr)
+        return drive.upper() + path.replace(os.path.sep,"/")
+    return pathstr
+
+
 class CMakeTest(unittest.TestCase):
 
     def setUp(self):
@@ -34,6 +42,7 @@ class CMakeTest(unittest.TestCase):
         shutil.rmtree(self.tempdir2)
 
     def config_patch_test(self):
+
         conan_file = ConanFileMock()
         conan_file.name = "MyPkg"
         conan_file.settings = Settings()
@@ -42,7 +51,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.package_folder = os.path.join(self.tempdir, "pkg")
         conan_file.deps_cpp_info = DepsCppInfo()
 
-        msg = "FOLDER: " + conan_file.package_folder
+        msg = "FOLDER: " + _format_path_as_cmake(conan_file.package_folder)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
@@ -79,7 +88,7 @@ class CMakeTest(unittest.TestCase):
         self.assertEqual(conan_file.deps_cpp_info['MyPkg1'].rootpath,
                          self.tempdir2)
 
-        msg = "FOLDER: " + self.tempdir2
+        msg = "FOLDER: " + _format_path_as_cmake(self.tempdir2)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
@@ -1001,6 +1010,69 @@ build_type: [ Release]
             conan_file.settings = settings
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
+    def install_definitions_test(self):
+        conanfile = ConanFileMock()
+        conanfile.package_folder = None
+        conanfile.settings = Settings.loads(default_settings_yml)
+        install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.package_folder,
+                              "CMAKE_INSTALL_BINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_LIBEXECDIR": "bin",
+                              "CMAKE_INSTALL_LIBDIR": "lib",
+                              "CMAKE_INSTALL_INCLUDEDIR": "include",
+                              "CMAKE_INSTALL_OLDINCLUDEDIR": "include",
+                              "CMAKE_INSTALL_DATAROOTDIR": "res"}
+
+        # Without package_folder
+        cmake = CMake(conanfile)
+        for key, value in cmake.definitions.items():
+            self.assertNotIn(key, install_defintions.keys())
+
+        # With package_folder
+        conanfile.package_folder = "my_package_folder"
+        install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
+        cmake = CMake(conanfile)
+        for key, value in install_defintions.items():
+            self.assertEquals(cmake.definitions[key], value)
+
+    @mock.patch('platform.system', return_value="Macos")
+    def test_cmake_system_version_osx(self, _):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Macos"
+
+        # No version defined
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertFalse("CMAKE_OSX_DEPLOYMENT_TARGET" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_VERSION" in cmake.definitions)
+
+        # Version defined using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
+
+        # Version defined in settings
+        settings.os.version = "10.9"
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "10.9")
+        self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "10.9")
+
+        # Version defined in settings AND using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
     @staticmethod
     def scape(args):

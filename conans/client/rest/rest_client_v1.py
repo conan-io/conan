@@ -12,10 +12,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.files import decode_text, load
+from conans.util.files import decode_text
 from conans.util.log import logger
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE,\
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 
 
 def complete_url(base_url, url):
@@ -33,20 +31,23 @@ class RestV1Methods(RestCommonMethods):
     def remote_api_url(self):
         return "%s/v1" % self.remote_url.rstrip("/")
 
-    def _download_files(self, file_urls):
+    def _download_files(self, file_urls, quiet=False):
         """
         :param: file_urls is a dict with {filename: url}
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        output = self._output if not quiet else None
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            self._output.writeln("Downloading %s" % filename)
+            if output:
+                output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
-            self._output.writeln("")
+            if output:
+                output.writeln("")
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -69,7 +70,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls)
+        contents = self._download_files(urls, quiet=True)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
@@ -82,7 +83,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls)
+        contents = self._download_files(urls, quiet=True)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
