@@ -154,8 +154,8 @@ class AutoToolsBuildEnvironment(object):
 
             all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]
-            not_available = [flag for flag in all_flags
-                             if "--%s" % flag not in self._help_output(configure_dir)]
+            help_output = self._help_output(configure_dir)
+            not_available = [flag for flag in all_flags if "--%s" % flag not in help_output]
 
             if use_default_install_dirs:
                 for varname in ["bindir", "sbin", "libexec"]:
