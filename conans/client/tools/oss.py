@@ -35,7 +35,21 @@ def cpu_count():
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
-    if "64" in machine:
+    if "ppc64le" in machine:
+        return "ppc64le"
+    elif "ppc64" in machine:
+        return "ppc64"
+    elif "mips64" in machine:
+        return "mips64"
+    elif "mips" in machine:
+        return "mips"
+    elif "sparc64" in machine:
+        return "sparcv9"
+    elif "sparc" in machine:
+        return "sparc"
+    elif "aarch64" in machine:
+        return "armv8"
+    elif "64" in machine:
         return "x86_64"
     elif "86" in machine:
         return "x86"
@@ -43,6 +57,8 @@ def detected_architecture():
         return "armv8"
     elif "armv7" in machine:
         return "armv7"
+    elif "arm" in machine:
+        return "armv6"
 
     return None
 
@@ -311,28 +327,43 @@ def get_cross_building_settings(settings, self_os=None, self_arch=None):
     return build_os, build_arch, host_os, host_arch
 
 
-def get_gnu_triplet(os, arch, compiler=None):
+def get_gnu_triplet(os_, arch, compiler=None):
     """
     Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
 
-    :param os: os to be used to create the triplet
+    :param os_: os to be used to create the triplet
     :param arch: arch to be used to create the triplet
     :param compiler: compiler used to create the triplet (only needed fo windows)
     """
 
-    if os == "Windows" and compiler is None:
+    if os_ == "Windows" and compiler is None:
         raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
                              "needed for os=Windows")
 
     # Calculate the arch
-    machine = {"x86": "i686" if os != "Linux" else "x86",
+    machine = {"x86": "i686" if os_ != "Linux" else "x86",
                "x86_64": "x86_64",
-               "armv6": "arm",
-               "armv7": "arm",
-               "armv7s": "arm",
-               "armv7k": "arm",
-               "armv7hf": "arm",
                "armv8": "aarch64"}.get(arch, None)
+
+    if not machine:
+        # https://wiki.debian.org/Multiarch/Tuples
+        if "arm" in arch:
+            machine = "arm"
+        elif "ppc64le" in arch:
+            machine = "powerpc64le"
+        elif "ppc64" in arch:
+            machine = "powerpc64"
+        elif "powerpc" in arch:
+            machine = "powerpc"
+        elif "mips64" in arch:
+            machine = "mips64"
+        elif "mips" in arch:
+            machine = "mips"
+        elif "sparcv9" in arch:
+            machine = "sparc64"
+        elif "sparc" in arch:
+            machine = "sparc"
+
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
                              "translate it to the GNU triplet, please report at "
@@ -353,13 +384,13 @@ def get_gnu_triplet(os, arch, compiler=None):
                  "Macos": "apple-darwin",
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin"}.get(os, os.lower())
+                 "tvOS": "apple-darwin"}.get(os_, os_.lower())
 
-    if os in ("Linux", "Android"):
+    if os_ in ("Linux", "Android"):
         if "arm" in arch and arch != "armv8":
             op_system += "eabi"
 
-        if arch == "armv7hf" and os == "Linux":
+        if arch == "armv7hf" and os_ == "Linux":
             op_system += "hf"
 
     return "%s-%s" % (machine, op_system)

@@ -47,7 +47,7 @@ class ConanFileToolsTest(ConanFile):
                 super(DownloadFilesBrokenRequester, self).__init__(*args, **kwargs)
 
             def get(self, url, **kwargs):
-                if "conaninfo.txt?signature" in url and not self.first_fail:
+                if "conaninfo.txt" in url and not self.first_fail:
                     self.first_fail = True
                     raise ConnectionError("Fake connection error exception")
                 else:
