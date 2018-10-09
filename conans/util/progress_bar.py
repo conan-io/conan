@@ -30,6 +30,9 @@ class _FileReaderWithProgressBar(object):
         self._pb = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
         self.seek(0)
 
+    def seekable(self):
+        return self._fileobj.seekable()
+
     def seek(self, *args, **kwargs):
         return self._fileobj.seek(*args, **kwargs)
 
