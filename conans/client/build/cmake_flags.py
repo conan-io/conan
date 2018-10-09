@@ -6,6 +6,7 @@ from conans.client.build.compiler_flags import architecture_flag, parallel_compi
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_RES
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.log import logger
@@ -173,6 +174,8 @@ class CMakeDefinitionsBuilder(object):
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
+            if str(os_) == "Macos":
+                ret["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR")
@@ -240,7 +243,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(build_type_definition(build_type, self.generator))
         ret.update(runtime_definition(runtime))
 
-        if str(os_).lower() == "macos":
+        if str(os_) == "Macos":
             if arch == "x86":
                 ret["CMAKE_OSX_ARCHITECTURES"] = "i386"
 
@@ -275,6 +278,13 @@ class CMakeDefinitionsBuilder(object):
         try:
             if self._conanfile.package_folder:
                 ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+                ret["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_LIBDIR"] = DEFAULT_LIB
+                ret["CMAKE_INSTALL_INCLUDEDIR"] = DEFAULT_INCLUDE
+                ret["CMAKE_INSTALL_OLDINCLUDEDIR"] = DEFAULT_INCLUDE
+                ret["CMAKE_INSTALL_DATAROOTDIR"] = DEFAULT_RES
         except AttributeError:
             pass
 

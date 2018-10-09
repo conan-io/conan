@@ -125,9 +125,9 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
         return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                               policy)
+                                               policy, remote_manifest)
 
     @input_credentials_if_unauthorized
     def upload_package(self, package_reference, the_files, retry, retry_wait, policy):

@@ -460,6 +460,42 @@ class ReplaceInFileTest(unittest.TestCase):
 
 class ToolsTest(unittest.TestCase):
 
+    def replace_paths_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        replace_with = "MYPATH"
+        expected = 'Some other contentsMYPATH"finally all text'
+
+        save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertFalse(ret)
+
+        # Multiple matches
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertTrue(ret)
+
+        # Automatic windows_paths
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
+        if platform.system() == "Windows":
+            self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+            self.assertTrue(ret)
+        else:
+            self.assertFalse(ret)
+
     def load_save_test(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
@@ -713,6 +749,31 @@ class HelloConan(ConanFile):
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_env_not_duplicated_path_test(self):
+        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
+        can already have set some of the vars and accumulate unnecessary entries."""
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+
+        # Set the env with a PATH containing the vcvars paths
+        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = {key.lower(): value for key, value in tmp.items()}
+        with tools.environment_append({"path": tmp["path"]}):
+            previous_path = os.environ["PATH"].split(";")
+            # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
+            with tools.vcvars(settings):
+                path = os.environ["PATH"].split(";")
+                values_count = {value: path.count(value) for value in path}
+                for value, counter in values_count.items():
+                    if value and counter > 1 and previous_path.count(value) != counter:
+                        # If the entry was already repeated before calling "tools.vcvars" we keep it
+                        self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
