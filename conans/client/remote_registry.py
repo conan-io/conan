@@ -100,8 +100,8 @@ class _GenericReferencesRegistry(_Registry):
     @property
     def list(self):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, refs, _ = self._load()
-            return refs
+            _, refs, prefs = self._load()
+            return self._select_refs(refs, prefs)
 
     def remove(self, ref, quiet=False):
         assert(isinstance(ref, ConanFileReference) or isinstance(ref, PackageReference))
