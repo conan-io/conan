@@ -74,7 +74,6 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
 
-
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
@@ -104,6 +103,12 @@ class Pkg(ConanFile):
         # Check registry, recipe should have been found from server1 and binary from server2
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
+        client.run("remote list_pref Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
+                      client.out)
+
+        # FIXME: Test the updates from the correct place
 
     def test_binary_defines_remote(self):
         servers = OrderedDict([("server1", TestServer()),
