@@ -29,7 +29,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
@@ -817,6 +817,32 @@ class ConanAPIV1(object):
     def remote_update_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference))
         return self._registry.refs.update(reference, remote_name)
+
+    @api_method
+    def remote_list_pref(self, reference):
+        reference = ConanFileReference.loads(str(reference))
+        ret = {}
+        tmp = self._registry.prefs.list
+        for r, remote in tmp.items():
+            pref = PackageReference.loads(r)
+            if pref.conan == reference:
+                ret[r] = remote
+        return ret
+
+    @api_method
+    def remote_add_pref(self, package_reference, remote_name):
+        p_reference = PackageReference.loads(str(package_reference))
+        return self._registry.prefs.set(p_reference, remote_name, check_exists=True)
+
+    @api_method
+    def remote_remove_ref(self, package_reference):
+        p_reference = PackageReference.loads(str(package_reference))
+        return self._registry.prefs.remove(p_reference)
+
+    @api_method
+    def remote_update_ref(self, package_reference, remote_name):
+        p_reference = PackageReference.loads(str(package_reference))
+        return self._registry.prefs.update(p_reference, remote_name)
 
     @api_method
     def profile_list(self):

@@ -74,6 +74,37 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
 
+
+    def test_binary_packages_mixed(self):
+        servers = OrderedDict([("server1", TestServer()),
+                               ("server2", TestServer()),
+                               ("server3", TestServer())])
+        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                    "server2": [("lasote", "mypass")],
+                                                    "server3": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "build_type"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        client.run("upload Pkg* --all -r=server1 --confirm")
+
+        # Built type Debug only in server2
+        client.run('remove -f "*"')
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        client.run("upload Pkg* --all -r=server2 --confirm")
+
+        # Remove all, install a package for debug
+        client.run('remove -f "*"')
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', ignore_error=True)
+        # DEBERIA ITERAR EN REMOTES HASTA ENCONTRAR UN BINARY PACKAGE?
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
+
+        # Check registry, recipe should have been found from server1 and binary from server2
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
     def test_binary_defines_remote(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
@@ -103,7 +134,9 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server1'", client.out)
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
+        # The recipe is not downloaded from anywhere, it should be kept to local cache
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
 
         # Explicit remote also defines the remote
         client.run("remove * -f")
@@ -112,11 +145,13 @@ class Pkg(ConanFile):
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("install Pkg/0.1@lasote/testing -r=server2")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server2'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
+        # Still not downloaded from anywhere, it shouldn't have a registry entry
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
 
         # Ordered search of binary works
         client.run("remove * -f")
@@ -125,8 +160,19 @@ class Pkg(ConanFile):
         client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server2'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
+        client.run("remote list_ref")
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
+
+        # Download recipe and binary from the remote2 by iterating
+        client.run("remove * -f")
+        client.run("remove * -f -r=server1")
+        client.run("install Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Downloaded", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
 

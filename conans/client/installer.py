@@ -317,11 +317,6 @@ class ConanInstaller(object):
                     self._remote_manager.get_package(package_ref, package_folder,
                                                      node.binary_remote, output, self._recorder)
                     self._registry.prefs.set(package_ref, node.binary_remote.name)
-                    if not self._registry.refs.get(conan_ref):
-                        # FIXME: !!!!!!!!!!!! recipe exported, but binary downloaded....
-                        # registry for recipe shouldn't be None?
-                        self._registry.refs.set(conan_ref, node.binary_remote.name)
-
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
