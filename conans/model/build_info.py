@@ -6,6 +6,7 @@ DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
 DEFAULT_BIN = "bin"
 DEFAULT_RES = "res"
+DEFAULT_SHARE = "share"
 
 
 class _CppInfo(object):
