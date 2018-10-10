@@ -1863,6 +1863,7 @@ class HelloConan(ConanFile):
 
 
 class CollectLibTestCase(unittest.TestCase):
+
     def collect_libs_test(self):
         conanfile = ConanFileMock()
         # Without package_folder
@@ -1910,8 +1911,9 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
-        self.assertIn("Library 'mylib' already found in a previous 'conanfile.cpp_info.libdirs' "
-                      "folder", conanfile.output)
+        self.assertIn("Library 'mylib' was either already found in a previous "
+                      "'conanfile.cpp_info.libdirs' folder or appears several times with a "
+                      "different file extension", conanfile.output)
 
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
