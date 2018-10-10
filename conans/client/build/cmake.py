@@ -323,12 +323,13 @@ class CMake(object):
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
                         ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
                         if ret:
-                            self._conanfile.output.info("Patched paths for %s: %s to %s" % (dep, from_str, dep_str))
+                            self._conanfile.output.info("Patched paths for %s: %s to %s"
+                                                        % (dep, from_str, dep_str))
 
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)
