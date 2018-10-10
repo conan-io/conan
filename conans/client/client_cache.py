@@ -24,6 +24,7 @@ CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
+PLUGINS_FOLDER = "plugins"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -143,6 +144,13 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
+    def plugins_path(self):
+        """
+        :return: Plugins folder in client cache
+        """
+        return join(self.conan_folder, PLUGINS_FOLDER)
+
+    @property
     def default_profile(self):
         if self._default_profile is None:
             if not os.path.exists(self.default_profile_path):
@@ -188,6 +196,15 @@ class ClientCache(SimplePaths):
 
             self._settings = settings
         return self._settings
+
+    @property
+    def plugins(self):
+        """Returns a list of plugins inside the plugins folder"""
+        plugins = []
+        for plugin_name in os.listdir(self.plugins_path):
+            if os.path.isfile(plugin_name) and plugin_name.endswith(".py"):
+                plugins.append(plugin_name[:-3])
+        return plugins
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """

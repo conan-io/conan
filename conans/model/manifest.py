@@ -1,7 +1,7 @@
 import os
 import calendar
 import time
-from conans.util.files import md5sum, md5, save, load
+from conans.util.files import md5sum, md5, save, load, walk
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
 from conans.errors import ConanException
 import datetime
@@ -15,7 +15,7 @@ def discarded_file(filename):
 def gather_files(folder):
     file_dict = {}
     symlinks = {}
-    for root, dirs, files in os.walk(folder):
+    for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
         for d in dirs:
             abs_path = os.path.join(root, d)

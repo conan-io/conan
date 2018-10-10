@@ -20,7 +20,7 @@ class TestConan(ConanFile):
     version = "1.0"
     short_paths = {0}
     exports_sources = "source_file.cpp"
-    
+
     def source(self):
         for item in os.listdir(self.source_folder):
             self.output.info("SOURCE: " + str(item))
@@ -107,3 +107,8 @@ class TestConan(ConanFile):
         self.assertIn(
             "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
             client.out)
+
+        # try conan get
+        client.run("get test/1.0@danimtb/testing . -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertIn("conaninfo.txt", client.out)
+        self.assertIn("conanmanifest.txt", client.out)

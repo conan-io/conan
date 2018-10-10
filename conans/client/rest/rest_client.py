@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 from conans.client.rest.rest_client_v1 import RestV1Methods
 
 
@@ -28,6 +29,15 @@ class RestApiClient(object):
             _, _, cap = tmp.server_info()
             self._capabilities[self.remote_url] = cap
 
+        # FIXME: ONLY CONNECT TO APIV2 THE CLIENT WHEN THE PROTOCOL IS STABLE
+        # from conans import API_V2, CHECKSUM_DEPLOY
+        # from conans.client.rest.rest_client_v2 import RestV2Methods
+        #if API_V2 in self._capabilities[self.remote_url]:
+        #    checksum_deploy = CHECKSUM_DEPLOY in self._capabilities[self.remote_url]
+        #    return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
+        #                         self.requester, self.verify_ssl, self._put_headers,
+        #                         checksum_deploy)
+        #else:
         return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                              self.requester, self.verify_ssl, self._put_headers)
 
@@ -52,10 +62,9 @@ class RestApiClient(object):
     def get_path(self, conan_reference, package_id, path):
         return self._get_api().get_path(conan_reference, package_id, path)
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
-                      no_overwrite):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
         return self._get_api().upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                             ignore_deleted_file, no_overwrite)
+                                             policy, remote_manifest)
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         return self._get_api().upload_package(package_reference, the_files, retry, retry_wait,

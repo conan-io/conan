@@ -1,8 +1,11 @@
-from conans.util.sha import sha1
-from conans.errors import ConanException
+
 import yaml
 import six
 import fnmatch
+from collections import Counter
+
+from conans.util.sha import sha1
+from conans.errors import ConanException
 
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -119,8 +122,7 @@ class PackageOptionValues(object):
 
         assert isinstance(down_package_values, PackageOptionValues)
         for (name, value) in down_package_values.items():
-            current_value = self._dict.get(name)
-            if value == current_value:
+            if name in self._dict and self._dict.get(name) == value:
                 continue
 
             modified = self._modified.get(name)
@@ -162,19 +164,20 @@ class OptionsValues(object):
 
         # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
         if isinstance(values, tuple):
-            new_values = []
-            for v in values:
-                option, value = v.split("=", 1)
-                new_values.append((option.strip(), value.strip()))
-            values = new_values
+            values = [item.split("=", 1) for item in values]
+
+        # convert dict {"Pkg:option": "value", "..": "..", ...} to list of tuples (name, value)
+        if isinstance(values, dict):
+            values = [(k, v) for k, v in values.items()]
 
         # handle list of tuples (name, value)
         for (k, v) in values:
+            k = k.strip()
+            v = v.strip() if isinstance(v, six.string_types) else v
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                package_values = self._reqs_options.setdefault(package.strip(),
-                                                               PackageOptionValues())
+                package_values = self._reqs_options.setdefault(package.strip(), PackageOptionValues())
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
@@ -264,14 +267,8 @@ class OptionsValues(object):
         other_option=3
         OtherPack:opt3=12.1
         """
-        result = []
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            name, value = line.split("=", 1)
-            result.append((name.strip(), value.strip()))
-        return OptionsValues(result)
+        options = tuple(line.strip() for line in text.splitlines() if line.strip())
+        return OptionsValues(options)
 
     @property
     def sha(self):
@@ -374,9 +371,7 @@ class PackageOptions(object):
         return PackageOptions(yaml.load(text) or {})
 
     def get_safe(self, field):
-        if field not in self._data:
-            return None
-        return self._data[field]
+        return self._data.get(field)
 
     def validate(self):
         for child in self._data.values():
@@ -467,8 +462,7 @@ class PackageOptions(object):
             return
 
         for (name, value) in package_values.items():
-            current_value = self._data.get(name)
-            if value == current_value:
+            if name in self._data and self._data.get(name) == value:
                 continue
 
             modified = self._modified.get(name)
