@@ -17,7 +17,7 @@ from conans.test.utils.tools import TestClient
 
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
-                      "--sbin", "--oldincludedir", "--libexec"]
+                      "--sbindir", "--oldincludedir", "--libexecdir"]
 
 
 class MockConanfileWithOutput(MockConanfile):
@@ -580,20 +580,22 @@ class HelloConan(ConanFile):
         self.assertNotIn("--bindir", runner.command_called)
         self.assertNotIn("--libdir", runner.command_called)
         self.assertNotIn("--includedir", runner.command_called)
-        self.assertNotIn("--dataroot", runner.command_called)
+        self.assertNotIn("--datarootdir", runner.command_called)
         # package folder defined
         conanfile.package_folder = "/package_folder"
         ab.configure()
         if platform.system() == "Windows":
             self.assertIn("./configure --prefix=/package_folder --bindir=${prefix}/bin "
-                          "--sbin=${prefix}/bin --libexec=${prefix}/bin --libdir=${prefix}/lib "
-                          "--includedir=${prefix}/include --oldincludedir=${prefix}/include "
-                          "--datarootdir=${prefix}/share", runner.command_called)
+                          "--sbindir=${prefix}/bin --libexecdir=${prefix}/bin "
+                          "--libdir=${prefix}/lib --includedir=${prefix}/include "
+                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/share",
+                          runner.command_called)
         else:
             self.assertIn("./configure '--prefix=/package_folder' '--bindir=${prefix}/bin' "
-                          "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' '--libdir=${prefix}/lib' "
-                          "'--includedir=${prefix}/include' '--oldincludedir=${prefix}/include' "
-                          "'--datarootdir=${prefix}/share'", runner.command_called)
+                          "'--sbindir=${prefix}/bin' '--libexecdir=${prefix}/bin' "
+                          "'--libdir=${prefix}/lib' '--includedir=${prefix}/include' "
+                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/share'",
+                          runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
         self.assertIn("--prefix=/my_package_folder", runner.command_called)
@@ -607,13 +609,13 @@ class HelloConan(ConanFile):
         if platform.system() == "Windows":
             self.assertIn("./configure --bindir=/pf/superbindir --libdir=/pf/superlibdir "
                           "--includedir=/pf/superincludedir --prefix=/package_folder "
-                          "--sbin=${prefix}/bin --libexec=${prefix}/bin "
+                          "--sbindir=${prefix}/bin --libexecdir=${prefix}/bin "
                           "--oldincludedir=${prefix}/include --datarootdir=${prefix}/share",
                           runner.command_called)
         else:
             self.assertIn("./configure '--bindir=/pf/superbindir' '--libdir=/pf/superlibdir' "
                           "'--includedir=/pf/superincludedir' '--prefix=/package_folder' "
-                          "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' "
+                          "'--sbindir=${prefix}/bin' '--libexecdir=${prefix}/bin' "
                           "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/share'",
                           runner.command_called)
         # opt-out from default installation dirs
