@@ -180,9 +180,9 @@ class ConanFile(object):
                                      "but self.user is used in conanfile")
         return self._conan_user
 
-    def collect_libs(self, folder="lib"):
-        self.output.warn("Use 'self.collect_libs' is deprecated, "
-                         "use tools.collect_libs(self) instead")
+    def collect_libs(self, folder=None):
+        self.output.warn("'self.collect_libs' is deprecated, "
+                         "use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property
