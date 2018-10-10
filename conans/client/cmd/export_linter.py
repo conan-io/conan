@@ -50,8 +50,8 @@ def _runner(args):
 
 
 def _normal_linter(conanfile_path, hook):
-    args = ["--py3k", "--enable=all", "--reports=no", "--disable=no-absolute-import", "--persistent=no", 
-            "--load-plugins=conans.pylint_plugin",
+    args = ["--py3k", "--enable=all", "--reports=no", "--disable=no-absolute-import",
+            "--persistent=no", "--load-plugins=conans.pylint_plugin",
             hook, '"%s"' % conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
@@ -67,6 +67,8 @@ def _normal_linter(conanfile_path, hook):
         if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False
         if symbol == "import-error" and msg.get("column") > 3:  # Import of a conan python package
+            return False
+        if symbol == "no-name-in-module" and "python_requires" in msg.get("message"):
             return False
 
         return True

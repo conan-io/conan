@@ -14,8 +14,21 @@ import tarfile
 import stat
 
 
+def walk(top, **kwargs):
+    if six.PY2:
+        # If py2 os.walk receives a unicode object, it will fail if a non-ascii file name is found
+        # during the iteration. More info:
+        # https://stackoverflow.com/questions/21772271/unicodedecodeerror-when-performing-os-walk
+        try:
+            top = str(top)
+        except UnicodeDecodeError:
+            pass
+
+    return os.walk(top, **kwargs)
+
+
 def make_read_only(path):
-    for root, _, files in os.walk(path):
+    for root, _, files in walk(path):
         for f in files:
             full_path = os.path.join(root, f)
             mode = os.stat(full_path).st_mode
@@ -56,7 +69,7 @@ def touch(fname, times=None):
 
 
 def touch_folder(folder):
-    for dirname, _, filenames in os.walk(folder):
+    for dirname, _, filenames in walk(folder):
         for fname in filenames:
             os.utime(os.path.join(dirname, fname), None)
 
@@ -112,20 +125,28 @@ def save_append(path, content):
         handle.write(to_file_bytes(content))
 
 
-def save(path, content):
+def save(path, content, only_if_modified=False):
     """
     Saves a file with given content
     Params:
         path: path to write file to
-        load: contents to save in the file
+        content: contents to save in the file
+        only_if_modified: file won't be modified if the content hasn't changed
     """
     try:
         os.makedirs(os.path.dirname(path))
     except:
         pass
 
+    new_content = to_file_bytes(content)
+
+    if only_if_modified and os.path.exists(path):
+        old_content = load(path, binary=True)
+        if old_content == new_content:
+            return
+
     with open(path, "wb") as handle:
-        handle.write(to_file_bytes(content))
+        handle.write(new_content)
 
 
 def mkdir_tmp():
@@ -158,9 +179,9 @@ def to_file_bytes(content):
     return content
 
 
-def save_files(path, files):
+def save_files(path, files, only_if_modified=False):
     for name, content in list(files.items()):
-        save(os.path.join(path, name), content)
+        save(os.path.join(path, name), content, only_if_modified=only_if_modified)
 
 
 def load(path, binary=False):
@@ -173,7 +194,7 @@ def load(path, binary=False):
 def relative_dirs(path):
     ''' Walks a dir and return a list with the relative paths '''
     ret = []
-    for dirpath, _, fnames in os.walk(path):
+    for dirpath, _, fnames in walk(path):
         for filename in fnames:
             tmp = os.path.join(dirpath, filename)
             tmp = tmp[len(path) + 1:]
@@ -302,7 +323,7 @@ def tar_extract(fileobj, destination_dir):
 
 def list_folder_subdirs(basedir, level):
     ret = []
-    for root, dirs, _ in os.walk(basedir):
+    for root, dirs, _ in walk(basedir):
         rel_path = os.path.relpath(root, basedir)
         if rel_path == ".":
             continue

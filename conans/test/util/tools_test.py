@@ -4,12 +4,14 @@ import mock
 import os
 import platform
 import unittest
+import uuid
 
 from collections import namedtuple
 
 import six
 from mock.mock import patch, mock_open
 from six import StringIO
+from six.moves.urllib.parse import unquote
 
 from conans.client.client_cache import CONAN_CONF
 
@@ -18,20 +20,22 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
 from conans.client.tools.win import vcvars_dict, vswhere
-from conans.client.tools.scm import Git
+from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
+from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
+from conans.test.build_helpers.cmake_test import ConanFileMock
 
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
-    StoppableThreadBottle
+    SVNLocalRepoTestCase, StoppableThreadBottle
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save, load, md5
+from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
@@ -58,6 +62,60 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEquals(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           tools.system_pm._global_output)
+
+    def add_repositories_exception_cases_test(self):
+        os_info = OSInfo()
+        os_info.is_macos = False
+        os_info.is_linux = True
+        os_info.is_windows = False
+        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+
+        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+            spt = SystemPackageTool(os_info=os_info)
+            spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
+                               repo_key=None)
+
+    def add_repository_test(self):
+        class RunnerOrderedMock:
+            commands = []  # Command + return value
+
+            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
+                if not len(runner_self.commands):
+                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
+                expected, ret = runner_self.commands.pop(0)
+                self.assertEqual(expected, command)
+                return ret
+
+        def _run_add_repository_test(repository, gpg_key, sudo, update):
+            sudo_cmd = "sudo " if sudo else ""
+            runner = RunnerOrderedMock()
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
+            if gpg_key:
+                runner.commands.append(
+                    ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            if update:
+                runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
+
+            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": str(sudo)}):
+                os_info = OSInfo()
+                os_info.is_macos = False
+                os_info.is_linux = True
+                os_info.is_windows = False
+                os_info.linux_distro = "debian"
+                spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+                spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
+                self.assertEqual(len(runner.commands), 0)
+
+        # Run several test cases
+        repository = "deb http://repo/url/ saucy universe multiverse"
+        gpg_key = 'http://one/key.gpg'
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=True, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=False, update=False)
+        _run_add_repository_test(repository, gpg_key=None, sudo=True, update=True)
+        _run_add_repository_test(repository, gpg_key=None, sudo=False, update=False)
 
     def system_package_tool_test(self):
 
@@ -109,7 +167,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "dpkg -s a_package")
+            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -224,7 +282,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
@@ -402,6 +460,42 @@ class ReplaceInFileTest(unittest.TestCase):
 
 class ToolsTest(unittest.TestCase):
 
+    def replace_paths_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "file")
+        replace_with = "MYPATH"
+        expected = 'Some other contentsMYPATH"finally all text'
+
+        save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, windows_paths=True)
+        self.assertEquals(load(path), expected)
+        self.assertTrue(ret)
+
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertFalse(ret)
+
+        # Multiple matches
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertTrue(ret)
+
+        # Automatic windows_paths
+        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
+        if platform.system() == "Windows":
+            self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+            self.assertTrue(ret)
+        else:
+            self.assertFalse(ret)
+
     def load_save_test(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
@@ -501,7 +595,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
-
+ 
         conanfile = """
 from conans import ConanFile, tools
 
@@ -657,6 +751,31 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_env_not_duplicated_path_test(self):
+        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
+        can already have set some of the vars and accumulate unnecessary entries."""
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+
+        # Set the env with a PATH containing the vcvars paths
+        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = {key.lower(): value for key, value in tmp.items()}
+        with tools.environment_append({"path": tmp["path"]}):
+            previous_path = os.environ["PATH"].split(";")
+            # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
+            with tools.vcvars(settings):
+                path = os.environ["PATH"].split(";")
+                values_count = {value: path.count(value) for value in path}
+                for value, counter in values_count.items():
+                    if value and counter > 1 and previous_path.count(value) != counter:
+                        # If the entry was already repeated before calling "tools.vcvars" we keep it
+                        self.fail("The key '%s' has been repeated" % value)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)
@@ -810,9 +929,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def run_in_bash_test(self):
-        if platform.system() != "Windows":
-            return
 
         class MockConanfile(object):
             def __init__(self):
@@ -824,28 +942,30 @@ ProgramFiles(x86)=C:\Program Files (x86)
                     def __call__(self, command, output, log_filepath=None,
                                  cwd=None, subprocess=False):  # @UnusedVariable
                         self.command = command
-                self._runner = MyRun()
+                self._conan_runner = MyRun()
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash", conanfile._runner.command)
-        self.assertIn("--login -c", conanfile._runner.command)
-        self.assertIn("^&^& a_command.bat ^", conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn("bash", conanfile._conan_runner.command)
+            self.assertIn("--login -c", conanfile._conan_runner.command)
+            self.assertIn("^&^& a_command.bat ^", conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._runner.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._runner.command)
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._conan_runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
-                                                                                       "MYVAR": "34"})
-        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
-                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._runner.command)
+        with patch.object(OSInfo, "bash_path", return_value='bash'):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
+                                      env={"PATH": "/other/path", "MYVAR": "34"})
+            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -926,6 +1046,26 @@ ProgramFiles(x86)=C:\Program Files (x86)
             build = tools.get_gnu_triplet(this_os, this_arch, compiler)
             host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
             return build, host
+
+        build, host = get_values("Linux", "armv6", "Linux", "armv6")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
+
+        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
+        self.assertEquals(build, "sparc-linux-gnu")
+        self.assertEquals(host, "sparc64-linux-gnu")
+
+        build, host = get_values("Linux", "mips", "Linux", "mips64")
+        self.assertEquals(build, "mips-linux-gnu")
+        self.assertEquals(host, "mips64-linux-gnu")
+
+        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
+        self.assertEquals(build, "powerpc64le-linux-gnu")
+        self.assertEquals(host, "powerpc64-linux-gnu")
+
+        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
+        self.assertEquals(build, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
@@ -1019,18 +1159,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
 
-        for os in ["Windows", "Linux"]:
+        for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(os, arch, "gcc")
+                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
 
                 output = ""
                 if arch == "x86_64":
                     output += "x86_64"
                 else:
-                    output += "i686" if os != "Linux" else "x86"
+                    output += "i686" if _os != "Linux" else "x86"
 
                 output += "-"
-                if os == "Windows":
+                if _os == "Windows":
                     output += "w64-mingw32"
                 else:
                     output += "linux-gnu"
@@ -1044,7 +1184,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
     def detect_windows_subsystem_test(self):
         # Dont raise test
         result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path or platform.system() != "Windows":
+        if not tools.os_info.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1095,8 +1235,113 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
+    def unix_to_dos_unit_test(self):
+
+        def save_file(contents):
+            tmp = temp_folder()
+            filepath = os.path.join(tmp, "a_file.txt")
+            save(filepath, contents)
+            return filepath
+
+        fp = save_file(b"a line\notherline\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+
+            tools.unix2dos(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+            tools.unix2dos(fp)
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+
+        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+
+        fp = save_file(b"a line\r\notherline\r\n")
+        if not tools.os_info.is_windows:
+            import subprocess
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertIn("CRLF", str(output))
+
+            tools.dos2unix(fp)
+            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            self.assertIn("ASCII text", str(output))
+            self.assertNotIn("CRLF", str(output))
+        else:
+            fc = tools.load(fp)
+            self.assertIn("\r\n", fc)
+            tools.dos2unix(fp)
+            fc = tools.load(fp)
+            self.assertNotIn("\r\n", fc)
+
+        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+
+    def unix_to_dos_conanfile_test(self):
+        client = TestClient()
+        conanfile = """
+import os
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "file.txt"
+
+    def build(self):
+        assert("\\r\\n" in tools.load("file.txt"))
+        tools.dos2unix("file.txt")
+        assert("\\r\\n" not in tools.load("file.txt"))
+        tools.unix2dos("file.txt")
+        assert("\\r\\n" in tools.load("file.txt"))
+"""
+        client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
+        client.run("create . user/channel")
+
 
 class GitToolTest(unittest.TestCase):
+
+    def test_repo_root(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        # Initialized in the root folder
+        git = Git(root_path)
+        self.assertEqual(root_path, git.get_repo_root())
+
+        # Initialized elsewhere
+        subfolder = os.path.join(root_path, 'subfolder')
+        os.makedirs(subfolder)
+        git = Git(subfolder)
+        self.assertEqual(root_path, git.get_repo_root())
+
+    def test_is_pristine(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(root_path)
+        self.assertTrue(git.is_pristine())
+
+        save(os.path.join(root_path, "other_file"), "content")
+        self.assertFalse(git.is_pristine())
+
+        git.run("add .")
+        self.assertFalse(git.is_pristine())
+
+        git.run('commit -m "commit"')
+        self.assertTrue(git.is_pristine())
+
+    def test_is_local_repository(self):
+        root_path, _ = create_local_git_repo({"myfile": "anything"})
+
+        git = Git(temp_folder())
+        git.clone(root_path)
+        self.assertTrue(git.is_local_repository())
+        # TODO: Check that with remote one it is working too
 
     def test_clone_git(self):
         path, _ = create_local_git_repo({"myfile": "contents"})
@@ -1202,12 +1447,15 @@ class GitToolTest(unittest.TestCase):
 
     def git_to_capture_branch_test(self):
         conanfile = """
+import re
 from conans import ConanFile, tools
 
 def get_version():
     git = tools.Git()
     try:
-        return "%s_%s" % (git.get_branch(), git.get_revision())
+        branch = git.get_branch()
+        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
+        return "%s_%s" % (branch, git.get_revision())
     except:
         return None
 
@@ -1297,71 +1545,384 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", ignore_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
-    def unix_to_dos_unit_test(self):
 
-        def save_file(contents):
-            tmp = temp_folder()
-            filepath = os.path.join(tmp, "a_file.txt")
-            save(filepath, contents)
-            return filepath
+class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
-        fp = save_file(b"a line\notherline\n")
-        if not tools.os_info.is_windows:
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
+    def test_clone(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
 
-            tools.unix2dos(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
+    def test_revision_number(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        rev = int(svn.get_revision())
+        self.create_project(files={'another_file': "content"})
+        svn.run("update")
+        rev2 = int(svn.get_revision())
+        self.assertEqual(rev2, rev + 1)
+
+    def test_repo_url(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        remote_url = svn.get_remote_url()
+        self.assertEqual(remote_url.lower(), self.repo_url.lower())
+
+        svn2 = SVN(folder=self.gimme_tmp(create=False))
+        svn2.checkout(url=remote_url)  # clone using quoted url
+        self.assertEqual(svn2.get_remote_url().lower(), self.repo_url.lower())
+
+    def test_repo_project_url(self):
+        project_url, _ = self.create_project(files={"myfile": "content"})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        self.assertEqual(svn.get_remote_url().lower(), project_url.lower())
+
+    def test_checkout(self):
+        # Ensure we have several revisions in the repository
+        self.create_project(files={'file': "content"})
+        self.create_project(files={'file': "content"})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        rev = int(svn.get_revision())
+        svn.update(revision=rev - 1)  # Checkout previous revision
+        self.assertTrue(int(svn.get_revision()), rev-1)
+
+    def test_clone_over_dirty_directory(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+
+        new_file = os.path.join(tmp_folder, "new_file")
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        mod_file = os.path.join(tmp_folder, "myfile")
+        with open(mod_file, "a") as f:
+            f.write("new content")
+
+        self.assertFalse(svn.is_pristine())
+        svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
+        self.assertTrue(svn.is_pristine())
+        # self.assertFalse(os.path.exists(new_file))
+
+    def test_excluded_files(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+
+        # Add untracked file
+        new_file = os.path.join(tmp_folder, str(uuid.uuid4()))
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        # Add ignore file
+        file_to_ignore = str(uuid.uuid4())
+        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
+            f.write("content")
+        svn.run("propset svn:ignore {} .".format(file_to_ignore))
+        svn.run('commit -m "add ignored file"')
+
+        excluded_files = svn.excluded_files()
+        self.assertIn(file_to_ignore, excluded_files)
+        self.assertNotIn('.svn', excluded_files)
+        self.assertEqual(len(excluded_files), 1)
+
+    def test_credentials(self):
+        svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
+        url_credentials = svn.get_url_with_credentials("https://some.url.com")
+        self.assertEquals(url_credentials, "https://ada:lovelace@some.url.com")
+
+    def test_verify_ssl(self):
+        class MyRunner(object):
+            def __init__(self, svn):
+                self.calls = []
+                self._runner = svn._runner
+                svn._runner = self
+
+            def __call__(self, command, *args, **kwargs):
+                self.calls.append(command)
+                return self._runner(command, *args, **kwargs)
+
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
+
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=True)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        self.assertNotIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
+
+        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
+        runner = MyRunner(svn)
+        svn.checkout(url=project_url)
+        if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+            self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
         else:
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
-            tools.unix2dos(fp)
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
+            self.assertIn("--trust-server-cert", runner.calls[1])
 
-        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+    def test_repo_root(self):
+        project_url, _ = self.create_project(files={'myfile': "contents",
+                                                    'subdir/otherfile': "content"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
 
-        fp = save_file(b"a line\r\notherline\r\n")
-        if not tools.os_info.is_windows:
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
+        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
+        self.assertEqual(path, svn.get_repo_root().lower())
 
-            tools.dos2unix(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
-        else:
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
-            tools.dos2unix(fp)
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
+        # SVN instantiated in a subfolder
+        svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
+        self.assertFalse(svn2.folder == tmp_folder)
+        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
+        self.assertEqual(path, svn2.get_repo_root().lower())
 
-        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+    def test_is_local_repository(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        self.assertTrue(svn.is_local_repository())
 
-    def unix_to_dos_conanfile_test(self):
-        client = TestClient()
-        conanfile = """
+        # TODO: Test not local repository
+
+    def test_last_changed_revision(self):
+        project_url, _ = self.create_project(files={'project1/myfile': "contents",
+                                                    'project2/myfile': "content",
+                                                    'project2/subdir1/myfile': "content",
+                                                    'project2/subdir2/myfile': "content",
+                                                    })
+        prj1 = SVN(folder=self.gimme_tmp())
+        prj1.checkout(url='/'.join([project_url, 'project1']))
+
+        prj2 = SVN(folder=self.gimme_tmp())
+        prj2.checkout(url='/'.join([project_url, 'project2']))
+
+        self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+
+        # Modify file in one subfolder of prj2
+        with open(os.path.join(prj2.folder, "subdir1", "myfile"), "a") as f:
+            f.write("new content")
+        prj2.run('commit -m "add to file"')
+        prj2.run('update')
+        prj1.run('update')
+
+        self.assertNotEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
+        self.assertEqual(prj1.get_revision(), prj2.get_revision())
+
+        # Instantiate a SVN in the other subfolder
+        prj2_subdir2 = SVN(folder=os.path.join(prj2.folder, "subdir2"))
+        prj2_subdir2.run('update')
+        self.assertEqual(prj2.get_last_changed_revision(),
+                         prj2_subdir2.get_last_changed_revision())
+        self.assertNotEqual(prj2.get_last_changed_revision(use_wc_root=False),
+                            prj2_subdir2.get_last_changed_revision(use_wc_root=False))
+
+    def test_branch(self):
+        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
+                                                    'prj1/branches/my_feature/myfile': "",
+                                                    'prj1/branches/issue3434/myfile': "",
+                                                    'prj1/tags/v12.3.4/myfile': "",
+                                                    })
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
+        self.assertEqual("trunk", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
+        self.assertEqual("branches/my_feature", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
+        self.assertEqual("branches/issue3434", svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
+        self.assertEqual("tags/v12.3.4", svn.get_branch())
+
+
+class SVNToolTestsPristine(SVNLocalRepoTestCase):
+
+    def test_checkout(self):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        self.assertTrue(svn.is_pristine())
+
+    def test_checkout_project(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        self.assertTrue(svn.is_pristine())
+
+    def test_modified_file(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=project_url)
+        with open(os.path.join(tmp_folder, "myfile"), "a") as f:
+            f.write("new content")
+        self.assertFalse(svn.is_pristine())
+
+    def test_untracked_file(self):
+        self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=self.repo_url)
+        with open(os.path.join(tmp_folder, "not_tracked.txt"), "w") as f:
+            f.write("content")
+        self.assertTrue(svn.is_pristine())
+
+    def test_ignored_file(self):
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=self.repo_url)
+        file_to_ignore = "secret.txt"
+        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
+            f.write("content")
+        svn.run("propset svn:ignore {} .".format(file_to_ignore))
+        self.assertFalse(svn.is_pristine())  # Folder properties have been modified
+        svn.run('commit -m "add ignored file"')
+        self.assertTrue(svn.is_pristine())
+
+    def test_conflicted_file(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+
+        def work_on_project(tmp_folder):
+            svn = SVN(folder=tmp_folder)
+            svn.checkout(url=project_url)
+            self.assertTrue(svn.is_pristine())
+            with open(os.path.join(tmp_folder, "myfile"), "a") as f:
+                f.write("random content: {}".format(uuid.uuid4()))
+            return svn
+
+        # Two users working on the same project
+        svn1 = work_on_project(self.gimme_tmp())
+        svn2 = work_on_project(self.gimme_tmp())
+
+        # User1 is faster
+        svn1.run('commit -m "user1 commit"')
+        self.assertFalse(svn1.is_pristine())
+        svn1.run('update')  # Yes, we need to update local copy in order to have the same revision everywhere.
+        self.assertTrue(svn1.is_pristine())
+
+        # User2 updates and get a conflicted file
+        svn2.run('update')
+        self.assertFalse(svn2.is_pristine())
+        svn2.run('revert . -R')
+        self.assertTrue(svn2.is_pristine())
+
+
+class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
+
+    conanfile = """
 import os
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
-    exports_sources = "file.txt"
+    exports_sources = "other"
+
+    def source(self):
+        svn = tools.SVN({svn_folder})
+        svn.checkout(url="{svn_url}")
 
     def build(self):
-        assert("\\r\\n" in tools.load("file.txt"))
-        tools.dos2unix("file.txt")
-        assert("\\r\\n" not in tools.load("file.txt"))
-        tools.unix2dos("file.txt")
-        assert("\\r\\n" in tools.load("file.txt"))
+        assert(os.path.exists("{file_path}"))
+        assert(os.path.exists("other"))
 """
-        client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
+
+    def test_clone_root_folder(self):
+        tmp_folder = self.gimme_tmp()
+        client = TestClient()
+        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        save(os.path.join(tmp_folder, "file.h"), "contents")
+        client.runner("svn add file.h", cwd=tmp_folder)
+        client.runner('svn commit -m "message"', cwd=tmp_folder)
+
+        conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
+                                          file_path="file.h")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")
+
+    def test_clone_subfolder(self):
+        tmp_folder = self.gimme_tmp()
+        client = TestClient()
+        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        save(os.path.join(tmp_folder, "file.h"), "contents")
+        client.runner("svn add file.h", cwd=tmp_folder)
+        client.runner('svn commit -m "message"', cwd=tmp_folder)
+
+        conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
+                                          file_path="src/file.h")
+        client.save({"conanfile.py": conanfile, "other": "hello"})
+        client.run("create . user/channel")
+
+
+class CollectLibTestCase(unittest.TestCase):
+    def collect_libs_test(self):
+        conanfile = ConanFileMock()
+        # Without package_folder
+        conanfile.package_folder = None
+        result = tools.collect_libs(conanfile)
+        self.assertEqual([], result)
+
+        # Default behavior
+        conanfile.package_folder = temp_folder()
+        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(mylib_path, "")
+        conanfile.cpp_info = CppInfo("")
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+
+        # Custom folder
+        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+        save(customlib_path, "")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Custom folder doesn't exist
+        result = tools.collect_libs(conanfile, folder="fake_folder")
+        self.assertEqual([], result)
+        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+
+        # Use cpp_info.libdirs
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib", "customlib"], result)
+
+        # Custom folder with multiple libdirs should only collect from custom folder
+        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+        result = tools.collect_libs(conanfile, folder="custom_folder")
+        self.assertEqual(["customlib"], result)
+
+        # Warn same lib different folders
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(custom_mylib_path, "")
+        save(lib_mylib_path, "")
+        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("Library 'mylib' already found in a previous 'conanfile.cpp_info.libdirs' "
+                      "folder", conanfile.output)
+
+        # Warn lib folder does not exist with correct result
+        conanfile = ConanFileMock()
+        conanfile.package_folder = temp_folder()
+        conanfile.cpp_info = CppInfo("")
+        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+        save(lib_mylib_path, "")
+        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+        result = tools.collect_libs(conanfile)
+        self.assertEqual(["mylib"], result)
+        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                      % no_folder_path, conanfile.output)
+

@@ -23,6 +23,15 @@ class Printer(object):
     def __init__(self, out):
         self._out = out
 
+    def print_inspect(self, inspect):
+        for k, v in inspect.items():
+            if isinstance(v, dict):
+                self._out.writeln("%s" % k)
+                for sk, sv in sorted(v.items()):
+                    self._out.writeln("    %s: %s" % (sk, str(sv)))
+            else:
+                self._out.writeln("%s: %s" % (k, str(v)))
+
     def _print_paths(self, ref, conan, path_resolver, show):
         if isinstance(ref, ConanFileReference):
             if show("export_folder"):

@@ -6,6 +6,7 @@ from conans.client.build.compiler_flags import architecture_flag, parallel_compi
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_SHARE
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.log import logger
@@ -14,6 +15,7 @@ from conans.util.log import logger
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
 cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"
 runtime_definition_var_name = "CONAN_LINK_RUNTIME"
+cmake_in_local_cache_var_name = "CONAN_IN_LOCAL_CACHE"
 
 
 def get_toolset(settings):
@@ -81,6 +83,10 @@ def is_multi_configuration(generator):
 
 def verbose_definition(value):
     return {verbose_definition_name: "ON" if value else "OFF"}
+
+
+def in_local_cache_definition(value):
+    return {cmake_in_local_cache_var_name: "ON" if value else "OFF"}
 
 
 def runtime_definition(runtime):
@@ -168,6 +174,8 @@ class CMakeDefinitionsBuilder(object):
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
+            if str(os_) == "Macos":
+                ret["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR")
@@ -235,7 +243,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(build_type_definition(build_type, self.generator))
         ret.update(runtime_definition(runtime))
 
-        if str(os_).lower() == "macos":
+        if str(os_) == "Macos":
             if arch == "x86":
                 ret["CMAKE_OSX_ARCHITECTURES"] = "i386"
 
@@ -243,6 +251,9 @@ class CMakeDefinitionsBuilder(object):
         ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
+        ret[cmake_in_local_cache_var_name] =\
+            in_local_cache_definition(self._conanfile.in_local_cache)[cmake_in_local_cache_var_name]
+
         if compiler:
             ret["CONAN_COMPILER"] = compiler
         if compiler_version:
@@ -267,6 +278,13 @@ class CMakeDefinitionsBuilder(object):
         try:
             if self._conanfile.package_folder:
                 ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+                ret["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
+                ret["CMAKE_INSTALL_LIBDIR"] = DEFAULT_LIB
+                ret["CMAKE_INSTALL_INCLUDEDIR"] = DEFAULT_INCLUDE
+                ret["CMAKE_INSTALL_OLDINCLUDEDIR"] = DEFAULT_INCLUDE
+                ret["CMAKE_INSTALL_DATAROOTDIR"] = DEFAULT_SHARE
         except AttributeError:
             pass
 

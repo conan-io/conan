@@ -147,12 +147,12 @@ class ConanService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def get_conanfile_snapshot(self, reference):
+    def get_recipe_snapshot(self, reference):
         """Gets a dict with filepaths and the md5:
             {filename: md5}
         """
         self._authorizer.check_read_conan(self._auth_user, reference)
-        snap = self._server_store.get_conanfile_snapshot(reference)
+        snap = self._server_store.get_recipe_snapshot(reference)
         if not snap:
             raise NotFoundException("conanfile not found")
         return snap
@@ -218,7 +218,7 @@ class ConanService(object):
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         try:
-            self._server_store.get_conanfile_snapshot(package_reference.conan)
+            self._server_store.get_recipe_snapshot(package_reference.conan)
         except NotFoundException:
             raise NotFoundException("There are no remote conanfiles like %s"
                                     % str(package_reference.conan))

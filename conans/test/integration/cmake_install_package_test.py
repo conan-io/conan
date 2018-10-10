@@ -9,13 +9,22 @@ class CMakeInstallPackageTest(unittest.TestCase):
         conanfile = """from conans import ConanFile, CMake
 from conans.tools import save, load
 import os
+import platform
+
+def _mess_with_path(pathstr):
+   if platform.system() == "Windows":
+       drive, path = os.path.splitdrive(pathstr)
+       return drive.upper() + path.replace(os.path.sep,"/")
+   return pathstr
 
 class AConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     def build(self):
         cmake = CMake(self)
-        save("file1.cmake", "FOLDER " + self.package_folder)
-        save("sub/file1.cmake", "FOLDER " + self.package_folder)
+        pth = _mess_with_path(self.package_folder)
+        self.output.info("output path: %s" % pth)
+        save("file1.cmake", "FOLDER " + pth)
+        save("sub/file1.cmake", "FOLDER " + pth)
         cmake.patch_config_paths()
     def package(self):
         self.copy("*")
