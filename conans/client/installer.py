@@ -391,6 +391,8 @@ class ConanInstaller(object):
             else:
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
+                # Built locally, clear reference
+                self._registry.prefs.remove(package_ref)
 
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)

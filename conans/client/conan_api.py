@@ -346,7 +346,7 @@ class ConanAPIV1(object):
             # Forcing an export!
             if not not_export:
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                           self._client_cache, self._plugin_manager)
+                           self._client_cache, self._plugin_manager, self._registry)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -413,7 +413,7 @@ class ConanAPIV1(object):
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
-                   self._client_cache, self._plugin_manager)
+                   self._client_cache, self._plugin_manager, self._registry)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -670,7 +670,7 @@ class ConanAPIV1(object):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                   self._client_cache, self._plugin_manager)
+                   self._client_cache, self._plugin_manager, self._registry)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -835,12 +835,12 @@ class ConanAPIV1(object):
         return self._registry.prefs.set(p_reference, remote_name, check_exists=True)
 
     @api_method
-    def remote_remove_ref(self, package_reference):
+    def remote_remove_pref(self, package_reference):
         p_reference = PackageReference.loads(str(package_reference))
         return self._registry.prefs.remove(p_reference)
 
     @api_method
-    def remote_update_ref(self, package_reference, remote_name):
+    def remote_update_pref(self, package_reference, remote_name):
         p_reference = PackageReference.loads(str(package_reference))
         return self._registry.prefs.update(p_reference, remote_name)
 
