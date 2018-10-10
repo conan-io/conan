@@ -9,7 +9,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 build_type_flags, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_RES
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_SHARE
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
@@ -167,7 +167,7 @@ class AutoToolsBuildEnvironment(object):
                     if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
                 if self._valid_configure_flag("datarootdir", args, available_flags):
-                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
+                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_SHARE)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
