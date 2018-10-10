@@ -1,5 +1,6 @@
 import os
-from six import string_types
+import sys
+
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -14,9 +15,19 @@ class SystemPackageTool(object):
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
-        self._tool._sudo_str = "sudo " if self._is_sudo_enabled() else ""
+        self._tool._sudo_str = self._get_sudo_str()
         self._tool._runner = runner or ConanRunner()
         self._tool._recommends = recommends
+
+    @staticmethod
+    def _get_sudo_str():
+        if not SystemPackageTool._is_sudo_enabled():
+            return ""
+
+        if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+            return "sudo --askpass "
+        else:
+            return "sudo "
 
     @staticmethod
     def _is_sudo_enabled():
