@@ -1,6 +1,6 @@
 // ########## CONFIGURATION ##################
 def full_py_vers = true
-def test_v2 = true
+def test_v2 = false
 // ############################
 
 
@@ -17,7 +17,6 @@ def api_confs = ["v1"]
 
 if (full_py_vers){
     pyvers = ['py37', 'py36', 'py34', 'py27']
-    api_confs = ["v1", "v2"]
 }
 else if(test_v2){
     api_confs = ["v1", "v2"]
