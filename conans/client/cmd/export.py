@@ -153,8 +153,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         modified_recipe = True
     digest.save(exports_folder)
 
-    # Clear the registry reference as it is not anymore from a remote but from local cache
-    registry.refs.remove(conan_ref)
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
