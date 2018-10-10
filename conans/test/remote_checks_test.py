@@ -36,11 +36,6 @@ class Pkg(ConanFile):
                                            (server-1)*20)
             client.run("upload Pkg* -r=server%s --confirm --all" % server)
 
-        # The remote defined is the last one that was used for upload, because
-        # for every create (export) the reference is cleared and then set in the upload
-        client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
-
         # Fresh install from server1
         client.run("remove * -f")
         client.run("install Pkg/0.1@lasote/testing -r=server1")
@@ -173,7 +168,8 @@ class Pkg(ConanFile):
         time.sleep(1)
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
         client.run("remote list_ref")
-        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
+        # FIXME: Conan 2.0 the package should be cleared from the registry after a create
+        self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
     def test_binary_defines_remote(self):
         servers = OrderedDict([("server1", TestServer()),
@@ -262,12 +258,12 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
         client.run("remote list_ref")
-        # last create cleans the reference and later the upload associate it to server2
-        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
+        # It keeps associated to server1 even after a create FIXME: Conan 2.0
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
 
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Cache", client.out)
         self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Download", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package b0c3b52601b7e36532a74a37c81bb432898a951b "
                       "from remote 'server2'", client.out)

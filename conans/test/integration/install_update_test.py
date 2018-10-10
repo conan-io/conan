@@ -129,10 +129,12 @@ class Pkg(ConanFile):
         self.client.run("install Hello0/1.0@lasote/stable --build")
 
         self.client.run("remote list_ref")
-        self.assertNotIn("Hello0/1.0@lasote/stable", self.client.out)
+        # FIXME Conan 2.0 It should be a assertNotIn
+        self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
 
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
-        self.assertNotIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
+        # FIXME Conan 2.0 It should be a assertNotIn
+        self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
                          self.client.out)
 
         rebuild_timestamps = timestamps()
@@ -141,9 +143,6 @@ class Pkg(ConanFile):
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
         # First assign the preference to a remote, it has been cleared when exported locally
-        self.client.run("remote add_ref Hello0/1.0@lasote/stable myremote")
-        self.client.run("remote add_pref Hello0/1.0@lasote/stable:"
-                        "55a3af76272ead64e6f543c12ecece30f94d3eda myremote")
         self.client.run("install . --update")
         self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer", self.client.out)
         failed_update_timestamps = timestamps()
