@@ -154,6 +154,7 @@ class ClientCache(SimplePaths):
         else:
             return join(self.conan_folder, PROFILES_FOLDER,
                         self.conan_config.default_profile)
+
     @property
     def plugins_path(self):
         """
