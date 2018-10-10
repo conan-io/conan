@@ -13,7 +13,6 @@ from io import StringIO
 import subprocess
 import unittest
 import tempfile
-import platform
 
 import bottle
 import requests
@@ -50,7 +49,6 @@ from conans.util.log import logger
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.client.tools.win import get_cased_path
-
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -314,14 +312,14 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
     return tmp.replace("\\", "/"), git.get_revision()
 
 
-def handleRemoveReadonly(func, path, exc):  # TODO: May promote to conan tools?
-    # Credit: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+def try_remove_readonly(func, path, exc):  # TODO: May promote to conan tools?
+    # src: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
     excvalue = exc[1]
     if func in (os.rmdir, os.remove, os.unlink) and excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
         func(path)
     else:
-        raise
+        raise OSError("Cannot make read-only %s" % path)
 
 
 class SVNLocalRepoTestCase(unittest.TestCase):
@@ -355,7 +353,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             return project_url, rev
         finally:
             if delete_checkout:
-                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=handleRemoveReadonly)
+                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
 
     def run(self, *args, **kwargs):
         tmp_folder = tempfile.mkdtemp(suffix='_conans')
@@ -365,7 +363,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             self.repo_url = self._create_local_svn_repo()
             super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
         finally:
-            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=handleRemoveReadonly)
+            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
 
 class MockedUserIO(UserIO):
