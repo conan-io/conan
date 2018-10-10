@@ -5,7 +5,7 @@ from astroid import MANAGER
 
 def register(linter):
     """Declare package as plugin
-    
+
     This function needs to be declared so astroid treats
     current file as a plugin.
     """

@@ -588,12 +588,12 @@ class HelloConan(ConanFile):
             self.assertIn("./configure --prefix=/package_folder --bindir=${prefix}/bin "
                           "--sbin=${prefix}/bin --libexec=${prefix}/bin --libdir=${prefix}/lib "
                           "--includedir=${prefix}/include --oldincludedir=${prefix}/include "
-                          "--datarootdir=${prefix}/res", runner.command_called)
+                          "--datarootdir=${prefix}/share", runner.command_called)
         else:
             self.assertIn("./configure '--prefix=/package_folder' '--bindir=${prefix}/bin' "
                           "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' '--libdir=${prefix}/lib' "
                           "'--includedir=${prefix}/include' '--oldincludedir=${prefix}/include' "
-                          "'--datarootdir=${prefix}/res'", runner.command_called)
+                          "'--datarootdir=${prefix}/share'", runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
         self.assertIn("--prefix=/my_package_folder", runner.command_called)
@@ -608,13 +608,13 @@ class HelloConan(ConanFile):
             self.assertIn("./configure --bindir=/pf/superbindir --libdir=/pf/superlibdir "
                           "--includedir=/pf/superincludedir --prefix=/package_folder "
                           "--sbin=${prefix}/bin --libexec=${prefix}/bin "
-                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/res",
+                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/share",
                           runner.command_called)
         else:
             self.assertIn("./configure '--bindir=/pf/superbindir' '--libdir=/pf/superlibdir' "
                           "'--includedir=/pf/superincludedir' '--prefix=/package_folder' "
                           "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' "
-                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res'",
+                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/share'",
                           runner.command_called)
         # opt-out from default installation dirs
         ab.configure(use_default_install_dirs=False)
