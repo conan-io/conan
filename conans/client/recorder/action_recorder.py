@@ -4,7 +4,7 @@
 # about the downloaded files prior to unzip them
 
 from datetime import datetime
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, defaultdict
 
 # Install actions
 from conans.model.ref import ConanFileReference, PackageReference
@@ -35,6 +35,7 @@ class ActionRecorder(object):
         self._inst_recipes_actions = OrderedDict()
         self._inst_packages_actions = OrderedDict()
         self._inst_recipes_develop = set()  # Recipes being created (to set dependency=False)
+        self._inst_packages_info = defaultdict(dict)
 
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, reference):
@@ -79,6 +80,16 @@ class ActionRecorder(object):
             self._inst_packages_actions[reference] = []
         doc = {"type": error_type, "description": description, "remote": remote_name}
         self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
+
+    def package_cpp_info(self, reference, cpp_info):
+        assert isinstance(reference, PackageReference)
+        # assert isinstance(cpp_info, CppInfo)
+        doc = {}
+        for it, value in vars(cpp_info).items():
+            if it.startswith("_") or not value:
+                continue
+            doc[it] = value
+        self._inst_packages_info[reference]['cpp_info'] = doc
 
     @property
     def install_errored(self):
@@ -136,6 +147,8 @@ class ActionRecorder(object):
 
             for p_ref, p_action in packages:
                 p_doc = get_doc_for_ref(p_ref.package_id, p_action)
+                package_data = self._inst_packages_info.get(p_ref, {})
+                p_doc.update(package_data)
                 tmp["packages"].append(p_doc)
 
             ret["installed"].append(tmp)
