@@ -184,6 +184,14 @@ class Pkg(ConanFile):
         self._check(zippath)
         self.assertTrue(os.path.exists(zippath))
 
+    def install_dir_test(self):
+        """ should install from a dir in current dir
+        """
+        folder = self._create_profile_folder()
+        self.assertTrue(os.path.isdir(folder))
+        self.client.run('config install "%s"' % folder)
+        self._check(folder)
+
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.client_cache.profiles_path)
         zippath = self._create_zip()
