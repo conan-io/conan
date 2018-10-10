@@ -1170,6 +1170,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
+        package_reference = args.package_reference if hasattr(args, 'package_reference') else None
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
@@ -1201,11 +1202,11 @@ class Command(object):
             refs = self._conan.remote_list_pref(reference)
             self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_pref":
-            return self._conan.remote_add_pref(reference, remote_name)
+            return self._conan.remote_add_pref(package_reference, remote_name)
         elif args.subcommand == "remove_pref":
-            return self._conan.remote_remove_pref(reference)
+            return self._conan.remote_remove_pref(package_reference)
         elif args.subcommand == "update_pref":
-            return self._conan.remote_update_pref(reference, remote_name)
+            return self._conan.remote_update_pref(package_reference, remote_name)
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.

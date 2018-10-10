@@ -153,7 +153,8 @@ class CmdUpload(object):
                         integrity_check=False, policy=None, remote=None):
         """Uploads the package identified by package_id"""
 
-        msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
+        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(package_ref.package_id),
+                                                        remote.name))
         t1 = time.time()
         self._user_io.out.info(msg)
 

@@ -82,6 +82,8 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing")
+        client.run("remote add_pref Pkg/0.1@lasote/testing:"
+                   "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 myremote")
         client.run("install Pkg/0.1@lasote/testing --update")
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
@@ -97,6 +99,12 @@ class Pkg(ConanFile):
         self.client.save(files1, clean_first=True)
         self.client.run("install . --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
+
+        self.client.run("remote list_ref")
+        self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
+        self.client.run("remote list_pref Hello0/1.0@lasote/stable")
+        self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
+                      self.client.out)
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
@@ -119,14 +127,25 @@ class Pkg(ConanFile):
         self.client.save(files0, clean_first=True)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
+
+        self.client.run("remote list_ref")
+        self.assertNotIn("Hello0/1.0@lasote/stable", self.client.out)
+
+        self.client.run("remote list_pref Hello0/1.0@lasote/stable")
+        self.assertNotIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
+                         self.client.out)
+
         rebuild_timestamps = timestamps()
         self.assertNotEqual(rebuild_timestamps, initial_timestamps)
 
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
+        # First assign the preference to a remote, it has been cleared when exported locally
+        self.client.run("remote add_ref Hello0/1.0@lasote/stable myremote")
+        self.client.run("remote add_pref Hello0/1.0@lasote/stable:"
+                        "55a3af76272ead64e6f543c12ecece30f94d3eda myremote")
         self.client.run("install . --update")
-        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer",
-                      self.client.out)
+        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer", self.client.out)
         failed_update_timestamps = timestamps()
         self.assertEqual(rebuild_timestamps, failed_update_timestamps)
 
