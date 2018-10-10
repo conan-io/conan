@@ -95,10 +95,12 @@ class CmdUpload(object):
                                      reference=conan_ref, remote=upload_remote)
 
         if policy != UPLOAD_POLICY_FORCE:
-            self._check_recipe_date(conan_ref, upload_remote)
+            remote_manifest = self._check_recipe_date(conan_ref, upload_remote)
+        else:
+            remote_manifest = None
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), upload_remote.name))
-        self._upload_recipe(conan_ref, retry, retry_wait, policy, upload_remote)
+        self._upload_recipe(conan_ref, retry, retry_wait, policy, upload_remote, remote_manifest)
 
         recorder.add_recipe(str(conan_ref), upload_remote.name, upload_remote.url)
 
@@ -122,7 +124,7 @@ class CmdUpload(object):
         self._plugin_manager.execute("post_upload", conanfile_path=conanfile_path,
                                      reference=conan_ref, remote=upload_remote)
 
-    def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote):
+    def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)
         current_remote = self._registry.get_recipe_remote(conan_reference)
         if remote != current_remote:
@@ -130,7 +132,7 @@ class CmdUpload(object):
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
         result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                    policy=policy)
+                                                    policy=policy, remote_manifest=remote_manifest)
         return result
 
     def _upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
@@ -159,3 +161,5 @@ class CmdUpload(object):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))
+
+        return remote_recipe_manifest

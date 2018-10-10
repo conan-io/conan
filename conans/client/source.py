@@ -9,7 +9,7 @@ from conans.errors import ConanException, conanfile_exception_formatter, \
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
-from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
+from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir, walk
 from conans.model.scm import SCMData
 
 
@@ -47,7 +47,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
-    for src_dir, dirs, files in os.walk(src, followlinks=True):
+    for src_dir, dirs, files in walk(src, followlinks=True):
         if is_excluded(src_dir):
             dirs[:] = []
             continue
@@ -135,11 +135,13 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                         local_sources_path = local_sources_path if captured else None
                         _fetch_scm(scm_data, dest_dir, local_sources_path, output)
 
+                    # Files from python requires are obtained before the self files
                     from conans.client.cmd.export import export_source
                     for python_require in conanfile.python_requires:
                         src = client_cache.export_sources(python_require.conan_ref)
                         export_source(conanfile, src, src_folder, output)
 
+                    # so self exported files have precedence over python_requires ones
                     merge_directories(export_folder, src_folder)
                     # Now move the export-sources to the right location
                     merge_directories(export_source_folder, src_folder)
@@ -200,6 +202,5 @@ def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir)
-        scm.clone()
         scm.checkout()
     _clean_source_folder(dest_dir)

@@ -39,7 +39,8 @@ class ConanPythonRequire(object):
             try:
                 dirname = os.path.dirname(path)
                 sys.path.append(dirname)
-                module = imp.load_source(str(r), path)
+                # replace avoid warnings in Py2 with dots
+                module = imp.load_source(str(r).replace(".", "*"), path)
             finally:
                 sys.path.pop()
             python_require = PythonRequire(reference, module, dirname)

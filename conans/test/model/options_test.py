@@ -1,3 +1,5 @@
+import six
+import sys
 import unittest
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
@@ -224,6 +226,34 @@ Poco:deps_bundled=True""")
                                                      ])
 
 
+class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
+
+    def test_propagate_in_options(self):
+        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
+        values = PackageOptionValues()
+        values.add_option("opt", "a")
+        package_options.values = values
+        sut = Options(package_options)
+
+        other_options = PackageOptionValues()
+        other_options.add_option("opt", None)
+        options = {"whatever.*": other_options}
+        down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        sut.propagate_upstream(options, down_ref, own_ref)
+        self.assertEqual(sut.values.as_list(), [("opt", "a"),
+                                                ("whatever.*:opt", "None"),
+                                                ])
+
+    def test_propagate_in_pacakge_options(self):
+        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
+        values = PackageOptionValues()
+        package_options.values = values
+
+        package_options.propagate_upstream({'opt': None}, None, None, [])
+        self.assertEqual(package_options.values.items(), [('opt', 'None'), ])
+
+
 class OptionsValuesTest(unittest.TestCase):
 
     def setUp(self):
@@ -238,6 +268,39 @@ class OptionsValuesTest(unittest.TestCase):
     def test_from_list(self):
         option_values = OptionsValues(self.sut.as_list())
         self.assertEqual(option_values.dumps(), self.sut.dumps())
+
+    def test_from_dict(self):
+        options_as_dict = dict([item.split('=') for item in self.sut.dumps().splitlines()])
+        option_values = OptionsValues(options_as_dict)
+        self.assertEqual(option_values.dumps(), self.sut.dumps())
+
+    def test_consistency(self):
+        def _check_equal(hs1, hs2, hs3, hs4):
+            opt_values1 = OptionsValues(hs1)
+            opt_values2 = OptionsValues(hs2)
+            opt_values3 = OptionsValues(hs3)
+            opt_values4 = OptionsValues(hs4)
+
+            self.assertEqual(opt_values1.dumps(), opt_values2.dumps())
+            self.assertEqual(opt_values1.dumps(), opt_values3.dumps())
+            self.assertEqual(opt_values1.dumps(), opt_values4.dumps())
+
+        # Check that all possible input options give the same result
+        _check_equal([('opt', 3)],       [('opt', '3'), ],       ('opt=3', ),       {'opt': 3})
+        _check_equal([('opt', True)],    [('opt', 'True'), ],    ('opt=True', ),    {'opt': True})
+        _check_equal([('opt', False)],   [('opt', 'False'), ],   ('opt=False', ),   {'opt': False})
+        _check_equal([('opt', None)],    [('opt', 'None'), ],    ('opt=None', ),    {'opt': None})
+        _check_equal([('opt', 0)],       [('opt', '0'), ],       ('opt=0', ),       {'opt': 0})
+        _check_equal([('opt', '')],      [('opt', ''), ],        ('opt=', ),        {'opt': ''})
+
+        # Check for leading and trailing spaces
+        _check_equal([('  opt  ', 3)], [(' opt  ', '3'), ], ('  opt =3', ), {' opt ': 3})
+        _check_equal([('opt', '  value  ')], [('opt', '  value '), ], ('opt= value  ', ),
+                     {'opt': ' value '})
+
+        # This is expected behaviour:
+        self.assertNotEqual(OptionsValues([('opt', ''), ]).dumps(),
+                            OptionsValues(('opt=""', )).dumps())
 
     def test_dumps(self):
         self.assertEqual(self.sut.dumps(), "\n".join(["optimized=3",
@@ -265,3 +328,36 @@ class OptionsValuesTest(unittest.TestCase):
                                                       "Poco:new_option=0"]))
         self.assertEqual(self.sut.sha,
                          "2442d43f1d558621069a15ff5968535f818939b5")
+
+    def test_loads_exceptions(self):
+        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
+            else "need more than 1 value to unpack"
+        with self.assertRaisesRegexp(ValueError, emsg):
+            OptionsValues.loads("a=2\nconfig\nb=3")
+
+        with self.assertRaisesRegexp(ValueError, emsg):
+            OptionsValues.loads("config\na=2\ncommit\nb=3")
+
+    def test_exceptions_empty_value(self):
+        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
+            else "need more than 1 value to unpack"
+        with self.assertRaisesRegexp(ValueError, emsg):
+            OptionsValues("a=2\nconfig\nb=3")
+
+        with self.assertRaisesRegexp(ValueError, emsg):
+            OptionsValues(("a=2", "config"))
+
+        with self.assertRaisesRegexp(ValueError, emsg):
+            OptionsValues([('a', 2), ('config', ), ])
+
+    def test_exceptions_repeated_value(self):
+        try:
+            OptionsValues.loads("a=2\na=12\nb=3").dumps()
+            OptionsValues(("a=2", "b=23", "a=12"))
+            OptionsValues([('a', 2), ('b', True), ('a', '12')])
+        except Exception as e:
+            self.fail("Not expected exception: {}".format(e))
+
+    def test_package_with_spaces(self):
+        self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
+                         OptionsValues([('pck2 :opt', 50), ]).dumps())

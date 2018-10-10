@@ -362,6 +362,27 @@ class PkgTest(base.MyConanfileBase):
         self.assertTrue(os.path.exists(os.path.join(client.client_cache.export(ref),
                                                     "other.txt")))
 
+    def reuse_exports_conflict_test(self):
+        conanfile = """from conans import ConanFile
+class Base(ConanFile):
+    exports_sources = "*.h"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "my header Base!!"})
+        client.run("export . Base/0.1@user/testing")
+        conanfile = """from conans import python_requires, load
+base = python_requires("Base/0.1@user/testing")
+class Pkg2(base.Base):
+    def build(self):
+        self.output.info("Exports sources: %s" % self.exports_sources)
+        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+"""
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "my header Pkg!!"}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header Pkg!!", client.out)
+
 
 class PythonBuildTest(unittest.TestCase):
 

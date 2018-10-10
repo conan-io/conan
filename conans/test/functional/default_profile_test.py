@@ -7,6 +7,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans import tools
+from conans.client.client_cache import PROFILES_FOLDER
 
 
 class DefaultProfileTest(unittest.TestCase):
@@ -161,10 +162,15 @@ class MyConanfile(ConanFile):
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use relative path defined in environment variable
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': '../whatever'}):
-            client.run("create . name/version@user/channel", ignore_error=True)
-            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                          "an absolute path", client.out)
+        env_variable = "env_variable=relative_profile"
+        rel_path = os.path.join('..', 'env_rel_profile')
+        self.assertFalse(os.path.isabs(rel_path))
+        default_profile_path = os.path.join(client.client_cache.conan_folder,
+                                            PROFILES_FOLDER, rel_path)
+        save(default_profile_path, "[env]\n" + env_variable)
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):
+            client.run("create . name/version@user/channel")
+            self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
