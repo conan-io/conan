@@ -6,6 +6,7 @@ from collections import namedtuple
 from conans import tools
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.tools.oss import cpu_count
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
@@ -13,6 +14,30 @@ from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.utils.tools import TestClient
+
+
+default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
+                      "--sbin", "--oldincludedir", "--libexec"]
+
+
+class MockConanfileWithOutput(MockConanfile):
+    def run(self, *args, **kwargs):
+        if self.runner:
+            self.runner(*args, **kwargs)
+
+
+class RunnerMockWithHelp(RunnerMock):
+
+    def __init__(self, return_ok=True, available_args=None):
+        self.command_called = None
+        self.return_ok = return_ok
+        self.available_args = available_args or []
+
+    def __call__(self, command, output=None, win_bash=False, subsystem=None):  # @UnusedVariable
+        if "configure --help" in command:
+            output.write(" ".join(self.available_args))
+        else:
+            return super(RunnerMockWithHelp, self).__call__(command, output, win_bash, subsystem)
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -514,9 +539,40 @@ class HelloConan(ConanFile):
         ab.install()
         self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
 
+    def autotools_install_dir_custom_configure_test(self):
+        for flag_to_remove in default_dirs_flags:
+            flags_available = set(default_dirs_flags) - set([flag_to_remove])
+            runner = RunnerMockWithHelp(available_args=flags_available)
+            conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
+            conanfile.package_folder = "/package_folder"
+            ab = AutoToolsBuildEnvironment(conanfile)
+            ab.configure()
+            self.assertNotIn(flag_to_remove, runner.command_called)
+            for flag_applied in flags_available:
+                self.assertIn(flag_applied, runner.command_called)
+
+    def failing_configure_help_test(self):
+
+        class RunnerMockWithHelpFailing(RunnerMockWithHelp):
+            def __call__(self, command, output=None, win_bash=False, subsystem=None):  # @UnusedVariable
+                if "configure --help" in command:
+                    raise ConanException("Help not available")
+                else:
+                    return super(RunnerMockWithHelp, self).__call__(command, output, win_bash, subsystem)
+
+        runner = RunnerMockWithHelpFailing(available_args=default_dirs_flags)
+        conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
+        conanfile.package_folder = "/package_folder"
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        for flag_applied in default_dirs_flags:
+            self.assertNotIn(flag_applied, runner.command_called)
+        self.assertIn("Error running `configure --help`: Help not available", conanfile.output)
+
     def autotools_install_dirs_test(self):
-        runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}), None, runner)
+
+        runner = RunnerMockWithHelp(available_args=default_dirs_flags)
+        conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
         # Package folder is not defined
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
@@ -532,12 +588,12 @@ class HelloConan(ConanFile):
             self.assertIn("./configure --prefix=/package_folder --bindir=${prefix}/bin "
                           "--sbin=${prefix}/bin --libexec=${prefix}/bin --libdir=${prefix}/lib "
                           "--includedir=${prefix}/include --oldincludedir=${prefix}/include "
-                          "--datarootdir=${prefix}/res", runner.command_called)
+                          "--datarootdir=${prefix}/share", runner.command_called)
         else:
             self.assertIn("./configure '--prefix=/package_folder' '--bindir=${prefix}/bin' "
                           "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' '--libdir=${prefix}/lib' "
                           "'--includedir=${prefix}/include' '--oldincludedir=${prefix}/include' "
-                          "'--datarootdir=${prefix}/res'", runner.command_called)
+                          "'--datarootdir=${prefix}/share'", runner.command_called)
         # --prefix already used in args
         ab.configure(args=["--prefix=/my_package_folder"])
         self.assertIn("--prefix=/my_package_folder", runner.command_called)
@@ -552,13 +608,13 @@ class HelloConan(ConanFile):
             self.assertIn("./configure --bindir=/pf/superbindir --libdir=/pf/superlibdir "
                           "--includedir=/pf/superincludedir --prefix=/package_folder "
                           "--sbin=${prefix}/bin --libexec=${prefix}/bin "
-                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/res",
+                          "--oldincludedir=${prefix}/include --datarootdir=${prefix}/share",
                           runner.command_called)
         else:
             self.assertIn("./configure '--bindir=/pf/superbindir' '--libdir=/pf/superlibdir' "
                           "'--includedir=/pf/superincludedir' '--prefix=/package_folder' "
                           "'--sbin=${prefix}/bin' '--libexec=${prefix}/bin' "
-                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/res'",
+                          "'--oldincludedir=${prefix}/include' '--datarootdir=${prefix}/share'",
                           runner.command_called)
         # opt-out from default installation dirs
         ab.configure(use_default_install_dirs=False)
