@@ -75,7 +75,9 @@ class BaseConan(ConanFile):
         client.run("export . conan/stable")
 
         conanfile2 = """
-from conans import ConanFile
+from conans import ConanFile, python_requires
+
+python_requires("baselib/1.0@conan/stable")
 class TestConan(ConanFile):
     name = "Hello"
     version = "1.2"
