@@ -24,7 +24,7 @@ class SystemPackageTool(object):
         if not SystemPackageTool._is_sudo_enabled():
             return ""
 
-        if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        if hasattr(sys.stdout, "isatty") and not sys.stdout.isatty():
             return "sudo --askpass "
         else:
             return "sudo "
