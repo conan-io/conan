@@ -152,13 +152,13 @@ class AutoToolsBuildEnvironment(object):
             elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
-            all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
+            all_flags = ["bindir", "sbindir", "libexecdir", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]
             help_output = self._configure_help_output(configure_dir)
             available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
 
             if use_default_install_dirs:
-                for varname in ["bindir", "sbin", "libexec"]:
+                for varname in ["bindir", "sbindir", "libexecdir"]:
                     if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
                 if self._valid_configure_flag("libdir", args, available_flags):
