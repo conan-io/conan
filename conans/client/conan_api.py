@@ -86,7 +86,7 @@ def api_method(f):
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
-            except:
+            except BaseException:
                 pass
             raise
         finally:
@@ -541,7 +541,8 @@ class ConanAPIV1(object):
             item = os.path.abspath(item)
 
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type, args)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
+                                     config_type, args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
@@ -563,32 +564,37 @@ class ConanAPIV1(object):
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, remote_name=None, build_order=None, check_updates=None,
                          install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
-                                                          False, remote_name, recorder, workspace=None)
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"],
+                                                          check_updates, False, remote_name,
+                                                          recorder, workspace=None)
         return deps_graph.build_order(build_order)
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_name=None, remote_name=None, check_updates=None, install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+                            profile_name=None, remote_name=None, check_updates=None,
+                            install_folder=None):
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
-                                                                  False, remote_name, recorder, workspace=None)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile,
+                                                                  build_modes, check_updates,
+                                                                  False, remote_name, recorder,
+                                                                  workspace=None)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
              profile_name=None, update=False, install_folder=None, build=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
-                                                                  False, remote_name, recorder, workspace=None)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build,
+                                                                  update, False, remote_name,
+                                                                  recorder, workspace=None)
         return deps_graph, conanfile
 
     @api_method
@@ -611,7 +617,8 @@ class ConanAPIV1(object):
                       should_install=should_install, should_test=should_test)
 
     @api_method
-    def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
+    def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
+                cwd=None):
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
@@ -675,7 +682,8 @@ class ConanAPIV1(object):
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
-        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, self._registry)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io,
+                               self._registry)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -698,7 +706,8 @@ class ConanAPIV1(object):
 
     @api_method
     def user_set(self, user, remote_name=None):
-        remote = self.get_default_remote() if not remote_name else self.get_remote_by_name(remote_name)
+        remote = (self.get_default_remote() if not remote_name
+                  else self.get_remote_by_name(remote_name))
         return user_set(self._client_cache.localdb, user, remote)
 
     @api_method
