@@ -790,42 +790,42 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._registry.remotes
+        return self._registry.remotes.list
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        return self._registry.add(remote_name, url, verify_ssl, insert, force)
+        return self._registry.remotes.add(remote_name, url, verify_ssl, insert, force)
 
     @api_method
     def remote_remove(self, remote_name):
-        return self._registry.remove(remote_name)
+        return self._registry.remotes.remove(remote_name)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
-        return self._registry.update(remote_name, url, verify_ssl, insert)
+        return self._registry.remotes.update(remote_name, url, verify_ssl, insert)
 
     @api_method
     def remote_rename(self, remote_name, new_new_remote):
-        return self._registry.rename(remote_name, new_new_remote)
+        return self._registry.remotes.rename(remote_name, new_new_remote)
 
     @api_method
     def remote_list_ref(self):
-        return self._registry.refs
+        return self._registry.refs.list
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.set_ref(reference, remote_name, check_exists=True)
+        return self._registry.refs.set(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.remove_ref(reference)
+        return self._registry.refs.remove(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.update_ref(reference, remote_name)
+        return self._registry.refs.update(reference, remote_name)
 
     @api_method
     def profile_list(self):
@@ -874,11 +874,11 @@ class ConanAPIV1(object):
 
     @api_method
     def get_default_remote(self):
-        return self._registry.default_remote
+        return self._registry.remotes.default
 
     @api_method
     def get_remote_by_name(self, remote_name):
-        return self._registry.remote(remote_name)
+        return self._registry.remotes.get(remote_name)
 
 
 Conan = ConanAPIV1
