@@ -316,7 +316,7 @@ class ConanInstaller(object):
                     self._remote_manager.get_package(package_ref, package_folder,
                                                      node.binary_remote, output, self._recorder)
                     if node.binary_remote != node.remote:
-                        self._registry.set_ref(conan_ref, node.binary_remote.name)
+                        self._registry.refs.set(conan_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)

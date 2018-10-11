@@ -38,7 +38,8 @@ class ConanManager(object):
         self._graph_manager = graph_manager
         self._plugin_manager = plugin_manager
 
-    def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
+    def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder,
+                   profile, force):
 
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
@@ -80,7 +81,8 @@ class ConanManager(object):
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
         deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
-                                                          False, update, remote_name, self._recorder, workspace)
+                                                          False, update, remote_name, self._recorder,
+                                                          workspace)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
@@ -120,12 +122,13 @@ class ConanManager(object):
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(profile.dumps())
         result = self._graph_manager.load_graph(reference, create_reference, profile,
-                                                build_modes, False, update, remote_name, self._recorder,
-                                                None)
+                                                build_modes, False, update, remote_name,
+                                                self._recorder, None)
         deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s (test package)" % str(create_reference)) if create_reference else "PROJECT",
+            output = ScopedOutput(("%s (test package)" % str(create_reference))
+                                  if create_reference else "PROJECT",
                                   self._user_io.out)
             output.highlight("Installing %s" % reference)
         else:
@@ -176,7 +179,7 @@ class ConanManager(object):
             call_system_requirements(conanfile, output)
 
             if not create_reference and isinstance(reference, ConanFileReference):
-                # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
+                # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):

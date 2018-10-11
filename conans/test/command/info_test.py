@@ -236,20 +236,20 @@ class AConan(ConanFile):
 
         self.client.run("info . --only None")
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
-                          "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
+                          "Hello1/0.1@lasote/stable"], str(self.client.out).splitlines()[-3:])
         self.client.run("info . --only=date")
         lines = [(line if "date" not in line else "Date")
-                 for line in str(self.client.user_io.out).splitlines()]
+                 for line in str(self.client.out).splitlines()]
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date"], lines)
 
         self.client.run("info . --only=invalid", ignore_error=True)
-        self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertNotIn("with --path specified, allowed values:", self.client.user_io.out)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertNotIn("with --path specified, allowed values:", self.client.out)
 
         self.client.run("info . --paths --only=bad", ignore_error=True)
-        self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertIn("with --path specified, allowed values:", self.client.out)
 
     def test_cwd(self):
         self.client = TestClient()

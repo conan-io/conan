@@ -91,7 +91,7 @@ class Printer(object):
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
-                reg_remote = registry.get_recipe_remote(ref)
+                reg_remote = registry.refs.get(ref)
             except:
                 reg_remote = None
 
