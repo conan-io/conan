@@ -8,7 +8,7 @@ from conans.model.requires import Requirement
 from collections import namedtuple
 
 
-PythonRequire = namedtuple("PythonRequire", "conan_ref module path")
+PythonRequire = namedtuple("PythonRequire", "conan_ref module")
 
 
 class ConanPythonRequire(object):
@@ -43,7 +43,7 @@ class ConanPythonRequire(object):
                 module = imp.load_source(str(r).replace(".", "*"), path)
             finally:
                 sys.path.pop()
-            python_require = PythonRequire(reference, module, dirname)
+            python_require = PythonRequire(reference, module)
             self._cached_requires[require] = python_require
         self._requires.append(python_require)
         return python_require.module

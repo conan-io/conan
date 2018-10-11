@@ -135,7 +135,7 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
     origin_folder = os.path.dirname(conanfile_path)
-    _export(conanfile, origin_folder, exports_folder, output)
+    export_recipe(conanfile, origin_folder, exports_folder, output)
     export_source(conanfile, origin_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
@@ -218,7 +218,7 @@ def export_source(conanfile, origin_folder, destination_source_folder, output):
     copier.report(package_output)
 
 
-def _export(conanfile, origin_folder, destination_folder, output):
+def export_recipe(conanfile, origin_folder, destination_folder, output):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
 

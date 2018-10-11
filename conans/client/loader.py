@@ -102,7 +102,8 @@ class ConanFileLoader(object):
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
             tmp_settings = processed_profile._settings.copy()
-            if processed_profile._package_settings and conanfile.name in processed_profile._package_settings:
+            if (processed_profile._package_settings and
+                    conanfile.name in processed_profile._package_settings):
                 # Update the values, keeping old ones (confusing assign)
                 values_tuple = processed_profile._package_settings[conanfile.name]
                 tmp_settings.values = Values.from_list(values_tuple)
