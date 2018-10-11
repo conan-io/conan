@@ -265,3 +265,28 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
         self.assertIn("Hello1/0.1@user/testing: remote2", self.client.user_io.out)
+
+    def package_refs_test(self):
+
+        self.client.run("remote add_pref Hello/0.1@user/testing:555 remote0")
+        self.client.run("remote list_pref Hello/0.1@user/testing")
+        self.assertIn("Hello/0.1@user/testing:555: remote0", self.client.user_io.out)
+
+        self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote1")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote1", self.client.user_io.out)
+
+        self.client.run("remote remove_pref Hello1/0.1@user/testing:555")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertNotIn("Hello1/0.1@user/testing:555", self.client.user_io.out)
+
+        self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote0")
+        self.client.run("remote add_pref Hello1/0.1@user/testing:666 remote1")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote0", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)
+
+        self.client.run("remote update_pref Hello1/0.1@user/testing:555 remote2")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)

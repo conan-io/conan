@@ -85,14 +85,17 @@ class _Registry(object):
         self._filename = filename
         self._lockfile = lockfile
         self._output = output
-        self._remotes = None
+        # Cache json contents
+        self._contents = ""
 
     def _load(self):
-        contents = load(self._filename)
-        return load_registry(contents)
+        if not self._contents:
+            self._contents = load(self._filename)
+        return load_registry(self._contents)
 
     def _save(self, remotes, refs, prefs):
-        save(self._filename, dump_registry(remotes, refs, prefs))
+        self._contents = dump_registry(remotes, refs, prefs)
+        save(self._filename, self._contents)
 
 
 class _GenericReferencesRegistry(_Registry):
@@ -179,7 +182,7 @@ class _RemotesRegistry(_Registry):
         self._add_update(remote_name, url, verify_ssl, exists_function, insert)
 
     def remove(self, remote_name):
-        self._remotes = None  # invalidate cached remotes
+        self._contents = None  # invalidate cache
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
             if remote_name not in remotes:
@@ -195,7 +198,6 @@ class _RemotesRegistry(_Registry):
         self._add_update(remote_name, url, verify_ssl, exists_function, insert)
 
     def rename(self, remote_name, new_remote_name):
-        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
             if remote_name not in remotes:
@@ -211,14 +213,12 @@ class _RemotesRegistry(_Registry):
             self._save(remotes, refs, prefs)
 
     def define(self, remotes):
-        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             _, refs, prefs = self._load()
             refs = {k: v for k, v in refs.items() if v in remotes}
             self._save(remotes, refs, prefs)
 
     def _add_update(self, remote_name, url, verify_ssl, exists_function, insert=None):
-        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
             exists_function(remotes)
@@ -258,15 +258,13 @@ class _RemotesRegistry(_Registry):
 
     @property
     def _remote_dict(self):
-        if self._remotes is None:
-            with fasteners.InterProcessLock(self._lockfile, logger=logger):
-                remotes, _, _ = self._load()
-                self._remotes = OrderedDict([(ref, Remote(ref, remote_name, verify_ssl))
-                                             for ref, (remote_name, verify_ssl) in remotes.items()])
-        return self._remotes
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, _, _ = self._load()
+            ret = OrderedDict([(ref, Remote(ref, remote_name, verify_ssl))
+                               for ref, (remote_name, verify_ssl) in remotes.items()])
+            return ret
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
-        self._remotes = None  # invalidate cached remotes
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
             # Remove duplicates
