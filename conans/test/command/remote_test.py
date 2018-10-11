@@ -1,3 +1,4 @@
+import json
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
@@ -185,10 +186,22 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add my-remote3 http://someurl3 FALse")
         client.run("remote add my-remote4 http://someurl4 No")
         registry = load(client.client_cache.registry)
-        self.assertIn("my-remote http://someurl True", registry)
-        self.assertIn("my-remote2 http://someurl2 True", registry)
-        self.assertIn("my-remote3 http://someurl3 False", registry)
-        self.assertIn("my-remote4 http://someurl4 False", registry)
+        data = json.loads(registry)
+        self.assertEquals(data["remotes"][0]["name"], "my-remote")
+        self.assertEquals(data["remotes"][0]["url"], "http://someurl")
+        self.assertEquals(data["remotes"][0]["verify_ssl"], True)
+
+        self.assertEquals(data["remotes"][1]["name"], "my-remote2")
+        self.assertEquals(data["remotes"][1]["url"], "http://someurl2")
+        self.assertEquals(data["remotes"][1]["verify_ssl"], True)
+
+        self.assertEquals(data["remotes"][2]["name"], "my-remote3")
+        self.assertEquals(data["remotes"][2]["url"], "http://someurl3")
+        self.assertEquals(data["remotes"][2]["verify_ssl"], False)
+
+        self.assertEquals(data["remotes"][3]["name"], "my-remote4")
+        self.assertEquals(data["remotes"][3]["url"], "http://someurl4")
+        self.assertEquals(data["remotes"][3]["verify_ssl"], False)
 
     def verify_ssl_error_test(self):
         client = TestClient()
@@ -197,7 +210,9 @@ class RemoteTest(unittest.TestCase):
         self.assertTrue(error)
         self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
                       client.user_io.out)
-        self.assertEqual("", load(client.client_cache.registry))
+        data = json.loads(load(client.client_cache.registry))
+        self.assertEqual(data["remotes"], [])
+        self.assertEqual(data["references"], {})
 
     def errors_test(self):
         self.client.run("remote update origin url", ignore_error=True)

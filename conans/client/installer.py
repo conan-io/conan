@@ -58,7 +58,8 @@ class _ConanPackageBuilder(object):
         self._plugin_manager = plugin_manager
 
         new_id = build_id(self._conan_file)
-        self.build_reference = PackageReference(self._conan_ref, new_id) if new_id else package_reference
+        self.build_reference = PackageReference(self._conan_ref,
+                                                new_id) if new_id else package_reference
         self.build_folder = self._client_cache.build(self.build_reference,
                                                      self._conan_file.short_paths)
         self.package_folder = self._client_cache.package(self._package_reference,
@@ -72,9 +73,6 @@ class _ConanPackageBuilder(object):
             return
 
         # build_id is not caching the build folder, so actually rebuild the package
-        _handle_system_requirements(self._conan_file, self._package_reference,
-                                    self._client_cache, self._out)
-
         export_folder = self._client_cache.export(self._conan_ref)
         export_source_folder = self._client_cache.export_sources(self._conan_ref,
                                                                  self._conan_file.short_paths)
@@ -313,7 +311,7 @@ class ConanInstaller(object):
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
-        processed_package_references = set()
+        processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
                 conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -332,15 +330,16 @@ class ConanInstaller(object):
                 if workspace_package:
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
                 else:
-                    self._handle_node_cache(node, package_id, keep_build, processed_package_references)
+                    package_ref = PackageReference(conan_ref, package_id)
+                    _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
+                    self._handle_node_cache(node, package_ref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
 
-    def _handle_node_cache(self, node, package_id, keep_build, processed_package_references):
+    def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         output = ScopedOutput(str(conan_ref), self._out)
-        package_ref = PackageReference(conan_ref, package_id)
         package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):
@@ -350,9 +349,10 @@ class ConanInstaller(object):
                 if node.binary == BINARY_BUILD:
                     self._build_package(node, package_ref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    self._download_package(conan_file, package_ref, output, package_folder, node.binary_remote)
+                    self._remote_manager.get_package(package_ref, package_folder,
+                                                     node.binary_remote, output, self._recorder)
                     if node.binary_remote != node.remote:
-                        self._registry.set_ref(conan_ref, node.binary_remote.name)
+                        self._registry.refs.set(conan_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
@@ -390,11 +390,6 @@ class ConanInstaller(object):
         from conans.client.importer import run_imports
         copied_files = run_imports(conan_file, build_folder, output)
         report_copied_files(copied_files, output)
-
-    def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._remote_manager.get_package(package_reference, package_folder,
-                                         remote, output, self._recorder)
-        _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile

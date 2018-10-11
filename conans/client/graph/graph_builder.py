@@ -154,7 +154,7 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration
-        new_reqs, new_options = self._config_node(node, down_reqs, down_ref, down_options)
+        new_reqs, new_options = self._config_node(node, down_reqs, down_ref, down_options, aliased)
 
         self._resolve_deps(node, aliased, update, remote_name)
 
@@ -217,7 +217,7 @@ class DepsGraphBuilder(object):
                         return True
         return False
 
-    def _config_node(self, node, down_reqs, down_ref, down_options):
+    def _config_node(self, node, down_reqs, down_ref, down_options, aliased):
         """ update settings and option in the current ConanFile, computing actual
         requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
@@ -264,8 +264,12 @@ class DepsGraphBuilder(object):
                         conanfile.requirements()
 
                 new_options = conanfile.options.deps_package_values
-                new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref,
-                                                          down_ref)
+                if aliased:
+                    for req in conanfile.requires.values():
+                        req.conan_reference = aliased.get(req.conan_reference,
+                                                          req.conan_reference)
+                new_down_reqs = conanfile.requires.update(down_reqs, self._output,
+                                                          conanref, down_ref)
         except ConanExceptionInUserConanfileMethod:
             raise
         except ConanException as e:
