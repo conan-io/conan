@@ -130,6 +130,12 @@ class ActionRecorder(object):
                    "time": the_action.time}
             if isinstance(the_ref, ConanFileReference):
                 doc["dependency"] = not self.in_development_recipe(the_ref)
+                doc["name"] = the_ref.name
+                doc["version"] = the_ref.version
+                doc["user"] = the_ref.user
+                doc["channel"] = the_ref.channel
+                if the_ref.revision:
+                    doc["revision"] = the_ref.revision
             else:
                 doc["built"] = the_action.type == INSTALL_BUILT
 
