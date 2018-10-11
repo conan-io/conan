@@ -1,7 +1,6 @@
 import os
 import random
 import shlex
-import shutil
 import sys
 import threading
 import uuid
@@ -16,23 +15,29 @@ import tempfile
 
 import bottle
 import requests
+import shutil
 import six
+import threading
 import time
+import uuid
 from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client.client_cache import ClientCache
+from conans.client.client_cache import ClientCache, REGISTRY_JSON
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.plugin_manager import PluginManager
-from conans.client.remote_registry import RemoteRegistry
+from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools.win import get_cased_path
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.tools.scm import Git, SVN
 from conans.client.userio import UserIO
 from conans.client.tools.files import chdir
@@ -46,9 +51,6 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.client.tools.win import get_cased_path
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -443,22 +445,26 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        self.update_servers(servers)
+        self.servers = servers or {}
+        if servers is not False:  # Do not mess with registry remotes
+            self.update_servers()
+
         self.init_dynamic_vars()
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
-    def update_servers(self, servers):
-        self.servers = servers or {}
-        save(self.client_cache.registry, "")
+    def update_servers(self):
+
+        save(self.client_cache.registry, dump_registry({}, {}))
+
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
-                registry.add(name, server.fake_url)
+                registry.remotes.add(name, server.fake_url)
             else:
-                registry.add(name, server)
+                registry.remotes.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
@@ -501,7 +507,7 @@ class TestClient(object):
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-
+        self.client_cache = ClientCache(self.base_folder, self.storage_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
