@@ -10,6 +10,8 @@ DEFINES *= {deps.defines}
 QMAKE_CXXFLAGS *= {deps.cppflags}
 QMAKE_CFLAGS *= {deps.cflags}
 QMAKE_LFLAGS *= {deps.exelinkflags}
+QMAKE_LFLAGS *= {deps.sharedlinkflags}
+}
 """
 
 class QmakeSubDirsGenerator(Generator):
