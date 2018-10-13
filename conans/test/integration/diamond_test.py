@@ -109,6 +109,7 @@ class DiamondTester(object):
                 self.test_obj.assertIn("Conan: Using cmake global configuration", client.user_io.out)
                 self.test_obj.assertNotIn("Conan: Using cmake targets configuration", client.user_io.out)
         client.run("build .")
+        self.test_obj.fail("AAA")
         self._check_individual_deps(client)
 
         command = os.sep.join([".", "bin", "say_hello"])

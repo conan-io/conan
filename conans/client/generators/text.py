@@ -127,6 +127,8 @@ class TXTGenerator(Generator):
                 if pkg:
                     result.update(cpp_info, pkg)
 
+            from pprint import pprint
+            pprint(result.libs)
             return result
 
         except Exception as e:
