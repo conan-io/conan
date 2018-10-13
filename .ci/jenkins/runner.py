@@ -38,6 +38,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     if num_cores <= 1:
         multiprocess = ""
 
+    multiprocess = ""  # TODO: Try running Jenkins without processes
+
     pip_installs = "pip install -r conans/requirements.txt && " \
                    "pip install -r conans/requirements_dev.txt && " \
                    "pip install -r conans/requirements_server.txt && "
