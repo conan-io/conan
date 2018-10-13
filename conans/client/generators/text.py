@@ -125,10 +125,17 @@ class TXTGenerator(Generator):
                         setattr(item_to_apply, key, value)
 
                 if pkg:
-                    result.update(cpp_info, pkg)
+                    # FIXME: Here we should use `result.update(cpp_info, pkg)`, but then there will
+                    # FIXME:   be a problem with the order or dependent libraries in linking stage.
+                    # FIXME:   The problem is originated in conanbuildinfo.txt because the
+                    # FIXME:   dependencies of the dependencies are not listed, so the final order
+                    # FIXME:   of libraries is incorrect.
+                    # FIXME:
+                    # FIXME:   The workaround is to access the private member to avoid the `update`
+                    # FIXME:     behavior.
+                    # result.update(cpp_info, pkg)
+                    result._dependencies[pkg] = cpp_info
 
-            from pprint import pprint
-            pprint(result.libs)
             return result
 
         except Exception as e:
