@@ -144,7 +144,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo yum update")
+            self.assertEquals(runner.command_called, "sudo yum update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
