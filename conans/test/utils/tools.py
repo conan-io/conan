@@ -338,7 +338,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             os.makedirs(tmp)
         return tmp
 
-    def create_project(self, files, rel_project_path=None, commit_msg='default commit message', delete_checkout=True):
+    def create_project(self, files, rel_project_path=None, commit_msg='default commit message', delete_checkout=True, needs_lock=False):
         tmp_dir = self.gimme_tmp()
         try:
             rel_project_path = rel_project_path or str(uuid.uuid4())
@@ -349,6 +349,8 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             save_files(tmp_project_dir, files)
             with chdir(tmp_project_dir):
                 subprocess.check_output("svn add .", shell=True)
+                if needs_lock:
+                    subprocess.check_output('svn propset svn:needs-lock * . -R', shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
                 rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
             project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))

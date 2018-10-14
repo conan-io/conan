@@ -561,6 +561,35 @@ class ConanLib(ConanFile):
                       str(self.client.out).lower())
         self.assertIn("My file is copied", self.client.out)
 
+    def test_needs_locked_svn(self):
+        conanfile = base_svn.format(directory="None", url="auto", revision="auto")
+        project_url, rev = self.create_project(files={"conanfile.py": conanfile, "myfile.txt": "My file is copied"}, needs_lock=True)
+        project_url = project_url.replace(" ", "%20")
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=self.client.current_folder))
+
+        curdir = self.client.current_folder.replace("\\", "/")
+        # Create the package, will copy the sources from the local folder
+        self.client.run("create . user/channel")
+        sources_dir = self.client.client_cache.scm_folder(self.reference)
+        self.assertEquals(load(sources_dir), curdir)
+        self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
+            str(self.client.out).lower())
+        self.assertIn("Revision deduced by 'auto'", self.client.out)
+        self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
+        self.assertIn("My file is copied", self.client.out)
+
+        # Export again but now with absolute reference, so no pointer file is created nor kept
+        svn = SVN(curdir)
+        self.client.save({"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
+        self.client.run("create . user/channel", ignore_error=False)
+        sources_dir = self.client.client_cache.scm_folder(self.reference)
+        self.assertFalse(os.path.exists(sources_dir))
+        self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)
+        self.assertNotIn("Revision deduced by 'auto'", self.client.out)
+        self.assertIn("Getting sources from url: '{}'".format(project_url).lower(),
+                      str(self.client.out).lower())
+        self.assertIn("My file is copied", self.client.out)
+        
     def test_auto_subfolder(self):
         conanfile = base_svn.replace('"revision": "{revision}"',
                                      '"revision": "{revision}",\n        '
