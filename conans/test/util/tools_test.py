@@ -212,7 +212,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEquals(runner.command_called, "yum update")
+            self.assertEquals(runner.command_called, "yum update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
@@ -393,7 +393,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if os_info.with_apt:
                 update_command = "sudo apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo yum update"
+                update_command = "sudo yum update -y"
             elif os_info.with_zypper:
                 update_command = "sudo zypper --non-interactive ref"
             elif os_info.with_pacman:
