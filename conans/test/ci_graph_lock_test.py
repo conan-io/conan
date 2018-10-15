@@ -31,18 +31,14 @@ class Pkg(ConanFile):
         lock_file = os.path.join(client.current_folder, "serial_graph.json")
         print "PATH: ", lock_file
         content = load(lock_file)
-        print "TYPE ", type(content), len(content)
         print "LCOK FILE!!!!!\n", str(content)
-        lock_graph = json.loads(content)
-        print "LCOK GRAPH!!!!!\n", str(lock_graph)
-        build_order = lock_graph["build_order"]
-        print "BUILD ORDER!!!\n", build_order
+        build_order_file = os.path.join(client.current_folder, "build_order.json")
+        print "PATH: ", build_order_file
+        content = load(build_order_file)
+        print "LCOK FILE!!!!!\n", str(content)
+        build_order = json.loads(content)
 
         for level in build_order:
             for node in level:
-                graph_node = lock_graph["nodes"][node]
-                ref = graph_node["conan_ref"]
-                ref = ConanFileReference.loads(ref)
-                print "++++++++++++++++ REF ", ref
                 client.run("lock serial_graph.json --lock-id=%s" % (node))
                 print client.out

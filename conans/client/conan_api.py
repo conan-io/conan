@@ -49,20 +49,16 @@ from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
 from conans.model.workspace import Workspace
 from conans.client.graph.graph_manager import GraphManager
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
-import time
-from conans.client.serial import serial_graph, unserial_graph
-import json
-from conans.model.env_info import EnvValues
 from conans.client.installer import ConanInstaller
-import pprint
-from conans.client.graph.graph import BINARY_BUILD
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph import build_mode
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph_builder import GraphLock, DepsGraphLockBuilder
+from conans.client import settings_preprocessor
 
 
 default_manifest_folder = '.conan_manifests'
@@ -456,27 +452,38 @@ class ConanAPIV1(object):
                                                                   False, remote_name, recorder, workspace=None)
 
         # write serialized graph
-        serialized_graph = serial_graph(deps_graph)
-        return serialized_graph
-    
+        build_order = deps_graph.build_order_ids("ALL")
+        print "BUILD ORDER ", build_order
+        graph_lock = GraphLock(deps_graph)
+        return graph_lock, build_order
+
     @api_method
-    def install_lock(self, lock_graph, node_id):
+    def install_lock(self, profile, lock_graph, node_id, remote_name=None):
 
         try:
             recorder = ActionRecorder()
-            deps_graph = unserial_graph(lock_graph, EnvValues(), None,
-                                        self._user_io.out, self._proxy, self._loader,
-                                        scoped_output=self._user_io.out,
-                                        id_=node_id)
+            graph_lock = GraphLock.loads(lock_graph)
+
+            if profile is None:
+                profile = self._client_cache.default_profile  # Ensures a default profile creating
+            else:
+                profile = self._client_cache.profile(profile)
+            cache_settings = self._client_cache.settings.copy()
+            cache_settings.values = profile.settings_values
+            settings_preprocessor.preprocess(cache_settings)
+            processed_profile = ProcessedProfile(cache_settings, profile)
+            builder = DepsGraphLockBuilder(self._proxy, self._user_io.out, self._loader, recorder)
+            deps_graph = builder.load_graph(remote_name, processed_profile, node_id, graph_lock)
+
             binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._user_io.out,
                                                       self._remote_manager, self._registry, workspace=None)
-            build_mode = BuildMode(["missing"], self._user_io.out)
+            build_mode = BuildMode([], self._user_io.out)
             binaries_analyzer.evaluate_graph(deps_graph, build_mode, update=False, remote_name=None)
 
             installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
                                        self._registry, recorder=recorder, workspace=None,
                                        plugin_manager=self._plugin_manager)
-            #installer.unserial(deps_graph)
+
             print "INSTALLING ", deps_graph.nodes
             installer.install(deps_graph)
             return recorder.get_info()

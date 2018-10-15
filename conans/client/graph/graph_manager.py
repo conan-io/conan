@@ -16,11 +16,6 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
-import json
-from conans.client.installer import ConanInstaller
-from conans.client.recorder.action_recorder import ActionRecorder
-import time
-from conans.client.serial import unserial_graph
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -95,7 +90,6 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
                    recorder, workspace):
-        t1 = time.time()
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -136,10 +130,8 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
-        deps_graph.root.path = root_path
 
         build_mode.report_matches()
-        print "GraphManager.load_graph() ", time.time() - t1
         return deps_graph, conanfile, cache_settings
 
     @staticmethod

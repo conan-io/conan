@@ -9,72 +9,131 @@ from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.model.workspace import WORKSPACE_FILE
+from collections import namedtuple
+import json
+from conans.model.options import OptionsValues
+
+
+GraphLockDependency = namedtuple("GraphLockDependency", "node_id private")
+
+
+class GraphLock(object):
+
+    def __init__(self, graph):
+        self._nodes = {}  # id: conan_ref, binaryID, options_values, dependencies
+        for node in graph.nodes:
+            id_ = str(id(node))
+            conan_ref = node.conan_ref
+            binary_id = node.conanfile.info.package_id()
+            options_values = node.conanfile.options.values
+            dependencies = []
+            for edge in node.dependencies:
+                dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private))
+
+            self._nodes[id_] = conan_ref, binary_id, options_values, dependencies
+
+    def conan_ref(self, node_id):
+        return self._nodes[node_id][0]
+
+    def options_values(self, node_id):
+        return self._nodes[node_id][2]
+
+    def dependencies(self, node_id):
+        return self._nodes[node_id][3]
+
+    @staticmethod
+    def loads(text):
+        graph_lock = GraphLock(DepsGraph())
+        graph_json = json.loads(text)
+        for id_, graph_node in graph_json.items():
+            try:
+                conan_ref = ConanFileReference.loads(graph_node["conan_ref"])
+            except ConanException:
+                conan_ref = None
+            binary_id = graph_node["binary_id"]
+            options_values = OptionsValues.loads(graph_node["options"])
+            dependencies = [GraphLockDependency(n[0], n[1])
+                            for n in graph_node["dependencies"]]
+            node = conan_ref, binary_id, options_values, dependencies
+            graph_lock._nodes[id_] = node
+        return graph_lock
+
+    def dumps(self):
+        result = {}
+        for id_, node in self._nodes.items():
+            result[id_] = {"conan_ref": str(node[0]),
+                           "binary_id": node[1],
+                           "options": node[2].dumps(),
+                           "dependencies": node[3]}
+        return json.dumps(result, indent=True)
 
 
 class DepsGraphLockBuilder(object):
-    def __init__(self, proxy, output, loader, resolver, workspace, recorder):
+    def __init__(self, proxy, output, loader, recorder):
         self._proxy = proxy
         self._output = output
         self._loader = loader
-        self._workspace = workspace
         self._recorder = recorder
 
-    def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile,
-                   graph_lock):
+    def load_graph(self, remote_name, processed_profile, node_id, graph_lock):
         """graph_lock: #NodeId: Pkg/version@user/channel#RR:#ID#BR
         """
-        check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node = Node(None, conanfile)
+        current_node_id = node_id  # FIXME!!!
+        reference = graph_lock.conan_ref(node_id)
+        root_node = self._create_new_node_simple(reference, processed_profile,
+                                                 remote_name)
         dep_graph.add_node(root_node)
         # enter recursive computation
-        self._load_deps(root_node, dep_graph, check_updates, update, remote_name,
-                        processed_profile, graph_lock)
-        dep_graph.compute_package_ids_lock()
+        visited_deps = {}
+        self._load_deps(root_node, dep_graph, visited_deps, remote_name, processed_profile,
+                        graph_lock, current_node_id)
+        dep_graph.compute_package_ids()
+        # TODO: Implement BinaryID check against graph_lock
         return dep_graph
 
-    def _load_deps(self, node, down_ref, down_options, dep_graph, check_updates, update,
-                   remote_name, processed_profile, graph_lock):
-        # basic node configuration
-        new_options = self._config_node(node, down_ref, down_options)
+    def _load_deps(self, node, dep_graph, visited_deps, remote_name, processed_profile,
+                   graph_lock, current_node_id):
+
+        options_values = graph_lock.options_values(current_node_id)
+        self._config_node(node, options_values)
 
         # Defining explicitly the requires
         requires = Requirements()
-        for dependency, sub_graph_lock in graph_lock.dependencies():
-            requires.add(dependency.ref, dependency.private)
+        for dependency in graph_lock.dependencies(current_node_id):
+            dep_ref = graph_lock.conan_ref(dependency.node_id)
+            print "DEP REF ", dep_ref, type(dep_ref)
+            requires.add(str(dep_ref), dependency.private)
 
-            previous = public_deps.get(name)
+            previous = visited_deps.get(dep_ref)
             if not previous:  # new node, must be added and expanded
-                new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
-                                                 check_updates, update, remote_name,
-                                                 processed_profile)
+                new_node = self._create_new_node(node, dep_graph, dep_ref,
+                                                 dependency.private,
+                                                 remote_name, processed_profile)
                 # RECURSION!
-                self._load_deps(new_node, dep_graph, new_public_deps, node.conan_ref,
-                                new_options, check_updates, update,
-                                remote_name, processed_profile)
+                self._load_deps(new_node, dep_graph, visited_deps, remote_name, processed_profile,
+                                graph_lock, dependency.node_id)
+                visited_deps[dep_ref] = new_node
             else:
-                dep_graph.add_edge(node, previous_node)
-        
+                dep_graph.add_edge(node, previous)
+
         # Just in case someone is checking it
         node.conanfile.requires = requires
 
-    def _config_node(self, node, down_ref, down_options):
+    def _config_node(self, node, options_values):
         try:
             conanfile, conanref = node.conanfile, node.conan_ref
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
-                conanfile.options.propagate_upstream(down_options, down_ref, conanref)
-
+                conanfile.options.values = options_values
                 with conanfile_exception_formatter(str(conanfile), "configure"):
                     conanfile.configure()
 
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
-
-                new_options = conanfile.options.deps_package_values
         except ConanExceptionInUserConanfileMethod:
             raise
         except ConanException as e:
@@ -82,7 +141,30 @@ class DepsGraphLockBuilder(object):
         except Exception as e:
             raise ConanException(e)
 
-        return new_options
+    def _create_new_node(self, current_node, dep_graph, reference, private,
+                         remote_name, processed_profile):
+        new_node = self._create_new_node_simple(reference, processed_profile, remote_name)
+        dep_graph.add_node(new_node)
+        dep_graph.add_edge(current_node, new_node, private)
+        return new_node
+
+    def _create_new_node_simple(self, reference, processed_profile, remote_name):
+        try:
+            result = self._proxy.get_recipe(reference,
+                                            False, False, remote_name, self._recorder)
+        except ConanException as e:
+            self._output.error("Failed requirement '%s'" % (reference,))
+            raise e
+        conanfile_path, recipe_status, remote, _ = result
+
+        output = ScopedOutput(str(reference), self._output)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
+                                                    reference=reference)
+
+        new_node = Node(reference, dep_conanfile)
+        new_node.recipe = recipe_status
+        new_node.remote = remote
+        return new_node
 
 
 class DepsGraphBuilder(object):

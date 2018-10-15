@@ -28,7 +28,7 @@ from conans.util.tracer import log_package_built,\
     log_package_got_from_local_cache
 from conans.client.tools.env import pythonpath
 from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING,\
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE, BINARY_WORKSPACE
+    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
 from conans.client.file_copier import report_copied_files
 
 
@@ -264,49 +264,13 @@ class ConanInstaller(object):
         self._workspace = workspace
         self._plugin_manager = plugin_manager
 
-    def unserial(self, deps_graph):
-        nodes_by_level = deps_graph.by_levels()
-        #root_level = nodes_by_level.pop()
-        #root_node = root_level[0]
-        inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
-        time_propagate = 0
-        time_call = 0
-
-        for level in nodes_by_level:
-            for node in level:
-                conan_ref, conan_file = node.conan_ref, node.conanfile
-                output = ScopedOutput(str(conan_ref), self._out)
-                package_id = conan_file.info.package_id()
-                package_ref = PackageReference(conan_ref, package_id)
-
-                t1 = time.time()
-                self._propagate_info(node, inverse_levels, deps_graph, output)
-                time_propagate += (time.time() - t1)
-                if node.binary == BINARY_SKIP:  # Privates not necessary
-                    continue
-
-                if node.binary == BINARY_WORKSPACE:
-                    raise Exception("NOT MANAGING WORKSPACES YET")
-                else:
-                    package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
-                    t1 = time.time()
-                    self._call_package_info(conan_file, package_folder)
-                    time_call += (time.time() - t1)
-
-        # Finally, propagate information to root node (conan_ref=None)
-        #self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
-        print "TIME PROPAGETE ", time_propagate
-        print "TIME CALL ", time_call
-
     def install(self, deps_graph, keep_build=False):
         # order by levels and separate the root node (conan_ref=None) from the rest
-        t1 = time.time()
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._build(nodes_by_level, deps_graph, keep_build, root_node)
-        print "INSTALLER.install() ", time.time() - t1
 
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}

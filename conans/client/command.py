@@ -569,11 +569,11 @@ class Command(object):
         args = parser.parse_args(*args)
 
         if args.lock_id:
-            graph = json.loads(load(args.path_or_reference))
-            self._conan.install_lock(graph, args.lock_id)
+            graph = load(args.path_or_reference)
+            self._conan.install_lock(args.profile, graph, args.lock_id, remote_name=args.remote)
             return
 
-        serialized_graph = self._conan.lock(args.path_or_reference,
+        graph_lock, build_order = self._conan.lock(args.path_or_reference,
                                     remote_name=args.remote,
                                     settings=args.settings,
                                     options=args.options,
@@ -581,9 +581,11 @@ class Command(object):
                                     profile_name=args.profile,
                                     update=args.update,
                                     build=args.build)
-        serialized_graph_str = json.dumps(serialized_graph, indent=True)
+        serialized_graph_str = graph_lock.dumps()
         serialized_graph_path = "serial_graph.json"
         save(serialized_graph_path, serialized_graph_str)
+        build_order_path = "build_order.json"
+        save(build_order_path, json.dumps(build_order))
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method.

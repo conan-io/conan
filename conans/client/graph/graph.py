@@ -229,18 +229,6 @@ class DepsGraph(object):
             current = new_current
         return closure
 
-    def prune_subgraph(self, node):
-        """ eliminate the part of the graph that is not a transitive dependency to
-        node
-        """
-        closure = self.full_closure(node, private=True)
-        to_remove = [n for n in self.nodes if n not in closure and n is not node]
-        for n in to_remove:
-            for neigh in n.neighbors():
-                edges = [e for e in neigh.dependants if e.src == n]
-                neigh.dependants.difference_update(edges)
-            self.nodes.remove(n)
-
     def collapse_graph(self):
         """Computes and return a new graph, that doesn't have duplicated nodes with the same
         PackageReference. This is the case for build_requires and private requirements
