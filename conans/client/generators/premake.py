@@ -1,5 +1,4 @@
 from conans.model import Generator
-from conans import ConanFile
 
 
 class PremakeDeps(object):
@@ -51,18 +50,3 @@ class PremakeGenerator(Generator):
             sections.append(dep_flags)
 
         return "\n".join(sections)
-
-
-class MyCustomGeneratorPackage(ConanFile):
-    name = "PremakeGen"
-    version = "0.1"
-    url = "https://github.com/memsharded/conan-premake"
-    license = "MIT"
-
-    def build(self):
-        pass
-
-    def package_info(self):
-        self.cpp_info.includedirs = []
-        self.cpp_info.libdirs = []
-        self.cpp_info.bindirs = []
