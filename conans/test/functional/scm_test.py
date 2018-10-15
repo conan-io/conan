@@ -562,11 +562,11 @@ class ConanLib(ConanFile):
                       str(self.client.out).lower())
         self.assertIn("My file is copied", self.client.out)
 
-    def test_needs_locked_svn(self):
+    def test_with_locked_svn(self):
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
         project_url, rev = self.create_project(files={"conanfile.py": conanfile,
                                                       "myfile.txt": "My file is copied"},
-                                               needs_lock=True)
+                                               lock_repo=True)
         project_url = project_url.replace(" ", "%20")
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=self.client.current_folder))
 
