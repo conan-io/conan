@@ -474,7 +474,8 @@ class ConanAPIV1(object):
             binaries_analyzer.evaluate_graph(deps_graph, build_mode, update=False, remote_name=None)
 
             installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
-                                       self._registry, recorder=recorder, workspace=None)
+                                       self._registry, recorder=recorder, workspace=None,
+                                       plugin_manager=self._plugin_manager)
             #installer.unserial(deps_graph)
             print "INSTALLING ", deps_graph.nodes
             installer.install(deps_graph)

@@ -126,7 +126,7 @@ class ConanFile(object):
         # Keys are the package names, and the values a dict with the vars
         self.deps_user_info = DepsUserInfo()
         
-        self._env_values = EnvValues()
+        self._conan_env_values = EnvValues()
 
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):

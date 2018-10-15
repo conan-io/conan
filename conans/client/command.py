@@ -581,7 +581,7 @@ class Command(object):
                                     profile_name=args.profile,
                                     update=args.update,
                                     build=args.build)
-        serialized_graph_str = json.dumps(serialized_graph)
+        serialized_graph_str = json.dumps(serialized_graph, indent=True)
         serialized_graph_path = "serial_graph.json"
         save(serialized_graph_path, serialized_graph_str)
 
