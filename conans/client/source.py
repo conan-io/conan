@@ -68,7 +68,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 os.symlink(linkto, dst_file)
             else:
                 if os.path.isfile(dst_file) and not os.access(dst_file, os.W_OK):
-                    os.chmod(dst_file, stat.S_IWRITE)
+                    os.chmod(dst_file, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
                 shutil.copy2(src_file, dst_file)
 
 
