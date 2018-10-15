@@ -140,7 +140,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
-    save(conanfile_path, '\n'.join(headers) + '\n' + content)
+    content = content if not headers else '\n'.join(headers) + '\n' + content
+    save(conanfile_path, content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
