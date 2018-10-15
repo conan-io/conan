@@ -5,13 +5,15 @@ import os
 import platform
 import unittest
 import uuid
+import shutil
+import subprocess
 
 from collections import namedtuple
 
 import six
 from mock.mock import patch, mock_open
 from six import StringIO
-from six.moves.urllib.parse import unquote
+from six.moves.urllib.parse import quote
 
 from conans.client.client_cache import CONAN_CONF
 
@@ -1842,8 +1844,75 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         svn.run('commit -m "up version"')
         self.assertFalse(svn.is_pristine())
 
+    def test_missing_remote(self):
+        # TODO: Cannot reach remote, do we want to handle this issue?
+        repo_url = self.gimme_tmp()
+        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        project_url = SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
 
-class SVNToolTestsPristineWithExternals(SVNLocalRepoTestCase):
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        self.assertTrue(svn.is_pristine())
+
+        shutil.rmtree(repo_url)
+        with self.assertRaisesRegex(subprocess.CalledProcessError, "non-zero exit status 1"):
+            self.assertFalse(svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
+
+    def _propset_cmd(self, relpath, rev, url):
+        return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
+
+    def setUp(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, rev = self.create_project(files={'nestedfile': "contents"})
+
+        self.svn = SVN(folder=self.gimme_tmp())
+        self.svn.checkout(url=project_url)
+        self.svn.run(self._propset_cmd("subrepo_nestedfile", rev, project2_url + '/nestedfile'))
+        self.svn.run('commit -m "add external"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
+
+    def test_modified_external(self):
+        with open(os.path.join(self.svn.folder, "subrepo_nestedfile"), "a") as f:
+            f.write("cosass")
+        self.assertFalse(self.svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
+
+    def _propset_cmd(self, relpath, url):
+        return 'propset svn:externals "{} {}" .'.format(relpath, url)
+
+    def setUp(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, _ = self.create_project(files={'nestedfile': "contents"})
+
+        self.svn = SVN(folder=self.gimme_tmp())
+        self.svn.checkout(url=project_url)
+        self.svn.run(self._propset_cmd("subrepo", project2_url))
+        self.svn.run('commit -m "add external"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
+
+        self.svn2 = SVN(folder=self.gimme_tmp())
+        self.svn2.checkout(url=project2_url)
+        self.assertTrue(self.svn.is_pristine())
+
+    def test_modified_external(self):
+        with open(os.path.join(self.svn2.folder, "nestedfile"), "a") as f:
+            f.write("cosass")
+        self.svn2.run('commit -m "another"')
+        self.svn2.update()
+        self.assertTrue(self.svn2.is_pristine())
+
+        # Known: without fixed external, it won't be pristine if there is something new in remote.
+        self.assertFalse(self.svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
         return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
