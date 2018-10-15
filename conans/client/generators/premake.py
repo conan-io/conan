@@ -1,6 +1,7 @@
 from conans.model import Generator
 from conans import ConanFile
 
+
 class PremakeDeps(object):
     def __init__(self, deps_cpp_info):
         self.include_paths = ",\n".join('"%s"' % p.replace("\\", "/")
@@ -17,6 +18,7 @@ class PremakeDeps(object):
         self.exelinkflags = ", ".join('"%s"' % p for p in deps_cpp_info.exelinkflags)
 
         self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
+
 
 class PremakeGenerator(Generator):
     @property
