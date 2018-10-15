@@ -1855,7 +1855,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertTrue(svn.is_pristine())
 
         shutil.rmtree(repo_url)
-        with self.assertRaisesRegex(subprocess.CalledProcessError, "non-zero exit status 1"):
+        with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
             self.assertFalse(svn.is_pristine())
 
 
