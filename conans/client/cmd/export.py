@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+import six
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -13,7 +14,6 @@ from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
 from conans.search.search import search_recipes
-from conans.client.plugin_manager import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -99,6 +99,19 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
+    lines = content.splitlines(False)
+    headers = []
+
+    if six.PY2:
+        # Workaround for https://bugs.python.org/issue22221
+        lines_without_headers = []
+        for line in lines:
+            if not lines_without_headers and line.startswith("#"):
+                headers.append(line.strip())
+            else:
+                lines_without_headers.append(line)
+        content = '\n'.join(lines_without_headers)
+
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
@@ -127,7 +140,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
-    save(conanfile_path, content)
+    save(conanfile_path, '\n'.join(headers) + '\n' + content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
