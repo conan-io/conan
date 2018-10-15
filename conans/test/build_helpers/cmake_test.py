@@ -1032,7 +1032,7 @@ build_type: [ Release]
                               "CMAKE_INSTALL_LIBDIR": "lib",
                               "CMAKE_INSTALL_INCLUDEDIR": "include",
                               "CMAKE_INSTALL_OLDINCLUDEDIR": "include",
-                              "CMAKE_INSTALL_DATAROOTDIR": "res"}
+                              "CMAKE_INSTALL_DATAROOTDIR": "share"}
 
         # Without package_folder
         cmake = CMake(conanfile)

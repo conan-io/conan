@@ -9,7 +9,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 build_type_flags, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_RES
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_SHARE
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
@@ -137,7 +137,7 @@ class AutoToolsBuildEnvironment(object):
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
                        [os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
-                                       for f in pkg_config_paths)]}
+                                        for f in pkg_config_paths)]}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
@@ -152,13 +152,13 @@ class AutoToolsBuildEnvironment(object):
             elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
-            all_flags = ["bindir", "sbin", "libexec", "libdir", "includedir", "oldincludedir",
+            all_flags = ["bindir", "sbindir", "libexecdir", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]
             help_output = self._configure_help_output(configure_dir)
             available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
 
             if use_default_install_dirs:
-                for varname in ["bindir", "sbin", "libexec"]:
+                for varname in ["bindir", "sbindir", "libexecdir"]:
                     if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
                 if self._valid_configure_flag("libdir", args, available_flags):
@@ -167,7 +167,7 @@ class AutoToolsBuildEnvironment(object):
                     if self._valid_configure_flag(varname, args, available_flags):
                         args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
                 if self._valid_configure_flag("datarootdir", args, available_flags):
-                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_RES)
+                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_SHARE)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
