@@ -1,5 +1,6 @@
 import json
 import os
+import stat
 import unittest
 from collections import namedtuple
 
@@ -563,7 +564,8 @@ class ConanLib(ConanFile):
 
     def test_needs_locked_svn(self):
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
-        project_url, rev = self.create_project(files={"conanfile.py": conanfile, "myfile.txt": "My file is copied"}, needs_lock=True)
+        project_url, rev = self.create_project(files={"conanfile.py": conanfile, "myfile.txt": "My file is copied"},
+                                               needs_lock=True)
         project_url = project_url.replace(" ", "%20")
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=self.client.current_folder))
 
@@ -580,6 +582,8 @@ class ConanLib(ConanFile):
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         svn = SVN(curdir)
+        if not os.access(os.path.join(curdir, "conanfile.py"), os.W_OK):
+            os.chmod(os.path.join(curdir, "conanfile.py"), stat.S_IWRITE)
         self.client.save({"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
         self.client.run("create . user/channel", ignore_error=False)
         sources_dir = self.client.client_cache.scm_folder(self.reference)
