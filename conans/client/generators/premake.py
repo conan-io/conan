@@ -18,7 +18,7 @@ class PremakeDeps(object):
 
         self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
 
-class Premake(Generator):
+class PremakeGenerator(Generator):
     @property
     def filename(self):
         return "conanpremake.lua"
