@@ -11,7 +11,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
 
     assert(isinstance(reference, ConanFileReference))
     output = ScopedOutput(str(reference), out)
-    remote = registry.remote(remote_name) if remote_name else registry.default_remote
+    remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
     package = remote_manager.search_recipes(remote, reference, None)
     if not package:  # Search the reference first, and raise if it doesn't exist
         raise ConanException("'%s' not found in remote" % str(reference))
@@ -19,7 +19,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     plugin_manager.execute("pre_download", reference=reference, remote=remote)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
-    registry.set_ref(reference, remote.name)
+    registry.refs.set(reference, remote.name)
     conan_file_path = client_cache.conanfile(reference)
     conanfile = loader.load_class(conan_file_path)
 
