@@ -562,10 +562,11 @@ class ConanLib(ConanFile):
                       str(self.client.out).lower())
         self.assertIn("My file is copied", self.client.out)
 
-    def test_needs_locked_svn(self):
+    def test_with_locked_svn(self):
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
-        project_url, rev = self.create_project(files={"conanfile.py": conanfile, "myfile.txt": "My file is copied"},
-                                               needs_lock=True)
+        project_url, rev = self.create_project(files={"conanfile.py": conanfile,
+                                                      "myfile.txt": "My file is copied"},
+                                               lock_repo=True)
         project_url = project_url.replace(" ", "%20")
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=self.client.current_folder))
 
@@ -575,7 +576,7 @@ class ConanLib(ConanFile):
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertEquals(load(sources_dir), curdir)
         self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
-            str(self.client.out).lower())
+                      str(self.client.out).lower())
         self.assertIn("Revision deduced by 'auto'", self.client.out)
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
@@ -583,7 +584,7 @@ class ConanLib(ConanFile):
         # Export again but now with absolute reference, so no pointer file is created nor kept
         svn = SVN(curdir)
         if not os.access(os.path.join(curdir, "conanfile.py"), os.W_OK):
-            os.chmod(os.path.join(curdir, "conanfile.py"), stat.S_IWRITE)
+            os.chmod(os.path.join(curdir, "conanfile.py"), stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
         self.client.save({"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
         self.client.run("create . user/channel", ignore_error=False)
         sources_dir = self.client.client_cache.scm_folder(self.reference)
