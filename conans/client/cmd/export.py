@@ -99,12 +99,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
-    lines = content.splitlines(False)
     headers = []
 
     if six.PY2:
         # Workaround for https://bugs.python.org/issue22221
         lines_without_headers = []
+        lines = content.splitlines(False)
         for line in lines:
             if not lines_without_headers and line.startswith("#"):
                 headers.append(line.strip())
