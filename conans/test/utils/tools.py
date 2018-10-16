@@ -350,7 +350,13 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             with chdir(tmp_project_dir):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-                rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+                    rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                else:
+                    import xml.etree.ElementTree as ET
+                    output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                    root = ET.fromstring(output)
+                    rev = root.findall("./entry")[0].get("revision")
             project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
             return project_url, rev
         finally:

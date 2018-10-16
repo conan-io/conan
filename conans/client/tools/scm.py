@@ -170,7 +170,7 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-    API_CHANGE_VERSION = Version("1.10")  # CLI changes in 1.9.x
+    API_CHANGE_VERSION = Version("1.8")  # CLI changes in 1.8
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
@@ -221,10 +221,12 @@ class SVN(SCMBase):
             elif item == 'last-changed-revision':
                 return root.findall("./entry/commit")[0].get("revision")
             elif item == 'relative-url':
-                return root.findall("./entry/relative-url")[0].text
-            else:
-                raise ConanException("Retrieval of item '{}' not implemented for SVN<{}".format(
-                    item, SVN.API_CHANGE_VERSION))
+                root_url = root.findall("./entry/repository/root")[0].text
+                url = self._show_item(item='url', target=target)
+                if url.startswith(root_url):
+                    return url[len(root_url):]
+            raise ConanException("Retrieval of item '{}' not implemented for SVN<{}".format(
+                item, SVN.API_CHANGE_VERSION))
 
     def checkout(self, url, revision="HEAD"):
         output = ""
@@ -270,16 +272,23 @@ class SVN(SCMBase):
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
-        output = self.run("status -u -r {}".format(self.get_revision()))
-        offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
+        if self.version >= SVN.API_CHANGE_VERSION:
+            output = self.run("status -u -r {}".format(self.get_revision()))
+            offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
 
-        for item in output.splitlines()[:-1]:
-            if item[0] == '?':  # Untracked file
-                continue
-            if any(item[i] != ' ' for i in offending_columns):
-                return False
+            for item in output.splitlines()[:-1]:
+                if item[0] == '?':  # Untracked file
+                    continue
+                if any(item[i] != ' ' for i in offending_columns):
+                    return False
 
-        return True
+            return True
+        else:
+            import warnings
+            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
+                          "returning not-pristine always because it cannot compare with"
+                          "checkout version.".format(self.version, SVN.API_CHANGE_VERSION))
+            return False
 
     def get_revision(self):
         return self._show_item('revision')

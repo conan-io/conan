@@ -1624,8 +1624,9 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         self.assertFalse(svn.is_pristine())
         svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
-        self.assertTrue(svn.is_pristine())
-        # self.assertFalse(os.path.exists(new_file))
+        if svn.version >= SVN.API_CHANGE_VERSION:  # SVN::is_pristine returns always False.
+            self.assertTrue(svn.is_pristine())
+            # self.assertFalse(os.path.exists(new_file))
 
     def test_excluded_files(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
@@ -1774,6 +1775,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
+@unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def test_checkout(self):
