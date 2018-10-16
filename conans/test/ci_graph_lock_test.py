@@ -40,5 +40,6 @@ class Pkg(ConanFile):
 
         for level in build_order:
             for node in level:
+                print "PROCESSING ", node
                 client.run("lock serial_graph.json --lock-id=%s" % (node))
                 print client.out

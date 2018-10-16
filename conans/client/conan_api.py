@@ -452,9 +452,8 @@ class ConanAPIV1(object):
                                                                   False, remote_name, recorder, workspace=None)
 
         # write serialized graph
-        build_order = deps_graph.build_order_ids("ALL")
-        print "BUILD ORDER ", build_order
         graph_lock = GraphLock(deps_graph)
+        build_order = graph_lock.build_order(None)
         return graph_lock, build_order
 
     @api_method

@@ -12,6 +12,7 @@ from conans.model.workspace import WORKSPACE_FILE
 from collections import namedtuple
 import json
 from conans.model.options import OptionsValues
+from collections import defaultdict
 
 
 GraphLockDependency = namedtuple("GraphLockDependency", "node_id private")
@@ -31,6 +32,53 @@ class GraphLock(object):
                 dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private))
 
             self._nodes[id_] = conan_ref, binary_id, options_values, dependencies
+
+    def build_order(self, node_id):
+        inverse_neighbors = defaultdict(set)
+        for id_, node in self._nodes.items():
+            for d in node[3]:
+                inverse_neighbors[d.node_id].add(id_)
+        # first compute dependents closure
+        if node_id:
+            closure = set()
+            current = [node_id]
+            closure.update(current)
+            while current:
+                new_current = set()
+                for n in current:
+                    closure.add(n)
+                    new_neighs = inverse_neighbors[n]
+                    to_add = set(new_neighs).difference(current)
+                    new_current.update(to_add)
+                current = new_current
+        else:
+            closure = set(self._nodes.keys())
+
+        # Then, order by levels
+        current_level = []
+        levels = [current_level]
+        opened = closure.copy()
+        while opened:
+            current = opened.copy()
+            for o in opened:
+                o_neighs = inverse_neighbors[o]
+                if not any(n in opened for n in o_neighs):
+                    current_level.append(o)
+                    current.discard(o)
+            current_level.sort()
+            # now initialize new level
+            opened = current
+            if opened:
+                current_level = []
+                levels.append(current_level)
+
+        # closure following levels
+        result = []
+        for level in reversed(levels):
+            new_level = [n for n in level if (n in closure)]
+            if new_level:
+                result.append(new_level)
+        return result
 
     def conan_ref(self, node_id):
         return self._nodes[node_id][0]
@@ -82,8 +130,10 @@ class DepsGraphLockBuilder(object):
         # compute the conanfile entry point for this dependency graph
         current_node_id = node_id  # FIXME!!!
         reference = graph_lock.conan_ref(node_id)
-        root_node = self._create_new_node_simple(reference, processed_profile,
-                                                 remote_name)
+        if reference is None:
+        else:
+            root_node = self._create_new_node_simple(reference, processed_profile,
+                                                     remote_name)
         dep_graph.add_node(root_node)
         # enter recursive computation
         visited_deps = {}
@@ -103,7 +153,6 @@ class DepsGraphLockBuilder(object):
         requires = Requirements()
         for dependency in graph_lock.dependencies(current_node_id):
             dep_ref = graph_lock.conan_ref(dependency.node_id)
-            print "DEP REF ", dep_ref, type(dep_ref)
             requires.add(str(dep_ref), dependency.private)
 
             previous = visited_deps.get(dep_ref)
