@@ -26,7 +26,7 @@ class ConanManager(object):
     business logic
     """
     def __init__(self, client_cache, user_io, runner, remote_manager,
-                 recorder, registry, graph_manager):
+                 recorder, registry, graph_manager, plugin_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -36,8 +36,10 @@ class ConanManager(object):
         self._recorder = recorder
         self._registry = registry
         self._graph_manager = graph_manager
+        self._plugin_manager = plugin_manager
 
-    def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
+    def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder,
+                   profile, force):
 
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
@@ -70,22 +72,25 @@ class ConanManager(object):
         package_output = ScopedOutput(str(reference), self._user_io.out)
         if package_folder:
             packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
-                                package_output)
+                                package_output, self._plugin_manager, conan_file_path, reference)
         else:
             packager.create_package(conanfile, pkg_id, source_folder, build_folder,
-                                    dest_package_folder, install_folder, package_output, local=True)
+                                    dest_package_folder, install_folder, package_output,
+                                    self._plugin_manager, conan_file_path, reference, local=True)
 
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
         deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
-                                                          False, update, remote_name, self._recorder, workspace)
+                                                          False, update, remote_name, self._recorder,
+                                                          workspace)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
         print_graph(deps_graph, self._user_io.out)
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=workspace)
+                                   self._registry, recorder=self._recorder, workspace=workspace,
+                                   plugin_manager=self._plugin_manager)
         installer.install(deps_graph, keep_build=False)
         workspace.generate()
 
@@ -117,12 +122,13 @@ class ConanManager(object):
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(profile.dumps())
         result = self._graph_manager.load_graph(reference, create_reference, profile,
-                                                build_modes, False, update, remote_name, self._recorder,
-                                                None)
+                                                build_modes, False, update, remote_name,
+                                                self._recorder, None)
         deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s (test package)" % str(create_reference)) if create_reference else "PROJECT",
+            output = ScopedOutput(("%s (test package)" % str(create_reference))
+                                  if create_reference else "PROJECT",
                                   self._user_io.out)
             output.highlight("Installing %s" % reference)
         else:
@@ -139,7 +145,8 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=None)
+                                   self._registry, recorder=self._recorder, workspace=None,
+                                   plugin_manager=self._plugin_manager)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:
@@ -172,7 +179,7 @@ class ConanManager(object):
             call_system_requirements(conanfile, output)
 
             if not create_reference and isinstance(reference, ConanFileReference):
-                # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
+                # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
@@ -193,7 +200,8 @@ class ConanManager(object):
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
             _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
-        config_source_local(source_folder, conanfile, conanfile_folder, output)
+        config_source_local(source_folder, conanfile, conanfile_folder, output, conanfile_path,
+                            self._plugin_manager)
 
     def imports(self, conan_file_path, dest_folder, info_folder):
         """
@@ -214,10 +222,11 @@ class ConanManager(object):
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
-        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder, output,
-                                                                deps_info_required=True)
+        conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
+                                                                output, deps_info_required=True)
         packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                install_folder, output, local=True, copy_info=True)
+                                install_folder, output, self._plugin_manager, conanfile_path, None,
+                                local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
               test=False, should_configure=True, should_build=True, should_install=True,
@@ -259,10 +268,14 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             conan_file.install_folder = install_folder
+            self._plugin_manager.execute("pre_build", conanfile=conan_file,
+                                         conanfile_path=conanfile_path)
             with get_env_context_manager(conan_file):
                 output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):
                     conan_file.build()
+                self._plugin_manager.execute("post_build", conanfile=conan_file,
+                                             conanfile_path=conanfile_path)
                 if test:
                     output.highlight("Running test()")
                     with conanfile_exception_formatter(str(conan_file), "test"):

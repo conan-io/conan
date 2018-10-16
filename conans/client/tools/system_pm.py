@@ -1,5 +1,6 @@
 import os
-from six import string_types
+import sys
+
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -14,9 +15,19 @@ class SystemPackageTool(object):
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
-        self._tool._sudo_str = "sudo " if self._is_sudo_enabled() else ""
+        self._tool._sudo_str = self._get_sudo_str()
         self._tool._runner = runner or ConanRunner()
         self._tool._recommends = recommends
+
+    @staticmethod
+    def _get_sudo_str():
+        if not SystemPackageTool._is_sudo_enabled():
+            return ""
+
+        if hasattr(sys.stdout, "isatty") and not sys.stdout.isatty():
+            return "sudo --askpass "
+        else:
+            return "sudo "
 
     @staticmethod
     def _is_sudo_enabled():
@@ -149,7 +160,7 @@ class AptTool(object):
         _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name))
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg -s %s" % package_name, None)
+        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
         return exit_code == 0
 
 
@@ -158,7 +169,7 @@ class YumTool(object):
         raise ConanException("YumTool::add_repository not implemented")
 
     def update(self):
-        _run(self._runner, "%syum update" % self._sudo_str, accepted_returns=[0, 100])
+        _run(self._runner, "%syum update -y" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))

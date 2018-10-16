@@ -1,7 +1,10 @@
+
 import unittest
 import shutil
 import os
+import unittest
 import zipfile
+
 from mock import patch
 
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
@@ -76,15 +79,31 @@ class ConfigInstallTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
+        # Save to the old registry, it has to be migrated
         registry_path = self.client.client_cache.registry
 
-        save(registry_path, """my-repo-2 https://myrepo2.com True
-conan-center https://conan-center.com
-
-MyPkg/0.1@user/channel my-repo-2
-Other/1.2@user/channel conan-center
+        save(registry_path, """
+{
+ "remotes": [
+  {
+   "url": "https://myrepo2.com", 
+   "verify_ssl": true, 
+   "name": "my-repo-2"
+  }, 
+  {
+   "url": "https://conan-center.com", 
+   "verify_ssl": true, 
+   "name": "conan-center"
+  }
+ ], 
+ "references": {
+  "MyPkg/0.1@user/channel": "my-repo-2", 
+  "Other/1.2@user/channel": "conan-center"
+ }
+}        
 """)
-        save(os.path.join(self.client.client_cache.profiles_path, "default"), "#default profile empty")
+        save(os.path.join(self.client.client_cache.profiles_path, "default"),
+             "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
 
         self.old_env = dict(os.environ)
@@ -116,11 +135,11 @@ Other/1.2@user/channel conan-center
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry_path = self.client.client_cache.registry
         registry = RemoteRegistry(registry_path, TestBufferConanOutput())
-        self.assertEqual(registry.remotes,
+        self.assertEqual(registry.remotes.list,
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
-        self.assertEqual(registry.refs, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
@@ -166,6 +185,14 @@ class Pkg(ConanFile):
         self.client.run('config install "%s"' % zippath)
         self._check(zippath)
         self.assertTrue(os.path.exists(zippath))
+
+    def install_dir_test(self):
+        """ should install from a dir in current dir
+        """
+        folder = self._create_profile_folder()
+        self.assertTrue(os.path.isdir(folder))
+        self.client.run('config install "%s"' % folder)
+        self._check(folder)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.client_cache.profiles_path)
