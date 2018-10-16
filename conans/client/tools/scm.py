@@ -7,6 +7,7 @@ import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
 import platform
+import xml.etree.ElementTree as ET
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -204,6 +205,27 @@ class SVN(SCMBase):
                 extra_options += " --trust-server-cert"
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
+    def _show_item(self, item, target='.'):
+        if self.version >= SVN.API_CHANGE_VERSION:
+            value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
+            return value.strip()
+        else:
+            output = self.run("info --xml \"{target}\"".format(target=target))
+            root = ET.fromstring(output)
+            if item == 'revision':
+                return root.findall("./entry")[0].get("revision")
+            elif item == 'url':
+                return root.findall("./entry/url")[0].text
+            elif item == 'wc-root':
+                return root.findall("./entry/wc-info/wcroot-abspath")[0].text
+            elif item == 'last-changed-revision':
+                return root.findall("./entry/commit")[0].get("revision")
+            elif item == 'relative-url':
+                return root.findall("./entry/relative-url")[0].text
+            else:
+                raise ConanException("Retrieval of item '{}' not implemented for SVN<{}".format(
+                    item, SVN.API_CHANGE_VERSION))
+
     def checkout(self, url, revision="HEAD"):
         output = ""
         try:
@@ -233,7 +255,7 @@ class SVN(SCMBase):
         return excluded_list
 
     def get_remote_url(self):
-        return self.run("info --show-item url").strip()
+        return self._show_item('url')
 
     def get_qualified_remote_url(self):
         # Return url with peg revision
@@ -260,20 +282,19 @@ class SVN(SCMBase):
         return True
 
     def get_revision(self):
-        return self.run("info --show-item revision").strip()
+        return self._show_item('revision')
 
     def get_repo_root(self):
-        return self.run("info --show-item wc-root").strip()
+        return self._show_item('wc-root')
 
     def get_last_changed_revision(self, use_wc_root=True):
         if use_wc_root:
-            return self.run('info "{root}" --show-item last-changed-revision'.format(
-                root=self.get_repo_root())).strip()
+            return self._show_item(item='last-changed-revision', target=self.get_repo_root())
         else:
-            return self.run("info --show-item last-changed-revision").strip()
+            return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
-        url = self.run("info --show-item relative-url").strip()
+        url = self._show_item('relative-url')
         try:
             pattern = "(tags|branches)/[^/]+|trunk"
             branch = re.search(pattern, url)
