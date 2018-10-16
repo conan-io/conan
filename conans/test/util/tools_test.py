@@ -1267,7 +1267,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return filepath
 
         fp = save_file(b"a line\notherline\n")
-        if not tools.os_info.is_windows:
+        if not global_os_info.is_windows:
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
@@ -1287,7 +1287,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
-        if not tools.os_info.is_windows:
+        if not global_os_info.is_windows:
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
