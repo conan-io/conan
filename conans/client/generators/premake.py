@@ -1,4 +1,5 @@
 from conans.model import Generator
+from conans.paths import BUILD_INFO_PREMAKE
 
 
 class PremakeDeps(object):
@@ -22,7 +23,7 @@ class PremakeDeps(object):
 class PremakeGenerator(Generator):
     @property
     def filename(self):
-        return "conanpremake.lua"
+        return BUILD_INFO_PREMAKE
 
     @property
     def content(self):
