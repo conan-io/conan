@@ -102,6 +102,9 @@ class CmdUpload(object):
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
         self._upload_recipe(conan_ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
 
+        if not cur_recipe_remote and policy != UPLOAD_POLICY_SKIP:
+            self._registry.refs.set(conan_ref, recipe_remote.name)
+
         recorder.add_recipe(str(conan_ref), recipe_remote.name, recipe_remote.url)
 
         if packages_ids:
@@ -112,26 +115,17 @@ class CmdUpload(object):
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
                 pref = PackageReference(conan_ref, package_id)
-                cur_package_remote = self._registry.prefs.get(pref)
-
-                if remote_name:  # If remote_name is given, use it
-                    p_remote = self._registry.remotes.get(remote_name)
-                else:
-                    p_remote = cur_package_remote or default_remote
-
+                p_remote = recipe_remote
                 ret_upload_package = self._upload_package(pref,
                                                           index + 1, total, retry, retry_wait,
                                                           integrity_check,
                                                           policy, p_remote)
 
-                if (not cur_package_remote or not remote_name) and policy != UPLOAD_POLICY_SKIP:
+                if not self._registry.prefs.get(pref) and policy != UPLOAD_POLICY_SKIP:
                     self._registry.prefs.set(pref, p_remote.name)
 
                 if ret_upload_package:
                     recorder.add_package(str(conan_ref), package_id)
-
-        if (not cur_recipe_remote or not remote_name) and policy != UPLOAD_POLICY_SKIP:
-            self._registry.refs.set(conan_ref, recipe_remote.name)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one

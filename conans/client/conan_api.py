@@ -814,22 +814,22 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.set(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.remove(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.update(reference, remote_name)
 
     @api_method
     def remote_list_pref(self, reference):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         ret = {}
         tmp = self._registry.prefs.list
         for r, remote in tmp.items():
@@ -840,17 +840,17 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
-        p_reference = PackageReference.loads(str(package_reference))
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
         return self._registry.prefs.set(p_reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_pref(self, package_reference):
-        p_reference = PackageReference.loads(str(package_reference))
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
         return self._registry.prefs.remove(p_reference)
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
-        p_reference = PackageReference.loads(str(package_reference))
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
         return self._registry.prefs.update(p_reference, remote_name)
 
     @api_method

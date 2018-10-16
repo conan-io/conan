@@ -85,17 +85,14 @@ class _Registry(object):
         self._filename = filename
         self._lockfile = lockfile
         self._output = output
-        # Cache json contents
-        self._contents = ""
 
     def _load(self):
-        if not self._contents:
-            self._contents = load(self._filename)
-        return load_registry(self._contents)
+        tmp = load(self._filename)
+        return load_registry(tmp)
 
     def _save(self, remotes, refs, prefs):
-        self._contents = dump_registry(remotes, refs, prefs)
-        save(self._filename, self._contents)
+        tmp = dump_registry(remotes, refs, prefs)
+        save(self._filename, tmp)
 
 
 class _GenericReferencesRegistry(_Registry):
@@ -103,26 +100,24 @@ class _GenericReferencesRegistry(_Registry):
     @property
     def list(self):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, refs, prefs = self._load()
-            return self._select_refs(refs, prefs)
+            _, refs = self._partial_load()
+            return refs
 
     def remove(self, ref, quiet=False):
-        assert(isinstance(ref, ConanFileReference) or isinstance(ref, PackageReference))
+        assert(isinstance(ref, (ConanFileReference, PackageReference)))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, rrefs, prefs = self._load()
-            refs = self._select_refs(rrefs, prefs)
+            remotes, refs = self._partial_load()
             try:
                 del refs[str(ref)]
-                self._save(remotes, rrefs, prefs)
+                self._partial_save(refs)
             except:
                 if not quiet:
                     self._output.warn("Couldn't delete '%s' from remote registry" % str(ref))
 
     def get(self, ref):
-        assert(isinstance(ref, ConanFileReference) or isinstance(ref, PackageReference))
+        assert(isinstance(ref, (ConanFileReference, PackageReference)))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, rrefs, prefs = self._load()
-            refs = self._select_refs(rrefs, prefs)
+            remotes, refs = self._partial_load()
             remote_name = refs.get(str(ref))
             try:
                 return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
@@ -130,43 +125,63 @@ class _GenericReferencesRegistry(_Registry):
                 return None
 
     def set(self, ref, remote_name, check_exists=False):
-        assert(isinstance(ref, ConanFileReference) or isinstance(ref, PackageReference))
+        assert(isinstance(ref, (ConanFileReference, PackageReference)))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, rrefs, prefs = self._load()
-            refs = self._select_refs(rrefs, prefs)
-            if check_exists:
-                if ref in refs:
-                    raise ConanException("%s already exists. Use update" % ref)
-                if remote_name not in remotes:
-                    raise ConanException("%s not in remotes" % remote_name)
-            refs[str(ref)] = remote_name
-            self._save(remotes, rrefs, prefs)
-
-    def update(self, ref, remote_name):
-        assert(isinstance(ref, ConanFileReference) or isinstance(ref, PackageReference))
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, rrefs, prefs = self._load()
-            refs = self._select_refs(rrefs, prefs)
-            if str(ref) not in refs:
-                raise ConanException("%s does not exist. Use add" % str(ref))
+            remotes, refs = self._partial_load()
+            if check_exists and ref in refs:
+                raise ConanException("%s already exists. Use update" % ref)
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
             refs[str(ref)] = remote_name
-            self._save(remotes, rrefs, prefs)
+            self._partial_save(refs)
 
 
 class _ReferencesRegistry(_GenericReferencesRegistry):
 
-    @staticmethod
-    def _select_refs(refs, _):
-        return refs
+    def _partial_load(self):
+        """Loads only references for recipes"""
+        remotes, rrefs, _ = self._load()
+        return remotes, rrefs
+
+    def _partial_save(self, refs):
+        """Saves only modified references for recipes"""
+        remotes, _, prefs = self._load()
+        self._save(remotes, refs, prefs)
+
+    def update(self, ref, remote_name):
+        assert(isinstance(ref, ConanFileReference))
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, rrefs, prefs = self._load()
+            if str(ref) not in rrefs:
+                raise ConanException("%s does not exist. Use add" % str(ref))
+            if remote_name not in remotes:
+                raise ConanException("%s not in remotes" % remote_name)
+            rrefs[str(ref)] = remote_name
+            self._save(remotes, rrefs, prefs)
 
 
 class _PackageReferencesRegistry(_GenericReferencesRegistry):
 
-    @staticmethod
-    def _select_refs(_, prefs):
-        return prefs
+    def _partial_load(self):
+        """Loads only references for packages"""
+        remotes, _, prefs = self._load()
+        return remotes, prefs
+
+    def _partial_save(self, prefs):
+        """Saves only modified references for packages"""
+        remotes, refs, _ = self._load()
+        self._save(remotes, refs, prefs)
+
+    def update(self, ref, remote_name):
+        assert(isinstance(ref, PackageReference))
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, rrefs, prefs = self._load()
+            if str(ref) not in prefs:
+                raise ConanException("%s does not exist. Use add" % str(ref))
+            if remote_name not in remotes:
+                raise ConanException("%s not in remotes" % remote_name)
+            prefs[str(ref)] = remote_name
+            self._save(remotes, rrefs, prefs)
 
 
 class _RemotesRegistry(_Registry):
@@ -182,7 +197,6 @@ class _RemotesRegistry(_Registry):
         self._add_update(remote_name, url, verify_ssl, exists_function, insert)
 
     def remove(self, remote_name):
-        self._contents = None  # invalidate cache
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
             if remote_name not in remotes:
@@ -200,6 +214,9 @@ class _RemotesRegistry(_Registry):
     def rename(self, remote_name, new_remote_name):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs, prefs = self._load()
+            if remote_name not in remotes:
+                raise ConanException("Remote '%s' already exists" % new_remote_name)
+
             if remote_name not in remotes:
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
             new_remotes = OrderedDict()
