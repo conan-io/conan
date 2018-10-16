@@ -128,13 +128,12 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     build_policy = "missing"
+    default_user = "userfoo"
     
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 
-    def default_user(self):
-        return "userfoo"
-        
+    @property
     def default_channel(self):
         return "channelbar"
 """
