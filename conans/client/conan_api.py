@@ -1,7 +1,8 @@
 import os
 import sys
-
 import requests
+
+from collections import OrderedDict
 
 import conans
 from conans import __version__ as client_version, tools
@@ -85,7 +86,7 @@ def api_method(f):
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
-            except:
+            except BaseException:
                 pass
             raise
         finally:
@@ -225,7 +226,8 @@ class ConanAPIV1(object):
         if not interactive:
             self._user_io.disable_input()
 
-        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager, registry=self._registry)
+        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
+                                 registry=self._registry)
         resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
@@ -263,6 +265,34 @@ class ConanAPIV1(object):
         save_files(cwd, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
+
+    @api_method
+    def inspect(self, path, attributes, remote_name=None):
+        try:
+            reference = ConanFileReference.loads(path)
+        except ConanException:
+            reference = None
+            cwd = get_cwd()
+            conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        else:
+            update = True if remote_name else False
+            result = self._proxy.get_recipe(reference, update, update, remote_name,
+                                            ActionRecorder())
+            conanfile_path, _, _, reference = result
+        conanfile = self._loader.load_basic(conanfile_path, self._user_io.out)
+
+        result = OrderedDict()
+        if not attributes:
+            attributes = ['name', 'version', 'url', 'license', 'author', 'description',
+                          'generators', 'exports', 'exports_sources', 'short_paths',
+                          'apply_env',  'build_policy']
+        for attribute in attributes:
+            try:
+                attr = getattr(conanfile, attribute)
+                result[attribute] = attr
+            except AttributeError as e:
+                raise ConanException(str(e))
+        return result
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
@@ -308,7 +338,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
+                                                            channel)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
@@ -358,7 +389,8 @@ class ConanAPIV1(object):
 
         if package_folder:
             if build_folder or source_folder:
-                raise ConanException("package folder definition incompatible with build and source folders")
+                raise ConanException("package folder definition incompatible with build "
+                                     "and source folders")
             package_folder = _make_abs_path(package_folder, cwd)
 
         build_folder = _make_abs_path(build_folder, cwd)
@@ -509,7 +541,8 @@ class ConanAPIV1(object):
             item = os.path.abspath(item)
 
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl, config_type, args)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
+                                     config_type, args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
@@ -531,32 +564,37 @@ class ConanAPIV1(object):
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, remote_name=None, build_order=None, check_updates=None,
                          install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"], check_updates,
-                                                          False, remote_name, recorder, workspace=None)
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"],
+                                                          check_updates, False, remote_name,
+                                                          recorder, workspace=None)
         return deps_graph.build_order(build_order)
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_name=None, remote_name=None, check_updates=None, install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+                            profile_name=None, remote_name=None, check_updates=None,
+                            install_folder=None):
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build_modes, check_updates,
-                                                                  False, remote_name, recorder, workspace=None)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile,
+                                                                  build_modes, check_updates,
+                                                                  False, remote_name, recorder,
+                                                                  workspace=None)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
              profile_name=None, update=False, install_folder=None, build=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name, settings,
-                                                    options, env)
+        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
+                                                    settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
-                                                                  False, remote_name, recorder, workspace=None)
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build,
+                                                                  update, False, remote_name,
+                                                                  recorder, workspace=None)
         return deps_graph, conanfile
 
     @api_method
@@ -579,7 +617,8 @@ class ConanAPIV1(object):
                       should_install=should_install, should_test=should_test)
 
     @api_method
-    def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
+    def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
+                cwd=None):
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
@@ -643,7 +682,8 @@ class ConanAPIV1(object):
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
-        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, self._registry)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io,
+                               self._registry)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -666,7 +706,8 @@ class ConanAPIV1(object):
 
     @api_method
     def user_set(self, user, remote_name=None):
-        remote = self.get_default_remote() if not remote_name else self.get_remote_by_name(remote_name)
+        remote = (self.get_default_remote() if not remote_name
+                  else self.get_remote_by_name(remote_name))
         return user_set(self._client_cache.localdb, user, remote)
 
     @api_method
@@ -749,42 +790,42 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._registry.remotes
+        return self._registry.remotes.list
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        return self._registry.add(remote_name, url, verify_ssl, insert, force)
+        return self._registry.remotes.add(remote_name, url, verify_ssl, insert, force)
 
     @api_method
     def remote_remove(self, remote_name):
-        return self._registry.remove(remote_name)
+        return self._registry.remotes.remove(remote_name)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
-        return self._registry.update(remote_name, url, verify_ssl, insert)
+        return self._registry.remotes.update(remote_name, url, verify_ssl, insert)
 
     @api_method
     def remote_rename(self, remote_name, new_new_remote):
-        return self._registry.rename(remote_name, new_new_remote)
+        return self._registry.remotes.rename(remote_name, new_new_remote)
 
     @api_method
     def remote_list_ref(self):
-        return self._registry.refs
+        return self._registry.refs.list
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.set_ref(reference, remote_name, check_exists=True)
+        return self._registry.refs.set(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.remove_ref(reference)
+        return self._registry.refs.remove(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference))
-        return self._registry.update_ref(reference, remote_name)
+        return self._registry.refs.update(reference, remote_name)
 
     @api_method
     def profile_list(self):
@@ -833,11 +874,11 @@ class ConanAPIV1(object):
 
     @api_method
     def get_default_remote(self):
-        return self._registry.default_remote
+        return self._registry.remotes.default
 
     @api_method
     def get_remote_by_name(self, remote_name):
-        return self._registry.remote(remote_name)
+        return self._registry.remotes.get(remote_name)
 
 
 Conan = ConanAPIV1

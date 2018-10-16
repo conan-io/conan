@@ -23,6 +23,23 @@ class TestSystemReqs(ConanFile):
 
 class SystemReqsTest(unittest.TestCase):
 
+    def force_system_reqs_rerun_test(self):
+        client = TestClient()
+        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
+        client.save(files)
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        client.run("install Test/0.1@user/channel")
+        self.assertNotIn("*+Running system requirements+*", client.user_io.out)
+        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        pfs = client.client_cache.packages(ref)
+        pid = os.listdir(pfs)[0]
+        reqs_file = client.client_cache.system_reqs_package(PackageReference(ref, pid))
+        os.unlink(reqs_file)
+        client.run("install Test/0.1@user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(reqs_file))
+
     def local_system_requirements_test(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}

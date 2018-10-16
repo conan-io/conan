@@ -56,7 +56,7 @@ class ConanRunner(object):
 
         try:
             # piping both stdout, stderr and then later only reading one will hang the process
-            # if the other fills the pip. So piping stdout, and redirecting stderr to stdour,
+            # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
             proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:

@@ -225,6 +225,15 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
+def _manage_text_not_found(search, file_path, strict, function_name, output):
+    message = "%s didn't find pattern '%s' in '%s' file." % (function_name, search, file_path)
+    if strict:
+        raise ConanException(message)
+    else:
+        output.warn(message)
+        return False
+
+
 def replace_in_file(file_path, search, replace, strict=True, output=None):
     if output is None:
         import warnings
@@ -234,15 +243,43 @@ def replace_in_file(file_path, search, replace, strict=True, output=None):
 
     content = load(file_path)
     if -1 == content.find(search):
-        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            output.warn(message)
+        _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None):
+    if output is None:
+        import warnings
+        warnings.warn("Provide the output argument explicitly")
+        from conans.tools import _global_output
+        output = _global_output
+
+    if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
+        return replace_in_file(file_path, search, replace, strict=strict, output=output)
+
+    def normalized_text(text):
+        return text.replace("\\", "/").lower()
+
+    content = load(file_path)
+    normalized_content = normalized_text(content)
+    normalized_search = normalized_text(search)
+    index = normalized_content.find(normalized_search)
+    if index == -1:
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file", output=output)
+
+    while index != -1:
+        content = content[:index] + replace + content[index + len(search):]
+        normalized_content = normalized_text(content)
+        index = normalized_content.find(normalized_search)
+
+    content = content.encode("utf-8")
+    with open(file_path, "wb") as handle:
+        handle.write(content)
+
+    return True
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):
@@ -286,8 +323,9 @@ def collect_libs(conanfile, folder=None):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
-                    conanfile.output.warn("Library '%s' already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder" % name)
+                    conanfile.output.warn("Library '%s' was either already found in a previous "
+                                          "'conanfile.cpp_info.libdirs' folder or appears several "
+                                          "times with a different file extension" % name)
                 else:
                     result.append(name)
     return result

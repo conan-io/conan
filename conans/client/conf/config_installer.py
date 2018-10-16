@@ -1,13 +1,16 @@
 import os
+
 import shutil
 from six.moves.urllib.parse import urlparse
 
 from conans.client.tools.files import unzip
-from conans.util.files import rmdir, mkdir
-from conans.client.remote_registry import RemoteRegistry
-from conans.errors import ConanException
 import subprocess
 from conans.client import tools
+from conans import load
+from conans.client.remote_registry import RemoteRegistry, load_registry_txt
+from conans.errors import ConanException
+from conans.tools import unzip
+from conans.util.files import rmdir, mkdir, walk
 
 
 def _hide_password(resource):
@@ -22,14 +25,15 @@ def _hide_password(resource):
 
 
 def _handle_remotes(registry_path, remote_file, output):
+    # FIXME: Should we encourage to pass the remotes in json?
+    remotes, _ = load_registry_txt(load(remote_file))
     registry = RemoteRegistry(registry_path, output)
-    new_registry = RemoteRegistry(remote_file, output)
-    registry.define_remotes(new_registry.remotes)
+    registry.remotes.define(remotes)
 
 
 def _handle_profiles(source_folder, target_folder, output):
     mkdir(target_folder)
-    for root, _, files in os.walk(source_folder):
+    for root, _, files in walk(source_folder):
         relative_path = os.path.relpath(root, source_folder)
         if relative_path == ".":
             relative_path = ""
@@ -69,7 +73,7 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
 
 
 def _process_folder(folder, client_cache, output):
-    for root, dirs, files in os.walk(folder):
+    for root, dirs, files in walk(folder):
         for f in files:
             if f == "settings.yml":
                 output.info("Installing settings.yml")
@@ -123,8 +127,9 @@ def configuration_install(item, client_cache, output, verify_ssl, config_type=No
 
         if item.endswith(".git") or config_type == "git":
             _process_git_repo(item, client_cache, output, tmp_folder, verify_ssl, args)
-        elif os.path.exists(item):
-            # is a local file
+        elif os.path.isdir(item):
+            _process_folder(item, client_cache, output)
+        elif os.path.isfile(item):
             _process_zip_file(item, client_cache, output, tmp_folder)
         elif item.startswith("http"):
             _process_download(item, client_cache, output, tmp_folder, verify_ssl)

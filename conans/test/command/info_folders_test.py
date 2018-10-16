@@ -85,7 +85,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
-        self.assertNotIn("build", output)
+        self.assertNotIn("build_folder", output)
         self.assertNotIn("MyPackage2", output)
 
         client.run("info . --paths --only package_folder --package-filter MyPackage*")
@@ -93,7 +93,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
-        self.assertNotIn("build", output)
+        self.assertNotIn("build_folder", output)
 
         base_path = os.path.join("MyPackage2", "0.2.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)

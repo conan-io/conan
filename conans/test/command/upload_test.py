@@ -487,7 +487,8 @@ class Pkg(ConanFile):
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
         client2.users = {"server2": [("lasote", "mypass")]}
-        client2.update_servers({"server2": server2})
+        client2.servers = {"server2": server2}
+        client2.update_servers()
         client2.run("upload * --all --confirm -r=server2")
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)

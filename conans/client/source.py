@@ -9,7 +9,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
-from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir
+from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir, walk
 from conans.model.scm import SCMData
 from conans.client import tools
 
@@ -25,7 +25,7 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = registry.get_recipe_remote(conan_reference)
+    current_remote = registry.refs.get(conan_reference)
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(conan_reference))
@@ -48,7 +48,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
-    for src_dir, dirs, files in os.walk(src, followlinks=True):
+    for src_dir, dirs, files in walk(src, followlinks=True):
         if is_excluded(src_dir):
             dirs[:] = []
             continue
@@ -198,6 +198,5 @@ def _fetch_scm(scm_data, dest_dir, local_sources_path, output):
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir)
-        scm.clone()
         scm.checkout()
     _clean_source_folder(dest_dir)

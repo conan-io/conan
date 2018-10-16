@@ -92,21 +92,42 @@ class HelloConan(ConanFile):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        self.assertTrue(len(actions) in [20, 16])  # APIv1 vs APIv2
+        without_rest_api = [it for it in actions if "REST_API_CALL" not in it]
+        self.assertTrue(len(without_rest_api) == 11)
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
 
-        self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[0])["name"], "authenticate")
+        self.assertEquals(json.loads(without_rest_api[0])["_action"], "COMMAND")
+        self.assertEquals(json.loads(without_rest_api[0])["name"], "authenticate")
+        self.assertEquals(json.loads(without_rest_api[2])["_action"], "COMMAND")
+        self.assertEquals(json.loads(without_rest_api[2])["name"], "export")
+        self.assertEquals(json.loads(without_rest_api[3])["_action"], "COMMAND")
+        self.assertEquals(json.loads(without_rest_api[3])["name"], "install_reference")
+        self.assertEquals(json.loads(without_rest_api[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
+        self.assertEquals(json.loads(without_rest_api[4])["_id"], "Hello0/0.1@lasote/stable")
+        self.assertEquals(json.loads(without_rest_api[5])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
+        self.assertEquals(json.loads(without_rest_api[6])["_action"], "COMMAND")
+        self.assertEquals(json.loads(without_rest_api[6])["name"], "upload")
+        self.assertEquals(json.loads(without_rest_api[7])["_action"], "ZIP")
+        self.assertEquals(json.loads(without_rest_api[8])["_action"], "UPLOADED_RECIPE")
+        self.assertEquals(json.loads(without_rest_api[9])["_action"], "ZIP")
+        self.assertEquals(json.loads(without_rest_api[10])["_action"], "UPLOADED_PACKAGE")
 
-        self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[3])["name"], "export")
+        num_put = len([it for it in actions if "REST_API_CALL" in it and "PUT" in it])
+        self.assertEquals(num_put, 6)   # 3 files the recipe 3 files the package
 
-        self.assertEquals(json.loads(actions[4])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[4])["name"], "install_reference")
+        num_post = len([it for it in actions if "REST_API_CALL" in it and "POST" in it])
+        if "/v2/" in traces:
+            self.assertEquals(num_post, 0)
+        else:
+            self.assertEquals(num_post, 2)  # 2 get urls
 
-        self.assertEquals(json.loads(actions[5])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEquals(json.loads(actions[5])["_id"], "Hello0/0.1@lasote/stable")
+        num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
+        self.assertEquals(num_get, 10)
 
-        self.assertEquals(json.loads(actions[-1])["_action"], "UPLOADED_PACKAGE")
+        # Check masked signature
+        for action in actions:
+            doc = json.loads(action)
+            if doc.get("url") and "signature" in doc.get("url"):
+                self.assertIn("signature=*****", doc.get("url"))
