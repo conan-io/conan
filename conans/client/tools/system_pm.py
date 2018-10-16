@@ -16,13 +16,13 @@ class SystemPackageTool(object):
             from conans.tools import _global_output
             output = _global_output
 
+        self._output = output
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
-        self._tool = tool or self._create_tool(os_info)
+        self._tool = tool or self._create_tool(os_info, output=self._output)
         self._tool._sudo_str = self._get_sudo_str()
         self._tool._runner = runner or ConanRunner()
         self._tool._recommends = recommends
-        self._output = output
 
     @staticmethod
     def _get_sudo_str():
@@ -53,23 +53,23 @@ class SystemPackageTool(object):
         return mode_lower
 
     @staticmethod
-    def _create_tool(os_info):
+    def _create_tool(os_info, output):
         if os_info.with_apt:
-            return AptTool()
+            return AptTool(output=output)
         elif os_info.with_yum:
-            return YumTool()
+            return YumTool(output=output)
         elif os_info.with_pacman:
-            return PacManTool()
+            return PacManTool(output=output)
         elif os_info.is_macos:
-            return BrewTool()
+            return BrewTool(output=output)
         elif os_info.is_freebsd:
-            return PkgTool()
+            return PkgTool(output=output)
         elif os_info.is_solaris:
-            return PkgUtilTool()
+            return PkgUtilTool(output=output)
         elif os_info.with_zypper:
-            return ZypperTool()
+            return ZypperTool(output=output)
         else:
-            return NullTool()
+            return NullTool(output=output)
 
     def add_repository(self, repository, repo_key=None, update=True):
         self._tool.add_repository(repository, repo_key=repo_key)
@@ -136,7 +136,7 @@ class SystemPackageTool(object):
         raise ConanException("Could not install any of %s" % packages)
 
 
-class NullTool(object):
+class BaseTool(object):
     def __init__(self, output=None):
         if output is None:
             import warnings
@@ -145,6 +145,8 @@ class NullTool(object):
             output = _global_output
         self._output = output
 
+
+class NullTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         pass
 
@@ -159,15 +161,7 @@ class NullTool(object):
         return False
 
 
-class AptTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class AptTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository),
              output=self._output)
@@ -188,15 +182,7 @@ class AptTool(object):
         return exit_code == 0
 
 
-class YumTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class YumTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("YumTool::add_repository not implemented")
 
@@ -213,15 +199,7 @@ class YumTool(object):
         return exit_code == 0
 
 
-class BrewTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class BrewTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("BrewTool::add_repository not implemented")
 
@@ -236,15 +214,7 @@ class BrewTool(object):
         return exit_code == 0
 
 
-class PkgTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class PkgTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("PkgTool::add_repository not implemented")
 
@@ -260,15 +230,7 @@ class PkgTool(object):
         return exit_code == 0
 
 
-class PkgUtilTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class PkgUtilTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("PkgUtilTool::add_repository not implemented")
 
@@ -284,15 +246,7 @@ class PkgUtilTool(object):
         return exit_code == 0
 
 
-class ChocolateyTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class ChocolateyTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("ChocolateyTool::add_repository not implemented")
 
@@ -308,15 +262,7 @@ class ChocolateyTool(object):
         return exit_code == 0
 
 
-class PacManTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class PacManTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("PacManTool::add_repository not implemented")
 
@@ -332,15 +278,7 @@ class PacManTool(object):
         return exit_code == 0
 
 
-class ZypperTool(object):
-    def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
-
+class ZypperTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
         raise ConanException("ZypperTool::add_repository not implemented")
 
