@@ -105,6 +105,10 @@ class ConanFile(object):
     in_local_cache = True
     develop = False
 
+    # Defaulting the reference fields
+    default_channel = None
+    default_user = None
+
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -195,20 +199,6 @@ class ConanFile(object):
 
     def source(self):
         pass
-
-    @property
-    def default_user(self):
-        """
-        this method can be overwritten to return a user if no user has been specified (local method)
-        and there is no CONAN_USERNAME declared env var
-        """
-
-    @property
-    def default_channel(self):
-        """
-        this method can be overwritten to return a channel if no channel has been specified
-        (local method) and there is no CONAN_CHANNEL declared env var
-        """
 
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
