@@ -165,7 +165,7 @@ class ConanFile(object):
     @property
     def channel(self):
         if not self._conan_channel:
-            self._conan_channel = os.getenv("CONAN_CHANNEL")
+            self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel()
             if not self._conan_channel:
                 raise ConanException("CONAN_CHANNEL environment variable not defined, "
                                      "but self.channel is used in conanfile")
@@ -174,7 +174,7 @@ class ConanFile(object):
     @property
     def user(self):
         if not self._conan_user:
-            self._conan_user = os.getenv("CONAN_USERNAME")
+            self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user()
             if not self._conan_user:
                 raise ConanException("CONAN_USERNAME environment variable not defined, "
                                      "but self.user is used in conanfile")
@@ -195,6 +195,18 @@ class ConanFile(object):
 
     def source(self):
         pass
+
+    def default_user(self):
+        """
+        this method can be overwritten to return a user if no user has been specified (local method)
+        and there is no CONAN_USERNAME declared env var
+        """
+
+    def default_channel(self):
+        """
+        this method can be overwritten to return a channel if no channel has been specified
+        (local method) and there is no CONAN_CHANNEL declared env var
+        """
 
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
