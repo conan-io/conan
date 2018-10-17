@@ -2,7 +2,8 @@
 
 try:
     from contextlib import ExitStack
-except OSError:
+
+except ImportError:
 
     import sys
     from collections import deque
