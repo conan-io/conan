@@ -2,6 +2,8 @@
 import os
 import io
 import time
+from requests.exceptions import ConnectionError
+
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
 from conans.util.files import exception_message_safe

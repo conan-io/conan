@@ -1,8 +1,10 @@
+import os
 import unittest
+from requests.exceptions import ConnectionError
+
 from conans.test.utils.tools import TestServer, TestClient, TestRequester
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
-import os
 from conans.util.files import save
 
 
