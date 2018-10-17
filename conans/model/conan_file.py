@@ -5,7 +5,7 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -113,21 +113,6 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
-        # needed variables to pack the project
-        self.cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
-
-        # environment variables declared in the package_info
-        self.env_info = None  # Will be initialized at processing time
-        self.deps_env_info = DepsEnvInfo()
-
-        # user declared variables
-        self.user_info = None
-        # Keys are the package names, and the values a dict with the vars
-        self.deps_user_info = DepsUserInfo()
-        
-        self._conan_env_values = EnvValues()
-
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
@@ -147,6 +132,19 @@ class ConanFile(object):
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
+
+        # needed variables to pack the project
+        self.cpp_info = None  # Will be initialized at processing time
+        self.deps_cpp_info = DepsCppInfo()
+
+        # environment variables declared in the package_info
+        self.env_info = None  # Will be initialized at processing time
+        self.deps_env_info = DepsEnvInfo()
+
+        # user declared variables
+        self.user_info = None
+        # Keys are the package names, and the values a dict with the vars
+        self.deps_user_info = DepsUserInfo()
 
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e

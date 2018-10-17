@@ -3,7 +3,6 @@ from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import load
 import json
-from conans.model.ref import ConanFileReference
 
 
 class CIGraphLockTest(unittest.TestCase):

@@ -131,6 +131,7 @@ class DepsGraphLockBuilder(object):
         current_node_id = node_id  # FIXME!!!
         reference = graph_lock.conan_ref(node_id)
         if reference is None:
+            pass
         else:
             root_node = self._create_new_node_simple(reference, processed_profile,
                                                      remote_name)
@@ -228,8 +229,6 @@ class DepsGraphBuilder(object):
         self._recorder = recorder
 
     def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile):
-        """graph_lock: #NodeId: Pkg/version@user/channel#RR:#ID#BR
-        """
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph

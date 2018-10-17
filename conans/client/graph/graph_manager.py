@@ -108,21 +108,19 @@ class GraphManager(object):
         cache_settings.values = profile.settings_values
         settings_preprocessor.preprocess(cache_settings)
         processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
-        root_path = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
-            root_path = reference
             output = ScopedOutput("PROJECT", self._output)
-            if root_path.endswith(".py"):
-                conanfile = self._loader.load_conanfile(root_path, output, processed_profile, consumer=True)
+            if reference.endswith(".py"):
+                conanfile = self._loader.load_conanfile(reference, output, processed_profile, consumer=True)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
-                conanfile = self._loader.load_conanfile_txt(root_path, output, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(conanfile, check_updates, update,
@@ -130,7 +128,6 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
-
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
