@@ -1,5 +1,6 @@
 
-import os
+import six
+import copy
 import logging
 from tqdm import tqdm
 from contextlib import contextmanager
@@ -9,7 +10,7 @@ from conans.util.log import logger
 
 
 TIMEOUT_BEAT_SECONDS = 30
-TIMEOUT_BEAT_CHARACTER = '.'
+TIMEOUT_BEAT_CHARACTER = six.u('.')
 
 
 tqdm_file_defaults = {'unit': 'B',
@@ -27,7 +28,7 @@ def progress_bar(output, *args, **kwargs):
 
     assert isinstance(output, ConanOutput)
     original_stream = output._stream
-    original_log_handlers = logger.handlers.copy()
+    original_log_handlers = copy.copy(logger.handlers)
     original_is_terminal = output.is_terminal
 
     try:
@@ -74,7 +75,7 @@ class _ForwardTqdm(object):
         self._original_stream = original_stream
 
     def write(self, msg):
-        tqdm.write(msg.strip('\n\r'), file=self._original_stream)
+        tqdm.write(msg.strip('\n\r'), end=six.u('\n'), file=self._original_stream)
 
     def flush(self):
         self._original_stream.flush()

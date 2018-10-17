@@ -51,7 +51,7 @@ def download(requester, output, verify_ssl,
                         pb.update(len(data))
                         buffer.write(data)
 
-                return None if file_path else bytes(buffer.getbuffer())
+                return None if file_path else bytes(buffer.getvalue())
             finally:
                 r.close()
         except NotFoundException:
