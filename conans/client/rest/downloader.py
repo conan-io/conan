@@ -17,7 +17,10 @@ def download(requester, output, verify_ssl,
             else:
                 raise ConanException("Error, the file to download already exists: '{}'".format(
                     file_path))
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(file_path))  # TODO: (py3), exist_ok=True)
+        except OSError:
+            pass
 
     pb_description = "Downloading {}".format(os.path.basename(url))
     for n_retry in range(retry):

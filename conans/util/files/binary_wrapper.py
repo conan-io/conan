@@ -1,9 +1,12 @@
 
 import os
+from contextlib import contextmanager
+
 try:
-    from contextlib import contextmanager, ExitStack
-except ImportError:
-    from contextlib2 import contextmanager, ExitStack
+    from contextlib import ExitStack
+except ImportError:  # Fails for py2
+    from conans.util.exit_stack import ExitStack
+
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
 
 
