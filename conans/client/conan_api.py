@@ -398,14 +398,8 @@ class ConanAPIV1(object):
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
 
         # Checks that no both settings and info files are specified
-        if install_folder and existing_info_files(install_folder) and \
-                (profile_name or settings or options or env):
-            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
-                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
-                                                                              install_folder))
-
         infos_present = existing_info_files(install_folder)
-        if not infos_present:
+        if profile_name or settings or options or env or not infos_present:
             profile = profile_from_args(profile_name, settings, options, env=env,
                                         cwd=cwd, client_cache=self._client_cache)
         else:
