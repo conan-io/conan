@@ -828,6 +828,10 @@ class ConanAPIV1(object):
         return self._registry.refs.update(reference, remote_name)
 
     @api_method
+    def remote_clean(self):
+        return self._registry.remotes.clean()
+
+    @api_method
     def profile_list(self):
         return cmd_profile_list(self._client_cache.profiles_path, self._user_io.out)
 
