@@ -1148,6 +1148,10 @@ class Command(object):
                                             "a package recipe")
         parser_pupd.add_argument('reference', help='Package recipe reference')
         parser_pupd.add_argument('remote', help='Name of the remote')
+
+        subparsers.add_parser('clean', help="Clean the list of remotes and all "
+                                            "recipe-remote associations")
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
@@ -1178,6 +1182,8 @@ class Command(object):
             return self._conan.remote_remove_ref(reference)
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
+        elif args.subcommand == "clean":
+            return self._conan.remote_clean()
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.

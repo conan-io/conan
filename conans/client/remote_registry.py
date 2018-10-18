@@ -169,6 +169,10 @@ class _RemotesRegistry(_Registry):
             refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
+    def clean(self):
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            self._save({}, {})
+
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         def exists_function(remotes):
             if remote_name not in remotes:
