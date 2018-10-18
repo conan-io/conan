@@ -853,6 +853,10 @@ class ConanAPIV1(object):
         p_reference = PackageReference.loads(str(package_reference), validate=True)
         return self._registry.prefs.update(p_reference, remote_name)
 
+    def remote_clean(self):
+        return self._registry.remotes.clean()
+
+
     @api_method
     def profile_list(self):
         return cmd_profile_list(self._client_cache.profiles_path, self._user_io.out)

@@ -285,7 +285,7 @@ class DepsEnvInfo(EnvInfo):
                 env_info = EnvInfo()
             else:
                 var_name, value = line.split("=", 1)
-                if value[0] == "[" and value[-1] == "]":
+                if value and value[0] == "[" and value[-1] == "]":
                     # Take all the items between quotes
                     values = re.findall('"([^"]*)"', value[1:-1])
                     for val in values:
