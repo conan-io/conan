@@ -28,12 +28,12 @@ class NewTest(unittest.TestCase):
         client = TestClient()
         error = client.run('new A/1.3@myuser/testing', ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: 'A' is too short. Valid names must contain at least 2 characters.",
-                      client.user_io.out)
+        self.assertIn("ERROR: Value provided for package name, 'A' (type str), is too short. Valid "
+                      "names must contain at least 2 characters.", client.user_io.out)
         error = client.run('new A2/1.3@myuser/u', ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: 'u' is too short. Valid names must contain at least 2 characters.",
-                      client.user_io.out)
+        self.assertIn("ERROR: Value provided for channel, 'u' (type str), is too short. Valid "
+                      "names must contain at least 2 characters.", client.user_io.out)
 
     def new_dash_test(self):
         """ packages with dash
@@ -138,7 +138,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
         self.assertIn('- CONAN_USERNAME: "myuser"', travis)
         self.assertIn('- CONAN_CHANNEL: "testing"', travis)
-        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=lasote/conangcc5',
+        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))

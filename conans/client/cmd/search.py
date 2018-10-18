@@ -19,7 +19,7 @@ class Search(object):
             return references
 
         if remote_name == 'all':
-            remotes = self._registry.remotes
+            remotes = self._registry.remotes.list
             # We have to check if there is a remote called "all"
             # Deprecate: 2.0 can remove this check
             if 'all' not in (r.name for r in remotes):
@@ -29,7 +29,7 @@ class Search(object):
                         references[remote.name] = refs
                 return references
         # single remote
-        remote = self._registry.remote(remote_name)
+        remote = self._registry.remotes.get(remote_name)
         refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
         references[remote.name] = refs
         return references
@@ -71,7 +71,7 @@ class Search(object):
 
     def _search_packages_in_all(self, reference=None, query=None, outdated=False):
         references = OrderedDict()
-        remotes = self._registry.remotes
+        remotes = self._registry.remotes.list
         # We have to check if there is a remote called "all"
         # Deprecate: 2.0 can remove this check
         if 'all' not in (r.name for r in remotes):
@@ -94,7 +94,7 @@ class Search(object):
         return self._search_packages_in(self, 'all', reference, query, outdated)
 
     def _search_packages_in(self, remote_name, reference=None, query=None, outdated=False):
-        remote = self._registry.remote(remote_name)
+        remote = self._registry.remotes.get(remote_name)
         packages_props = self._remote_manager.search_packages(remote, reference, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
         manifest = self._remote_manager.get_conan_manifest(reference, remote)

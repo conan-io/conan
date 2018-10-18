@@ -4,6 +4,7 @@ import stat
 import sys
 import unittest
 import platform
+import mock
 
 from collections import namedtuple
 
@@ -23,6 +24,13 @@ from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
 
 
+def _format_path_as_cmake(pathstr):
+    if platform.system() == "Windows":
+        drive, path = os.path.splitdrive(pathstr)
+        return drive.upper() + path.replace(os.path.sep, "/")
+    return pathstr
+
+
 class CMakeTest(unittest.TestCase):
 
     def setUp(self):
@@ -34,6 +42,7 @@ class CMakeTest(unittest.TestCase):
         shutil.rmtree(self.tempdir2)
 
     def config_patch_test(self):
+
         conan_file = ConanFileMock()
         conan_file.name = "MyPkg"
         conan_file.settings = Settings()
@@ -42,7 +51,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.package_folder = os.path.join(self.tempdir, "pkg")
         conan_file.deps_cpp_info = DepsCppInfo()
 
-        msg = "FOLDER: " + conan_file.package_folder
+        msg = "FOLDER: " + _format_path_as_cmake(conan_file.package_folder)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
@@ -79,7 +88,7 @@ class CMakeTest(unittest.TestCase):
         self.assertEqual(conan_file.deps_cpp_info['MyPkg1'].rootpath,
                          self.tempdir2)
 
-        msg = "FOLDER: " + self.tempdir2
+        msg = "FOLDER: " + _format_path_as_cmake(self.tempdir2)
         for folder in (conan_file.build_folder, conan_file.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
@@ -124,7 +133,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.should_build = True
         conanfile.should_install = False
         conanfile.should_test = True
-        conanfile.package_folder = "pkg_folder"
+        conanfile.package_folder = temp_folder()
         cmake = CMake(conanfile, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conanfile.command)
@@ -250,7 +259,8 @@ class CMakeTest(unittest.TestCase):
         with tools.environment_append({"CONAN_MAKE_PROGRAM": "fake_path/make"}):
             cmake = CMake(conan_file)
             self.assertNotIn("CMAKE_MAKE_PROGRAM", cmake.definitions)
-            self.assertIn("The specified make program 'fake_path/make' cannot be found", conan_file.output)
+            self.assertIn("The specified make program 'fake_path/make' cannot be found",
+                          conan_file.output)
 
     def folders_test(self):
         def quote_var(var):
@@ -269,7 +279,8 @@ class CMakeTest(unittest.TestCase):
         conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
             linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
+                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' \
+                          if platform.system() != "Linux" else ""
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
             flags = '-DCONAN_EXPORTED="1"{} -DCONAN_COMPILER="gcc" ' \
@@ -312,11 +323,13 @@ class CMakeTest(unittest.TestCase):
                                               source_expected=source_expected,
                                               base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-
             cmake = CMake(conan_file)
             cmake.configure(source_folder="source", build_folder="build")
-            build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
-            source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
+            build_expected = quote_var(os.path.join(os.path.join(self.tempdir,
+                                                                 "my_cache_build_folder", "build")))
+            source_expected = quote_var(os.path.join(os.path.join(self.tempdir,
+                                                                  "my_cache_source_folder",
+                                                                  "source")))
             self.assertEquals(conan_file.command,
                               full_cmd.format(build_expected=build_expected,
                                               source_expected=source_expected,
@@ -326,8 +339,10 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conan_file)
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
-            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
-            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder",
+                                                    "rel_only_cache"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder",
+                                                     "source"))
             self.assertEquals(conan_file.command,
                               full_cmd.format(build_expected=build_expected,
                                               source_expected=source_expected,
@@ -338,7 +353,8 @@ class CMakeTest(unittest.TestCase):
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
-            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
+            source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder",
+                                                     "source"))
             self.assertEquals(conan_file.command,
                               full_cmd.format(build_expected=build_expected,
                                               source_expected=source_expected,
@@ -347,7 +363,8 @@ class CMakeTest(unittest.TestCase):
             conan_file.in_local_cache = True
             cmake = CMake(conan_file)
             cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
-            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+            build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder",
+                                                    "rel_only_cache"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
             self.assertEquals(conan_file.command,
                               full_cmd.format(build_expected=build_expected,
@@ -581,7 +598,8 @@ build_type: [ Release]
 
         cmake = CMake(conan_file)
         generator = "Unix" if platform.system() != "Windows" else "MinGW"
-        cross = "-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" " if platform.system() != "Linux" else ""
+        cross = ("-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                 if platform.system() != "Linux" else "")
         self.assertEqual('-G "%s Makefiles" %s-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
                          '-DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.9" -DCONAN_CXX_FLAGS="-m64" '
@@ -1001,6 +1019,69 @@ build_type: [ Release]
             conan_file.settings = settings
             cmake = CMake(conan_file)
             self.assertEquals(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
+
+    def install_definitions_test(self):
+        conanfile = ConanFileMock()
+        conanfile.package_folder = None
+        conanfile.settings = Settings.loads(default_settings_yml)
+        install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.package_folder,
+                              "CMAKE_INSTALL_BINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_SBINDIR": "bin",
+                              "CMAKE_INSTALL_LIBEXECDIR": "bin",
+                              "CMAKE_INSTALL_LIBDIR": "lib",
+                              "CMAKE_INSTALL_INCLUDEDIR": "include",
+                              "CMAKE_INSTALL_OLDINCLUDEDIR": "include",
+                              "CMAKE_INSTALL_DATAROOTDIR": "share"}
+
+        # Without package_folder
+        cmake = CMake(conanfile)
+        for key, value in cmake.definitions.items():
+            self.assertNotIn(key, install_defintions.keys())
+
+        # With package_folder
+        conanfile.package_folder = "my_package_folder"
+        install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
+        cmake = CMake(conanfile)
+        for key, value in install_defintions.items():
+            self.assertEquals(cmake.definitions[key], value)
+
+    @mock.patch('platform.system', return_value="Macos")
+    def test_cmake_system_version_osx(self, _):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Macos"
+
+        # No version defined
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertFalse("CMAKE_OSX_DEPLOYMENT_TARGET" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
+        self.assertFalse("CMAKE_SYSTEM_VERSION" in cmake.definitions)
+
+        # Version defined using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
+
+        # Version defined in settings
+        settings.os.version = "10.9"
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "10.9")
+        self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "10.9")
+
+        # Version defined in settings AND using Conan env variable
+        with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
+            conanfile = ConanFileMock()
+            conanfile.settings = settings
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
+            self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
     @staticmethod
     def scape(args):

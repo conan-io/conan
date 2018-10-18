@@ -18,8 +18,7 @@ def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
 
 if (full_py_vers){
-    pyvers = ['py36', 'py34', 'py27']
-    api_confs = ["v1", "v2"]
+    pyvers = ['py37', 'py36', 'py34', 'py27']
 }
 
 else if(test_v2){
@@ -45,6 +44,10 @@ try{
             for (y in pyvers) {
                 for (z in api_confs){
                     def pyver = y
+                    if(slave != "Linux" && pyver=="py37"){
+                        continue;
+                    }
+
                     def api_conf = z
                     def name = "${slave} - ${flavor} - ${pyver} - API${api_conf}"
 

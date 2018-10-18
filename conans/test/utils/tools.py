@@ -1,20 +1,25 @@
+import errno
 import os
 import random
 import shlex
-import shutil
+import stat
 import sys
-import threading
-import uuid
+import tempfile
+import unittest
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
 import requests
+import shutil
 import six
+import subprocess
+import threading
 import time
+import uuid
 from mock import Mock
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
@@ -24,11 +29,16 @@ from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_req
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
-from conans.client.remote_registry import RemoteRegistry
+from conans.client.plugin_manager import PluginManager
+from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools.scm import Git
+from conans.client.tools.files import chdir
+from conans.client.tools.scm import Git, SVN
+from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
@@ -39,9 +49,6 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.client.tools.win import get_cased_path
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -305,6 +312,60 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
     return tmp.replace("\\", "/"), git.get_revision()
 
 
+def try_remove_readonly(func, path, exc):  # TODO: May promote to conan tools?
+    # src: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+    excvalue = exc[1]
+    if func in (os.rmdir, os.remove, os.unlink) and excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
+        func(path)
+    else:
+        raise OSError("Cannot make read-only %s" % path)
+
+
+class SVNLocalRepoTestCase(unittest.TestCase):
+    path_with_spaces = True
+
+    def _create_local_svn_repo(self):
+        repo_url = os.path.join(self._tmp_folder, 'repo_server')
+        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        return SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
+
+    def gimme_tmp(self, create=True):
+        tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
+        if create:
+            os.makedirs(tmp)
+        return tmp
+
+    def create_project(self, files, rel_project_path=None, commit_msg='default commit message', delete_checkout=True):
+        tmp_dir = self.gimme_tmp()
+        try:
+            rel_project_path = rel_project_path or str(uuid.uuid4())
+            # Do not use SVN class as it is what we will be testing
+            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url, path=tmp_dir), shell=True)
+            tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
+            os.makedirs(tmp_project_dir)
+            save_files(tmp_project_dir, files)
+            with chdir(tmp_project_dir):
+                subprocess.check_output("svn add .", shell=True)
+                subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
+                rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+            project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
+            return project_url, rev
+        finally:
+            if delete_checkout:
+                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
+
+    def run(self, *args, **kwargs):
+        tmp_folder = tempfile.mkdtemp(suffix='_conans')
+        try:
+            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces' if self.path_with_spaces else 'pathwithoutspaces')
+            os.makedirs(self._tmp_folder)
+            self.repo_url = self._create_local_svn_repo()
+            super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -382,22 +443,26 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        self.update_servers(servers)
+        self.servers = servers or {}
+        if servers is not False:  # Do not mess with registry remotes
+            self.update_servers()
+
         self.init_dynamic_vars()
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
-    def update_servers(self, servers):
-        self.servers = servers or {}
-        save(self.client_cache.registry, "")
+    def update_servers(self):
+
+        save(self.client_cache.registry, dump_registry({}, {}, {}))
+
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
-                registry.add(name, server.fake_url)
+                registry.remotes.add(name, server.fake_url)
             else:
-                registry.add(name, server)
+                registry.remotes.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
@@ -440,7 +505,7 @@ class TestClient(object):
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-
+        self.client_cache = ClientCache(self.base_folder, self.storage_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -461,10 +526,15 @@ class TestClient(object):
             self.requester = ConanRequester(requester, self.client_cache,
                                             get_request_timeout())
 
+            self.plugin_manager = PluginManager(self.client_cache.plugins_path,
+                                                get_env("CONAN_PLUGINS", list()),
+                                                self.user_io.out)
+
             self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                             self.requester, self.client_cache,
                                                             self.user_io, self.client_version,
-                                                            self.min_server_compatible_version)
+                                                            self.min_server_compatible_version,
+                                                            self.plugin_manager)
             set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
@@ -485,7 +555,7 @@ class TestClient(object):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          interactive=interactive)
+                          self.plugin_manager, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

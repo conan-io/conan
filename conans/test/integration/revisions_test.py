@@ -203,7 +203,7 @@ class HelloConan(ConanFile):
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
         self.client.remote_registry.remove_ref(self.ref)
-        self.assertIsNone(self.client.remote_registry.get_ref_with_revision(self.ref))
+        self.assertIsNone(self.client.remote_registry.refs.get_with_revision(self.ref))
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))
         self.assertNotIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
@@ -239,14 +239,14 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        rev = self.client.remote_registry.refs.get_with_revision(self.ref).revision
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)
 
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev2 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        rev2 = self.client.remote_registry.refs.get_with_revision(self.ref).revision
         remote_rev2 = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev2, rev2)
         self.assertNotEquals(rev, rev2)
@@ -362,24 +362,24 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
-        self.assertIsNotNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+        self.assertIsNotNone(self.client.remote_registry.refs.get_with_revision(self.ref).revision)
 
         # No changes
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("export . %s" % str(self.ref))
-        self.assertIsNotNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+        self.assertIsNotNone(self.client.remote_registry.refs.get_with_revision(self.ref).revision)
 
         # Export new recipe, the revision is cleared
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("export . %s" % str(self.ref))
-        self.assertIsNone(self.client.remote_registry.get_ref_with_revision(self.ref).revision)
+        self.assertIsNone(self.client.remote_registry.refs.get_with_revision(self.ref).revision)
 
     def test_alias_with_revisions(self):
 
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        full_ref = self.client.remote_registry.get_ref_with_revision(self.ref)
+        full_ref = self.client.remote_registry.refs.get_with_revision(self.ref)
 
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
@@ -400,14 +400,14 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        self.client.remote_registry.get_ref_with_revision(self.ref)
+        self.client.remote_registry.refs.get_with_revision(self.ref)
 
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
 
         self.client.run("remove %s -r remote0 -f" % str(self.ref))
-        rev = self.client.remote_registry.get_ref_with_revision(self.ref)
+        rev = self.client.remote_registry.refs.get_with_revision(self.ref)
         self.assertIsNone(rev)
 
         last_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
@@ -418,7 +418,7 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        rev = self.client.remote_registry.refs.get_with_revision(self.ref).revision
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)
 
@@ -426,7 +426,7 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev2 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        rev2 = self.client.remote_registry.refs.get_with_revision(self.ref).revision
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev2)
 
@@ -439,14 +439,14 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 3")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev3 = self.client.remote_registry.get_ref_with_revision(self.ref).revision
+        rev3 = self.client.remote_registry.refs.get_with_revision(self.ref).revision
         self.assertNotEquals(rev3, rev2)
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev3)
 
         # Remove revision 3, local rev is None and remote is rev1
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
-        now_rev = self.client.remote_registry.get_ref_with_revision(self.ref)
+        now_rev = self.client.remote_registry.refs.get_with_revision(self.ref)
         self.assertIsNone(now_rev)
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)

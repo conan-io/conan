@@ -1,10 +1,9 @@
+import time
 import unittest
-
-from nose.plugins.attrib import attr
-
-from conans.test.utils.tools import TestClient, TestServer,\
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from collections import OrderedDict
+from conans.test.utils.tools import TestClient, TestServer, \
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
+from nose.plugins.attrib import attr
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -37,10 +36,6 @@ class Pkg(ConanFile):
                                            (server-1)*20)
             client.run("upload Pkg* -r=server%s --confirm --all" % server)
 
-        # The remote defined is the first one that was used for upload
-        client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
-
         # Fresh install from server1
         client.run("remove * -f")
         client.run("install Pkg/0.1@lasote/testing -r=server1")
@@ -70,12 +65,111 @@ class Pkg(ConanFile):
         # Update from server3
         client.run("install Pkg/0.1@lasote/testing -r=server3 --update")
         self.assertIn("Pkg/0.1@lasote/testing from 'server3' - Updated", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-                      " from remote 'server3' ", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server3' ", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Server3!", client.out)
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
+
+    def test_binary_packages_mixed(self):
+        servers = OrderedDict([("server1", TestServer()),
+                               ("server2", TestServer()),
+                               ("server3", TestServer())])
+        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                    "server2": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "build_type"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        client.run("upload Pkg* --all -r=server1 --confirm")
+
+        # Built type Debug only in server2
+        client.run('remove -f "*"')
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        client.run("upload Pkg* --all -r=server2 --confirm")
+
+        # Remove all, install a package for debug
+        client.run('remove -f "*"')
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', ignore_error=True)
+        # Force binary from server2
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
+
+        # Check registry, recipe should have been found from server1 and binary from server2
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
+        client.run("remote list_pref Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
+                      client.out)
+
+        # Use another client to update the server2 binary and server1 recipe
+        client2 = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                     "server2": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile, tools
+class Pkg(ConanFile):
+    settings = "build_type"
+    
+    def package(self):
+        tools.save("myfile.lib", "fake")
+    """
+        client2.save({"conanfile.py": conanfile})
+        time.sleep(1)
+        client2.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        client2.run("upload Pkg/0.1@lasote/testing --all")
+        self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client2.out)
+        # The upload is not done to server2 because in client2 we don't have the registry
+        # with the entry
+        self.assertIn("Uploading package 1/1: "
+                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 to 'server1'", client2.out)
+
+        # Now the reference is associated with server1
+        client2.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client2.out)
+
+        client2.run("remote list_pref Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server1",
+                      client2.out)
+
+        # Force upload to server2
+        client2.run("upload Pkg/0.1@lasote/testing --all -r server2")
+        # An upload doesn't modify a registry, so still server1
+        client2.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client2.out)
+
+        client2.run("remote list_pref Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server1",
+                      client2.out)
+
+        # Now go back to client and update, confirm that recipe=> server1, package=> server2
+        client.run("remote list_ref")
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+        client.run("remote list_pref Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
+                      client.out)
+
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 from remote 'server2' ", client.out)
+
+        # Export new recipe, it should be non associated
+        conanfile = """from conans import ConanFile, tools
+class Pkg(ConanFile):
+    settings = "build_type"
+    
+    def package(self):
+        tools.save("myfile.lib", "fake2")
+    """
+        client2.save({"conanfile.py": conanfile})
+        time.sleep(1)
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        client.run("remote list_ref")
+        # FIXME: Conan 2.0 the package should be cleared from the registry after a create
+        self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
     def test_binary_defines_remote(self):
         servers = OrderedDict([("server1", TestServer()),
@@ -101,11 +195,14 @@ class Pkg(ConanFile):
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server1'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server1'", client.out)
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+
+        # The recipe is not downloaded from anywhere, it should be kept to local cache
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
 
         # Explicit remote also defines the remote
         client.run("remove * -f")
@@ -114,11 +211,13 @@ class Pkg(ConanFile):
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("install Pkg/0.1@lasote/testing -r=server2")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server2'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
+        # Still not downloaded from anywhere, it shouldn't have a registry entry
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
 
         # Ordered search of binary works
         client.run("remove * -f")
@@ -127,13 +226,24 @@ class Pkg(ConanFile):
         client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
-                      "from remote 'server2'", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
+        client.run("remote list_ref")
+        self.assertNotIn("Pkg/0.1@lasote/testing", client.out)
+
+        # Download recipe and binary from the remote2 by iterating
+        client.run("remove * -f")
+        client.run("remove * -f -r=server1")
+        client.run("install Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Downloaded", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
 
     def test_binaries_from_different_remotes(self):
-        servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
+        servers = {"server1": TestServer(), "server2": TestServer()}
         client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
                                                     "server2": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -148,7 +258,8 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
         client.run("remote list_ref")
-        self.assertIn(": server1", client.out)
+        # It keeps associated to server1 even after a create FIXME: Conan 2.0
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
 
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")

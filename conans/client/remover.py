@@ -95,9 +95,9 @@ class ConanRemover(object):
         assert(isinstance(remote, Remote))
         if package_ids is None:
             result = self._remote_manager.remove(reference, remote)
-            current_remote = self._registry.get_recipe_remote(reference)
+            current_remote = self._registry.refs.get(reference)
             if current_remote == remote:
-                self._registry.remove_ref(reference)
+                self._registry.refs.remove(reference)
             return result
         else:
             return self._remote_manager.remove_packages(reference, package_ids, remote)
@@ -114,7 +114,7 @@ class ConanRemover(object):
             remover.remove_packages(reference, package_ids)
         if not src and build_ids is None and package_ids is None:
             remover.remove(reference)
-            self._registry.remove_ref(reference, quiet=True)
+            self._registry.refs.remove(reference, quiet=True)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None, force=False,
                packages_query=None, outdated=False):
@@ -131,7 +131,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         if remote_name:
-            remote = self._registry.remote(remote_name)
+            remote = self._registry.remotes.get(remote_name)
             references = self._remote_manager.search_recipes(remote, pattern)
         else:
             references = search_recipes(self._client_cache, pattern)

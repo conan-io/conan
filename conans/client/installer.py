@@ -1,35 +1,35 @@
 import os
-import time
-import shutil
 import platform
-
+import shutil
+import time
 from conans.client import tools
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING,\
+from conans.client.file_copier import report_copied_files
+from conans.client.generators import write_generators, TXTGenerator
+from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
+    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
+from conans.client.importer import remove_imports
+from conans.client.output import ScopedOutput
+from conans.client.packager import create_package
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
+    INSTALL_ERROR_BUILDING, \
     INSTALL_ERROR_MISSING
-from conans.model.conan_file import get_env_context_manager, get_recipe_revision
-from conans.model.env_info import EnvInfo
-from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
-from conans.util.files import (save, rmdir, mkdir, make_read_only,
-                               set_dirty, clean_dirty, load)
-from conans.model.ref import PackageReference
-from conans.util.log import logger
+from conans.client.source import config_source, complete_recipe_sources
+from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
-from conans.client.packager import create_package
-from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
-from conans.client.output import ScopedOutput
-from conans.client.source import config_source, complete_recipe_sources
+from conans.model.conan_file import get_env_context_manager
+from conans.model.conan_file import get_recipe_revision
+from conans.model.env_info import EnvInfo
+from conans.model.ref import PackageReference
+from conans.model.user_info import UserInfo
+from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
-from conans.client.importer import remove_imports
-
-from conans.util.tracer import log_package_built,\
+from conans.util.files import (save, rmdir, mkdir, make_read_only,
+                               set_dirty, clean_dirty, load)
+from conans.util.log import logger
+from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
-from conans.client.tools.env import pythonpath
-from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING,\
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
-from conans.client.file_copier import report_copied_files
 
 
 def build_id(conan_file):
@@ -48,16 +48,18 @@ def build_id(conan_file):
 class _ConanPackageBuilder(object):
     """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, package_reference, client_cache, output):
+    def __init__(self, conan_file, package_reference, client_cache, output, plugin_manager):
         self._client_cache = client_cache
         self._conan_file = conan_file
         self._out = output
         self._package_reference = package_reference
         self._conan_ref = self._package_reference.conan
         self._skip_build = False  # If build_id()
+        self._plugin_manager = plugin_manager
 
         new_id = build_id(self._conan_file)
-        self.build_reference = PackageReference(self._conan_ref, new_id) if new_id else package_reference
+        self.build_reference = PackageReference(self._conan_ref,
+                                                new_id) if new_id else package_reference
         self.build_folder = self._client_cache.build(self.build_reference,
                                                      self._conan_file.short_paths)
         self.package_folder = self._client_cache.package(self._package_reference,
@@ -71,12 +73,10 @@ class _ConanPackageBuilder(object):
             return
 
         # build_id is not caching the build folder, so actually rebuild the package
-        _handle_system_requirements(self._conan_file, self._package_reference,
-                                    self._client_cache, self._out)
-
         export_folder = self._client_cache.export(self._conan_ref)
         export_source_folder = self._client_cache.export_sources(self._conan_ref,
                                                                  self._conan_file.short_paths)
+        conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
         try:
             rmdir(self.build_folder)
@@ -89,7 +89,8 @@ class _ConanPackageBuilder(object):
         sources_pointer = self._client_cache.scm_folder(self._conan_ref)
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
-                      self._conan_file, self._out)
+                      self._conan_file, self._out, conanfile_path, self._conan_ref,
+                      self._plugin_manager)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -139,8 +140,11 @@ class _ConanPackageBuilder(object):
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
             pkg_id = self._conan_file.info.package_id()
+            conanfile_path = self._client_cache.conanfile(self._conan_ref)
+
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out)
+                           self.package_folder, install_folder, self._out, self._plugin_manager,
+                           conanfile_path, self._conan_ref)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -167,6 +171,9 @@ class _ConanPackageBuilder(object):
         try:
             # This is necessary because it is different for user projects
             # than for packages
+            self._plugin_manager.execute("pre_build", conanfile=self._conan_file,
+                                         reference=self._conan_ref,
+                                         package_id=self._package_reference.package_id)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
             self._out.highlight("Calling build()")
@@ -175,6 +182,9 @@ class _ConanPackageBuilder(object):
 
             self._out.success("Package '%s' built" % self._conan_file.info.package_id())
             self._out.info("Build folder %s" % self.build_folder)
+            self._plugin_manager.execute("post_build", conanfile=self._conan_file,
+                                         reference=self._conan_ref,
+                                         package_id=self._package_reference.package_id)
         except Exception as exc:
             self._out.writeln("")
             self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
@@ -246,13 +256,15 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace):
+    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace,
+                 plugin_manager):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = registry
         self._recorder = recorder
         self._workspace = workspace
+        self._plugin_manager = plugin_manager
 
     def install(self, deps_graph, keep_build=False):
         # order by levels and separate the root node (conan_ref=None) from the rest
@@ -265,7 +277,7 @@ class ConanInstaller(object):
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
-        processed_package_references = set()
+        processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
                 conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -284,15 +296,16 @@ class ConanInstaller(object):
                 if workspace_package:
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
                 else:
-                    self._handle_node_cache(node, package_id, keep_build, processed_package_references)
+                    package_ref = PackageReference(conan_ref, package_id)
+                    _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
+                    self._handle_node_cache(node, package_ref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
 
-    def _handle_node_cache(self, node, package_id, keep_build, processed_package_references):
+    def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         output = ScopedOutput(str(conan_ref), self._out)
-        package_ref = PackageReference(conan_ref, package_id)
         package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):
@@ -302,9 +315,9 @@ class ConanInstaller(object):
                 if node.binary == BINARY_BUILD:
                     self._build_package(node, package_ref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    self._download_package(conan_file, package_ref, output, package_folder, node.binary_remote)
-                    if node.binary_remote != node.remote:
-                        self._registry.set_ref(conan_ref, node.binary_remote.name)
+                    self._remote_manager.get_package(package_ref, package_folder,
+                                                     node.binary_remote, output, self._recorder)
+                    self._registry.prefs.set(package_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
@@ -343,11 +356,6 @@ class ConanInstaller(object):
         copied_files = run_imports(conan_file, build_folder, output)
         report_copied_files(copied_files, output)
 
-    def _download_package(self, conan_file, package_reference, output, package_folder, remote):
-        self._remote_manager.get_package(package_reference, package_folder,
-                                         remote, output, self._recorder)
-        _handle_system_requirements(conan_file, package_reference, self._client_cache, output)
-
     def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
@@ -356,7 +364,8 @@ class ConanInstaller(object):
             output.info("Won't be built as specified by --keep-build")
 
         t1 = time.time()
-        builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
+        builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
+                                       self._plugin_manager)
 
         if skip_build:
             if not os.path.exists(builder.build_folder):
@@ -383,6 +392,7 @@ class ConanInstaller(object):
             else:
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
+                # FIXME: Conan 2.0 Clear the registry entry (package ref)
 
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -409,7 +419,7 @@ class ConanInstaller(object):
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [node.conan_ref.name for node in node_order]
-        for package_name, env_vars in conan_file._env_values.data.items():
+        for package_name, env_vars in conan_file._conan_env_values.data.items():
             for name, value in env_vars.items():
                 if not package_name or package_name in subtree_libnames or \
                    package_name == conan_file.name:

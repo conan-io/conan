@@ -8,6 +8,31 @@ from conans.client.tools.files import replace_in_file
 
 class ConanAliasTest(unittest.TestCase):
 
+    def alias_overriden_test(self):
+        # https://github.com/conan-io/conan/issues/3353
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . PkgA/0.1@user/testing")
+        client.run("alias PkgA/latest@user/testing PkgA/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "PkgA/latest@user/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . PkgB/0.1@user/testing")
+        client.run("alias PkgB/latest@user/testing PkgB/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "PkgA/latest@user/testing", "PkgB/latest@user/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("info .")
+        self.assertNotIn("overridden", client.out)
+
     def test_alias_different_name(self):
         client = TestClient()
         error = client.run("alias myalias/1.0@user/channel lib/1.0@user/channel",
@@ -386,7 +411,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": dep_conanfile})
         client.run("create . Consumer/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
-        self.assertNotIn("latest", client.out)
+        self.assertNotIn("latest@user", client.out)
 
     def repeated_alias_test(self):
         client = TestClient()

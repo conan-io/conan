@@ -1,21 +1,17 @@
 import json
-
 import time
-from requests.auth import AuthBase, HTTPBasicAuth
-from six.moves.urllib.parse import urlencode
-
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException)
 from conans.model.manifest import FileTreeManifest
-
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_packages
 from conans.util.files import decode_text, load
 from conans.util.log import logger
-from conans.util.tracer import log_client_rest_api_call
+from requests.auth import AuthBase, HTTPBasicAuth
+from six.moves.urllib.parse import urlencode
 
 
 class JWTAuth(AuthBase):
@@ -85,7 +81,6 @@ class RestCommonMethods(object):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
         url = "%s/users/authenticate" % self.remote_api_url
-        t1 = time.time()
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -94,8 +89,6 @@ class RestCommonMethods(object):
         if not ret.ok or "html>" in str(ret.content):
             raise ConanException("%s\n\nInvalid server response, check remote URL and "
                                  "try again" % str(ret.content))
-        duration = time.time() - t1
-        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
 
     @handle_return_deserializer()
@@ -103,11 +96,8 @@ class RestCommonMethods(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self.remote_api_url
-        t1 = time.time()
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
-        duration = time.time() - t1
-        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
 
     def server_info(self):
@@ -126,7 +116,6 @@ class RestCommonMethods(object):
         return version_check, server_version, server_capabilities
 
     def get_json(self, url, data=None):
-        t1 = time.time()
         headers = self.custom_headers
         if data:  # POST request
             headers.update({'Content-type': 'application/json',
@@ -141,9 +130,6 @@ class RestCommonMethods(object):
                                           verify=self.verify_ssl,
                                           stream=True)
 
-        duration = time.time() - t1
-        method = "POST" if data else "GET"
-        log_client_rest_api_call(url, method, duration, headers)
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
@@ -153,7 +139,8 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy,
+                      remote_manifest):
         """
         the_files: dict with relative_path: content
         """
@@ -163,7 +150,7 @@ class RestCommonMethods(object):
         remote_snapshot, conan_reference = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = self.get_conan_manifest(conan_reference)
+            remote_manifest = remote_manifest or self.get_conan_manifest(conan_reference)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
