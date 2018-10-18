@@ -310,7 +310,7 @@ class TestConan(ConanFile):
                                  "Uploading conanmanifest.txt",
                                  "Uploading conanfile.py",
                                  "Uploading conan_export.tgz",
-                                 "Uploading package 1/1: myfakeid",
+                                 "Uploading package 1/1: myfakeid to 'default'",
                                  "Uploading conanmanifest.txt",
                                  "Uploading conaninfo.txt",
                                  "Uploading conan_package.tgz",

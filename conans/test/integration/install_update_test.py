@@ -61,6 +61,62 @@ class Pkg(ConanFile):
         new_value = load(os.path.join(client2.current_folder, "file.txt"))
         self.assertEqual(value2, new_value)
 
+    def upload_doesnt_follow_pref_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        servers = {"r1": TestServer(), "r2": TestServer()}
+        client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
+                                                    "r2": [("lasote", "mypass")]})
+        ref = "Pkg/0.1@lasote/testing"
+        client.save({"conanfile.py": conanfile})
+        client.run("create . %s" % ref)
+        client.run("upload %s --all -r r2" % ref)
+        client.run("remote list_pref %s" % ref)
+        self.assertIn("%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: r2" % ref, client.out)
+        client.run("remote remove_ref %s" % ref)
+
+        # It should upload both to r1 (default), not taking into account the pref to r2
+        client.run("upload %s --all" % ref)
+        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'r1'",
+                      client.out)
+
+    def install_update_following_pref_test(self):
+        conanfile = """
+import os, random
+from conans import ConanFile, tools
+class Pkg(ConanFile):
+    def package(self):
+        tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
+"""
+        servers = {"r1": TestServer(), "r2": TestServer()}
+        client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
+                                                    "r2": [("lasote", "mypass")]})
+
+        ref = "Pkg/0.1@lasote/testing"
+        client.save({"conanfile.py": conanfile})
+        client.run("create . %s" % ref)
+        client.run("upload %s --all -r r2" % ref)
+        client.run("upload %s --all -r r1" % ref)
+        # Force recipe to follow r1
+        client.run("remote update_ref %s r1" % ref)
+
+        # Update package in r2 from a different client
+        time.sleep(1)
+        client2 = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
+                                                     "r2": [("lasote", "mypass")]})
+        ref = "Pkg/0.1@lasote/testing"
+        client2.save({"conanfile.py": conanfile})
+        client2.run("create . %s" % ref)
+        client2.run("upload %s --all -r r2" % ref)
+
+        # Update from client, it will get the binary from r2
+        client.run("install %s --update" % ref)
+        self.assertIn("Pkg/0.1@lasote/testing from 'r1' - Cache", client.out)
+        self.assertIn("Retrieving package "
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'r2'", client.out)
+
     def update_binaries_failed_test(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -82,6 +138,8 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing")
+        client.run("remote add_pref Pkg/0.1@lasote/testing:"
+                   "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 myremote")
         client.run("install Pkg/0.1@lasote/testing --update")
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
@@ -97,6 +155,12 @@ class Pkg(ConanFile):
         self.client.save(files1, clean_first=True)
         self.client.run("install . --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
+
+        self.client.run("remote list_ref")
+        self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
+        self.client.run("remote list_pref Hello0/1.0@lasote/stable")
+        self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
+                      self.client.out)
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
@@ -119,14 +183,24 @@ class Pkg(ConanFile):
         self.client.save(files0, clean_first=True)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
+
+        self.client.run("remote list_ref")
+        # FIXME Conan 2.0 It should be a assertNotIn
+        self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
+
+        self.client.run("remote list_pref Hello0/1.0@lasote/stable")
+        # FIXME Conan 2.0 It should be a assertNotIn
+        self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
+                         self.client.out)
+
         rebuild_timestamps = timestamps()
         self.assertNotEqual(rebuild_timestamps, initial_timestamps)
 
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
+        # First assign the preference to a remote, it has been cleared when exported locally
         self.client.run("install . --update")
-        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer",
-                      self.client.out)
+        self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer", self.client.out)
         failed_update_timestamps = timestamps()
         self.assertEqual(rebuild_timestamps, failed_update_timestamps)
 
