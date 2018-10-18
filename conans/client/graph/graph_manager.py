@@ -5,7 +5,8 @@ from collections import OrderedDict
 from conans.model.ref import ConanFileReference
 from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
-from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder,\
+    DepsGraphLockBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
 from conans.client import settings_preprocessor
@@ -89,7 +90,7 @@ class GraphManager(object):
         return graph
 
     def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
-                   recorder, workspace):
+                   recorder, workspace, graph_lock=None):
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -127,7 +128,8 @@ class GraphManager(object):
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
-                                      processed_profile=processed_profile)
+                                      processed_profile=processed_profile,
+                                      graph_lock=graph_lock)
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -186,9 +188,14 @@ class GraphManager(object):
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def _load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, recorder, workspace, processed_profile):
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, workspace, recorder)
-        graph = builder.load_graph(conanfile, check_updates, update, remote_name, processed_profile)
+                    profile_build_requires, recorder, workspace, processed_profile,
+                    graph_lock=None):
+        if graph_lock:
+            builder = DepsGraphLockBuilder(self._proxy, self._output, self._loader, recorder)
+            graph = builder.load_graph(remote_name, processed_profile, node_id, graph_lock)
+        else:
+            builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, workspace, recorder)
+            graph = builder.load_graph(conanfile, check_updates, update, remote_name, processed_profile)
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,

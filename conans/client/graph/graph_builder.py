@@ -23,6 +23,8 @@ class GraphLock(object):
     def __init__(self, graph):
         self._nodes = {}  # id: conan_ref, binaryID, options_values, dependencies
         for node in graph.nodes:
+            if node.conan_ref is None:
+                continue
             id_ = str(id(node))
             conan_ref = node.conan_ref
             binary_id = node.conanfile.info.package_id()

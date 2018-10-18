@@ -97,7 +97,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False):
+                keep_build=False, graph_lock=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -123,7 +123,7 @@ class ConanManager(object):
         self._user_io.out.writeln(profile.dumps())
         result = self._graph_manager.load_graph(reference, create_reference, profile,
                                                 build_modes, False, update, remote_name,
-                                                self._recorder, None)
+                                                self._recorder, None, graph_lock=graph_lock)
         deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):

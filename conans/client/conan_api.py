@@ -33,7 +33,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, exception_message_safe, mkdir
+from conans.util.files import save_files, exception_message_safe, mkdir, load
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.tools import set_global_instances
@@ -476,7 +476,7 @@ class ConanAPIV1(object):
 
             binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._user_io.out,
                                                       self._remote_manager, self._registry, workspace=None)
-            build_mode = BuildMode([], self._user_io.out)
+            build_mode = BuildMode(None, self._user_io.out)
             binaries_analyzer.evaluate_graph(deps_graph, build_mode, update=False, remote_name=None)
 
             installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
@@ -495,12 +495,18 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generators=None, install_folder=None, cwd=None):
+                          update=False, generators=None, install_folder=None, cwd=None,
+                          lock_file=None):
 
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
             install_folder = _make_abs_path(install_folder, cwd)
+            if lock_file:
+                lock_file = _make_abs_path(lock_file, cwd)
+                graph_lock = GraphLock.loads(load(lock_file))
+            else:
+                graph_lock = None
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -518,7 +524,8 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators)
+                            generators=generators, graph_lock=graph_lock
+                            )
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True

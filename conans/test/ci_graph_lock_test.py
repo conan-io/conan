@@ -3,6 +3,7 @@ from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import load
 import json
+from conans.client.graph.graph_builder import GraphLock
 
 
 class CIGraphLockTest(unittest.TestCase):
@@ -28,17 +29,15 @@ class Pkg(ConanFile):
                    "-o PkgB:custom_option=3 -o PkgC:custom_option=4 -o PkgD:custom_option=5")
 
         lock_file = os.path.join(client.current_folder, "serial_graph.json")
-        print "PATH: ", lock_file
-        content = load(lock_file)
-        print "LCOK FILE!!!!!\n", str(content)
+        lock_file_content = load(lock_file)
         build_order_file = os.path.join(client.current_folder, "build_order.json")
-        print "PATH: ", build_order_file
         content = load(build_order_file)
-        print "LCOK FILE!!!!!\n", str(content)
         build_order = json.loads(content)
 
+        graph_lock = GraphLock.loads(lock_file_content)
         for level in build_order:
             for node in level:
+                ref = graph_lock.conan_ref(node)
                 print "PROCESSING ", node
-                client.run("lock serial_graph.json --lock-id=%s" % (node))
+                client.run("install %s --lock=serial_graph.json --build=%s" % (ref, ref.name))
                 print client.out
