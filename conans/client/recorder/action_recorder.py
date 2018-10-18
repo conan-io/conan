@@ -4,7 +4,7 @@
 # about the downloaded files prior to unzip them
 
 from datetime import datetime
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, defaultdict
 
 # Install actions
 from conans.model.ref import ConanFileReference, PackageReference
@@ -35,6 +35,7 @@ class ActionRecorder(object):
         self._inst_recipes_actions = OrderedDict()
         self._inst_packages_actions = OrderedDict()
         self._inst_recipes_develop = set()  # Recipes being created (to set dependency=False)
+        self._inst_packages_info = defaultdict(dict)
 
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, reference):
@@ -80,6 +81,16 @@ class ActionRecorder(object):
         doc = {"type": error_type, "description": description, "remote": remote_name}
         self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
 
+    def package_cpp_info(self, reference, cpp_info):
+        assert isinstance(reference, PackageReference)
+        # assert isinstance(cpp_info, CppInfo)
+        doc = {}
+        for it, value in vars(cpp_info).items():
+            if it.startswith("_") or not value:
+                continue
+            doc[it] = value
+        self._inst_packages_info[reference]['cpp_info'] = doc
+
     @property
     def install_errored(self):
         all_values = list(self._inst_recipes_actions.values()) + list(self._inst_packages_actions.values())
@@ -119,6 +130,12 @@ class ActionRecorder(object):
                    "time": the_action.time}
             if isinstance(the_ref, ConanFileReference):
                 doc["dependency"] = not self.in_development_recipe(the_ref)
+                doc["name"] = the_ref.name
+                doc["version"] = the_ref.version
+                doc["user"] = the_ref.user
+                doc["channel"] = the_ref.channel
+                if the_ref.revision:
+                    doc["revision"] = the_ref.revision
             else:
                 doc["built"] = the_action.type == INSTALL_BUILT
 
@@ -136,6 +153,8 @@ class ActionRecorder(object):
 
             for p_ref, p_action in packages:
                 p_doc = get_doc_for_ref(p_ref.package_id, p_action)
+                package_data = self._inst_packages_info.get(p_ref, {})
+                p_doc.update(package_data)
                 tmp["packages"].append(p_doc)
 
             ret["installed"].append(tmp)
