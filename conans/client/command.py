@@ -106,7 +106,7 @@ class Command(object):
         self._outputer = outputer
 
     def help(self, *args):
-        """Show help of a specific commmand.
+        """Show help of a specific command.
         """
         parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help")
         parser.add_argument("command", help='command', nargs="?")
