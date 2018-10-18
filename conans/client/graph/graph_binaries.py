@@ -1,14 +1,14 @@
 import os
 
-from conans.util.files import rmdir, is_dirty
-from conans.model.ref import PackageReference
-from conans.client.output import ScopedOutput
-from conans.errors import NotFoundException, NoRemoteAvailable
-from conans.model.manifest import FileTreeManifest
-from conans.model.info import ConanInfo
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
                                        BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
                                        BINARY_WORKSPACE)
+from conans.client.output import ScopedOutput
+from conans.errors import NotFoundException, NoRemoteAvailable
+from conans.model.info import ConanInfo
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference
+from conans.util.files import rmdir, is_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.refs.get(conan_ref)
+            remote = self._registry.prefs.get(package_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):

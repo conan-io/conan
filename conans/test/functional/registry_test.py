@@ -38,7 +38,7 @@ other/1.0@lasote/testing conan.io
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}))
+        save(f, dump_registry(default_remotes, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
 
         # Add
@@ -74,7 +74,7 @@ other/1.0@lasote/testing conan.io
 
     def refs_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}))
+        save(f, dump_registry(default_remotes, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
         ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
 
