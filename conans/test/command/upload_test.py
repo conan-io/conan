@@ -200,7 +200,7 @@ class UploadTest(unittest.TestCase):
         client = self._client()
 
         client.save({"conanfile.py": conanfile,
-                     "hello.cpp": ""})
+                     "hello.cpp": "int i=0"})
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
@@ -208,9 +208,8 @@ class UploadTest(unittest.TestCase):
                       client.out)
 
         client2 = self._client()
-
-        client2.save({"conanfile.py": conanfile,
-                     "hello.cpp": "//comamend"})
+        client2.save({"conanfile.py": conanfile + "\n#end",
+                      "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         manifest = client2.client_cache.load_manifest(ref)
@@ -224,7 +223,9 @@ class UploadTest(unittest.TestCase):
         # first client tries to upload again
         error = client.run("upload Hello0/1.2.1@frodo/stable", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: Remote recipe is newer than local recipe", client.user_io.out)
+        self.assertIn("remote recipe 2is newer than local recipe", client.user_io.out)
+        self.assertIn("""Local 'conanfile.py' using '\n' line-ends
+Remote 'conanfile.py' using '\n' line-ends""", client.user_io.out)
 
     def upload_unmodified_recipe_test(self):
         client = self._client()
