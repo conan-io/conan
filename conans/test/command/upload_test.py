@@ -223,7 +223,7 @@ class UploadTest(unittest.TestCase):
         # first client tries to upload again
         error = client.run("upload Hello0/1.2.1@frodo/stable", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("remote recipe 2is newer than local recipe", client.user_io.out)
+        self.assertIn("remote recipe is newer than local recipe", client.user_io.out)
         self.assertIn("""Local 'conanfile.py' using '\n' line-ends
 Remote 'conanfile.py' using '\n' line-ends""", client.user_io.out)
 
