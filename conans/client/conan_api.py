@@ -29,7 +29,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
@@ -346,7 +346,7 @@ class ConanAPIV1(object):
             # Forcing an export!
             if not not_export:
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                           self._client_cache, self._plugin_manager)
+                           self._client_cache, self._plugin_manager, self._registry)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -413,7 +413,7 @@ class ConanAPIV1(object):
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
-                   self._client_cache, self._plugin_manager)
+                   self._client_cache, self._plugin_manager, self._registry)
 
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
@@ -677,7 +677,7 @@ class ConanAPIV1(object):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                   self._client_cache, self._plugin_manager)
+                   self._client_cache, self._plugin_manager, self._registry)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -814,22 +814,48 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.set(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.remove(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
-        reference = ConanFileReference.loads(str(reference))
+        reference = ConanFileReference.loads(str(reference), validate=True)
         return self._registry.refs.update(reference, remote_name)
 
     @api_method
+    def remote_list_pref(self, reference):
+        reference = ConanFileReference.loads(str(reference), validate=True)
+        ret = {}
+        tmp = self._registry.prefs.list
+        for r, remote in tmp.items():
+            pref = PackageReference.loads(r)
+            if pref.conan == reference:
+                ret[r] = remote
+        return ret
+
+    @api_method
+    def remote_add_pref(self, package_reference, remote_name):
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
+        return self._registry.prefs.set(p_reference, remote_name, check_exists=True)
+
+    @api_method
+    def remote_remove_pref(self, package_reference):
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
+        return self._registry.prefs.remove(p_reference)
+
+    @api_method
+    def remote_update_pref(self, package_reference, remote_name):
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
+        return self._registry.prefs.update(p_reference, remote_name)
+
     def remote_clean(self):
         return self._registry.remotes.clean()
+
 
     @api_method
     def profile_list(self):
