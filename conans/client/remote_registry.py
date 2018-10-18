@@ -334,4 +334,3 @@ class RemoteRegistry(object):
     @property
     def prefs(self):
         return _PackageReferencesRegistry(self._filename, self._lockfile, self._output)
-
