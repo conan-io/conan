@@ -1149,6 +1149,7 @@ class Command(object):
         parser_pupd.add_argument('reference', help='Package recipe reference')
         parser_pupd.add_argument('remote', help='Name of the remote')
 
+
         list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
                                                             'its associated remotes')
         list_pref.add_argument('reference', help='Package recipe reference')
@@ -1166,6 +1167,9 @@ class Command(object):
                                             "a binary package")
         update_pref.add_argument('package_reference', help='Bianary package reference')
         update_pref.add_argument('remote', help='Name of the remote')
+
+        subparsers.add_parser('clean', help="Clean the list of remotes and all "
+                                            "recipe-remote associations")
 
         args = parser.parse_args(*args)
 
@@ -1207,6 +1211,8 @@ class Command(object):
             return self._conan.remote_remove_pref(package_reference)
         elif args.subcommand == "update_pref":
             return self._conan.remote_update_pref(package_reference, remote_name)
+        elif args.subcommand == "clean":
+            return self._conan.remote_clean()
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
