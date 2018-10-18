@@ -207,7 +207,7 @@ class _RemotesRegistry(_Registry):
 
     def clean(self):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            self._save({}, {})
+            self._save({}, {}, {})
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         def exists_function(remotes):
