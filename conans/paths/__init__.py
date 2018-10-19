@@ -44,3 +44,12 @@ EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 EXPORT_SOURCES_DIR_OLD = ".c_src"
 RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
+SCM_FOLDER = "scm_folder.txt"
+
+# Directories
+EXPORT_FOLDER = "export"
+EXPORT_SRC_FOLDER = "export_source"
+SRC_FOLDER = "source"
+BUILD_FOLDER = "build"
+PACKAGES_FOLDER = "package"
+SYSTEM_REQS_FOLDER = "system_reqs"

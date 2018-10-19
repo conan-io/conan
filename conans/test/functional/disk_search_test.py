@@ -1,9 +1,7 @@
 import os
 import unittest
 from conans.paths.simple_paths import SimplePaths
-from conans.client.package_layouts.package_cache_layout import BUILD_FOLDER, PACKAGES_FOLDER, \
-    EXPORT_FOLDER
-from conans.paths import CONANINFO
+from conans.paths import CONANINFO, EXPORT_FOLDER, BUILD_FOLDER, PACKAGES_FOLDER
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save

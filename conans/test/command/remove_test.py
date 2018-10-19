@@ -7,9 +7,8 @@ from mock import Mock
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
-from conans.client.package_layouts.package_cache_layout import PACKAGES_FOLDER, EXPORT_FOLDER, \
-    BUILD_FOLDER, SRC_FOLDER
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_FOLDER, SRC_FOLDER, \
+    BUILD_FOLDER, PACKAGES_FOLDER
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder

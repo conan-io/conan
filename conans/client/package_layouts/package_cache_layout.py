@@ -3,18 +3,10 @@
 import os
 import platform
 
-from conans.paths import CONANFILE, SYSTEM_REQS
+from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER
 from conans.model.ref import PackageReference
 from conans.client.package_layouts.package_base_layout import PackageBaseLayout
-
-EXPORT_FOLDER = "export"
-EXPORT_SRC_FOLDER = "export_source"
-SRC_FOLDER = "source"
-BUILD_FOLDER = "build"
-PACKAGES_FOLDER = "package"
-SYSTEM_REQS_FOLDER = "system_reqs"
-
-SCM_FOLDER = "scm_folder.txt"
 
 
 def short_path(func):
