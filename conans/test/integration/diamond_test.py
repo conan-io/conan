@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
 from conans.util.files import load
 import os
-from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
+from conans.constants import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 import platform
 from conans.test.utils.test_files import wait_until_removed
 

@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
-from conans.paths import CONANINFO
+from conans.constants import CONANINFO
 from conans.util.files import load
 import os
 

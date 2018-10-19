@@ -9,7 +9,7 @@ from conans.util.files import load
 
 generator = """
 from conans.model import Generator
-from conans.paths import BUILD_INFO
+from conans.constants import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustom_Generator(Generator):
