@@ -36,11 +36,11 @@ linux_config = """
 
 
 linux_config_gcc = linux_config + """
-        env: CONAN_GCC_VERSIONS={version} CONAN_DOCKER_IMAGE=lasote/conangcc{name}
+        env: CONAN_GCC_VERSIONS={version} CONAN_DOCKER_IMAGE=conanio/gcc{name}
 """
 
 linux_config_clang = linux_config + """
-        env: CONAN_CLANG_VERSIONS={version} CONAN_DOCKER_IMAGE=lasote/conanclang{name}
+        env: CONAN_CLANG_VERSIONS={version} CONAN_DOCKER_IMAGE=conanio/clang{name}
 """
 
 osx_config = """
@@ -142,7 +142,7 @@ variables:
 
 gitlab_config_gcc = """
 gcc-{version}:
-    image: lasote/conangcc{name}
+    image: conanio/gcc{name}
     variables:
         CONAN_GCC_VERSIONS: "{version}"
     <<: *build-template
@@ -150,7 +150,7 @@ gcc-{version}:
 
 gitlab_config_clang = """
 clang-{version}:
-    image: lasote/conanclang{name}
+    image: conanio/clang{name}
     variables:
         CONAN_CLANG_VERSIONS: "{version}"
     <<: *build-template
@@ -184,7 +184,7 @@ jobs:
 circleci_config_gcc = """
   gcc-{name}:
       docker:
-        - image: lasote/conangcc{name}
+        - image: conanio/gcc{name}
       environment:
         - CONAN_GCC_VERSIONS: "{version}"
       <<: *conan-steps
@@ -193,7 +193,7 @@ circleci_config_gcc = """
 circleci_config_clang = """
   clang-{name}:
       docker:
-        - image: lasote/conanclang{name}
+        - image: conanio/clang{name}
       environment:
         - CONAN_CLANG_VERSIONS: "{version}"
       <<: *conan-steps
