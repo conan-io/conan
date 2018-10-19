@@ -4,7 +4,7 @@ from conans import tools
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.constants import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME
 from conans.client.package_layouts.package_cache_layout import EXPORT_SRC_FOLDER
 from parameterized.parameterized import parameterized
 from conans.util.files import load, save, md5sum

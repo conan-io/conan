@@ -9,7 +9,7 @@ from conans.client.source import get_scm_data
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
-from conans.constants import CONAN_MANIFEST, CONANFILE
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger

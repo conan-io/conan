@@ -4,7 +4,7 @@ import shutil
 from conans.client import tools
 from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
-from conans.constants import CONANINFO
+from conans.paths import CONANINFO
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest

@@ -1,5 +1,5 @@
 from conans.model import Generator
-from conans.constants import BUILD_INFO_QMAKE
+from conans.paths import BUILD_INFO_QMAKE
 
 
 class DepsCppQmake(object):

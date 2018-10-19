@@ -11,7 +11,7 @@ from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.constants import CONANINFO
+from conans.paths import CONANINFO
 from conans.util.files import save, normalize
 from conans.client.graph.printer import print_graph
 

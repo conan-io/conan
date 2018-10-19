@@ -1,7 +1,7 @@
 import os
 
 from conans.model import Generator
-from conans.constants import BUILD_INFO_VISUAL_STUDIO
+from conans.paths import BUILD_INFO_VISUAL_STUDIO
 import re
 
 

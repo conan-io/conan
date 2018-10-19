@@ -10,9 +10,8 @@ from requests.exceptions import ConnectionError
 from conans.client.remote_registry import Remote
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.constants import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, \
+from conans.paths import rm_conandir, CONANFILE, CONAN_MANIFEST, CONANINFO, PACKAGE_TGZ_NAME, \
     EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
-from conans.paths import rm_conandir
 
 from conans.util.files import gzopen_without_timestamps, is_dirty,\
     make_read_only, set_dirty, clean_dirty

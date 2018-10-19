@@ -5,8 +5,7 @@ from six.moves import urllib
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.constants import DEFAULT_PROFILE_NAME
-from conans.paths import conan_expand_user
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import load
 

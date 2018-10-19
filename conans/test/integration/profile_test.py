@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
 import os
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.profiles import create_profile as _create_profile

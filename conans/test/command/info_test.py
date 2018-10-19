@@ -3,7 +3,7 @@ import os
 import re
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference
 import textwrap
 from conans.util.files import load

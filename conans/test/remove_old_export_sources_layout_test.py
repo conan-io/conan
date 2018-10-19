@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from conans.constants import EXPORT_SOURCES_DIR_OLD
+from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.util.files import tar_extract
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference

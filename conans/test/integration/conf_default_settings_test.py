@@ -6,7 +6,7 @@ from collections import OrderedDict
 from conans import tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
-from conans.constants import CONANFILE_TXT
+from conans.paths import CONANFILE_TXT
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save

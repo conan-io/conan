@@ -24,7 +24,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
-from conans.constants import CONANINFO, BUILD_INFO, RUN_LOG_NAME
+from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import (save, rmdir, mkdir, make_read_only,
                                set_dirty, clean_dirty, load)

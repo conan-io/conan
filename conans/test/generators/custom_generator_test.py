@@ -3,13 +3,13 @@ from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.constants import CONANFILE, CONANFILE_TXT
+from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.util.files import load
 
 
 generator = """
 from conans.model import Generator
-from conans.constants import BUILD_INFO
+from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustom_Generator(Generator):
@@ -38,7 +38,7 @@ MyCustom_Generator
 
 generator_multi = """
 from conans.model import Generator
-from conans.constants import BUILD_INFO
+from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustomMultiGenerator(Generator):

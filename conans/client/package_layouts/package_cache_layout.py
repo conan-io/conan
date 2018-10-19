@@ -3,7 +3,7 @@
 import os
 import platform
 
-from conans.constants import CONANFILE, SYSTEM_REQS
+from conans.paths import CONANFILE, SYSTEM_REQS
 from conans.model.ref import PackageReference
 from conans.client.package_layouts.package_base_layout import PackageBaseLayout
 

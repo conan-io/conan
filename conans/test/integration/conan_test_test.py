@@ -5,7 +5,7 @@ from nose.plugins.attrib import attr
 from conans.util.files import load
 from conans.model.ref import PackageReference
 import os
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 
 
 @attr("slow")

@@ -1,5 +1,5 @@
 from conans.client.generators.compiler_args import CompilerArgsGenerator
-from conans.constants import BUILD_INFO_GCC
+from conans.paths import BUILD_INFO_GCC
 
 
 class GCCGenerator(CompilerArgsGenerator):

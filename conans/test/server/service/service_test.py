@@ -2,7 +2,7 @@ import unittest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.service.service import ConanService, FileUploadDownloadService,\
     SearchService
-from conans.constants import CONAN_MANIFEST, CONANINFO
+from conans.paths import CONAN_MANIFEST, CONANINFO
 from conans.server.store.server_store import ServerStore
 from conans.util.files import save_files, save, mkdir, load, md5sum
 from conans.server.service.authorize import BasicAuthorizer

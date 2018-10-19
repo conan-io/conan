@@ -4,7 +4,7 @@ import shutil
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.constants import CONANINFO
+from conans.paths import CONANINFO
 from conans.client.package_layouts.package_cache_layout import PACKAGES_FOLDER, EXPORT_FOLDER
 from conans.model.manifest import FileTreeManifest
 from conans import COMPLEX_SEARCH_CAPABILITY

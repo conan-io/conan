@@ -10,8 +10,8 @@ from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.constants import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
-    PACKAGE_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, CONANINFO, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, \
+    EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
 

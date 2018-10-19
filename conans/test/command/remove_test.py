@@ -7,7 +7,7 @@ from mock import Mock
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.constants import CONANFILE, CONAN_MANIFEST, CONANINFO
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 from conans.client.package_layouts.package_cache_layout import PACKAGES_FOLDER, EXPORT_FOLDER, \
     BUILD_FOLDER, SRC_FOLDER
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer

@@ -12,7 +12,7 @@ from conans.client import settings_preprocessor
 from conans.client.output import ScopedOutput
 from conans.client.graph.build_mode import BuildMode
 from conans.client.profile_loader import read_conaninfo_profile
-from conans.constants import BUILD_INFO
+from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile

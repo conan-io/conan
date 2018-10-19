@@ -6,7 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
 from time import sleep
 import time
-from conans.constants import CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST
 
 
 class InstallUpdateTest(unittest.TestCase):

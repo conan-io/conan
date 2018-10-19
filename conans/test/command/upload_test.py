@@ -8,8 +8,7 @@ import os
 import itertools
 from mock import mock
 from conans.errors import ConanException
-from conans.constants import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-
+from conans.paths import PACKAGE_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):

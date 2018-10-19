@@ -13,7 +13,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.constants import PUT_HEADERS, CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS
 from conans.paths.simple_paths import SimplePaths
 from conans.client.package_layouts import check_ref_case
 from conans.util.files import save, load, normalize, list_folder_subdirs

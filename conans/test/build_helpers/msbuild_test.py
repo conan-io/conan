@@ -5,7 +5,7 @@ from nose.plugins.attrib import attr
 
 from conans import tools
 from conans.client.build.msbuild import MSBuild
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockSettings, MockConanfile
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files

@@ -1,7 +1,7 @@
 from conans.test.utils.cpp_test_files import cpp_hello_source_files, cpp_hello_conan_files
 from conans.test.utils.go_test_files import go_hello_source_files, go_hello_conan_files
 import os
-from conans.constants import PACKAGE_TGZ_NAME
+from conans.paths import PACKAGE_TGZ_NAME
 import tempfile
 from conans.test import CONAN_TEST_FOLDER
 from conans.tools import untargz

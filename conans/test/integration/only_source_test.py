@@ -3,7 +3,7 @@ import os
 
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 

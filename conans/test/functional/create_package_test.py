@@ -5,7 +5,7 @@ import shutil
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.test_files import hello_source_files
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.constants import CONANINFO, CONANFILE
+from conans.paths import CONANFILE, CONANINFO
 from conans.client.packager import create_package
 from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.client.output import ScopedOutput

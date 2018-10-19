@@ -2,7 +2,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 import os
 from conans.util.files import load
 

@@ -1,7 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
-from conans.constants import CONANFILE
-
+from conans.paths import CONANFILE
 
 conanfile = """
 from conans import ConanFile, tools

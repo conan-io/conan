@@ -2,7 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient, TestServer
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 

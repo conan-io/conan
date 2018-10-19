@@ -4,7 +4,7 @@ import unittest
 from conans.model.env_info import DepsEnvInfo
 from conans.model.profile import Profile
 from conans.model.settings import Settings
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
 

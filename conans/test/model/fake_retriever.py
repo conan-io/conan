@@ -3,7 +3,7 @@ import os
 from conans.test.utils.test_files import temp_folder
 from conans.model.ref import ConanFileReference
 from conans.tools import save
-from conans.constants import CONANFILE
+from conans.paths import CONANFILE
 
 
 class Retriever(object):
