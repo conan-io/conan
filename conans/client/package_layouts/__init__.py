@@ -1,18 +1,12 @@
 # coding=utf-8
 
 import os
-import platform
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.client.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.client.package_layouts.package_user_layout import PackageUserLayout, LINKED_FOLDER_SENTINEL
-
-
-def is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
+from conans.paths import is_case_insensitive_os
 
 if is_case_insensitive_os():
     def check_ref_case(conan_reference, store_folder):
