@@ -1,8 +1,8 @@
 import unittest
 from conans.model.ref import ConanFileReference, PackageReference
 
-from conans.paths import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONANINFO,
-                          BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE, BUILD_INFO)
+from conans.constants import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONANINFO,
+                              BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE, BUILD_INFO)
 from conans.util.files import load
 import os
 from conans.test.utils.tools import TestClient

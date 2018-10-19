@@ -4,7 +4,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.paths import CONANINFO
+from conans.constants import CONANINFO
 import os
 from conans.test.utils.conanfile import TestConanFile
 
