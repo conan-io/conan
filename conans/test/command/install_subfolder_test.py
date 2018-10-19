@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
-from conans.paths import CONANFILE, BUILD_INFO_CMAKE, CONANINFO
+from conans.paths import CONANFILE, CONANINFO, BUILD_INFO_CMAKE
 import os
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files

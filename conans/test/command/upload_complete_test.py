@@ -9,7 +9,7 @@ from requests.packages.urllib3.exceptions import ConnectionError
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO, CONANFILE
 from conans.util.files import load, mkdir, save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest

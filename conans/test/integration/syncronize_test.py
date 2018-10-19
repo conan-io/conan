@@ -6,7 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load, save
 from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.tools import untargz
 from conans.model.manifest import FileTreeManifest
 
