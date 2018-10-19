@@ -129,6 +129,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
         self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
         self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
+        self.assertIn(r'PYTHON: "C:\\Python37"', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 12', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 14', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 15', appveyor)
@@ -138,7 +139,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
         self.assertIn('- CONAN_USERNAME: "myuser"', travis)
         self.assertIn('- CONAN_CHANNEL: "testing"', travis)
-        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=lasote/conangcc5',
+        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
