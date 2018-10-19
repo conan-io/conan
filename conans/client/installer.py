@@ -1,35 +1,36 @@
 import os
-import time
-import shutil
 import platform
 
+import shutil
+import time
+
 from conans.client import tools
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, INSTALL_ERROR_BUILDING,\
+from conans.client.file_copier import report_copied_files
+from conans.client.generators import write_generators, TXTGenerator
+from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
+    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
+from conans.client.importer import remove_imports
+from conans.client.output import ScopedOutput
+from conans.client.packager import create_package
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
+    INSTALL_ERROR_BUILDING, \
     INSTALL_ERROR_MISSING
-from conans.model.conan_file import get_env_context_manager
-from conans.model.env_info import EnvInfo
-from conans.model.user_info import UserInfo
-from conans.constants import CONANINFO, BUILD_INFO, RUN_LOG_NAME
-from conans.util.files import (save, rmdir, mkdir, make_read_only,
-                               set_dirty, clean_dirty, load)
-from conans.model.ref import PackageReference
-from conans.util.log import logger
+from conans.client.source import config_source, complete_recipe_sources
+from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
-from conans.client.packager import create_package
-from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
-from conans.client.output import ScopedOutput
-from conans.client.source import config_source, complete_recipe_sources
+from conans.model.conan_file import get_env_context_manager
+from conans.model.env_info import EnvInfo
+from conans.model.ref import PackageReference
+from conans.model.user_info import UserInfo
+from conans.constants import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
-from conans.client.importer import remove_imports
-
-from conans.util.tracer import log_package_built,\
+from conans.util.files import (save, rmdir, mkdir, make_read_only,
+                               set_dirty, clean_dirty, load)
+from conans.util.log import logger
+from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
-from conans.client.tools.env import pythonpath
-from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING,\
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
-from conans.client.file_copier import report_copied_files
 
 
 def build_id(conan_file):
@@ -315,8 +316,7 @@ class ConanInstaller(object):
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._remote_manager.get_package(package_ref, package_folder,
                                                      node.binary_remote, output, self._recorder)
-                    if node.binary_remote != node.remote:
-                        self._registry.refs.set(conan_ref, node.binary_remote.name)
+                    self._registry.prefs.set(package_ref, node.binary_remote.name)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
@@ -324,6 +324,7 @@ class ConanInstaller(object):
                 clean_dirty(package_folder)
             # Call the info method
             self._call_package_info(conan_file, package_folder)
+            self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
         conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -391,6 +392,7 @@ class ConanInstaller(object):
             else:
                 # Log build
                 self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
+                # FIXME: Conan 2.0 Clear the registry entry (package ref)
 
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)

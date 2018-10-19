@@ -2,7 +2,6 @@ import ast
 import os
 import shutil
 import six
-
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
@@ -11,9 +10,9 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.constants import CONAN_MANIFEST, CONANFILE
+from conans.search.search import search_recipes
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
-from conans.search.search import search_recipes
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -35,7 +34,7 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager):
+               plugin_manager, registry):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -56,7 +55,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
 
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
-                          keep_source)
+                          keep_source, registry)
     conanfile_cache_path = client_cache.conanfile(reference)
     plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
@@ -144,7 +143,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source, registry):
 
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
@@ -166,6 +165,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
     digest.save(exports_folder)
+
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False

@@ -29,6 +29,36 @@ class Pkg(ConanFile):
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
 
+    def test_transitive_without_settings(self):
+        # https://github.com/conan-io/conan/issues/3367
+        conanfile = """from conans import ConanFile
+class PkgC(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgC/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgB(ConanFile):
+    settings = "arch"
+    requires = "PkgC/0.1@user/testing"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgB/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgA(ConanFile):
+    requires = "PkgB/0.1@user/testing"
+    def build(self):
+        self.output.info("BUILDING PKGA")
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("install . -if=build")
+        client.run("build . -bf=build")
+        client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
+        self.assertIn("PkgA/0.1@user/testing: Package "
+                      "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",
+                      client.out)
+
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
         conanfile = """from conans import ConanFile
@@ -179,45 +209,42 @@ class TestConan(ConanFile):
                       client.user_io.out)
 
         # Now repeat
-        client.save({CONANFILE: conanfile}, clean_first=True)
-        client.save({"include/header.h": "//Windows header2"})
+        client.save({CONANFILE: conanfile,
+                     "include/header.h": "//Windows header2"}, clean_first=True)
+        # Without force it fails
         err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows",
                          ignore_error=True)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
         self.assertTrue(err)
-
-        # Will fail because it finds the info files in the curdir.
-        client.run("install . -s os=Windows")
-        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f", ignore_error=True)
-        self.assertTrue(err)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.out)
-
-        client.save({CONANFILE: conanfile, "include/header.h": "//Windows header2"},
-                    clean_first=True)
+        # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header2")
 
-        # Now use --install-folder and avoid the -s os=Windows, should fail without  -f
+        # Now use --install-folder
+        client.save({CONANFILE: conanfile,
+                     "include/header.h": "//Windows header3"}, clean_first=True)
+        # Without force it fails
         client.run("install . --install-folder=inst -s os=Windows")
         err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", ignore_error=True)
         self.assertTrue(err)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
+        # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
+        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
+                      " created", client.out)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header2")
+                         "//Windows header3")
 
-        # Try to specify a setting and the install folder
-        error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -s os=Linux", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
-
-        error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f --profile=default",
-                           ignore_error=True)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
-        self.assertTrue(error)
+        # we can specify settings too
+        client.save({"include/header.h": "//Windows header4"})
+        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f -s os=Windows")
+        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
+                      " created", client.out)
+        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
+                         "//Windows header4")
 
         # Try to specify a install folder with no files
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", ignore_error=True)
@@ -376,7 +403,8 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . anyname/1.222@conan/stable")
-        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' file: file.txt", client.out)
+        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' file: file.txt",
+                      client.out)
 
     def test_with_deps(self):
         client = TestClient()

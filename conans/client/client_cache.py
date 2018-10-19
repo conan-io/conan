@@ -120,7 +120,7 @@ class ClientCache(SimplePaths):
             else:
                 self._output.warn("Remotes registry file missing, "
                                   "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}))
+                save(reg_json_path, dump_registry(default_remotes, {}, {}))
         return reg_json_path
 
     @property
