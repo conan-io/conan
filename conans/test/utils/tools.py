@@ -638,7 +638,8 @@ class TestConanApi(ConanAPIV1):
         requester = ConanRequester(TestRequester(None), client_cache, get_request_timeout())
         _, _, remote_manager = self.instance_remote_manager(requester, client_cache, self.user_io,
                                                             Version(str(CLIENT_VERSION)),
-                                                            Version(str(MIN_SERVER_COMPATIBLE_VERSION)),
+                                                            Version(
+                                                                str(MIN_SERVER_COMPATIBLE_VERSION)),
                                                             plugin_manager)
         super(TestConanApi, self).__init__(client_cache=client_cache, user_io=self.user_io,
                                            runner=runner, remote_manager=remote_manager,
