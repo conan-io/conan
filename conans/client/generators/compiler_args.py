@@ -1,6 +1,6 @@
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.model import Generator
-from conans.paths import BUILD_INFO_COMPILER_ARGS
+from conans.constants import BUILD_INFO_COMPILER_ARGS
 from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
                                                 format_defines, format_include_paths,
                                                 format_library_paths, format_libraries,

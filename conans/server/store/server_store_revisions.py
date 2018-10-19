@@ -2,7 +2,7 @@ from os.path import normpath, join
 
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import  PACKAGES_FOLDER
+from conans.client.package_layouts.package_cache_layout import PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.server.store.server_store import ServerStore
 

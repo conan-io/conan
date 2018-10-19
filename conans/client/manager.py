@@ -14,7 +14,7 @@ from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
+from conans.constants import CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.client.graph.graph_manager import load_deps_info

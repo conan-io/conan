@@ -7,7 +7,7 @@ from conans.model.info import ConanInfo
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANINFO
+from conans.constants import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 

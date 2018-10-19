@@ -1,6 +1,6 @@
 from conans.test.utils.tools import TestClient
 import unittest
-from conans.paths import CONANFILE, BUILD_INFO
+from conans.constants import CONANFILE, BUILD_INFO
 from conans.model.ref import PackageReference
 import os
 from conans.util.files import load, mkdir

@@ -2,7 +2,7 @@ import os
 import calendar
 import time
 from conans.util.files import md5sum, md5, save, load, walk
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
+from conans.constants import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
 from conans.errors import ConanException
 import datetime
 

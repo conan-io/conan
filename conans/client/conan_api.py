@@ -31,7 +31,8 @@ from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
-from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
+from conans.paths import get_conan_user_home
+from conans.constants import CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger

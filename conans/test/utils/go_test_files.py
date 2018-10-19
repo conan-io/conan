@@ -1,4 +1,4 @@
-from conans.paths import CONANFILE
+from conans.constants import CONANFILE
 
 
 conanfile_template = r"""

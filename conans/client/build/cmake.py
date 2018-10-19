@@ -3,7 +3,6 @@ import platform
 from itertools import chain
 import subprocess
 
-from conans import tools
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
@@ -12,9 +11,12 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
+from conans.client.tools.oss import args_to_string, cpu_count
+from conans.client.tools.win import vcvars as tools_vcvars
+from conans.client.tools.env import environment_append, remove_from_path
+from conans.client.tools.files import replace_path_in_file
 
 
 class CMake(object):
@@ -140,7 +142,7 @@ class CMake(object):
         compiler = self._settings.get_safe("compiler")
         if compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles',
                                                               'NMake Makefiles JOM']:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+            with tools_vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
@@ -176,10 +178,10 @@ class CMake(object):
                       and "PKG_CONFIG_PATH" not in os.environ
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
-        with tools.environment_append(pkg_env):
+        with environment_append(pkg_env):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-                with tools.remove_from_path("sh"):
+                with remove_from_path("sh"):
                     self._conanfile.run(command)
             else:
                 self._conanfile.run(command)
@@ -314,14 +316,14 @@ class CMake(object):
             for f in files:
                 if f.endswith(".cmake"):
                     path = os.path.join(root, f)
-                    tools.replace_path_in_file(path, pf, replstr, strict=False)
+                    replace_path_in_file(path, pf, replstr, strict=False)
 
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
                     for dep in self._conanfile.deps_cpp_info.deps:
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
+                        ret = replace_path_in_file(path, from_str, dep_str, strict=False)
                         if ret:
                             self._conanfile.output.info("Patched paths for %s: %s to %s"
                                                         % (dep, from_str, dep_str))

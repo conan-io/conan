@@ -1,5 +1,5 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_QBS
+from conans.constants import BUILD_INFO_QBS
 
 
 class DepsCppQbs(object):

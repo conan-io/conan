@@ -5,7 +5,7 @@ from bottle import request
 
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST
+from conans.constants import CONAN_MANIFEST
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import ConanService

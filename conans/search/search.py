@@ -6,7 +6,7 @@ from fnmatch import translate
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import CONANINFO
+from conans.constants import CONANINFO
 from conans.util.log import logger
 from conans.search.query_parse import infix_to_postfix, evaluate_postfix
 from conans.util.files import list_folder_subdirs, load

@@ -6,7 +6,7 @@ from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
 from conans.model.values import Values
-from conans.paths import CONANINFO
+from conans.constants import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
