@@ -10,6 +10,7 @@ env:
      {upload}
 linux: &linux
    os: linux
+   dist: xenial
    sudo: required
    language: python
    python: "3.6"
@@ -103,9 +104,7 @@ python build.py
 appveyor = r"""build: false
 
 environment:
-    PYTHON: "C:\\Python27"
-    PYTHON_VERSION: "2.7.8"
-    PYTHON_ARCH: "32"
+    PYTHON: "C:\\Python37"
 
     CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
