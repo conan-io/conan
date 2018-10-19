@@ -23,6 +23,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
+from conans.client.conan_api import ConanAPIV1
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
@@ -620,3 +621,29 @@ class StoppableThreadBottle(threading.Thread):
     def run_server(self):
         self.start()
         time.sleep(1)
+
+
+class TestConanApi(ConanAPIV1):
+
+    def __init__(self):
+        output = TestBufferConanOutput()
+        users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
+        self.user_io = MockedUserIO(users, out=output)
+        base_folder = temp_folder()
+        client_cache = ClientCache(temp_folder(), os.path.join(base_folder, ".conan", "data"),
+                                   self.user_io.out)
+        plugin_manager = PluginManager(client_cache.plugins_path, get_env("CONAN_PLUGINS", list()),
+                                       self.user_io.out)
+        runner = TestRunner(output, runner=None)
+        requester = ConanRequester(TestRequester(None), client_cache, get_request_timeout())
+        _, _, remote_manager = self.instance_remote_manager(requester, client_cache, self.user_io,
+                                                            Version(str(CLIENT_VERSION)),
+                                                            Version(str(MIN_SERVER_COMPATIBLE_VERSION)),
+                                                            plugin_manager)
+        super(TestConanApi, self).__init__(client_cache=client_cache, user_io=self.user_io,
+                                           runner=runner, remote_manager=remote_manager,
+                                           plugin_manager=plugin_manager, interactive=False)
+
+    @property
+    def out(self):
+        return self.user_io.out
