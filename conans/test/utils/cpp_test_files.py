@@ -2,6 +2,7 @@ import platform
 
 from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
+
 conanfile_build_cmake = """    def build(self):
         defs = {
             "BUILD_SHARED_LIBS": not self.options.static,
