@@ -541,7 +541,7 @@ class ConanLib(ConanFile):
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertEquals(load(sources_dir), curdir)
         self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
-            str(self.client.out).lower())
+                      str(self.client.out).lower())
         self.assertIn("Revision deduced by 'auto'", self.client.out)
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)

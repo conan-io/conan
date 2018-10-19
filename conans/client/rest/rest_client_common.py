@@ -186,7 +186,7 @@ class RestCommonMethods(object):
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False
+                return False, package_reference
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
@@ -202,7 +202,7 @@ class RestCommonMethods(object):
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-        return files_to_upload or deleted
+        return files_to_upload or deleted, package_reference
 
     def search(self, pattern=None, ignorecase=True):
         """

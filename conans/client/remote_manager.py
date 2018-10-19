@@ -38,8 +38,7 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._plugin_manager = plugin_manager
 
-    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest,
-                      recipe_revision=None):
+    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest):
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._plugin_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                      reference=conan_reference, remote=remote)
@@ -64,8 +63,6 @@ class RemoteManager(object):
 
         if policy == UPLOAD_POLICY_SKIP:
             return conan_reference
-
-        conan_reference.revision = recipe_revision
 
         ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
                                          retry_wait, policy, remote_manifest)
@@ -115,7 +112,7 @@ class RemoteManager(object):
         self._output.writeln("")
 
     def upload_package(self, package_reference, remote, retry, retry_wait, integrity_check=False,
-                       policy=None, recipe_revision=None):
+                       policy=None):
 
         """Will upload the package to the first remote"""
         conanfile_path = self._client_cache.conanfile(package_reference.conan)
@@ -155,29 +152,20 @@ class RemoteManager(object):
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        # Read the hashes (revisions) and build a correct package reference for the server
-        package_revision = self._client_cache.package_summary_hash(package_reference)
-
-        if not recipe_revision or not package_revision:
-            raise ConanException("Invalid recipe or package without summary hash!")
-
-        # Copy to not modify the original with the revisions
-        p_ref = package_reference.copy_with_revisions(recipe_revision, package_revision)
-
-        tmp = self._call_remote(remote, "upload_package", p_ref, the_files, retry, retry_wait,
-                                policy)
+        uploaded, new_pref = self._call_remote(remote, "upload_package", package_reference,
+                                               the_files, retry, retry_wait, policy)
 
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)
-        if not tmp:
+        if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")
 
         self._plugin_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                      reference=package_reference.conan,
                                      package_id=package_reference.package_id, remote=remote)
-        return tmp
+        return new_pref
 
     def get_conan_manifest(self, conan_reference, remote):
         """

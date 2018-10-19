@@ -31,7 +31,7 @@ class SCMData(object):
 
     @property
     def recipe_revision(self):
-        if self.type == "git":
+        if self.type in ["git", "svn"]:
             return self.revision
         raise ConanException("Not implemented recipe revision for %s" % self.type)
 
