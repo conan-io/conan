@@ -5,7 +5,8 @@ from conans.client import tools
 from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
 from conans.paths import CONANINFO
-from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, conanfile_exception_formatter
+from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
+                           conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
@@ -17,7 +18,6 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, pl
     conanfile.package_folder = src_package_folder
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
-    print("export_pkg", type(reference))
     plugin_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                            reference=reference, package_id=pkg_id)
 

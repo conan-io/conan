@@ -3,13 +3,9 @@ import os
 import platform
 import stat
 import unittest
-
-from nose.plugins.attrib import attr
-from requests.packages.urllib3.exceptions import ConnectionError
-
-from conans.client.manager import CONANFILE
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_source_files, temp_folder, \
@@ -18,6 +14,8 @@ from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.tools import untargz
 from conans.util.files import load, mkdir, save
+from nose.plugins.attrib import attr
+from requests.packages.urllib3.exceptions import ConnectionError
 
 myconan1 = """
 from conans import ConanFile
@@ -174,7 +172,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)

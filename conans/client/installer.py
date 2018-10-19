@@ -325,6 +325,7 @@ class ConanInstaller(object):
                 clean_dirty(package_folder)
             # Call the info method
             self._call_package_info(conan_file, package_folder)
+            self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
         conan_ref, conan_file = node.conan_ref, node.conanfile
