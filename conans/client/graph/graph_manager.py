@@ -8,7 +8,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.client.graph.graph_builder import DepsGraphBuilder,\
     DepsGraphLockBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
 from conans.client import settings_preprocessor
 from conans.client.output import ScopedOutput
 from conans.client.graph.build_mode import BuildMode
@@ -65,8 +65,8 @@ class GraphManager(object):
         cache_settings.remove_undefined()
         processed_profile = ProcessedProfile(cache_settings, profile, None)
         if conanfile_path.endswith(".py"):
-            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True, local=True,
-                                                    processed_profile=processed_profile)
+            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,
+                                                    local=True, processed_profile=processed_profile)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
 
@@ -85,12 +85,13 @@ class GraphManager(object):
         settings_preprocessor.preprocess(cache_settings)
         processed_profile = ProcessedProfile(cache_settings, profile, create_reference=None)
         conanfile = self._loader.load_virtual([reference], processed_profile)
-        graph = builder.load_graph(conanfile, check_updates=False, update=False, remote_name=None,
+        root_node = Node(None, conanfile)
+        graph = builder.load_graph(root_node, check_updates=False, update=False, remote_name=None,
                                    processed_profile=processed_profile)
         return graph
 
-    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update, remote_name,
-                   recorder, workspace, graph_lock=None):
+    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update,
+                   remote_name, recorder, workspace, graph_lock=None):
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -117,14 +118,16 @@ class GraphManager(object):
         else:
             output = ScopedOutput("PROJECT", self._output)
             if reference.endswith(".py"):
-                conanfile = self._loader.load_conanfile(reference, output, processed_profile, consumer=True)
+                conanfile = self._loader.load_conanfile(reference, output, processed_profile,
+                                                        consumer=True)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
                 conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
-        deps_graph = self._load_graph(conanfile, check_updates, update,
+        root_node = Node(None, conanfile)
+        deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
@@ -168,34 +171,45 @@ class GraphManager(object):
 
             if package_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = self._loader.load_virtual(package_build_requires.values(), scope_options=False,
-                                                    build_requires_options=node.conanfile.build_requires_options,
+                build_requires_options = node.conanfile.build_requires_options
+                virtual = self._loader.load_virtual(package_build_requires.values(),
+                                                    scope_options=False,
+                                                    build_requires_options=build_requires_options,
                                                     processed_profile=processed_profile)
-                build_requires_package_graph = self._load_graph(virtual, check_updates, update, build_mode,
-                                                                remote_name, profile_build_requires,
-                                                                recorder, workspace, processed_profile)
+                virtual_node = Node(None, virtual)
+                build_requires_package_graph = self._load_graph(virtual_node, check_updates, update,
+                                                                build_mode, remote_name,
+                                                                profile_build_requires,
+                                                                recorder, workspace,
+                                                                processed_profile)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
             if new_profile_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
-                virtual = self._loader.load_virtual(new_profile_build_requires.values(), scope_options=False,
-                                                    build_requires_options=node.conanfile.build_requires_options,
+                build_requires_options = node.conanfile.build_requires_options
+                virtual = self._loader.load_virtual(new_profile_build_requires.values(),
+                                                    scope_options=False,
+                                                    build_requires_options=build_requires_options,
                                                     processed_profile=processed_profile)
-
-                build_requires_profile_graph = self._load_graph(virtual, check_updates, update, build_mode,
-                                                                remote_name, new_profile_build_requires,
-                                                                recorder, workspace, processed_profile)
+                virtual_node = Node(None, virtual)
+                build_requires_profile_graph = self._load_graph(virtual_node, check_updates, update,
+                                                                build_mode, remote_name,
+                                                                new_profile_build_requires,
+                                                                recorder, workspace,
+                                                                processed_profile)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
-    def _load_graph(self, conanfile, check_updates, update, build_mode, remote_name,
+    def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile,
                     graph_lock=None):
         if graph_lock:
             builder = DepsGraphLockBuilder(self._proxy, self._output, self._loader, recorder)
-            graph = builder.load_graph(remote_name, processed_profile, node_id, graph_lock)
+            graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock)
         else:
-            builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, workspace, recorder)
-            graph = builder.load_graph(conanfile, check_updates, update, remote_name, processed_profile)
+            builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
+                                       workspace, recorder)
+            graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
+
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
