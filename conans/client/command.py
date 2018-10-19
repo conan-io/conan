@@ -106,7 +106,7 @@ class Command(object):
         self._outputer = outputer
 
     def help(self, *args):
-        """Show help of a specific commmand.
+        """Show help of a specific command.
         """
         parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help")
         parser.add_argument("command", help='command', nargs="?")
@@ -1148,9 +1148,33 @@ class Command(object):
                                             "a package recipe")
         parser_pupd.add_argument('reference', help='Package recipe reference')
         parser_pupd.add_argument('remote', help='Name of the remote')
+
+
+        list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
+                                                            'its associated remotes')
+        list_pref.add_argument('reference', help='Package recipe reference')
+
+        add_pref = subparsers.add_parser('add_pref',
+                                         help="Associate a package reference to a remote")
+        add_pref.add_argument('package_reference', help='Binary package reference')
+        add_pref.add_argument('remote', help='Name of the remote')
+
+        remove_pref = subparsers.add_parser('remove_pref', help="Dissociate a package's reference "
+                                                              "and its remote")
+        remove_pref.add_argument('package_reference', help='Binary package reference')
+
+        update_pref = subparsers.add_parser('update_pref', help="Update the remote associated with "
+                                            "a binary package")
+        update_pref.add_argument('package_reference', help='Bianary package reference')
+        update_pref.add_argument('remote', help='Name of the remote')
+
+        subparsers.add_parser('clean', help="Clean the list of remotes and all "
+                                            "recipe-remote associations")
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
+        package_reference = args.package_reference if hasattr(args, 'package_reference') else None
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
@@ -1178,6 +1202,17 @@ class Command(object):
             return self._conan.remote_remove_ref(reference)
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
+        elif args.subcommand == "list_pref":
+            refs = self._conan.remote_list_pref(reference)
+            self._outputer.remote_ref_list(refs)
+        elif args.subcommand == "add_pref":
+            return self._conan.remote_add_pref(package_reference, remote_name)
+        elif args.subcommand == "remove_pref":
+            return self._conan.remote_remove_pref(package_reference)
+        elif args.subcommand == "update_pref":
+            return self._conan.remote_update_pref(package_reference, remote_name)
+        elif args.subcommand == "clean":
+            return self._conan.remote_clean()
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
