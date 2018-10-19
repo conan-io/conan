@@ -4,7 +4,7 @@ from conans.client.output import ScopedOutput
 from conans.util.log import logger
 from conans.errors import (NotFoundException, ConanException,
                            conanfile_exception_formatter)
-from conans.paths import CONANFILE, CONANFILE_TXT
+from conans.constants import CONANFILE, CONANFILE_TXT
 from conans.util.files import mkdir
 from conans.model.conan_file import get_env_context_manager
 

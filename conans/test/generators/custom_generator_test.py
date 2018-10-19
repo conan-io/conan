@@ -38,7 +38,7 @@ MyCustom_Generator
 
 generator_multi = """
 from conans.model import Generator
-from conans.paths import BUILD_INFO
+from conans.constants import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustomMultiGenerator(Generator):

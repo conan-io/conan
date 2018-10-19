@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 # from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
-from conans.client.tools.env import pythonpath
+from conans.client.tools.env import pythonpath, run_environment as tools_run_environment
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
@@ -13,6 +13,8 @@ from conans.constants import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
+from conans.client.tools.files import collect_libs
+from conans.client.tools.win import run_in_windows_bash
 
 
 def create_options(conanfile):
@@ -187,7 +189,7 @@ class ConanFile(object):
     def collect_libs(self, folder=None):
         self.output.warn("'self.collect_libs' is deprecated, "
                          "use 'tools.collect_libs(self)' instead")
-        return tools.collect_libs(self, folder=folder)
+        return collect_libs(self, folder=folder)
 
     @property
     def build_policy_missing(self):
@@ -245,10 +247,10 @@ class ConanFile(object):
             if not win_bash:
                 return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
-            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+            return run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw)
         if run_environment:
-            with tools.run_environment(self):
+            with tools_run_environment(self):
                 if os_info.is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                                              command)
