@@ -1,9 +1,10 @@
+import os
 import time
-
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.search.search import search_recipes, search_packages
+from conans.util.files import load
 from conans.util.log import logger
 
 
@@ -167,8 +168,31 @@ class CmdUpload(object):
 
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
+            self._print_manifest_information(remote_recipe_manifest, local_manifest, conan_ref, remote)
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))
 
         return remote_recipe_manifest
+
+    def _print_manifest_information(self, remote_recipe_manifest, local_manifest, conan_ref, remote):
+        try:
+            self._user_io.out.info("\n%s" % ("-"*40))
+            self._user_io.out.info("Remote manifest:")
+            self._user_io.out.info(remote_recipe_manifest)
+            self._user_io.out.info("Local manifest:")
+            self._user_io.out.info(local_manifest)
+            difference = remote_recipe_manifest.difference(local_manifest)
+            if "conanfile.py" in difference:
+                contents = load(os.path.join(self._client_cache.export(conan_ref),
+                                                   "conanfile.py"))
+                endlines = "\\r\\n" if "\r\n" in contents else "\\n"
+                self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
+                remote_contents = self._remote_manager.get_path(conan_ref, package_id=None,
+                                                                path="conanfile.py", remote=remote)
+                endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
+                self._user_io.out.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
+            self._user_io.out.info("\n%s" % ("-"*40))
+        except Exception as e:
+            self._user_io.out.info("Error printing information about the diff: %s" % str(e))
+
