@@ -2,7 +2,7 @@ import fnmatch
 
 from collections import OrderedDict
 
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference

@@ -12,7 +12,7 @@ from conans.server.migrate import migrate_and_get_server_config
 import time
 import shutil
 from conans import SERVER_CAPABILITIES, API_V2, REVISIONS
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.server.conf import get_server_store
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"

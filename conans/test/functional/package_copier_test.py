@@ -5,7 +5,7 @@ from conans.client.userio import UserIO
 import sys
 from conans.util.files import mkdir, save, load
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 import os
 from conans.client.cmd.copy import package_copy
 

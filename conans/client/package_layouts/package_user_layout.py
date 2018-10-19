@@ -13,4 +13,5 @@ class PackageUserLayout(PackageBaseLayout):
         base_folder = load(linked_package_file)
         super(PackageUserLayout, self).__init__(base_folder, conan_ref, short_paths)
 
-        # TODO: Parse linked_package_file as may directories won't have the 'standard' layout.
+        # TODO: Parse linked_package_file (or wherever the laytout pattern is)
+        #  as directories won't have the 'standard' layout.

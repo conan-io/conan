@@ -1,7 +1,7 @@
 import os
 
 from conans.client.remote_registry import Remote
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.model.manifest import FileTreeManifest
 from conans.errors import ConanException
 from conans.model.ref import PackageReference

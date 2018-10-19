@@ -1,7 +1,8 @@
 import os
 import platform
 import unittest
-from conans.paths import conan_expand_user, SimplePaths
+from conans.paths import conan_expand_user
+from conans.paths.simple_paths import SimplePaths
 from conans.client.package_layouts.package_cache_layout import BUILD_FOLDER, PACKAGES_FOLDER, \
     EXPORT_FOLDER
 from conans.model.ref import ConanFileReference, PackageReference

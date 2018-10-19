@@ -1,6 +1,6 @@
 from os.path import normpath, join, relpath
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.client.package_layouts.package_cache_layout import EXPORT_FOLDER, PACKAGES_FOLDER
 
 

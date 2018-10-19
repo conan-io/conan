@@ -17,18 +17,16 @@ SYSTEM_REQS_FOLDER = "system_reqs"
 SCM_FOLDER = "scm_folder.txt"
 
 
-if platform.system() == "Windows":
-    from conans.util.windows import path_shortener
-else:
-    def path_shortener(x, _):
-        return x
-
-
 def short_path(func):
-    def wrap(self, *args, **kwargs):
-        p = func(*args, **kwargs)
-        return path_shortener(p, self._short_paths)
-    return wrap
+    if platform.system() == "Windows":
+        from conans.util.windows import path_shortener
+
+        def wrap(self, *args, **kwargs):
+            p = func(self,  *args, **kwargs)
+            return path_shortener(p, self._short_paths)
+        return wrap
+    else:
+        return func
 
 
 class PackageCacheLayout(PackageBaseLayout):

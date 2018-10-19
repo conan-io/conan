@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.util.files import save, load, md5
 from conans.model.ref import PackageReference
 from conans.constants import CONANFILE, CONAN_MANIFEST
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
 from conans.model.manifest import FileTreeManifest
 

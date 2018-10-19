@@ -2,7 +2,7 @@ import unittest
 from collections import namedtuple, Counter
 
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.client.loader import ConanFileLoader, ProcessedProfile

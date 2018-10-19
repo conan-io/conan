@@ -27,7 +27,7 @@ if is_case_insensitive_os():
                 if part != items[idx]:
                     raise ConanException("Requested '%s' but found case incompatible '%s'\n"
                                          "Case insensitive filesystem can't manage this"
-                                         % (str(conan_reference), part))
+                                         % (str(conan_reference), items[idx]))
                 tmp = os.path.normpath(tmp + os.sep + part)
             except ValueError:
                 return
@@ -42,7 +42,7 @@ def get_package_layout(store_folder, conan_reference, short_paths=False):
 
     linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
     if os.path.exists(linked_package_file):
-        return PackageUserLayout(linked_package_file,
+        return PackageUserLayout(linked_package_file=linked_package_file,
                                  conan_ref=conan_reference, short_paths=short_paths)
     else:
         check_ref_case(conan_reference, store_folder)
