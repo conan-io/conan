@@ -384,41 +384,48 @@ class ConanAPIV1(object):
         env = env or []
         cwd = cwd or get_cwd()
 
-        # Checks that info files exists if the install folder is specified
-        if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
-            raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
-                                 "files" % (CONANINFO, BUILD_INFO))
+        try:
+            recorder = ActionRecorder()
 
-        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+            # Checks that info files exists if the install folder is specified
+            if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
+                raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
+                                     "files" % (CONANINFO, BUILD_INFO))
 
-        if package_folder:
-            if build_folder or source_folder:
-                raise ConanException("package folder definition incompatible with build "
-                                     "and source folders")
-            package_folder = _make_abs_path(package_folder, cwd)
+            conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-        build_folder = _make_abs_path(build_folder, cwd)
-        install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
+            if package_folder:
+                if build_folder or source_folder:
+                    raise ConanException("package folder definition incompatible with build "
+                                         "and source folders")
+                package_folder = _make_abs_path(package_folder, cwd)
 
-        # Checks that no both settings and info files are specified
-        infos_present = existing_info_files(install_folder)
-        if profile_name or settings or options or env or not infos_present:
-            profile = profile_from_args(profile_name, settings, options, env=env,
-                                        cwd=cwd, client_cache=self._client_cache)
-        else:
-            profile = read_conaninfo_profile(install_folder)
+            build_folder = _make_abs_path(build_folder, cwd)
+            install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
+            source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
 
-        reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
-                   self._client_cache, self._plugin_manager, self._registry)
+            # Checks that no both settings and info files are specified
+            infos_present = existing_info_files(install_folder)
+            if profile_name or settings or options or env or not infos_present:
+                profile = profile_from_args(profile_name, settings, options, env=env,
+                                            cwd=cwd, client_cache=self._client_cache)
+            else:
+                profile = read_conaninfo_profile(install_folder)
 
-        recorder = ActionRecorder()
-        export_pkg(self._client_cache, self._graph_manager, self._plugin_manager, recorder,
-                   self._user_io.out,
-                   reference, source_folder=source_folder, build_folder=build_folder,
-                   package_folder=package_folder, install_folder=install_folder,
-                   profile=profile, force=force)
+            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+            recorder.add_recipe_being_developed(reference)
+            cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
+                       self._client_cache, self._plugin_manager, self._registry)
+            export_pkg(self._client_cache, self._graph_manager, self._plugin_manager, recorder,
+                       self._user_io.out,
+                       reference, source_folder=source_folder, build_folder=build_folder,
+                       package_folder=package_folder, install_folder=install_folder,
+                       profile=profile, force=force)
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def download(self, reference, remote_name=None, package=None, recipe=False):
