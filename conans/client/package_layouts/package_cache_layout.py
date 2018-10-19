@@ -24,19 +24,26 @@ else:
         return x
 
 
+def short_path(func):
+    def wrap(self, *args, **kwargs):
+        p = func(*args, **kwargs)
+        return path_shortener(p, self._short_paths)
+    return wrap
+
+
 class PackageCacheLayout(PackageBaseLayout):
     """ This is the package layout for Conan cache """
 
     def export(self):
         return os.path.join(self.conan(), EXPORT_FOLDER)
 
+    @short_path
     def export_sources(self):
-        p = os.path.join(self.conan(), EXPORT_SRC_FOLDER)
-        return path_shortener(p, self._short_paths)
+        return os.path.join(self.conan(), EXPORT_SRC_FOLDER)
 
+    @short_path
     def source(self):
-        p = os.path.join(self.conan(), SRC_FOLDER)
-        return path_shortener(p, self._short_paths)
+        return os.path.join(self.conan(), SRC_FOLDER)
 
     def conanfile(self):
         export = self.export()
@@ -45,11 +52,11 @@ class PackageCacheLayout(PackageBaseLayout):
     def builds(self):
         return os.path.join(self.conan(), BUILD_FOLDER)
 
+    @short_path
     def build(self, package_reference):
         assert isinstance(package_reference, PackageReference)
         assert package_reference.conan == self._conan_ref
-        p = os.path.join(self.conan(), BUILD_FOLDER, package_reference.package_id)
-        return path_shortener(p, self._short_paths)
+        return os.path.join(self.conan(), BUILD_FOLDER, package_reference.package_id)
 
     def system_reqs(self):
         return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, SYSTEM_REQS)
@@ -63,11 +70,11 @@ class PackageCacheLayout(PackageBaseLayout):
     def packages(self):
         return os.path.join(self.conan(), PACKAGES_FOLDER)
 
+    @short_path
     def package(self, package_reference):
         assert isinstance(package_reference, PackageReference)
         assert package_reference.conan == self._conan_ref
-        p = os.path.join(self.conan(), PACKAGES_FOLDER, package_reference.package_id)
-        return path_shortener(p, self._short_paths)
+        return os.path.join(self.conan(), PACKAGES_FOLDER, package_reference.package_id)
 
     def scm_folder(self):
         return os.path.join(self.conan(), SCM_FOLDER)
