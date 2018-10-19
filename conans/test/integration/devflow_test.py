@@ -241,12 +241,12 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("source . --source-folder src")
 
         # Patch the CMakeLists to include the generator file from a different folder
-        install_dir = os.path.join(client.current_folder, "install_x86")
+        install_dir = os.path.join(client.current_folder, "install_x86_64")
         tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
                               "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
                               '"%s/conanbuildinfo.cmake"' % install_dir)
 
-        client.run("install . --install-folder install_x86 -s arch=x86")
-        client.run("build . --build-folder build_x86 --install-folder '%s' "
+        client.run("install . --install-folder install_x86_64 -s arch=x86_64")
+        client.run("build . --build-folder build_x86_64 --install-folder '%s' "
                    "--source-folder src" % install_dir)
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_x86", "lib")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_x86_64", "lib")))

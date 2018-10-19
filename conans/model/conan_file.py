@@ -106,6 +106,10 @@ class ConanFile(object):
     in_local_cache = True
     develop = False
 
+    # Defaulting the reference fields
+    default_channel = None
+    default_user = None
+
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -166,7 +170,7 @@ class ConanFile(object):
     @property
     def channel(self):
         if not self._conan_channel:
-            self._conan_channel = os.getenv("CONAN_CHANNEL")
+            self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
                 raise ConanException("CONAN_CHANNEL environment variable not defined, "
                                      "but self.channel is used in conanfile")
@@ -175,7 +179,7 @@ class ConanFile(object):
     @property
     def user(self):
         if not self._conan_user:
-            self._conan_user = os.getenv("CONAN_USERNAME")
+            self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
                 raise ConanException("CONAN_USERNAME environment variable not defined, "
                                      "but self.user is used in conanfile")
