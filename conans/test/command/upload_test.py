@@ -207,7 +207,7 @@ class UploadTest(unittest.TestCase):
                       client.out)
 
         client2 = self._client()
-        client2.save({"conanfile.py": conanfile + "\n#end",
+        client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
@@ -222,9 +222,9 @@ class UploadTest(unittest.TestCase):
         # first client tries to upload again
         error = client.run("upload Hello0/1.2.1@frodo/stable", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("remote recipe is newer than local recipe", client.user_io.out)
-        self.assertIn("""Local 'conanfile.py' using '\n' line-ends
-Remote 'conanfile.py' using '\n' line-ends""", client.user_io.out)
+        self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
+        self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
+        self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
 
     def upload_unmodified_recipe_test(self):
         client = self._client()
@@ -487,8 +487,7 @@ class Pkg(ConanFile):
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
         client2.users = {"server2": [("lasote", "mypass")]}
-        client2.servers = {"server2": server2}
-        client2.update_servers()
+        client2.update_servers({"server2": server2})
         client2.run("upload * --all --confirm -r=server2")
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
