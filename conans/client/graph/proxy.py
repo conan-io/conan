@@ -47,7 +47,7 @@ class ConanProxy(object):
 
         # In disk but not with the same revision
         if reference.revision:
-            full_ref = self._registry.refs.get_with_revision(reference)
+            full_ref = self._registry.refs.get_with_revision(reference.copy_without_revision())
             if full_ref.revision != reference.revision:
                 output.info("Requested different revision of %s..." % str(reference))
                 remote, new_ref = self._download_recipe(reference, output, remote_name, recorder)

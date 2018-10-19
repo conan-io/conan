@@ -103,15 +103,16 @@ class _GenericReferencesRegistry(_Registry):
             _, refs = self._partial_load()
             return refs
 
-    def remove(self, ref, quiet=False):
+    def remove(self, ref, quiet=False, remote_name=None):
         assert(isinstance(ref, (ConanFileReference, PackageReference)))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             try:
                 full_ref = self._find_ref_in(ref, refs)
-                del refs[full_ref.full_repr()]
-                self._partial_save(refs)
-            except:
+                if full_ref and (remote_name is None or remote_name == refs[full_ref.full_repr()]):
+                    del refs[full_ref.full_repr()]
+                    self._partial_save(refs)
+            except KeyError:
                 if not quiet:
                     self._output.warn("Couldn't delete '%s' from remote registry" % str(ref))
 
@@ -130,12 +131,16 @@ class _GenericReferencesRegistry(_Registry):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             full_ref = self._find_ref_in(ref, refs)
-            if check_exists and full_ref:
+            simple_ref = self._find_ref_in(ref.copy_without_revision(), refs)
+
+            if check_exists and (full_ref or simple_ref):
                 raise ConanException("%s already exists. Use update" % str(ref))
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
             if full_ref:
                 del refs[full_ref.full_repr()]
+            elif simple_ref:  # Trying to set a ref with revisions when there is one without rev
+                del refs[simple_ref.full_repr()]
             refs[ref.full_repr()] = remote_name
             self._partial_save(refs)
 
@@ -147,8 +152,21 @@ class _GenericReferencesRegistry(_Registry):
                 remote_name = refs[full_ref.full_repr()]
                 self.update(full_ref.copy_without_revision(), remote_name)
 
+    def _find_ref_in(self, ref, refs):
+        # Finds a "ref" (even without revision) in the refs
+        # (that can contain revisions)
+        for ref_ in refs:
+            ref_ = self.ref_class.loads(ref_)
+            if ref_.matches_with_ref(ref):
+                return ref_
+        return None
+
 
 class _ReferencesRegistry(_GenericReferencesRegistry):
+
+    @property
+    def ref_class(self):
+        return ConanFileReference
 
     def _partial_load(self):
         """Loads only references for recipes"""
@@ -173,15 +191,6 @@ class _ReferencesRegistry(_GenericReferencesRegistry):
             rrefs[ref.full_repr()] = remote_name
             self._save(remotes, rrefs, prefs)
 
-    @staticmethod
-    def _find_ref_in(ref, refs):
-        # Finds a "conan_reference" (even without revision) in the refs (that can contain revisions)
-        for ref_ in refs:
-            ref_ = ConanFileReference.loads(ref_)
-            if ref_.copy_without_revision() == ref.copy_without_revision():
-                return ref_
-        return None
-
     def get_with_revision(self, ref):
         assert(isinstance(ref, ConanFileReference))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
@@ -190,6 +199,10 @@ class _ReferencesRegistry(_GenericReferencesRegistry):
 
 
 class _PackageReferencesRegistry(_GenericReferencesRegistry):
+
+    @property
+    def ref_class(self):
+        return PackageReference
 
     def _partial_load(self):
         """Loads only references for packages"""
@@ -212,15 +225,15 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             prefs[str(ref)] = remote_name
             self._save(remotes, rrefs, prefs)
 
-    @staticmethod
-    def _find_ref_in(ref, refs):
-        # Finds a "package_reference" (even without revision) in the refs
-        # (that can contain revisions)
-        for ref_ in refs:
-            ref_ = PackageReference.loads(ref_)
-            if ref_.copy_without_revision() == ref.copy_without_revision():
-                return ref_
-        return None
+    def remove_all(self, ref, remote_name=None):
+        assert(isinstance(ref, ConanFileReference))
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, rrefs, prefs = self._load()
+            new_prefs = {pref: remote for pref, remote in prefs.items()
+                         if not PackageReference.loads(pref).conan.matches_with_ref(ref)
+                         or (remote_name is not None and remote != remote_name)}
+
+            self._save(remotes, rrefs, new_prefs)
 
 
 class _RemotesRegistry(_Registry):

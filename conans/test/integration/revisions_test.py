@@ -22,7 +22,7 @@ class RevisionsTest(unittest.TestCase):
 
         self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
         self.users["remote_norevisions"] = [("lasote", "mypass")]
-        self.client = TestClient(servers=self.servers, users=self.users)
+        self.client = TestClient(servers=self.servers, users=self.users, activate_v2=True)
         self.conanfile = '''
 from conans import ConanFile
 
@@ -213,18 +213,32 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+        self.client.run("remote list_ref")
+        self.assertIn("%s#149570a812b46d87c7dfa6408809b370: remote0" % str(self.ref),
+                      self.client.out)
+        self.client.run("remote list_pref %s" % str(self.ref))
+        self.assertIn("%s#149570a812b46d87c7dfa6408809b370:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#33ed2b627c1f83f6381ed1823d42ad9f:"
+                      " remote0" % str(self.ref),
+                      self.client.out)
 
         sleep(1)
-        client2 = TestClient(servers=self.servers, users=self.users)
+        client2 = TestClient(servers=self.servers, users=self.users, activate_v2=True)
         conanfile2 = self.conanfile + " "
         client2.save({"conanfile.py": conanfile2})
         client2.run("create . %s" % str(self.ref))
         client2.run("upload %s -c --all -r remote0" % str(self.ref))
+        client2.run("remote list_pref %s" % str(self.ref))
 
         # install of the client1 (no-update)
         self.client.run("install %s" % str(self.ref))
         self.assertIn("lib/1.0@lasote/testing from 'remote0' - Cache", self.client.out)
         self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      self.client.out)
+        self.client.run("remote list_pref %s" % str(self.ref))
+        self.assertIn("%s#149570a812b46d87c7dfa6408809b370:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#33ed2b627c1f83f6381ed1823d42ad9f:"
+                      " remote0" % str(self.ref),
                       self.client.out)
 
         # install with update
@@ -233,7 +247,7 @@ class HelloConan(ConanFile):
         self.assertIn("The current binary package doesn't belong to the current recipe revision:",
                       self.client.out)
         self.assertIn("lib/1.0@lasote/testing from 'remote0' - Updated", self.client.out)
-        self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
+        self.assertIn("lib/1.0@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download",
                       self.client.out)
 
     def test_registry_revision_updated(self):
@@ -269,7 +283,7 @@ class HelloConan(ConanFile):
 
         # Same recipe, but will generate different package
         sleep(1)
-        client2 = TestClient(servers=self.servers, users=self.users)
+        client2 = TestClient(servers=self.servers, users=self.users, activate_v2=True)
         client2.save({"conanfile.py": conanfile})
         client2.run("create . %s" % str(self.ref))
         client2.run("upload %s -c --all -r remote0" % str(self.ref))

@@ -1,9 +1,11 @@
 import os
 import unittest
-from conans.client.remote_registry import (RemoteRegistry, migrate_registry_file, dump_registry,
-                                           default_remotes, load_registry_txt)
+from conans.client.remote_registry import RemoteRegistry, migrate_registry_file, dump_registry, \
+    default_remotes
+from conans.client.remote_registry import (load_registry_txt)
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
+from conans.model.ref import PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
@@ -158,23 +160,22 @@ other/1.0@lasote/testing conan.io
         registry.refs.set(ref_with_rev, "conan.io")
         self.assertEquals(registry.refs.get_with_revision(ref), ref_with_rev)
         self.assertEquals(registry.refs.get_with_revision(ref_with_rev), ref_with_rev)
-        self.assertEquals(registry.refs.get_with_revision(ref.copy_with_revision("OtherRevision")),
-                          ref_with_rev)
+        self.assertIsNone(registry.refs.get_with_revision(ref.copy_with_revision("OtherRevision")))
 
     def revisions_update_test(self):
         ref = ConanFileReference.loads("lib/1.0@user/channel")
         registry = self._get_registry()
         registry.refs.set(ref.copy_with_revision("revision"), "conan.io")
-        registry.refs.update(ref, "conan.io2")
+        registry.refs.update(ref.copy_with_revision("revision"), "conan.io2")
+
+        self.assertEquals({'lib/1.0@user/channel#revision': 'conan.io2'}, registry.refs.list)
 
         self.assertEquals(registry.refs.get(ref).name, "conan.io2")
-        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name,
-                          "conan.io2")
+        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name, "conan.io2")
 
         registry.refs.update(ref.copy_with_revision("revision"), "conan.io")
         self.assertEquals(registry.refs.get(ref).name, "conan.io")
-        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name,
-                          "conan.io")
+        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name, "conan.io")
 
         registry.refs.set(ref, "conan.io")
         self.assertNotIn(ref.copy_with_revision("revision").full_repr(), registry.refs.list)
@@ -200,3 +201,42 @@ other/1.0@lasote/testing conan.io
         registry.refs.clear_revision(ref.copy_without_revision())
         ref2 = registry.refs.get_with_revision(ref)
         self.assertIsNone(ref2.revision)
+
+    def remove_all_package_test(self):
+        f = os.path.join(temp_folder(), "aux_file")
+        save(f, dump_registry(default_remotes, {}, {}))
+        registry = RemoteRegistry(f, TestBufferConanOutput())
+
+        registry.remotes.add("r1", "url1", True, insert=0)
+        registry.remotes.add("r2", "url2", True, insert=0)
+
+        ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
+        ref2 = ConanFileReference.loads("MyLib2/0.1@lasote/stable")
+
+        registry.prefs.set(PackageReference(ref, "1"), "r1")
+        registry.prefs.set(PackageReference(ref, "2"), "r1")
+        registry.prefs.set(PackageReference(ref, "3"), "r1")
+        registry.prefs.set(PackageReference(ref, "4"), "r2")
+        registry.prefs.set(PackageReference(ref2, "1"), "r1")
+
+        registry.prefs.remove_all(ref)
+
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "4")))
+        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")
+
+        registry.prefs.set(PackageReference(ref, "1"), "r1")
+        registry.prefs.set(PackageReference(ref, "2"), "r1")
+        registry.prefs.set(PackageReference(ref, "3"), "r1")
+        registry.prefs.set(PackageReference(ref, "4"), "r2")
+        registry.prefs.set(PackageReference(ref2, "1"), "r1")
+
+        registry.prefs.remove_all(ref, "r1")
+
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
+        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
+        self.assertEquals(registry.prefs.get(PackageReference(ref, "4")).name, "r2")
+        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")

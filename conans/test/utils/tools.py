@@ -348,7 +348,13 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             with chdir(tmp_project_dir):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-                rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+                    rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                else:
+                    import xml.etree.ElementTree as ET
+                    output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                    root = ET.fromstring(output)
+                    rev = root.findall("./entry")[0].get("revision")
             project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
             return project_url, rev
         finally:
@@ -419,7 +425,8 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+                 requester_class=None, runner=None, path_with_spaces=True,
+                 activate_v2=False):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -427,6 +434,7 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.activate_v2 = activate_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
@@ -535,6 +543,7 @@ class TestClient(object):
                                                             self.user_io, self.client_version,
                                                             self.min_server_compatible_version,
                                                             self.plugin_manager)
+            self.rest_api_client._activate_v2 = self.activate_v2
             set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):

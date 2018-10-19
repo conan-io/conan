@@ -80,6 +80,22 @@ class RefTest(unittest.TestCase):
         self.assertTrue(ref == ref2)
         self.assertFalse(ref != ref2)
 
+    def check_with_revision_test(self):
+        _br = ConanFileReference.loads
+        ref = _br("opencv/2.4.10@3rd-party/testing")
+        self.assertTrue(ref.matches_with_ref(ref))
+
+        self.assertFalse(ref.matches_with_ref(_br("opencv/2.4.10@3rd-party/testing#Revision")))
+        self.assertTrue(_br("opencv/2.4.10@3rd-party/testing#Revision").matches_with_ref(ref))
+
+        self.assertTrue(_br("opencv/2.4.10@3rd-party/"
+                            "testing#Revision").matches_with_ref(_br("opencv/2.4.10@3rd-party/"
+                                                                     "testing#Revision")))
+
+        self.assertFalse(_br("opencv/2.4.10@3rd-party/"
+                             "testing#Revision2").matches_with_ref(_br("opencv/2.4.10@3rd-party/"
+                                                                       "testing#Revision1")))
+
 
 class ConanNameTestCase(unittest.TestCase):
 

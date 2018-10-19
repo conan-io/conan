@@ -10,7 +10,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, put_headers=None):
+    def __init__(self, output, requester, put_headers=None, activate_v2=False):
 
         # Set to instance
         self.token = None
@@ -22,19 +22,19 @@ class RestApiClient(object):
         self.verify_ssl = True
         self._put_headers = put_headers
 
-        self._capabilities = defaultdict(list)
+        self._cached_capabilities = defaultdict(list)
+        self._activate_v2 = activate_v2
 
     def _get_api(self):
-        if self.remote_url not in self._capabilities:
+        if self.remote_url not in self._cached_capabilities:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                 self.requester, self.verify_ssl, self._put_headers)
             _, _, cap = tmp.server_info()
-            self._capabilities[self.remote_url] = cap
+            self._cached_capabilities[self.remote_url] = cap
 
-        v2_enabled = get_env("CONAN_TESTING_SERVER_V2_ENABLED", False)
-        if v2_enabled and API_V2 in self._capabilities[self.remote_url]:
-            checksum_deploy = CHECKSUM_DEPLOY in self._capabilities[self.remote_url]
-            revisions_enabled = REVISIONS in self._capabilities[self.remote_url]
+        if self._activate_v2 and API_V2 in self._cached_capabilities[self.remote_url]:
+            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
+            revisions_enabled = REVISIONS in self._cached_capabilities[self.remote_url]
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, revisions_enabled, self._put_headers,
                                  checksum_deploy)
