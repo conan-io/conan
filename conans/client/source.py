@@ -7,9 +7,8 @@ from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.model.conan_file import get_env_context_manager
-from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
-from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty, mkdir, walk
 from conans.model.scm import SCMData
 

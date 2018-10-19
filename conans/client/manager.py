@@ -137,10 +137,5 @@ class ConanManager(object):
                 # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
-                try:
-                    if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                        run_deploy(deploy_conanfile, install_folder, output)
-                except:
-                    import traceback
-                    a = traceback.format_exc()
-                    print(a)
+                if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                    run_deploy(deploy_conanfile, install_folder, output)
