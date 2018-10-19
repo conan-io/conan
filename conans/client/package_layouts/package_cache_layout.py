@@ -4,7 +4,6 @@ import os
 import platform
 
 from conans.constants import CONANFILE, SYSTEM_REQS
-from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.client.package_layouts.package_base_layout import PackageBaseLayout
 
@@ -25,34 +24,6 @@ else:
         return x
 
 
-def is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
-
-if is_case_insensitive_os():
-    def check_ref_case(conan_reference, conan_folder, store_folder):
-        if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
-            return
-        # If exists, lets check path
-        tmp = store_folder
-        for part in conan_reference:
-            items = os.listdir(tmp)
-            if part not in items:
-                offending = ""
-                for item in items:
-                    if item.lower() == part.lower():
-                        offending = item
-                        break
-                raise ConanException("Requested '%s' but found case incompatible '%s'\n"
-                                     "Case insensitive filesystem can't manage this"
-                                     % (str(conan_reference), offending))
-            tmp = os.path.normpath(tmp + os.sep + part)
-else:
-    def check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
-        pass
-
-
 class PackageCacheLayout(PackageBaseLayout):
     """ This is the package layout for Conan cache """
 
@@ -69,7 +40,6 @@ class PackageCacheLayout(PackageBaseLayout):
 
     def conanfile(self):
         export = self.export()
-        check_ref_case(self._conan_ref, export, self._base_folder)
         return os.path.join(export, CONANFILE)
 
     def builds(self):

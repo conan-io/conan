@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer,\
     create_local_git_repo
-from conans.paths import CONANFILE, BUILD_INFO
+from conans.constants import CONANFILE, BUILD_INFO
 from conans.util.files import load, save
 import os
 from conans.test.utils.test_files import temp_folder

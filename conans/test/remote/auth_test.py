@@ -2,7 +2,7 @@ import unittest
 
 from conans import tools
 from conans.test.utils.tools import TestServer, TestClient
-from conans.paths import CONANFILE
+from conans.constants import CONANFILE
 from conans.util.files import save
 from conans.model.ref import ConanFileReference
 import os

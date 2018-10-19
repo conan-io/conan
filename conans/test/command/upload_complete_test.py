@@ -5,7 +5,7 @@ from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
+from conans.constants import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 import platform
 import stat
 from conans.util.files import load, mkdir, save

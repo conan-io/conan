@@ -7,7 +7,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import load
 import json
-from conans.paths import CONANFILE, RUN_LOG_NAME
+from conans.constants import CONANFILE, RUN_LOG_NAME
 from conans.client.runner import ConanRunner
 
 

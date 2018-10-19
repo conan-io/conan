@@ -3,7 +3,7 @@ import unittest
 from conans import tools
 from conans.test.utils.tools import TestClient
 import os
-from conans.paths import CONANFILE
+from conans.constants import CONANFILE
 from conans.util.files import load, mkdir
 from conans.test.utils.test_files import temp_folder
 from parameterized import parameterized

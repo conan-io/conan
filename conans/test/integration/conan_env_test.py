@@ -8,7 +8,7 @@ from conans import tools
 from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, BUILD_INFO
+from conans.constants import CONANFILE, CONANINFO, BUILD_INFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load

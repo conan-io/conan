@@ -1,7 +1,7 @@
 import platform
 import unittest
 
-from conans.paths import CONANFILE
+from conans.constants import CONANFILE
 from conans.test.utils.tools import TestClient
 
 mylibh = '''

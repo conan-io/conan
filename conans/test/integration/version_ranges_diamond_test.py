@@ -3,7 +3,7 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.paths import CONANFILE
+from conans.constants import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer, \
     inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 from conans.util.files import load

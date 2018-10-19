@@ -1,5 +1,5 @@
 import unittest
-from conans.paths import CONANFILE, BUILD_INFO
+from conans.constants import CONANFILE, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 import os
