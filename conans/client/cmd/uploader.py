@@ -1,6 +1,6 @@
 import os
 import time
-from conans import tools
+from conans.util.files import load
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
