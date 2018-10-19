@@ -174,7 +174,7 @@ class CmdUpload(object):
             self._user_io.out.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = tools.load(os.path.join(self._client_cache.export(conan_ref),
+                contents = load(os.path.join(self._client_cache.export(conan_ref),
                                                    "conanfile.py"))
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
