@@ -167,13 +167,13 @@ class Command(object):
                             help='Generate GitLab files for linux clang')
         parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for linux gcc')
+                            help='Generate CircleCI files for linux gcc')
         parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for linux clang')
+                            help='Generate CircleCI files for linux clang')
         parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for OSX apple-clang')
+                            help='Generate CircleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",

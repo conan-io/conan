@@ -1,16 +1,14 @@
 import unittest
 import os
+import shutil
+
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.test_files import hello_source_files
-from conans.client.manager import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
-import shutil
-from conans.paths import CONANINFO
+from conans.paths import CONANINFO, CONANFILE
 from conans.client.packager import create_package
 from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.model.settings import Settings
 from conans.client.output import ScopedOutput
-from conans.model.profile import Profile
 from conans.client.graph.python_requires import ConanPythonRequire
 
 

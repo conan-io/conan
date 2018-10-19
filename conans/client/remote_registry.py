@@ -103,13 +103,14 @@ class _GenericReferencesRegistry(_Registry):
             _, refs = self._partial_load()
             return refs
 
-    def remove(self, ref, quiet=False):
+    def remove(self, ref, quiet=False, remote_name=None):
         assert(isinstance(ref, (ConanFileReference, PackageReference)))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             try:
-                del refs[str(ref)]
-                self._partial_save(refs)
+                if remote_name is None or remote_name == refs[str(ref)]:
+                    del refs[str(ref)]
+                    self._partial_save(refs)
             except:
                 if not quiet:
                     self._output.warn("Couldn't delete '%s' from remote registry" % str(ref))
@@ -182,6 +183,16 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
                 raise ConanException("%s not in remotes" % remote_name)
             prefs[str(ref)] = remote_name
             self._save(remotes, rrefs, prefs)
+
+    def remove_all(self, ref, remote_name=None):
+        assert(isinstance(ref, ConanFileReference))
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, rrefs, prefs = self._load()
+            new_prefs = {pref: remote for pref, remote in prefs.items()
+                         if not PackageReference.loads(pref).conan.matches_with_ref(ref)
+                         or (remote_name is not None and remote != remote_name)}
+
+            self._save(remotes, rrefs, new_prefs)
 
 
 class _RemotesRegistry(_Registry):
