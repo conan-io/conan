@@ -31,6 +31,7 @@ from conans.util.files import (save, rmdir, mkdir, make_read_only,
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
+from conans.model.manifest import FileTreeManifest
 
 
 def build_id(conan_file):
@@ -302,6 +303,14 @@ class ConanInstaller(object):
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
 
+    def _node_concurrently_installed(self, node, package_folder):
+        if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
+            return True
+        elif node.binary == BINARY_UPDATE:
+            read_manifest = FileTreeManifest.load(package_folder)
+            if node.update_manifest == read_manifest:
+                return True
+
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         output = ScopedOutput(str(conan_ref), self._out)
@@ -314,9 +323,14 @@ class ConanInstaller(object):
                 if node.binary == BINARY_BUILD:
                     self._build_package(node, package_ref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    self._remote_manager.get_package(package_ref, package_folder,
-                                                     node.binary_remote, output, self._recorder)
-                    self._registry.prefs.set(package_ref, node.binary_remote.name)
+                    if not self._node_concurrently_installed(node, package_folder):
+                        self._remote_manager.get_package(package_ref, package_folder,
+                                                         node.binary_remote, output, self._recorder)
+                        self._registry.prefs.set(package_ref, node.binary_remote.name)
+                    else:
+                        output.success('Download skipped. Probable concurrent download')
+                        log_package_got_from_local_cache(package_ref)
+                        self._recorder.package_fetched_from_cache(package_ref)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
                     log_package_got_from_local_cache(package_ref)
