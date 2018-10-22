@@ -1,12 +1,82 @@
-import unittest
-from conans.test.utils.tools import TestClient
-import os
-from conans.util.files import load
 import json
-from conans.client.graph.graph_builder import GraphLock
+import os
+import unittest
+
+from conans.model.ref import PackageReference
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class CIGraphLockTest(unittest.TestCase):
+
+    def version_ranges_lock_test(self):
+        # locking a version range
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . PkgA/0.1@user/channel")
+
+        # Use a consumer with a version range
+        consumer = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "PkgA/[>=0.1]@user/channel"
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
+        client.run("graph lock . --lock-file=default.lock")
+        self.assertIn("PkgA/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.out)
+        lock_file = load(os.path.join(client.current_folder, "default.lock"))
+        self.assertIn("PkgA/0.1@user/channel", lock_file)
+
+        # If we create a new PkgA version
+        client.save({"conanfile.py": conanfile})
+        client.run("create . PkgA/0.2@user/channel")
+
+        # Normal install will use it
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
+        self.assertIn("PkgA/0.2@user/channel", client.out)
+        self.assertNotIn("PkgA/0.1@user/channel", client.out)
+
+        # Locked install will use PkgA/0.1
+        client.run("install . --lock-file=default.lock -g=cmake")
+        self.assertIn("PkgA/0.1@user/channel", client.out)
+        self.assertNotIn("PkgA/0.2@user/channel", client.out)
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("PkgA/0.1/user/channel", cmake)
+        self.assertNotIn("PkgA/0.2/user/channel", cmake)
+
+        # Info also works
+        client.run("info . --lock-file=default.lock")
+        self.assertIn("PkgA/0.2@user/channel", client.out)
+        self.assertNotIn("PkgA/0.1/user/channel", client.out)
+
+    def option_lock_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"custom_option": [1, 2, 3, 4, 5]}
+    default_options = "custom_option=1"
+    %s
+"""
+        client.save({"conanfile.py": conanfile % ""})
+        client.run("create . PkgA/0.1@user/channel -o PkgA:custom_option=2")
+
+        client.save({"conanfile.py": conanfile % "requires = 'PkgA/0.1@user/channel'"})
+        client.run("graph lock . -o PkgA:custom_option=2")
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728 - Cache",
+                      client.out)
+
+        client.run("graph root conan_graph.lock PkgB/0.1@user/testing")
+        client.run("create . PkgB/0.1@user/testing --lock-file=conan_graph.lock")
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728 - Cache",
+                      client.out)
+        self.assertIn("PkgB/0.1@user/testing: Package 'be80f811c336669e69eb58adc8215ce32ac1ba6f' "
+                      "created", client.out)
 
     def graph_lock_test(self):
         client = TestClient()
@@ -23,21 +93,59 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile % "requires = 'PkgB/0.1@user/channel'"})
         client.run("export . PkgC/0.1@user/channel")
         client.save({"conanfile.py": conanfile % "requires = 'PkgC/0.1@user/channel'"})
-        client.run("export . PkgD/0.1@user/channel")
 
-        client.run("lock PkgD/0.1@user/channel -o PkgA:custom_option=2 "
-                   "-o PkgB:custom_option=3 -o PkgC:custom_option=4 -o PkgD:custom_option=5")
+        client.run("graph lock . -o PkgA:custom_option=2 "
+                   "-o PkgB:custom_option=3 -o PkgC:custom_option=4 --lock-file=options.lock")
 
-        lock_file = os.path.join(client.current_folder, "serial_graph.json")
-        lock_file_content = load(lock_file)
-        build_order_file = os.path.join(client.current_folder, "build_order.json")
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728 - Missing",
+                      client.out)
+        self.assertIn("PkgB/0.1@user/channel:af3515bc3fcd0aa30f4f719830d1bdb6eb46379a - Missing",
+                      client.out)
+        self.assertIn("PkgC/0.1@user/channel:a1f49d2fd08c58cbc75961f109afb1a585c20bbe - Missing",
+                      client.out)
+        lock_file = load(os.path.join(client.current_folder, "options.lock"))
+        self.assertIn("PkgC:custom_option=4", lock_file)
+        self.assertIn("PkgB:custom_option=3", lock_file)
+        self.assertIn("PkgA:custom_option=2", lock_file)
+
+        client.run("graph build-order options.lock")
+
+        build_order_file = os.path.join(client.current_folder, "options_build_order.json")
         content = load(build_order_file)
         build_order = json.loads(content)
+        # Checking A
+        self.assertEqual(3, len(build_order))
+        level = build_order[0]
+        self.assertEqual(1, len(level))
+        self.assertEqual("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728",
+                         level[0])
+        r = PackageReference.loads(level[0])
+        conan_ref = r.conan
+        client.run("install %s --lock-file=options.lock --build=%s"
+                   % (conan_ref, conan_ref.name))
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728", client.out)
 
-        graph_lock = GraphLock.loads(lock_file_content)
-        for level in build_order:
-            for node in level:
-                ref = graph_lock.conan_ref(node)
-                print "PROCESSING ", node
-                client.run("install %s --lock=serial_graph.json --build=%s" % (ref, ref.name))
-                print client.out
+        # Checking B
+        level = build_order[1]
+        self.assertEqual(1, len(level))
+        self.assertEqual("PkgB/0.1@user/channel:af3515bc3fcd0aa30f4f719830d1bdb6eb46379a",
+                         level[0])
+        r = PackageReference.loads(level[0])
+        conan_ref = r.conan
+        client.run("install %s --lock-file=options.lock --build=%s"
+                   % (conan_ref, conan_ref.name))
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728", client.out)
+        self.assertIn("PkgB/0.1@user/channel:af3515bc3fcd0aa30f4f719830d1bdb6eb46379a", client.out)
+
+        # Checking C
+        level = build_order[2]
+        self.assertEqual(1, len(level))
+        self.assertEqual("PkgC/0.1@user/channel:a1f49d2fd08c58cbc75961f109afb1a585c20bbe",
+                         level[0])
+        r = PackageReference.loads(level[0])
+        conan_ref = r.conan
+        client.run("install %s --lock-file=options.lock --build=%s"
+                   % (conan_ref, conan_ref.name))
+        self.assertIn("PkgA/0.1@user/channel:ff96d88607d8cfb182c50ad39b2c73b5ef569728", client.out)
+        self.assertIn("PkgB/0.1@user/channel:af3515bc3fcd0aa30f4f719830d1bdb6eb46379a", client.out)
+        self.assertIn("PkgC/0.1@user/channel:a1f49d2fd08c58cbc75961f109afb1a585c20bbe", client.out)

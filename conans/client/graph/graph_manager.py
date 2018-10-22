@@ -5,8 +5,7 @@ from collections import OrderedDict
 from conans.model.ref import ConanFileReference
 from conans.errors import conanfile_exception_formatter, ConanException
 from conans.model.conan_file import get_env_context_manager
-from conans.client.graph.graph_builder import DepsGraphBuilder,\
-    DepsGraphLockBuilder
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
 from conans.client import settings_preprocessor
@@ -17,6 +16,7 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
+from conans.client.graph.graph_lock_builder import DepsGraphLockBuilder
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -110,12 +110,15 @@ class GraphManager(object):
         cache_settings.values = profile.settings_values
         settings_preprocessor.preprocess(cache_settings)
         processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
+        graph_lock_root_node = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
+            if graph_lock:
+                graph_lock_root_node = graph_lock.get_node_from_ref(None)
             output = ScopedOutput("PROJECT", self._output)
             if reference.endswith(".py"):
                 conanfile = self._loader.load_conanfile(reference, output, processed_profile,
@@ -132,7 +135,8 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile,
-                                      graph_lock=graph_lock)
+                                      graph_lock=graph_lock,
+                                      graph_lock_root_node=graph_lock_root_node)
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -201,14 +205,16 @@ class GraphManager(object):
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile,
-                    graph_lock=None):
+                    graph_lock=None, graph_lock_root_node=None):
         if graph_lock:
             builder = DepsGraphLockBuilder(self._proxy, self._output, self._loader, recorder)
-            graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock)
+            graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock,
+                                       graph_lock_root_node)
         else:
             builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                        workspace, recorder)
-            graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
+            graph = builder.load_graph(root_node, check_updates, update, remote_name,
+                                       processed_profile)
 
         if build_mode is None:
             return graph

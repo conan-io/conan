@@ -25,7 +25,7 @@ def get_test_conanfile_path(tf, conanfile_path):
 
 def create(reference, manager, user_io, profile, remote_name, update, build_modes, manifest_folder,
            manifest_verify, manifest_interactive, keep_build, test_build_folder, test_folder,
-           conanfile_path):
+           conanfile_path, graph_lock):
 
     test_conanfile_path = get_test_conanfile_path(test_folder, conanfile_path)
 
@@ -37,7 +37,8 @@ def create(reference, manager, user_io, profile, remote_name, update, build_mode
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
                                   keep_build=keep_build,
-                                  test_build_folder=test_build_folder)
+                                  test_build_folder=test_build_folder,
+                                  graph_lock=graph_lock)
     else:
         manager.install(reference=reference,
                         create_reference=reference,
@@ -49,4 +50,5 @@ def create(reference, manager, user_io, profile, remote_name, update, build_mode
                         profile=profile,
                         build_modes=build_modes,
                         update=update,
-                        keep_build=keep_build)
+                        keep_build=keep_build,
+                        graph_lock=graph_lock)
