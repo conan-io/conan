@@ -4,7 +4,7 @@ import os
 import platform
 
 if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user
+    from conans.util.windows import conan_expand_user, rm_conandir
 else:
     from conans.util.files import rmdir
 
