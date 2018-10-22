@@ -251,7 +251,7 @@ class ConanAPIV1(object):
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
-        return ConanManager(self._client_cache, self._user_io, self._runner,
+        return ConanManager(self._client_cache, self._user_io,
                             self._remote_manager, action_recorder, self._registry,
                             self._graph_manager, self._plugin_manager)
 
