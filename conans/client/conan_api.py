@@ -294,9 +294,9 @@ class ConanAPIV1(object):
 
         result = OrderedDict()
         if not attributes:
-            attributes = ['name', 'version', 'url', 'license', 'author', 'description',
-                          'topics', 'generators', 'exports', 'exports_sources', 'short_paths',
-                          'apply_env', 'build_policy']
+            attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
+                          'description', 'topics', 'generators', 'exports', 'exports_sources',
+                          'short_paths', 'apply_env', 'build_policy']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)

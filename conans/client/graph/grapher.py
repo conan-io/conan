@@ -143,6 +143,7 @@ class ConanHTMLGrapher(object):
                 for name, data in [("id", conanfile.info.package_id()),
                                    ("build_id", build_id(conanfile)),
                                    ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
+                                   ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
                                    ("license", conanfile.license),
                                    ("author", conanfile.author),
                                    ("topics", conanfile.topics)]:

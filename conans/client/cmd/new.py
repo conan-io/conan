@@ -14,7 +14,7 @@ class {package_name}Conan(ConanFile):
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    topics = ["<Put some tag here>", "<here>", "<and here>"]
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -84,7 +84,7 @@ class {package_name}Conan(ConanFile):
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    topics = ["<Put some tag here>", "<here>", "<and here>"]
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -125,7 +125,7 @@ class {package_name}Conan(ConanFile):
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    topics = ["<Put some tag here>", "<here>", "<and here>"]
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     no_copy_source = True
     # No settings/options are necessary, this is header only
 
