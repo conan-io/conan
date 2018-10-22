@@ -495,7 +495,8 @@ class MyTest(ConanFile):
         self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
         self.assertNotIn("License: MIT", self.client.user_io.out)
         self.assertNotIn("Author: John Doe", self.client.user_io.out)
-        self.assertNotIn("Tags: foo, bar, qux", self.client.user_io.out)
+        self.assertNotIn("Topics:", self.client.user_io.out)
+        self.assertNotIn("Homepage:", self.client.user_io.out)
         self.assertNotIn("URL: https://foo.bar.baz", self.client.user_io.out)
 
     def test_full_attributes(self):
@@ -511,6 +512,7 @@ class MyTest(ConanFile):
     author = "John Doe"
     license = "MIT"
     url = "https://foo.bar.baz"
+    homepage = "https://foo.bar.site"
     topics = ["foo", "bar", "qux"]
 
 """
@@ -523,5 +525,6 @@ class MyTest(ConanFile):
         self.assertIn("Pkg/0.2@PROJECT", self.client.user_io.out)
         self.assertIn("License: MIT", self.client.user_io.out)
         self.assertIn("Author: John Doe", self.client.user_io.out)
-        self.assertIn("Tags: foo, bar, qux", self.client.user_io.out)
+        self.assertIn("Topics: foo, bar, qux", self.client.user_io.out)
         self.assertIn("URL: https://foo.bar.baz", self.client.user_io.out)
+        self.assertIn("Homepage: https://foo.bar.site", self.client.user_io.out)

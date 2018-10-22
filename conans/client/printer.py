@@ -111,11 +111,14 @@ class Printer(object):
                 else:
                     self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
             url = getattr(conan, "url", None)
+            homepage = getattr(conan, "homepage", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)
             topics = getattr(conan, "topics", None)
             if url and show("url"):
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
+            if homepage and show("homepage"):
+                self._out.writeln("    Homepage: %s" % homepage, Color.BRIGHT_GREEN)
 
             if license_ and show("license"):
                 if isinstance(license_, (list, tuple, set)):

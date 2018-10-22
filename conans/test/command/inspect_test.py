@@ -134,6 +134,7 @@ class Pkg(ConanFile):
         self.assertIn("""name: MyPkg
 version: 1.2.3
 url: None
+homepage: None
 license: None
 author: None
 description: None
@@ -154,6 +155,7 @@ class Pkg(ConanFile):
     version = "1.2.3"
     author = "John Doe"
     url = "https://john.doe.com"
+    homepage = "https://john.company.site"
     license = "MIT"
     description = "Yet Another Test"
     generators = "cmake"
@@ -167,6 +169,7 @@ class Pkg(ConanFile):
         self.assertIn("""name: MyPkg
 version: 1.2.3
 url: https://john.doe.com
+homepage: https://john.company.site
 license: MIT
 author: John Doe
 description: Yet Another Test
