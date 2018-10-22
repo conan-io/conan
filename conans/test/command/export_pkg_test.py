@@ -1,3 +1,4 @@
+import json
 import unittest
 import platform
 import os
@@ -439,3 +440,42 @@ class TestConan(ConanFile):
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
+
+    def export_pkg_json_test(self):
+
+        def _check_json_output():
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(output["error"], False)
+            self.assertEqual(output["installed"][0]["recipe"]["id"],
+                             "mypackage/0.1.0@danimtb/testing")
+            self.assertEqual(output["installed"][0]["recipe"]["dependency"], False)
+            self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+            self.assertEqual(output["installed"][0]["packages"][0]["built"], True)
+
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    name = "mypackage"
+    version = "0.1.0"
+"""
+        self.client = TestClient()
+        self.client.save({"conanfile.py": conanfile})
+
+        # Deafult folders
+        self.client.run("export-pkg . danimtb/testing --json output.json")
+        _check_json_output()
+
+        # Without package_folder
+        self.client.save({"sources/kk.cpp": "", "build/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -bf build -sf sources --json output.json "
+                        "--force")
+        _check_json_output()
+
+        # With package_folder
+        self.client.save({"package/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
+        _check_json_output()
+
