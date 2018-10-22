@@ -113,7 +113,7 @@ class Printer(object):
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)
-            tags = getattr(conan, "tags", None)
+            topics = getattr(conan, "topics", None)
             if url and show("url"):
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
 
@@ -124,11 +124,11 @@ class Printer(object):
                     self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
             if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
-            if tags and show("tags"):
-                if isinstance(tags, (list, tuple, set)):
-                    self._out.writeln("    Tags: %s" % ", ".join(tags), Color.BRIGHT_GREEN)
+            if topics and show("topics"):
+                if isinstance(topics, (list, tuple, set)):
+                    self._out.writeln("    Topics: %s" % ", ".join(topics), Color.BRIGHT_GREEN)
                 else:
-                    self._out.writeln("    Tags: %s" % tags, Color.BRIGHT_GREEN)
+                    self._out.writeln("    Topics: %s" % topics, Color.BRIGHT_GREEN)
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)

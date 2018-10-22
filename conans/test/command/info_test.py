@@ -511,7 +511,7 @@ class MyTest(ConanFile):
     author = "John Doe"
     license = "MIT"
     url = "https://foo.bar.baz"
-    tags = ["foo", "bar", "qux"]
+    topics = ["foo", "bar", "qux"]
 
 """
 
