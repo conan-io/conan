@@ -41,7 +41,7 @@ other/1.0@lasote/testing conan.io
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
+        save(f, dump_registry(default_remotes, {}, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
 
         # Add
@@ -82,7 +82,7 @@ other/1.0@lasote/testing conan.io
 
     def refs_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
+        save(f, dump_registry(default_remotes, {}, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
         ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
 
@@ -128,7 +128,7 @@ other/1.0@lasote/testing conan.io
         f = os.path.join(temp_folder(), "aux_file")
         remotes, refs = load_registry_txt("conan.io https://server.conan.io True\n"
                                           "conan.io2 https://server2.conan.io True\n")
-        reg = dump_registry(remotes, refs, {})
+        reg = dump_registry(remotes, refs, {}, {})
         save(f, reg)
         return RemoteRegistry(f, TestBufferConanOutput())
 
@@ -160,7 +160,8 @@ other/1.0@lasote/testing conan.io
         registry.refs.set(ref_with_rev, "conan.io")
         self.assertEquals(registry.refs.get_with_revision(ref), ref_with_rev)
         self.assertEquals(registry.refs.get_with_revision(ref_with_rev), ref_with_rev)
-        self.assertIsNone(registry.refs.get_with_revision(ref.copy_with_revision("OtherRevision")))
+        self.assertEquals(registry.refs.get_with_revision(ref.copy_with_revision("OtherRevision")),
+                          ref_with_rev)
 
     def revisions_update_test(self):
         ref = ConanFileReference.loads("lib/1.0@user/channel")
@@ -169,6 +170,7 @@ other/1.0@lasote/testing conan.io
         registry.refs.update(ref.copy_with_revision("revision"), "conan.io2")
 
         self.assertEquals({'lib/1.0@user/channel#revision': 'conan.io2'}, registry.refs.list)
+        self.assertEquals({'lib/1.0@user/channel': 'revision'}, registry.revisions.list)
 
         self.assertEquals(registry.refs.get(ref).name, "conan.io2")
         self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name, "conan.io2")
@@ -182,8 +184,7 @@ other/1.0@lasote/testing conan.io
         self.assertIn(str(ref), registry.refs.list)
 
         registry.refs.set(ref.copy_with_revision("revision"), "conan.io")
-        self.assertIn(ref.copy_with_revision("revision").full_repr(), registry.refs.list)
-        self.assertNotIn(str(ref), registry.refs.list)
+        self.assertEquals(registry.revisions.list[str(ref.copy_without_revision())], "revision")
 
     def clear_revision_test(self):
         ref = ConanFileReference.loads("lib/1.0@user/channel")
@@ -202,41 +203,10 @@ other/1.0@lasote/testing conan.io
         ref2 = registry.refs.get_with_revision(ref)
         self.assertIsNone(ref2.revision)
 
-    def remove_all_package_test(self):
-        f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
-        registry = RemoteRegistry(f, TestBufferConanOutput())
+        pref = PackageReference(ref.copy_with_revision("rev_recipe"), "22222")
+        pref.revision = "3333"
+        registry.refs.set(pref.conan, "conan.io")
+        registry.prefs.set(pref, "conan.io")
 
-        registry.remotes.add("r1", "url1", True, insert=0)
-        registry.remotes.add("r2", "url2", True, insert=0)
-
-        ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
-        ref2 = ConanFileReference.loads("MyLib2/0.1@lasote/stable")
-
-        registry.prefs.set(PackageReference(ref, "1"), "r1")
-        registry.prefs.set(PackageReference(ref, "2"), "r1")
-        registry.prefs.set(PackageReference(ref, "3"), "r1")
-        registry.prefs.set(PackageReference(ref, "4"), "r2")
-        registry.prefs.set(PackageReference(ref2, "1"), "r1")
-
-        registry.prefs.remove_all(ref)
-
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "4")))
-        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")
-
-        registry.prefs.set(PackageReference(ref, "1"), "r1")
-        registry.prefs.set(PackageReference(ref, "2"), "r1")
-        registry.prefs.set(PackageReference(ref, "3"), "r1")
-        registry.prefs.set(PackageReference(ref, "4"), "r2")
-        registry.prefs.set(PackageReference(ref2, "1"), "r1")
-
-        registry.prefs.remove_all(ref, "r1")
-
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
-        self.assertEquals(registry.prefs.get(PackageReference(ref, "4")).name, "r2")
-        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")
+        pref2 = registry.prefs.get_with_revision(pref.copy_without_revision())
+        self.assertEquals(pref, pref2)

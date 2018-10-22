@@ -1,12 +1,12 @@
-import time
 import unittest
 from collections import OrderedDict
-from conans.test.utils.tools import TestClient, TestServer, \
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
-from conans.util.env_reader import get_env
+
+import time
 from nose.plugins.attrib import attr
 
-revisions = get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False)
+from conans.test import revisions_enabled
+from conans.test.utils.tools import TestClient, TestServer, \
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -102,23 +102,16 @@ class Pkg(ConanFile):
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 
         # Check registry, recipe should have been found from server1 and binary from server2
+        ref = "Pkg/0.1@lasote/testing%s" % ("" if not revisions_enabled
+                                            else "#1b25ee13ed28ed6349426f272e44a1da")
+        pref = ref + ":5a67a79dbc25fd0fa149a0" \
+                     "eb7a20715189a0d988%s" % ("" if not revisions_enabled
+                                               else "#392bc1a5b7288d4feae15db77c24d52b")
         client.run("remote list_ref")
-        if not revisions:
-            self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
-        else:
-            self.assertIn("Pkg/0.1@lasote/testing#1b25ee13ed28ed6349426f272e44a1da: server1",
-                          client.out)
+        self.assertIn("%s: server1" % ref, client.out)
 
         client.run("remote list_pref Pkg/0.1@lasote/testing")
-        if not revisions:
-            self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
-                          client.out)
-        else:
-            self.assertIn("Pkg/0.1@lasote/testing#1b25ee13ed28ed6349426f272e44a1da#"
-                          "4024617540c4f240a6a5e8911b0de9ef38a11a72"
-                          ":5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
-                          client.out)
-
+        self.assertIn("%s: server2" % pref, client.out)
         # Use another client to update the server2 binary and server1 recipe
         client2 = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
                                                      "server2": [("lasote", "mypass")]})
@@ -139,30 +132,32 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: "
                       "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 to 'server1'", client2.out)
 
+        ref2 = "Pkg/0.1@lasote/testing%s" % ("" if not revisions_enabled
+                                            else "#c31433adf4363557eefe7a8cdecd4d87")
+        pref2 = ref2 + ":5a67a79dbc25fd0fa149a0" \
+                       "eb7a20715189a0d988%s" % ("" if not revisions_enabled
+                                                 else "#12d82bc06c6c4615c91aa05a365fc0a4")
         # Now the reference is associated with server1
         client2.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client2.out)
+        self.assertIn("%s: server1" % ref2, client2.out)
 
         client2.run("remote list_pref Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server1",
-                      client2.out)
+        self.assertIn("%s: server1" % pref2, client2.out)
 
         # Force upload to server2
         client2.run("upload Pkg/0.1@lasote/testing --all -r server2")
         # An upload doesn't modify a registry, so still server1
         client2.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client2.out)
+        self.assertIn("%s: server1" % ref2, client2.out)
 
         client2.run("remote list_pref Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server1",
-                      client2.out)
+        self.assertIn("%s: server1" % pref2, client2.out)
 
         # Now go back to client and update, confirm that recipe=> server1, package=> server2
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+        self.assertIn("%s: server1" % ref, client.out)
         client.run("remote list_pref Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing:5a67a79dbc25fd0fa149a0eb7a20715189a0d988: server2",
-                      client.out)
+        self.assertIn("%s: server2" % pref, client.out)
 
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
@@ -253,7 +248,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
-        if not revisions:
+        if not revisions_enabled:
             self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
         else:
             self.assertIn("Pkg/0.1@lasote/testing#6c9ff50eec2c939e49c96e8d371677dc: server2", client.out)
@@ -276,7 +271,7 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
 
         # It keeps associated to server1 even after a create FIXME: Conan 2.0
-        if revisions:
+        if revisions_enabled:
             self.assertIn("Pkg/0.1@lasote/testing#860aa6c655a33b36cda995c0a7d271d5: server1",
                           client.out)
         else:

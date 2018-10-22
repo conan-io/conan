@@ -325,9 +325,10 @@ class ConanInstaller(object):
                     self._build_package(node, package_ref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     if not self._node_concurrently_installed(node, package_folder):
-                        self._remote_manager.get_package(package_ref, package_folder,
-                                                         node.binary_remote, output, self._recorder)
-                        self._registry.prefs.set(package_ref, node.binary_remote.name)
+                        new_ref = self._remote_manager.get_package(package_ref, package_folder,
+                                                                   node.binary_remote, output,
+                                                                   self._recorder)
+                        self._registry.prefs.set(new_ref, node.binary_remote.name)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(package_ref)

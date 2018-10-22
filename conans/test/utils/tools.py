@@ -426,7 +426,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 activate_v2=False):
+                 activate_v2=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -434,6 +434,9 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        if activate_v2 is None:
+            activate_v2 = get_env("CONAN_TESTING_SERVER_V2_ENABLED", False)
+
         self.activate_v2 = activate_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
@@ -462,7 +465,7 @@ class TestClient(object):
 
     def update_servers(self):
 
-        save(self.client_cache.registry, dump_registry({}, {}, {}))
+        save(self.client_cache.registry, dump_registry({}, {}, {}, {}))
 
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 

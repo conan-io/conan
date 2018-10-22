@@ -25,7 +25,7 @@ class ServerStoreRevisions(ServerStore):
         return super(ServerStoreRevisions, self).packages(reference)
 
     def package(self, p_reference, short_paths=None):
-        p_reference = self._p_ref_with_rev(p_reference)
+        p_reference = self.p_ref_with_rev(p_reference)
         tmp = super(ServerStoreRevisions, self).package(p_reference, short_paths)
         return join(tmp, p_reference.revision) if p_reference.revision else tmp
 
@@ -34,12 +34,12 @@ class ServerStoreRevisions(ServerStore):
         return super(ServerStoreRevisions, self).get_conanfile_file_path(reference, filename)
 
     def get_package_file_path(self, p_reference, filename):
-        p_reference = self._p_ref_with_rev(p_reference)
+        p_reference = self.p_ref_with_rev(p_reference)
         return super(ServerStoreRevisions, self).get_package_file_path(p_reference, filename)
 
     def get_package_snapshot(self, p_reference):
         """Returns a {filepath: md5} """
-        p_reference = self._p_ref_with_rev(p_reference)
+        p_reference = self.p_ref_with_rev(p_reference)
         return super(ServerStoreRevisions, self).get_package_snapshot(p_reference)
 
     # Methods to manage revisions
@@ -105,7 +105,7 @@ class ServerStoreRevisions(ServerStore):
 
         return reference.copy_with_revision(latest)
 
-    def _p_ref_with_rev(self, p_reference):
+    def p_ref_with_rev(self, p_reference):
         if p_reference.revision:
             return p_reference
 

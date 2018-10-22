@@ -675,7 +675,6 @@ class ConanLib(ConanFile):
         self.servers = {"myremote": test_server}
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
-        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_svn.format(url="auto", revision="auto")
         project_url, rev = self.create_project(files={"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         project_url = project_url.replace(" ", "%20")

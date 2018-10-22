@@ -421,12 +421,20 @@ class AliasConanfile(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
 
+        # Deleting from the remote doesn't remove the refs
         self.client.run("remove %s -r remote0 -f" % str(self.ref))
         rev = self.client.remote_registry.refs.get_with_revision(self.ref)
-        self.assertIsNone(rev)
+        self.assertIsNotNone(rev)
 
         last_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertIsNone(last_rev)
+
+        # Deleting from local yes
+        self.client.run("remove %s -f" % str(self.ref))
+        rev = self.client.remote_registry.refs.get_with_revision(self.ref)
+        self.assertIsNone(rev)
+        prefs = self.client.remote_registry.prefs.list
+        self.assertEquals(prefs, {})
 
     def test_recipe_revision_delete_one(self):
         # Upload revision1
@@ -459,12 +467,17 @@ class AliasConanfile(ConanFile):
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev3)
 
-        # Remove revision 3, local rev is None and remote is rev1
+        # Remove revision 3, local rev is not None and remote is rev1
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
         now_rev = self.client.remote_registry.refs.get_with_revision(self.ref)
-        self.assertIsNone(now_rev)
+        self.assertIsNotNone(now_rev)
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)
+
+        # Remove package locally, local rev is None
+        self.client.run("remove %s#%s -f" % (str(self.ref), rev3))
+        now_rev = self.client.remote_registry.refs.get_with_revision(self.ref)
+        self.assertIsNone(now_rev)
 
     def test_remote_search(self):
         conanfile = '''

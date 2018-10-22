@@ -207,7 +207,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_package_urls(package_reference)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files
+        return zipped_files, package_reference
 
     def _get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""

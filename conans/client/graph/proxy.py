@@ -72,7 +72,7 @@ class ConanProxy(object):
             upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
-            return conanfile_path, status, update_remote, remote, reference
+            return conanfile_path, status, update_remote, reference
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)

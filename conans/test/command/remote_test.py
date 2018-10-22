@@ -1,5 +1,7 @@
 import json
 import unittest
+
+from conans.test import revisions_enabled
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
 from conans.util.files import load
@@ -30,52 +32,55 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote2')
 
         self.client.run('remote list_ref')
-        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        ref = "lib/1.0@lasote/channel%s" % ("#ae76c741c485af58c1a3b881c1dfb38f"
+                                            if revisions_enabled else "")
+        pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9%s" % (ref,
+                                                                  "#9411e3b766a0e722cb2"
+                                                                  "6cf1081ec277d"
+                                                                  if revisions_enabled else "")
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" -f -r remote2')
         self.client.run('remote list_ref')
-        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
-        # Upload again to remote2 and remove from remote1, the ref should be removed
+        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2')
         self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
         self.client.run('remote list_ref')
-        self.assertNotIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
         # Test the packages references now
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("%s: remote1" % pref,
                       self.client.out)
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote2')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
 
-        # Upload again to remote2 and remove from remote1, the ref should be removed
+        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote1')
         self.client.run('remote list_ref')
+        self.assertIn("%s: remote1" % ref, self.client.out)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
-                         self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
 
         # Remove package locally
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
-                         self.client.out)
+        self.assertNotIn("%s: remote1" % pref, self.client.out)
 
         # If I remove all in local, I also remove packages
         self.client.run("create . lib/1.0@lasote/channel")

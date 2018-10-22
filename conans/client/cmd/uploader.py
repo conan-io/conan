@@ -152,7 +152,7 @@ class CmdUpload(object):
                                                      policy=policy, remote_manifest=remote_manifest)
 
         cur_recipe_remote = self._registry.refs.get(conan_reference.copy_without_revision())
-        cur_full_ref = self._registry.refs.get_with_revision(conan_reference.copy_without_revision())
+        cur_full_ref = self._registry.refs.get_with_revision(conan_reference)
         updated_ref = (cur_full_ref and
                        new_ref.copy_without_revision() == cur_full_ref.copy_without_revision() and
                        new_ref.revision != cur_full_ref.revision)
@@ -184,7 +184,7 @@ class CmdUpload(object):
                                                        integrity_check, policy)
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_ref = self._registry.prefs.get(pref)
+        cur_package_ref = self._registry.prefs.get(pref.copy_without_revision())
         if (not cur_package_ref or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
             self._registry.prefs.set(pref, p_remote.name)
 

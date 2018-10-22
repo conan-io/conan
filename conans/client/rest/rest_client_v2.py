@@ -114,11 +114,12 @@ class RestV2Methods(RestCommonMethods):
         data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
+        reference = PackageReference.loads(data["reference"])
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        return ret, reference
 
     def get_path(self, conan_reference, package_id, path):
 

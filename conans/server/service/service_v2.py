@@ -57,6 +57,12 @@ class ConanServiceV2(object):
         file_list = self._server_store.get_package_file_list(p_reference)
         if not file_list:
             raise NotFoundException("conanfile not found")
+
+        if self.with_revisions:
+            p_reference = self._server_store.p_ref_with_rev(p_reference)
+        else:
+            p_reference = p_reference.copy_without_revision()
+
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
                 "reference": p_reference.full_repr()}

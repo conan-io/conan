@@ -247,7 +247,7 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+            zipped_files, new_ref = self._call_remote(remote, "get_package", package_reference, dest_folder)
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
@@ -276,6 +276,7 @@ class RemoteManager(object):
         self._plugin_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                      reference=package_reference.conan, package_id=package_id,
                                      remote=remote)
+        return new_ref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

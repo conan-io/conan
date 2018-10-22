@@ -1,7 +1,8 @@
-import six
 from collections import namedtuple
+
 import re
 from six import string_types
+
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
@@ -11,6 +12,8 @@ class ConanName(object):
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars - 1))
+
+    _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)
 
     @staticmethod
     def invalid_name_message(value, reference_token=None):
@@ -53,6 +56,13 @@ class ConanName(object):
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 
+    @staticmethod
+    def validate_revision(revision):
+        if ConanName._validation_revision_pattern.match(revision) is None:
+            raise InvalidNameException("The revision field, must contain only letters "
+                                       "and numbers with a length between 1 and "
+                                       "%s" % ConanName._max_chars)
+
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
     """ Full reference of a package recipes, e.g.:
@@ -83,7 +93,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(self.user, reference_token="user name")
         ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
-            ConanName.validate_name(self.revision, reference_token="revision")
+            ConanName.validate_revision(self.revision)
 
     def __eq__(self, value):
         if not value:
@@ -130,14 +140,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ret = ConanFileReference.loads(str(self))
         ret.revision = None
         return ret
-
-    def matches_with_ref(self, other):
-        # if other hasn't revision and the current obj has it, it matches
-        # otherwise the revision and the reference should be equal
-        if not other.revision:
-            return super(ConanFileReference, self).__eq__(other)
-        else:
-            return self == other
 
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
@@ -189,14 +191,3 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         ret.revision = None
         ret.conan.revision = None
         return ret
-
-    def matches_with_ref(self, other):
-        # if other hasn't revision and the current obj has it, it matches
-        # otherwise the revision and the reference should be equal
-        if not self.conan.matches_with_ref(other.conan):
-            return False
-
-        if not other.revision:
-            return super(PackageReference, self).__eq__(other)
-        else:
-            return self == other
