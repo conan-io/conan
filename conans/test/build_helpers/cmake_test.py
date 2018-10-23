@@ -5,6 +5,7 @@ import sys
 import unittest
 import platform
 import mock
+from parameterized.parameterized import parameterized
 
 from collections import namedtuple
 
@@ -1087,6 +1088,29 @@ build_type: [ Release]
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
         return ' '.join(pattern % i for i in args.split())
+
+    @parameterized.expand([('Ninja',), ('NMake Makefiles',), ('NMake Makefiles JOM',)])
+    def test_vcvars_applied(self, generator):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = 15
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator=generator)
+
+        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+            vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.configure()
+            self.assertTrue(vcvars_mock.called)
+
+        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+            vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.build()
+            self.assertTrue(vcvars_mock.called)
 
 
 class ConanFileMock(ConanFile):
