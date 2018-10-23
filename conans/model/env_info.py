@@ -105,7 +105,7 @@ class EnvValues(object):
             if isinstance(value, list):
                 self._data[package][name] = value
             else:
-                self._data[package][name] = value.replace("\\", "/")
+                self._data[package][name] = value  # .replace("\\", "/")
         # There is data already
         else:
             # Only append at the end if we had a list
