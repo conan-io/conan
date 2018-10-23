@@ -33,6 +33,7 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -426,7 +427,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 activate_v2=None):
+                 activate_v2=None, revisions=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -434,8 +435,9 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
-        if activate_v2 is None:
-            activate_v2 = get_env("CONAN_TESTING_SERVER_V2_ENABLED", False)
+
+        if activate_v2 is None:  # Until v2 is stable
+            activate_v2 = get_env("CONAN_TESTING_SERVER_V2_ENABLED", False) or revisions
 
         self.activate_v2 = activate_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
@@ -453,6 +455,14 @@ class TestClient(object):
 
         self.requester_class = requester_class
         self.conan_runner = runner
+
+        if revisions:
+            # Generate base file
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "revisions_enabled = False", "revisions_enabled = True")
+            # Invalidate the cached config
+            self.client_cache.invalidate()
 
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes

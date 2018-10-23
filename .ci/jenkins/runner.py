@@ -20,7 +20,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    if flavor == "revisions":
+    if flavor == "server_revisions":
         excluded_tags.append("only_without_revisions")
     elif flavor == "no_revisions":
         excluded_tags.append("only_revisions")
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--flavor', '-f', help='Flavor (revisions, no_revisions)')
+    parser.add_argument('--flavor', '-f', help='Flavor (server_revisions, no_revisions)')
 
     args = parser.parse_args()
 

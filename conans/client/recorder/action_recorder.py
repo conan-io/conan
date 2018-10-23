@@ -129,7 +129,7 @@ class ActionRecorder(object):
                    "remote": the_action.doc.get("remote", None),
                    "time": the_action.time}
             if isinstance(the_ref, ConanFileReference):
-                doc["dependency"] = not self.in_development_recipe(the_ref)
+                doc["dependency"] = not self.in_development_recipe(the_ref.copy_without_revision())
                 doc["name"] = the_ref.name
                 doc["version"] = the_ref.version
                 doc["user"] = the_ref.user

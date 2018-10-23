@@ -102,11 +102,8 @@ class Pkg(ConanFile):
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 
         # Check registry, recipe should have been found from server1 and binary from server2
-        ref = "Pkg/0.1@lasote/testing%s" % ("" if not revisions_enabled
-                                            else "#1b25ee13ed28ed6349426f272e44a1da")
-        pref = ref + ":5a67a79dbc25fd0fa149a0" \
-                     "eb7a20715189a0d988%s" % ("" if not revisions_enabled
-                                               else "#392bc1a5b7288d4feae15db77c24d52b")
+        ref = "Pkg/0.1@lasote/testing"
+        pref = "%s:5a67a79dbc25fd0fa149a0eb7a20715189a0d988" % ref
         client.run("remote list_ref")
         self.assertIn("%s: server1" % ref, client.out)
 
@@ -132,11 +129,8 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: "
                       "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 to 'server1'", client2.out)
 
-        ref2 = "Pkg/0.1@lasote/testing%s" % ("" if not revisions_enabled
-                                            else "#c31433adf4363557eefe7a8cdecd4d87")
-        pref2 = ref2 + ":5a67a79dbc25fd0fa149a0" \
-                       "eb7a20715189a0d988%s" % ("" if not revisions_enabled
-                                                 else "#12d82bc06c6c4615c91aa05a365fc0a4")
+        ref2 = "Pkg/0.1@lasote/testing"
+        pref2 = "%s:5a67a79dbc25fd0fa149a0eb7a20715189a0d988" % ref
         # Now the reference is associated with server1
         client2.run("remote list_ref")
         self.assertIn("%s: server1" % ref2, client2.out)
@@ -248,10 +242,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'server2'", client.out)
         client.run("remote list_ref")
-        if not revisions_enabled:
-            self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
-        else:
-            self.assertIn("Pkg/0.1@lasote/testing#6c9ff50eec2c939e49c96e8d371677dc: server2", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
 
     def test_binaries_from_different_remotes(self):
         servers = {"server1": TestServer(), "server2": TestServer()}
@@ -271,11 +262,7 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
 
         # It keeps associated to server1 even after a create FIXME: Conan 2.0
-        if revisions_enabled:
-            self.assertIn("Pkg/0.1@lasote/testing#860aa6c655a33b36cda995c0a7d271d5: server1",
-                          client.out)
-        else:
-            self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
 
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")

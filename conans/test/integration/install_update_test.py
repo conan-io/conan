@@ -71,11 +71,8 @@ class Pkg(ConanFile):
         servers = {"r1": TestServer(), "r2": TestServer()}
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
-        ref = "Pkg/0.1@lasote/testing%s" % ("" if not revisions_enabled
-                                            else "#979c7187047f9799fac1581ae1982210")
-        pref = "%s:5ab84d6acfe1f23c4f" \
-               "ae0ab88f26e3a396351ac9%s" % (ref, "" if not revisions_enabled
-                                             else "#0cea4cbba3fb8a3a0ff9b8c8b59b07f0")
+        ref = "Pkg/0.1@lasote/testing"
+        pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing --all -r r2")
@@ -166,12 +163,8 @@ class Pkg(ConanFile):
         self.client.run("remote list_ref")
         self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
-        ref = "Hello0/1.0@lasote/stable%s" % ("#28165d6b94d4af34c681c4708f3370e8"
-                                              if revisions_enabled else "")
-        pref = "%s:" \
-               "55a3af76272ead64e6f543c12ecece30f94d3eda%s" % (ref,
-                                                               "#692a4efe94b2b3685e50091bb004f704"
-                                                               if revisions_enabled else "")
+        ref = "Hello0/1.0@lasote/stable"
+        pref = "%s:55a3af76272ead64e6f543c12ecece30f94d3eda" % ref
         self.assertIn(pref, self.client.out)
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")

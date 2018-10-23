@@ -96,8 +96,11 @@ class ConanFileLoader(object):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
-        if processed_profile._dev_reference and processed_profile._dev_reference == reference:
-            conanfile.develop = True
+
+        if processed_profile._dev_reference:
+            _ref = reference.copy_without_revision() if reference else None
+            if processed_profile._dev_reference == _ref:
+                conanfile.develop = True
         try:
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist

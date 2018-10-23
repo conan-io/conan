@@ -18,8 +18,7 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import get_env_context_manager
-from conans.model.conan_file import get_recipe_revision
+from conans.model.conan_file import get_env_context_manager, get_recipe_revision
 from conans.model.env_info import EnvInfo
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
@@ -49,7 +48,8 @@ def build_id(conan_file):
 class _ConanPackageBuilder(object):
     """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, package_reference, client_cache, output, plugin_manager):
+    def __init__(self, conan_file, package_reference, client_cache, output, plugin_manager,
+                 registry):
         self._client_cache = client_cache
         self._conan_file = conan_file
         self._out = output
@@ -57,6 +57,7 @@ class _ConanPackageBuilder(object):
         self._conan_ref = self._package_reference.conan
         self._skip_build = False  # If build_id()
         self._plugin_manager = plugin_manager
+        self._registry = registry
 
         new_id = build_id(self._conan_file)
         self.build_reference = PackageReference(self._conan_ref,
@@ -123,7 +124,11 @@ class _ConanPackageBuilder(object):
         # FIXME: Is weak to assign here the recipe_hash
         manifest = self._client_cache.load_manifest(self._conan_ref)
         self._conan_file.info.recipe_hash = manifest.summary_hash
-        revision = get_recipe_revision(self._conan_file, self._client_cache, self._conan_ref)
+
+        # If there is a revision in the registry use it, otherwise it will use scm or summary hash
+        revision = get_recipe_revision(self._conan_ref, self._registry,
+                                       self._conan_file, self._client_cache)
+
         self._conan_file.info.recipe_revision = revision
 
         # Creating ***info.txt files
@@ -329,6 +334,8 @@ class ConanInstaller(object):
                                                                    node.binary_remote, output,
                                                                    self._recorder)
                         self._registry.prefs.set(new_ref, node.binary_remote.name)
+                        if new_ref.revision:
+                            self._registry.revisions.set(new_ref, new_ref.revision)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(package_ref)
@@ -381,7 +388,7 @@ class ConanInstaller(object):
 
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
-                                       self._plugin_manager)
+                                       self._plugin_manager, self._registry)
 
         if skip_build:
             if not os.path.exists(builder.build_folder):
@@ -401,6 +408,9 @@ class ConanInstaller(object):
                 if not skip_build:
                     builder.build()
                 builder.package()
+                # FIXME: It could be a parameter in the conan create to get a different one
+                package_revision = self._client_cache.package_summary_hash(package_ref)
+                self._registry.revisions.set(package_ref, package_revision)
             except ConanException as exc:
                 self._recorder.package_install_error(package_ref, INSTALL_ERROR_BUILDING,
                                                      str(exc), remote_name=None)

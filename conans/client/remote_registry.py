@@ -136,33 +136,16 @@ class _GenericReferencesRegistry(_Registry):
 
             refs.pop(self._key(ref), None)
             refs[self._key(ref)] = remote_name
-            if ref.revision:
-                revisions[self._key(ref)] = ref.revision
-            else:
-                revisions.pop(self._key(ref), None)
-            self._partial_save(refs, revisions)
-
-    def clear_revision(self, ref):
-        assert(isinstance(ref, (ConanFileReference, PackageReference)))
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, refs, revisions = self._partial_load()
-            revisions.pop(self._key(ref), None)
             self._partial_save(refs, revisions)
 
     @property
     def list(self):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, refs, revisions = self._partial_load()
-            ret = {self._get_with_revision(self.ref_class.loads(ref), revisions).full_repr(): r
-                   for ref, r in refs.items()}
-            return ret
+            _, refs, _ = self._partial_load()
+            return refs
 
 
 class _ReferencesRegistry(_GenericReferencesRegistry):
-
-    @property
-    def ref_class(self):
-        return ConanFileReference
 
     def _partial_load(self):
         """Loads only references for recipes"""
@@ -183,28 +166,10 @@ class _ReferencesRegistry(_GenericReferencesRegistry):
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
             rrefs[self._key(ref)] = remote_name
-            if ref.revision:
-                revisions[self._key(ref)] = ref.revision
             self._save(remotes, rrefs, prefs, revisions)
-
-    def get_with_revision(self, ref):
-        assert(isinstance(ref, ConanFileReference))
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, rrefs, _, revisions = self._load()
-            if not self._key(ref) in rrefs:
-                return None
-            return self._get_with_revision(ref, revisions)
-
-    def _get_with_revision(self, ref, revisions):
-        rev = revisions.get(self._key(ref))
-        return ref.copy_with_revision(rev)
 
 
 class _PackageReferencesRegistry(_GenericReferencesRegistry):
-
-    @property
-    def ref_class(self):
-        return PackageReference
 
     def _partial_load(self):
         """Loads only references for packages"""
@@ -225,24 +190,7 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
             prefs[self._key(ref)] = remote_name
-            if ref.conan.revision:
-                revisions[self._key(ref.conan)] = ref.conan.revision
-            if ref.revision:
-                revisions[self._key(ref)] = ref.revision
             self._save(remotes, rrefs, prefs, revisions)
-
-    def get_with_revision(self, ref):
-        assert(isinstance(ref, PackageReference))
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, rrefs, prefs, revisions = self._load()
-            if not self._key(ref) in prefs:
-                return None
-            return self._get_with_revision(ref, revisions)
-
-    def _get_with_revision(self, ref, revisions):
-        rev = revisions.get(self._key(ref.conan))
-        prev = revisions.get(self._key(ref))
-        return ref.copy_with_revisions(rev, prev)
 
     def remove_all(self, ref):
         assert(isinstance(ref, ConanFileReference))
@@ -252,6 +200,8 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             for p, r in prefs.items():
                 if PackageReference.loads(p).conan != ref.copy_without_revision():
                     ret[p] = r
+                else:
+                    revisions.pop(p, None)
             self._save(remotes, rrefs, ret, revisions)
 
 
@@ -389,11 +339,26 @@ class _RemotesRegistry(_Registry):
 
 class _GenericRevisionsRegistry(_Registry):
 
+    @staticmethod
+    def _key(ref):
+        return str(ref.copy_without_revision())
+
     @property
     def list(self):
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             _, refs, _, revisions = self._load()
             return revisions
+
+    def get(self, reference):
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            _, _, _, revisions = self._load()
+            return revisions.get(self._key(reference))
+
+    def set(self, reference, revision):
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, refs, prefs, revisions = self._load()
+            revisions[self._key(reference)] = revision
+            self._save(remotes, refs, prefs, revisions)
 
 
 class RemoteRegistry(object):

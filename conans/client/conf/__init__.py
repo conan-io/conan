@@ -86,6 +86,7 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
+revisions_enabled = False             # environment CONAN_CLIENT_REVISIONS_ENABLED
 default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
@@ -201,7 +202,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None)
+               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None),
+               "CONAN_CLIENT_REVISIONS_ENABLED": self._env_c("general.revisions_enabled", "CONAN_CLIENT_REVISIONS_ENABLED", "False"),
                }
 
         # Filter None values

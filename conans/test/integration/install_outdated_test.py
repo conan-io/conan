@@ -25,6 +25,9 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
 
+    # !!!! La prueba de que tiene que buscar secuencialmente, quitar todos los only_without_revisions
+    # y volver a pasar tests (o probar sin excluir el tag) en caso de que alguno no pase, reflexionar
+    # sobre si estamos rompiendo
     def install_outdated_test(self):
         # If we try to install the same package with --build oudated it's already ok
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")

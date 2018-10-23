@@ -10,6 +10,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -110,16 +111,22 @@ class RestV2Methods(RestCommonMethods):
         return ret
 
     def get_package(self, package_reference, dest_folder):
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if not revisions_enabled:
+            # Tell server v2 to find the latest package that matched the package ID
+            # without taking into account the recipe revision
+            package_reference.conan.revision = None
+
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
-        reference = PackageReference.loads(data["reference"])
+        new_reference = PackageReference.loads(data["reference"])
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, reference
+        return ret, new_reference
 
     def get_path(self, conan_reference, package_id, path):
 

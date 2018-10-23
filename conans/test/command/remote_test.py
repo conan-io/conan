@@ -1,6 +1,7 @@
 import json
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.test import revisions_enabled
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
@@ -32,12 +33,8 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote2')
 
         self.client.run('remote list_ref')
-        ref = "lib/1.0@lasote/channel%s" % ("#ae76c741c485af58c1a3b881c1dfb38f"
-                                            if revisions_enabled else "")
-        pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9%s" % (ref,
-                                                                  "#9411e3b766a0e722cb2"
-                                                                  "6cf1081ec277d"
-                                                                  if revisions_enabled else "")
+        ref = "lib/1.0@lasote/channel"
+        pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref
         self.assertIn("%s: remote1" % ref, self.client.out)
 
         # Remove from remote2, the reference should be kept there
@@ -55,8 +52,7 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("%s: remote1" % pref,
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" '
@@ -121,10 +117,13 @@ class HelloConan(ConanFile):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
-    def with_revisions_test(self):
-        self.client.run("remote add_ref Hello/0.1@user/testing#revision remote0")
+    def with_revisions_cannot_be_set_with_add_ref_test(self):
+        ref = ConanFileReference.loads("Hello/0.1@user/testing")
+        self.client.run("remote add_ref %s#revision remote0" % str(ref))
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing#revision", self.client.out)
+        self.assertIn("Hello/0.1@user/testing", self.client.out)
+        rev = self.client.remote_registry.revisions.get(ref)
+        self.assertIsNone(rev)
 
     def remove_remote_test(self):
         self.client.run("remote list")

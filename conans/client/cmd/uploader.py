@@ -103,8 +103,11 @@ class CmdUpload(object):
             remote_manifest = None
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
-        recipe_revision = get_recipe_revision(conan_file, self._client_cache, conan_ref)
-        conan_ref.revision = recipe_revision
+
+        # If there is a revision in the registry use it, otherwise it will use scm or summary hash
+        revision = get_recipe_revision(conan_ref, self._registry, conan_file, self._client_cache)
+        assert(revision is not None)
+        conan_ref.revision = revision
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
@@ -151,11 +154,11 @@ class CmdUpload(object):
         new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                                      policy=policy, remote_manifest=remote_manifest)
 
-        cur_recipe_remote = self._registry.refs.get(conan_reference.copy_without_revision())
-        cur_full_ref = self._registry.refs.get_with_revision(conan_reference)
-        updated_ref = (cur_full_ref and
-                       new_ref.copy_without_revision() == cur_full_ref.copy_without_revision() and
-                       new_ref.revision != cur_full_ref.revision)
+        cur_recipe_remote = self._registry.refs.get(conan_reference)
+        cur_revision = self._registry.revisions.get(conan_reference)
+        updated_ref = (cur_recipe_remote and
+                       new_ref.copy_without_revision() == cur_recipe_remote and
+                       new_ref.revision != cur_revision)
         # The recipe wasn't in the registry or it has changed the revision field only
         if (not cur_recipe_remote or updated_ref) and policy != UPLOAD_POLICY_SKIP:
             self._registry.refs.set(new_ref, remote.name)
@@ -172,9 +175,8 @@ class CmdUpload(object):
         self._user_io.out.info(msg)
 
         if pref.conan.revision:
-            # Read the hashes (revisions) and build a correct package reference for the server
-            # FIXME: Extract from registry
-            package_revision = self._client_cache.package_summary_hash(pref)
+            # Read the revisions and build a correct package reference for the server
+            package_revision = self._registry.revisions.get(pref)
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revisions(pref.conan.revision, package_revision)
         else:

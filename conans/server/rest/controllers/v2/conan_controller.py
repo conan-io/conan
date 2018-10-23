@@ -20,6 +20,7 @@ class ConanControllerV2(Controller):
         def get_package_file_list(name, version, username, channel, package_id, auth_user,
                                   revision=None, p_revision=None):
 
+            # AKI BUSCAR LA ULTIMA SI NO TIENE REVISION Y DEVOLVER LA ENCONTRADA
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision)
             ret = conan_service.get_package_file_list(package_reference, auth_user)

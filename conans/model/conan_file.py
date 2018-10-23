@@ -16,18 +16,18 @@ from conans.client.output import Color
 from conans.client.tools.oss import os_info
 
 
-def get_recipe_revision(conanfile, client_cache, reference):
-    try:
-        scm_data = SCMData(conanfile)
-    except ConanException:
-        try:
-            revision = client_cache.load_manifest(reference).summary_hash
-        except IOError:
-            return None
-    else:
-        revision = scm_data.recipe_revision
+def get_recipe_revision(conan_ref, registry, conanfile, client_cache):
 
-    return revision
+    # Use the existing revision in the registry (generated during the export)
+    ref = registry.revisions.get(conan_ref)
+    if ref:
+        return ref
+
+    # Use the scm data if present (maybe recipe downloaded from a remote without revisions)
+    # and finally calculate the summary hash if there is no scm
+    scm_data = get_scm_data(conanfile)
+    return scm_data.recipe_revision \
+        if scm_data else client_cache.load_manifest(conan_ref).summary_hash
 
 
 def get_scm_data(conanfile):

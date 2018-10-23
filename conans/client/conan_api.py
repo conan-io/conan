@@ -420,7 +420,6 @@ class ConanAPIV1(object):
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
                    self._client_cache, self._plugin_manager, self._registry)
 
-
         recorder = ActionRecorder()
         export_pkg(self._client_cache, self._graph_manager, self._plugin_manager, recorder,
                    self._user_io.out,
@@ -852,8 +851,6 @@ class ConanAPIV1(object):
         tmp = self._registry.prefs.list
         for r, remote in tmp.items():
             pref = PackageReference.loads(r)
-            if reference.revision is None:
-                pref.conan.revision = None
             if pref.conan == reference:
                 ret[PackageReference.loads(r)] = remote
         return ret
@@ -875,7 +872,6 @@ class ConanAPIV1(object):
 
     def remote_clean(self):
         return self._registry.remotes.clean()
-
 
     @api_method
     def profile_list(self):

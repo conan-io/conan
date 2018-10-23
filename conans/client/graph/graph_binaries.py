@@ -8,6 +8,7 @@ from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
+from conans.util.env_reader import get_env
 from conans.util.files import rmdir, is_dirty
 
 
@@ -27,6 +28,14 @@ class GraphBinariesAnalyzer(object):
             return False
 
     def _check_update(self, package_folder, package_ref, remote, output, node):
+
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if revisions_enabled:
+            recipe_rev_of_package = ConanInfo.load_from_package(package_folder).recipe_revision
+            if recipe_rev_of_package != node.conan_ref.revision:
+                output.warn("Outdated package! The package doesn't belong "
+                            "to the installed recipe revision: %s" % str(package_ref))
+
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
@@ -77,17 +86,11 @@ class GraphBinariesAnalyzer(object):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)
-            elif os.path.exists(package_folder) and node.conan_ref.revision:
-                recipe_revision_of_package = ConanInfo.load_from_package(package_folder).recipe_revision
-                if recipe_revision_of_package != node.conan_ref.revision:
-                    output.info("The current binary package doesn't belong to the current recipe "
-                                "revision: %s, removing folder" % str(package_ref))
-                    rmdir(package_folder)
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.prefs.get(package_ref.copy_without_revision())
+            remote = self._registry.prefs.get(package_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):

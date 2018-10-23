@@ -62,7 +62,6 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
                            reference=reference)
 
 
-
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
 
     scm_src_file = paths.scm_folder(conan_ref)
@@ -95,6 +94,8 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     save(scm_src_file, src_path.replace("\\", "/"))
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
                                    scm_data)
+
+    return scm_data
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -145,16 +146,16 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source, registry):
+def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source, registry):
 
-    exports_folder = paths.export(conan_ref)
-    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
+    exports_folder = client_cache.export(conan_ref)
+    exports_source_folder = client_cache.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
     _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                             output, paths, conan_ref)
+    scm_data = _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
+                                        output, client_cache, conan_ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -166,13 +167,15 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
-        # The recipe cannot be associated to a server revision anymore
-        registry.refs.clear_revision(conan_ref)
+
     digest.save(exports_folder)
 
-    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
+    revision = scm_data.recipe_revision \
+        if scm_data else client_cache.load_manifest(conan_ref).summary_hash
+    registry.revisions.set(conan_ref, revision)
 
-    source = paths.source(conan_ref, conanfile.short_paths)
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
+    source = client_cache.source(conan_ref, conanfile.short_paths)
     remove = False
     if is_dirty(source):
         output.info("Source folder is corrupted, forcing removal")
