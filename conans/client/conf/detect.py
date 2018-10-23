@@ -64,9 +64,14 @@ def _clang_compiler(output, compiler_exe="clang"):
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 8 and compiler == "clang":
+                output.info("clang>=8, using the major as version")
+                installed_version = major
             return compiler, installed_version
     except:
         return None
+
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
