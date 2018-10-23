@@ -23,7 +23,6 @@ from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client.conan_api import ConanAPIV1
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
