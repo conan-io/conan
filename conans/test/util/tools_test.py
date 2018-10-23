@@ -14,6 +14,7 @@ from six import StringIO
 from six.moves.urllib.parse import unquote
 
 from conans.client.client_cache import CONAN_CONF
+from conans.model.version import Version
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
@@ -1565,7 +1566,6 @@ class HelloConan(ConanFile):
 
 
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
-
     def test_clone(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -1624,8 +1624,9 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         self.assertFalse(svn.is_pristine())
         svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
-        self.assertTrue(svn.is_pristine())
-        # self.assertFalse(os.path.exists(new_file))
+        if svn.version >= SVN.API_CHANGE_VERSION:  # SVN::is_pristine returns always False.
+            self.assertTrue(svn.is_pristine())
+            # self.assertFalse(os.path.exists(new_file))
 
     def test_excluded_files(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
@@ -1677,7 +1678,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
         runner = MyRunner(svn)
         svn.checkout(url=project_url)
-        if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+        if svn.version >= SVN.API_CHANGE_VERSION:
             self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
         else:
             self.assertIn("--trust-server-cert", runner.calls[1])
@@ -1760,6 +1761,21 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
 
+class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
+    def run(self, *args, **kwargs):
+        try:
+            setattr(SVN, '_version', Version("1.5"))
+            self.assertTrue(SVN().version < SVN.API_CHANGE_VERSION)
+            super(SVNToolTestsBasicOldVersion, self).run(*args, **kwargs)
+        finally:
+            delattr(SVN, '_version')
+            assert SVN().version == SVN.get_version(), \
+                "{} != {}".format(SVN().version, SVN.get_version())
+
+    # Do not add tests to this class, all should be compatible with new version of SVN
+
+
+@unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def test_checkout(self):

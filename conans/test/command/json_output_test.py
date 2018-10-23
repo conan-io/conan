@@ -17,7 +17,7 @@ class JsonOutputTest(unittest.TestCase):
         # Result of a create
         files = cpp_hello_conan_files("CC", "1.0", build=False)
         self.client.save(files, clean_first=True)
-        self.client.run("create . private_user/channel --json=myfile.json ")
+        self.client.run("create . private_user/channel --json=myfile.json")
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
@@ -25,6 +25,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(my_json["installed"][0]["recipe"]["cache"])
         self.assertIsNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
+        self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
         # Result of an install retrieving only the recipe
         self.client.run("upload CC/1.0@private_user/channel -c")
@@ -41,6 +42,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
+        self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
         # Upload the binary too
         self.client.run("upload CC/1.0@private_user/channel --all -c")
@@ -55,6 +57,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertFalse(my_json["installed"][0]["packages"][0]["built"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["downloaded"])
+        self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
         # Force build
         self.client.run("remove '*' -f")
@@ -68,6 +71,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
+        self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
     def test_errors(self):
 
