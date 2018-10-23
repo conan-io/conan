@@ -130,6 +130,14 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ret.revision = None
         return ret
 
+    def matches_with_ref(self, other):
+        # if other hasn't revision and the current obj has it, it matches
+        # otherwise the revision and the reference should be equal
+        if not other.revision:
+            return super(ConanFileReference, self).__eq__(other)
+        else:
+            return self == other
+
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
     """ Full package reference, e.g.:
