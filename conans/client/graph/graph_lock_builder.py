@@ -13,7 +13,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.requires import Requirements
 
 
-GraphLockDependency = namedtuple("GraphLockDependency", "node_id private")
+GraphLockDependency = namedtuple("GraphLockDependency", "node_id private build_require")
 GraphLockNode = namedtuple("GraphLockNode", "conan_ref binary_id options_values dependencies")
 
 
