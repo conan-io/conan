@@ -78,8 +78,6 @@ class Pkg(ConanFile):
                       client.out)
         lock_file = load(os.path.join(client.current_folder, "default.lock"))
         self.assertIn("Tool/0.1@user/channel", lock_file)
-        print lock_file
-        return
 
         # If we create a new PkgA version
         client.save({"conanfile.py": conanfile})

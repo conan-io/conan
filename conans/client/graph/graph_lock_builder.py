@@ -29,7 +29,8 @@ class GraphLock(object):
             options_values = node.conanfile.options.values
             dependencies = []
             for edge in node.dependencies:
-                dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private))
+                dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private,
+                                                        edge.build_require))
 
             self._nodes[id_] = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
 
@@ -127,7 +128,7 @@ class GraphLock(object):
                 conan_ref = None
             binary_id = graph_node["binary_id"]
             options_values = OptionsValues.loads(graph_node["options"])
-            dependencies = [GraphLockDependency(n[0], n[1])
+            dependencies = [GraphLockDependency(n[0], n[1], n[2])
                             for n in graph_node["dependencies"]]
             node = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
             graph_lock._nodes[id_] = node
@@ -152,6 +153,8 @@ class DepsGraphLockBuilder(object):
         self._loader = loader
         self._recorder = recorder
 
+    def expand_build_requires(self, node, graph_lock):
+        
     def load_graph(self, root_node, remote_name, processed_profile, graph_lock,
                    graph_lock_root_node):
         dep_graph = DepsGraph()
@@ -176,10 +179,12 @@ class DepsGraphLockBuilder(object):
             # This is a virtual, we need to extract the required reference
             ref = node.conanfile.requires.values()[0].conan_reference
             node_ref = graph_lock.get_node_from_ref(ref)
-            dependencies = [GraphLockDependency(node_ref, False)]
+            dependencies = [GraphLockDependency(node_ref, False, False)]
         # Defining explicitly the requires
         requires = Requirements()
         for dependency in dependencies:
+            if dependency.build_require:
+                continue
             dep_id = dependency.node_id
             dep_ref = graph_lock.conan_ref(dep_id)
             requires.add(str(dep_ref), dependency.private)

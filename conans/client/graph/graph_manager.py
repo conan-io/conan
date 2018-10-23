@@ -203,6 +203,37 @@ class GraphManager(object):
                                                                 processed_profile)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
+    def _recurse_build_requires_lock(self, graph, graph_lock, processed_profile,
+                                     check_updates, update, build_mode, remote_name, recorder,
+                                     workspace):
+        for node in list(graph.nodes):
+            if node.conanfile.output is None:
+                continue
+            if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
+                continue
+            # FIXME: Broken get node from ref, NOT UNIQUE!!
+            graph_lock_node_id = graph_lock.get_node_from_ref(node.conan_ref)
+            build_requires = OrderedDict()
+            for dependency in graph_lock.dependencies(graph_lock_node_id):
+                if dependency.build_require:
+                    dep_id = dependency.node_id
+                    dep_ref = graph_lock.conan_ref(dep_id)
+                    build_requires[dep_ref.name] = dep_ref
+            if build_requires:
+                build_requires_options = node.conanfile.build_requires_options
+                virtual = self._loader.load_virtual(build_requires.values(),
+                                                    scope_options=False,
+                                                    build_requires_options=build_requires_options,
+                                                    processed_profile=processed_profile)
+                virtual_node = Node(None, virtual)
+                build_requires_graph = self._load_graph(virtual_node, check_updates, update,
+                                                        build_mode, remote_name,
+                                                        build_requires,
+                                                        recorder, workspace,
+                                                        processed_profile,
+                                                        graph_lock)
+                graph.add_graph(node, build_requires_graph, build_require=True)
+
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile,
                     graph_lock=None, graph_lock_root_node=None):
@@ -222,8 +253,14 @@ class GraphManager(object):
                                                   self._remote_manager, self._registry, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
-        self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires, recorder, workspace, processed_profile)
+        if graph_lock:
+            self._recurse_build_requires_lock(graph, graph_lock, processed_profile,
+                                              check_updates, update, build_mode, remote_name,
+                                              recorder,  workspace)
+        else:
+            self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
+                                         profile_build_requires, recorder, workspace,
+                                         processed_profile)
         return graph
 
 
