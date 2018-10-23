@@ -1,10 +1,9 @@
 import os
-
 import shutil
+import subprocess
 from six.moves.urllib.parse import urlparse
 
 from conans.client.tools.files import unzip
-import subprocess
 from conans.client import tools
 from conans import load
 from conans.client.remote_registry import RemoteRegistry, load_registry_txt
