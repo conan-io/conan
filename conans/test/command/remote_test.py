@@ -18,6 +18,72 @@ class RemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
+    def test_removed_references(self):
+        conanfile = """
+from conans import ConanFile
+class HelloConan(ConanFile):
+    pass
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . lib/1.0@lasote/channel")
+        self.client.run('upload "*" -c -r remote1')
+        self.client.run('upload "*" -c -r remote2')
+
+        self.client.run('remote list_ref')
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Remove from remote2, the reference should be kept there
+        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote2')
+        self.client.run('remote list_ref')
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Upload again to remote2 and remove from remote1, the ref should be removed
+        self.client.run('upload "*" -c -r remote2')
+        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
+        self.client.run('remote list_ref')
+        self.assertNotIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Test the packages references now
+        self.client.run('upload "*" -c -r remote1 --all')
+        self.client.run('upload "*" -c -r remote2 --all')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+                      self.client.out)
+
+        # Remove from remote2, the reference should be kept there
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote2')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+                      self.client.out)
+
+        # Upload again to remote2 and remove from remote1, the ref should be removed
+        self.client.run('upload "*" -c -r remote2 --all')
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote1')
+        self.client.run('remote list_ref')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+                         self.client.out)
+
+        # Remove package locally
+        self.client.run('upload "*" -c -r remote1 --all')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+                      self.client.out)
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+                         self.client.out)
+
+        # If I remove all in local, I also remove packages
+        self.client.run("create . lib/1.0@lasote/channel")
+        self.client.run('upload "*" -c -r remote1')
+        self.client.run('remove "lib/1.0@lasote/channel" -f')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertEquals("", self.client.out)
+
     def list_raw_test(self):
         self.client.run("remote list --raw")
         output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
