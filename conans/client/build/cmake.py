@@ -180,9 +180,9 @@ class CMake(object):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
-                    self._conanfile.run(command)
+                    self._run(command)
             else:
-                self._conanfile.run(command)
+                self._run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:

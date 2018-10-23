@@ -169,7 +169,7 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-    API_CHANGE_VERSION = Version("1.10")  # CLI changes in 1.9.x
+    API_CHANGE_VERSION = Version("1.8")  # CLI changes in 1.8
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
@@ -204,6 +204,29 @@ class SVN(SCMBase):
                 extra_options += " --trust-server-cert"
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
+    def _show_item(self, item, target='.'):
+        if self.version >= SVN.API_CHANGE_VERSION:
+            value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
+            return value.strip()
+        else:
+            output = self.run("info --xml \"{target}\"".format(target=target))
+            root = ET.fromstring(output)
+            if item == 'revision':
+                return root.findall("./entry")[0].get("revision")
+            elif item == 'url':
+                return root.findall("./entry/url")[0].text
+            elif item == 'wc-root':
+                return root.findall("./entry/wc-info/wcroot-abspath")[0].text
+            elif item == 'last-changed-revision':
+                return root.findall("./entry/commit")[0].get("revision")
+            elif item == 'relative-url':
+                root_url = root.findall("./entry/repository/root")[0].text
+                url = self._show_item(item='url', target=target)
+                if url.startswith(root_url):
+                    return url[len(root_url):]
+            raise ConanException("Retrieval of item '{}' not implemented for SVN<{}".format(
+                item, SVN.API_CHANGE_VERSION))
+
     def checkout(self, url, revision="HEAD"):
         output = ""
         try:
@@ -233,7 +256,7 @@ class SVN(SCMBase):
         return excluded_list
 
     def get_remote_url(self):
-        return self.run("info --show-item url").strip()
+        return self._show_item('url')
 
     def get_qualified_remote_url(self):
         # Return url with peg revision
@@ -248,40 +271,45 @@ class SVN(SCMBase):
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
-        output = self.run("status -u -r {} --xml".format(self.get_revision()))
-        root = ET.fromstring(output)
+        if self.version >= SVN.API_CHANGE_VERSION:
+            output = self.run("status -u -r {} --xml".format(self.get_revision()))
+            root = ET.fromstring(output)
 
-        pristine_item_list = ['external', 'ignored', 'none', 'normal']
-        pristine_props_list = ['normal', 'none']
-        for item in root.findall('.//wc-status'):
-            if item.get('item', 'none') not in pristine_item_list:
-                return False
-            if item.get('props', 'none') not in pristine_props_list:
-                return False
+            pristine_item_list = ['external', 'ignored', 'none', 'normal']
+            pristine_props_list = ['normal', 'none']
+            for item in root.findall('.//wc-status'):
+                if item.get('item', 'none') not in pristine_item_list:
+                    return False
+                if item.get('props', 'none') not in pristine_props_list:
+                    return False
 
-        for item in root.findall('.//repos-status'):
-            if item.get('item', 'none') not in pristine_item_list:
-                return False
-            if item.get('props', 'none') not in pristine_props_list:
-                return False
-
-        return True
+            for item in root.findall('.//repos-status'):
+                if item.get('item', 'none') not in pristine_item_list:
+                    return False
+                if item.get('props', 'none') not in pristine_props_list:
+                    return False
+            return True
+        else:
+            import warnings
+            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
+                          " returning not-pristine always because it cannot compare with"
+                          " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            return False
 
     def get_revision(self):
-        return self.run("info --show-item revision").strip()
+        return self._show_item('revision')
 
     def get_repo_root(self):
-        return self.run("info --show-item wc-root").strip()
+        return self._show_item('wc-root')
 
     def get_last_changed_revision(self, use_wc_root=True):
         if use_wc_root:
-            return self.run('info "{root}" --show-item last-changed-revision'.format(
-                root=self.get_repo_root())).strip()
+            return self._show_item(item='last-changed-revision', target=self.get_repo_root())
         else:
-            return self.run("info --show-item last-changed-revision").strip()
+            return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
-        url = self.run("info --show-item relative-url").strip()
+        url = self._show_item('relative-url')
         try:
             pattern = "(tags|branches)/[^/]+|trunk"
             branch = re.search(pattern, url)

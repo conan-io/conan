@@ -119,6 +119,29 @@ class HelloReuseConan(ConanFile):
         del os.environ["CONAN_USERNAME"]
         del os.environ["CONAN_CHANNEL"]
 
+        # Now use the default_ methods to declare user and channel
+        self.client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    build_policy = "missing"
+    default_user = "userfoo"
+    
+    def build(self):
+        self.output.info("Building %s/%s" % (self.user, self.channel) )
+
+    @property
+    def default_channel(self):
+        return "channelbar"
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("install .")
+        self.client.run("build .")
+        self.assertIn("Building userfoo/channelbar", self.client.out)
+
 
 class BuildRequireUserChannelTest(unittest.TestCase):
     def test(self):
