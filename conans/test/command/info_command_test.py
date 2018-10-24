@@ -7,7 +7,6 @@ import os
 from conans.util.files import load, save
 
 
-
 class InfoTest(unittest.TestCase):
 
     def setUp(self):
