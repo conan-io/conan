@@ -2,14 +2,11 @@ import json
 import os
 import unittest
 
-from nose.plugins.attrib import attr
-
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save, load
 
 
-@attr('only_without_revisions')
 class JsonOutputTest(unittest.TestCase):
 
     def setUp(self):

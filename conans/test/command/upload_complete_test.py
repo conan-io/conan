@@ -15,7 +15,6 @@ from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.tools import untargz
 from conans.util.files import load, mkdir, save
-from nose.plugins.attrib import attr
 from requests.packages.urllib3.exceptions import ConnectionError
 
 myconan1 = """
@@ -57,7 +56,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-@attr('only_without_revisions')
+
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):

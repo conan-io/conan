@@ -229,7 +229,9 @@ class RestV2Methods(RestCommonMethods):
                                  "specify a package revision")
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if not doing_upload and not revisions_enabled:
-            # Search for the latest package id available in any revision
+            # Search for the latest package id available in any revision (compatibility)
+            # Doing upload is always necessary and with revisions it is not needed
+            # but otherwise if we request a package it should look for the latest available
             p_reference = p_reference.copy_without_revision()
 
         if doing_upload:
@@ -237,7 +239,7 @@ class RestV2Methods(RestCommonMethods):
 
         url = self._recipe_url(p_reference.conan)
         url += "/packages/%s" % p_reference.package_id
-        if doing_upload or revisions_enabled:
+        if p_reference.revision and (doing_upload or revisions_enabled):
             assert(p_reference.revision is not None)
             url += "/revisions/%s" % p_reference.revision
         return url

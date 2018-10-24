@@ -1,7 +1,5 @@
 import unittest
 
-from nose.plugins.attrib import attr
-
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
@@ -9,7 +7,7 @@ import os
 from conans.util.files import load, save
 
 
-@attr('only_without_revisions')
+
 class InfoTest(unittest.TestCase):
 
     def setUp(self):

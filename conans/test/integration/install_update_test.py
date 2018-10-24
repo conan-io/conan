@@ -6,7 +6,6 @@ from conans.paths import CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
-from nose.plugins.attrib import attr
 from time import sleep
 
 
@@ -246,7 +245,6 @@ class Pkg(ConanFile):
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 
-    @attr('only_without_revisions')
     def remove_old_sources_test(self):
         # https://github.com/conan-io/conan/issues/1841
         test_server = TestServer()

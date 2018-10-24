@@ -3,7 +3,6 @@ import unittest
 
 import six
 from mock import Mock
-from nose.plugins.attrib import attr
 
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
@@ -17,7 +16,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
-@attr('only_without_revisions')
+
 class RemoveOutdatedTest(unittest.TestCase):
 
     def remove_query_test(self):
@@ -91,7 +90,7 @@ conaninfo = '''
 ''' +  fake_recipe_hash
 
 
-@attr('only_without_revisions')
+
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):

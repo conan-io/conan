@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.tools import environment_append
 from conans.util.files import save, is_dirty, gzopen_without_timestamps
 from mock import mock
-from nose.plugins.attrib import attr
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -32,7 +31,7 @@ class MyPkg(ConanFile):
         self.copy("*")
 """
 
-@attr('only_without_revisions')
+
 class UploadTest(unittest.TestCase):
 
     def not_existing_error_test(self):

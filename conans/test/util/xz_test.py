@@ -4,8 +4,6 @@ import six
 import unittest
 import tarfile
 
-from nose.plugins.attrib import attr
-
 from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.test_files import temp_folder
 from conans.tools import unzip, save

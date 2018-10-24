@@ -3,8 +3,6 @@ import os
 import shutil
 import unittest
 
-from nose.plugins.attrib import attr
-
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer
@@ -1004,7 +1002,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
-@attr('only_without_revisions')
+
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
