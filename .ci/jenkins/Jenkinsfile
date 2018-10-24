@@ -10,9 +10,9 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
 
 
 def slaves = ['Linux', 'Windows', 'Macos']
-def flavors = ["no_revisions"]
+def flavors = ["blocked_v2"]
 if(test_revisions){
-    flavors = ["client_revisions", "no_revisions"]
+    flavors = ["allowed_v2", "blocked_v2"]
 }
 def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
@@ -55,12 +55,17 @@ try{
                         continue;
                     }
 
-                    if (flavor != "no_revisions" && api_conf == "v1"){
+                    if (flavor != "blocked_v2" && api_conf == "v1"){
                         continue;
                     }
 
-                    if (flavor != "no_revisions" && pyver == "py34"){
+                    if (flavor != "blocked_v2" && pyver == "py34"){
                         continue;
+                    }
+
+                    def arg_flavor = ""
+                    if(flavor == "blocked_v2"){
+                        arg_flavor = "--blocked_v2"
                     }
 
                     builders[name] = {
@@ -102,14 +107,14 @@ try{
                                 if(slave == "Linux"){
                                     sh "docker pull lasote/conantests"
                                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}  --server_api=${api_conf} -f ${flavor}")
+                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} -f ${flavor}")
                                     }
                                 }
                                 else if(slave == "Windows"){
                                     try{
 
                                       withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} --server_api=${api_conf} -f ${flavor}")
+                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}  -f ${flavor}")
                                       }
                                     }
                                     finally{
@@ -120,7 +125,7 @@ try{
                                 else if(slave == "Macos"){
                                     try{
                                       withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --server_api=${api_conf} -f ${flavor}")
+                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} -f ${flavor}")
                                       }
                                     }
                                     finally{
@@ -198,6 +203,6 @@ if(env.JOB_NAME == "ConanNightly"){
 def build_linux(){
     sh "docker pull lasote/conantests"
     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}  --server_api=${api_conf}")
+        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
     }
 }

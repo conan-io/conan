@@ -9,7 +9,7 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder, client_revisions,
+def run_tests(module_path, pyver, source_folder, tmp_folder, blocked_v2,
               excluded_tags, num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
@@ -20,7 +20,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, client_revisions,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    if not client_revisions:
+    excluded_tags = []
+    if blocked_v2:
         excluded_tags.append("only_revisions")
 
     exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
@@ -69,7 +70,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, client_revisions,
     env["PYTHONPATH"] = source_folder
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
-    if client_revisions:
+    if not blocked_v2:
         env["CONAN_API_V2_BLOCKED"] = "False"
 
     with chdir(source_folder):
@@ -101,10 +102,11 @@ if __name__ == "__main__":
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--client_revisions', '-c', help='Flavor (client_revisions, no_revisions)',
-                        type=bool, default=False)
+    parser.add_argument('--blocked_v2', '-b', help='Block client to speak v2',
+                        default=False, action='store_true')
 
     args = parser.parse_args()
 
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.client_revisions,
+    print("Blocked v2: %s" % args.blocked_v2)
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.blocked_v2,
               args.exclude_tag, num_cores=args.num_cores)
