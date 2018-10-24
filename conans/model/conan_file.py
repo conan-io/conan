@@ -79,14 +79,6 @@ def get_env_context_manager(conanfile, without_python=False):
     return _env_and_python(conanfile)
 
 
-class classproperty(object):
-    def __init__(self, f):
-        self.f = f
-
-    def __get__(self, obj, owner):
-        return self.f(owner)
-
-
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -100,6 +92,7 @@ class ConanFile(object):
     author = None  # Main maintainer/responsible for the package, any format
     description = None
     build_policy = None
+    short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
@@ -116,8 +109,6 @@ class ConanFile(object):
     # Defaulting the reference fields
     default_channel = None
     default_user = None
-
-    _conan_short_paths = False
 
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -290,10 +281,3 @@ class ConanFile(object):
         else:
             return "PROJECT"
 
-    @classproperty
-    def short_paths(cls):
-        """ This property will be overriden by users assigning a bool value to it """
-        if get_env("CONAN_USE_ALWAYS_SHORT_PATHS", False):
-            return True
-        else:
-            return cls._conan_short_paths
