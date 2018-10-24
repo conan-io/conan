@@ -99,7 +99,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 # cache_no_locks = True               # Disable locking mechanism of local cache
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
-# user_home_short = use_always_short_paths         # environment CONAN_USE_ALWAYS_SHORT_PATHS
+# use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
 # non_interactive = False             # environment CONAN_NON_INTERACTIVE
 
