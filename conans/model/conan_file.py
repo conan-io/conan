@@ -13,6 +13,7 @@ from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
+from conans.util.env_reader import get_env
 
 
 def create_options(conanfile):
@@ -78,6 +79,14 @@ def get_env_context_manager(conanfile, without_python=False):
     return _env_and_python(conanfile)
 
 
+class classproperty(object):
+    def __init__(self, f):
+        self.f = f
+    def __get__(self, obj, owner):
+        return self.f(owner)
+
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -108,6 +117,8 @@ class ConanFile(object):
     default_channel = None
     default_user = None
 
+    _conan_short_paths = False
+
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -115,7 +126,6 @@ class ConanFile(object):
         self._conan_runner = runner
         self._conan_user = user
         self._conan_channel = channel
-        self._conan_short_paths = False
 
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):
@@ -280,10 +290,6 @@ class ConanFile(object):
         else:
             return "PROJECT"
 
-    @property
-    def short_paths(self):
-        return os.getenv("CONAN_USE_ALWAYS_SHORT_PATHS", self._conan_short_paths)
-
-    @short_paths.setter
-    def short_paths(self, value):
-        self._conan_short_paths = value
+    @classproperty
+    def short_paths(cls):
+        return get_env("CONAN_USE_ALWAYS_SHORT_PATHS", cls._conan_short_paths)
