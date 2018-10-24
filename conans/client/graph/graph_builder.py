@@ -248,9 +248,9 @@ class DepsGraphBuilder(object):
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or new_ref
+            alias_reference = alias_ref or new_ref.copy_without_revision()
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
-            aliased[alias_reference.copy_without_revision()] = requirement.conan_reference
+            aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
                                          remote_name, processed_profile, alias_ref=alias_reference)

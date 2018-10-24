@@ -46,31 +46,40 @@ class ConanProxy(object):
             return conanfile_path, status, remote, new_ref
 
         cur_revision = get_recipe_revision(reference, self._client_cache)
+        remote = self._registry.refs.get(reference)
+        named_remote = self._registry.remotes.get(remote_name) if remote_name else None
+        update_remote = named_remote or remote
 
         # Check if we have a revision different from the requested one
+        # !!! Here check if client revisions enabled
         if reference.revision and cur_revision != reference.revision:
-            check_updates = True
+            output.info("Different revision requested, removing current local recipe...")
+            DiskRemover(self._client_cache).remove_recipe(reference)
 
-        reference.revision = cur_revision
-
-        remote = self._registry.refs.get(reference)
+            output.info("Retrieving from remote '%s'..." % update_remote.name)
+            reference = self._remote_manager.get_recipe(reference, update_remote)
+            self._registry.refs.set(reference, update_remote.name)
+            status = RECIPE_UPDATED
+            return conanfile_path, status, update_remote, reference
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
             status = RECIPE_INCACHE
+            reference.revision = cur_revision
             return conanfile_path, status, remote, reference
 
-        named_remote = self._registry.remotes.get(remote_name) if remote_name else None
-        update_remote = named_remote or remote
+
         if not update_remote:
             status = RECIPE_NO_REMOTE
+            reference.revision = cur_revision
             return conanfile_path, status, None, reference
 
         try:  # get_conan_manifest can fail, not in server
             upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
+            reference.revision = cur_revision
             return conanfile_path, status, update_remote, reference
 
         export = self._client_cache.export(reference)
@@ -91,6 +100,7 @@ class ConanProxy(object):
         else:
             status = RECIPE_INCACHE
 
+        reference.revision = cur_revision
         return conanfile_path, status, update_remote, reference
 
     def _download_recipe(self, conan_reference, output, remote_name, recorder):

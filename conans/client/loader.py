@@ -2,21 +2,24 @@ import os
 import sys
 import imp
 import inspect
+import os
+import sys
+
 import uuid
 
+from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
+from conans.client.output import ScopedOutput
+from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
+from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
-from conans.client.output import ScopedOutput
-from conans.model.profile import Profile
-from conans.client.generators import registered_generators
-from conans.model.conan_generator import Generator
-from conans.client.tools.files import chdir
 
 
 class ProcessedProfile(object):
@@ -43,13 +46,9 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
-        loaded, filename = _parse_file(conanfile_path)
-        try:
-            conanfile = _parse_module(loaded, filename)
-            conanfile.python_requires = self._python_requires.references
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        conanfile = load_class_without_python_requires(conanfile_path)
+        conanfile.python_requires = self._python_requires.references
+        return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -96,11 +95,9 @@ class ConanFileLoader(object):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
-
-        if processed_profile._dev_reference:
-            _ref = reference.copy_without_revision() if reference else None
-            if processed_profile._dev_reference == _ref:
-                conanfile.develop = True
+        if (processed_profile._dev_reference and reference and
+                processed_profile._dev_reference == reference.copy_without_revision()):
+            conanfile.develop = True
         try:
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
@@ -198,7 +195,8 @@ def _parse_module(conanfile_module, module_id):
     """
     result = None
     for name, attr in conanfile_module.__dict__.items():
-        if name[0] == "_" or attr.__dict__["__module__"] != module_id or not inspect.isclass(attr):
+        if (name.startswith("_") or not inspect.isclass(attr) or
+                attr.__dict__.get("__module__") != module_id):
             continue
 
         if issubclass(attr, ConanFile) and attr != ConanFile:

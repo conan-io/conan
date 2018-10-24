@@ -415,12 +415,8 @@ class AliasConanfile(ConanFile):
 
         self.client.save({"conanfile.py": alias})
         self.client.run("export . lib/snap@lasote/testing")
-        # Will keep the local cache copy (revision 1)
+        # As we requested a different revision it will install the correct one
         self.client.run("install lib/snap@lasote/testing --build")
-        self.assertIn("Revision 2", self.client.out)
-
-        # Will get the correct revision
-        self.client.run("install lib/snap@lasote/testing --update --build")
         self.assertIn("Revision 1", self.client.out)
 
     def test_recipe_revision_delete_all(self):
@@ -467,17 +463,10 @@ class AliasConanfile(ConanFile):
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev3)
 
-        # Remove revision 3, local rev is not None and remote is rev1
+        # Remove revision 3, remote is rev1
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
-        now_rev = self.client.get_revision(self.ref)
-        self.assertIsNotNone(now_rev)
         remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
         self.assertEquals(remote_rev, rev)
-
-        # Remove package locally, local rev is None
-        self.client.run("remove %s#%s -f" % (str(self.ref), rev3))
-        now_rev = self.client.get_revision(self.ref)
-        self.assertIsNone(now_rev)
 
     def test_remote_search(self):
         conanfile = '''
