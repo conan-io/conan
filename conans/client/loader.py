@@ -31,7 +31,6 @@ class ProcessedProfile(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
         # Make sure the paths are normalized first, so env_values can be just a copy
-        self._env_values.normalize_paths()
         self._dev_reference = create_reference
 
 
