@@ -153,3 +153,9 @@ class Pkg(ConanFile):
         error = client.run("download pkg/0.1@lasote/stable -p=wrong", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Package binary 'pkg/0.1@lasote/stable:wrong' not found in 'default'", client.out)
+
+    def test_download_pattern(self):
+        client = TestClient()
+        error = client.run("download pkg/*@user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Provide a valid full reference without wildcards", client.out)
