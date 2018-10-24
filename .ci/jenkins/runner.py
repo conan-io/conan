@@ -20,7 +20,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, blocked_v2,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    excluded_tags = []
     if blocked_v2:
         excluded_tags.append("only_revisions")
 

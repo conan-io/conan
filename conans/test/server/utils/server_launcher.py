@@ -43,8 +43,6 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path, self.storage_folder)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
-            if get_env("CONAN_TESTING_SERVER_REVISIONS_ENABLED", False):
-                server_capabilities.add(REVISIONS)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port
