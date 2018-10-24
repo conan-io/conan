@@ -117,6 +117,8 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile + scm})
         with chdir(client.current_folder):
             client.runner("git init")
+            client.runner('git config user.email "you@example.com"')
+            client.runner('git config user.name "Your Name"')
             client.runner("git remote add origin https://github.com/fake/fake.git")
             client.runner("git add .")
             client.runner("git commit -m \"initial commit\"")
