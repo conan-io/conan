@@ -18,3 +18,4 @@ REVISIONS = "revisions"  # Only when enabled in config, not by default look at s
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]  # Still without v2 because it is changing
 
 __version__ = '1.9.0-dev'
+
