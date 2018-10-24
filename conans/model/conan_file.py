@@ -91,7 +91,6 @@ class ConanFile(object):
     author = None  # Main maintainer/responsible for the package, any format
     description = None
     build_policy = None
-    short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
@@ -116,6 +115,7 @@ class ConanFile(object):
         self._conan_runner = runner
         self._conan_user = user
         self._conan_channel = channel
+        self._conan_short_paths = False
 
     def initialize(self, settings, env, local=None):
         if isinstance(self.generators, str):
@@ -279,3 +279,11 @@ class ConanFile(object):
             return "%s/%s@PROJECT" % (self.name, self.version)
         else:
             return "PROJECT"
+
+    @@property
+    def short_paths(self):
+        return os.getenv("CONAN_USE_ALWAYS_SHORT_PATHS", self._conan_short_paths)
+
+    @short_paths.setter
+    def short_paths(self, value):
+        self._conan_short_paths = value
