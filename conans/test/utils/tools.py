@@ -428,7 +428,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 activate_v2=None, revisions=None):
+                 block_v2=None, revisions=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -437,10 +437,10 @@ class TestClient(object):
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
 
-        if activate_v2 is None:  # Until v2 is stable
-            activate_v2 = get_env("CONAN_TESTING_SERVER_V2_ENABLED", False) or revisions
+        if block_v2 is None:  # Until v2 is stable
+            block_v2 = not get_env("CONAN_API_V2_BLOCKED", True) and not revisions
 
-        self.activate_v2 = activate_v2
+        self.block_v2 = block_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
@@ -557,7 +557,7 @@ class TestClient(object):
                                                             self.user_io, self.client_version,
                                                             self.min_server_compatible_version,
                                                             self.plugin_manager)
-            self.rest_api_client._activate_v2 = self.activate_v2
+            self.rest_api_client.block_v2 = self.block_v2
             set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):

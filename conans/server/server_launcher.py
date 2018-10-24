@@ -35,14 +35,11 @@ class ServerLauncher(object):
                                                    server_config.authorize_timeout)
 
         server_store = get_server_store(server_config.disk_storage_path,
-                                        server_config.revisions_enabled,
                                         server_config.public_url,
                                         updown_auth_manager=updown_auth_manager)
 
         server_capabilities = SERVER_CAPABILITIES
-
-        if server_config.revisions_enabled:
-            server_capabilities.append(REVISIONS)
+        server_capabilities.append(REVISIONS)
 
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, server_store,

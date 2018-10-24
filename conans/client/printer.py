@@ -179,7 +179,7 @@ class Printer(object):
                 if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
-                    self._out.writeln(conan_item["recipe"]["id"])
+                    self._out.writeln(str(conan_item["recipe"]["id"]))
 
     def print_search_packages(self, search_info, reference, packages_query,
                               outdated=False):

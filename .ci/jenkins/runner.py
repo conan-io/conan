@@ -72,9 +72,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     if server_api == "v2":
-        env["CONAN_TESTING_SERVER_V2_ENABLED"] = "1"
-    if flavor == "revisions":
-        env["CONAN_TESTING_SERVER_REVISIONS_ENABLED"] = "1"
+        env["CONAN_API_V2_BLOCKED"] = "False"
 
     with chdir(source_folder):
         with environment_append(env):

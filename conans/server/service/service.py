@@ -1,14 +1,18 @@
 import re
 from fnmatch import translate
 
+from conans import load
 from conans.errors import RequestErrorException, NotFoundException, ForbiddenException, \
     ConanException
 import os
 import jwt
+
+from conans.model.info import ConanInfo
+from conans.paths import CONANINFO
 from conans.util.files import mkdir, list_folder_subdirs
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
-from conans.search.search import search_packages, _partial_match
+from conans.search.search import _partial_match, filter_packages, search_packages
 
 
 class FileUploadDownloadService(object):
@@ -89,11 +93,6 @@ class SearchService(object):
                 r = _pattern
             return r
 
-        def get_folders_levels(_pattern):
-            """If a reference with revisions is detected compare with 5 levels of subdirs"""
-            r = get_ref(_pattern)
-            return 5 if r and r.revision else 4
-
         # Check directly if it is a reference
         ref = get_ref(pattern)
         if ref:
@@ -109,7 +108,7 @@ class SearchService(object):
             b_pattern = translate(pattern)
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
 
-        subdirs = list_folder_subdirs(basedir=self._server_store.store, level=get_folders_levels(pattern))
+        subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:

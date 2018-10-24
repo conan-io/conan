@@ -6,6 +6,7 @@ from bottle import request
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
+from conans.server.conf import DEFAULT_REVISION_V1
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import ConanService
@@ -26,6 +27,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             urls = conan_service.get_conanfile_download_urls(reference, [CONAN_MANIFEST])
             if not urls:
                 raise NotFoundException("No digest found")
@@ -38,6 +40,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             package_reference = PackageReference(reference, package_id)
 
             urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
@@ -53,6 +56,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             snapshot = conan_service.get_recipe_snapshot(reference)
             snapshot_norm = {filename.replace("\\", "/"): the_md5
                              for filename, the_md5 in snapshot.items()}
@@ -65,6 +69,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             package_reference = PackageReference(reference, package_id)
             snapshot = conan_service.get_package_snapshot(package_reference)
             snapshot_norm = {filename.replace("\\", "/"): the_md5
@@ -78,6 +83,7 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             urls = conan_service.get_conanfile_download_urls(reference)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
@@ -90,7 +96,9 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             package_reference = PackageReference(reference, package_id)
+            package_reference.revision = DEFAULT_REVISION_V1
             urls = conan_service.get_package_download_urls(package_reference)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
@@ -102,10 +110,12 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_conanfile_upload_urls(reference, filesizes)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
+            app.server_store.update_last_revision(reference)
             return urls_norm
 
         @app.route('%s/upload_urls' % r.package, method=["POST"])
@@ -115,9 +125,13 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reference = ConanFileReference(name, version, username, channel)
+            reference.revision = DEFAULT_REVISION_V1
             package_reference = PackageReference(reference, package_id)
+            package_reference.revision = DEFAULT_REVISION_V1
+
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_package_upload_urls(package_reference, filesizes)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
+            app.server_store.update_last_package_revision(package_reference)
             return urls_norm

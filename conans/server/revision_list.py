@@ -33,6 +33,9 @@ class RevisionList(object):
             return None
         return self._data[-1]["id"]
 
+    def items(self):
+        return reversed([el["id"] for el in self._data])
+
     def remove_revision(self, revision_id):
         index = self._find_revision_index(revision_id)
         if index is None:

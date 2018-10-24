@@ -1,8 +1,6 @@
 import json
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.test import revisions_enabled
 from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
 from conans.util.files import load

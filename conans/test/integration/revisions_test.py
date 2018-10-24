@@ -5,7 +5,7 @@ from collections import OrderedDict
 from nose.plugins.attrib import attr
 from time import sleep
 
-from conans import tools, API_V2, REVISIONS
+from conans import tools, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
@@ -17,7 +17,7 @@ class RevisionsTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.users = {}
         for i in range(3):
-            self.servers["remote%d" % i] = TestServer(server_capabilities=[API_V2, REVISIONS])
+            self.servers["remote%d" % i] = TestServer(server_capabilities=[REVISIONS])
             self.users["remote%d" % i] = [("lasote", "mypass")]
 
         self.servers["remote_norevisions"] = TestServer(server_capabilities=[])

@@ -7,6 +7,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
+from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_source_files, temp_folder, \
     hello_conan_files
@@ -71,6 +72,7 @@ class UploadTest(unittest.TestCase):
     def setUp(self):
         self.client = self._get_client()
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        self.conan_ref.revision = DEFAULT_REVISION_V1
         reg_folder = self.client.paths.export(self.conan_ref)
 
         self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
@@ -88,8 +90,10 @@ class UploadTest(unittest.TestCase):
         manifest = FileTreeManifest.create(reg_folder)
         manifest.time = '123123123'
         manifest.save(reg_folder)
+        self.test_server.paths.update_last_revision(self.conan_ref)
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
+        self.package_ref.revision = DEFAULT_REVISION_V1
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
 
         package_folder = self.client.paths.package(self.package_ref)
@@ -100,6 +104,7 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
         save(os.path.join(package_folder, CONANINFO), """[recipe_hash]\n%s""" % manifest.summary_hash)
         FileTreeManifest.create(package_folder).save(package_folder)
+        self.test_server.paths.update_last_package_revision(self.package_ref)
 
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |

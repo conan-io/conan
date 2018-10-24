@@ -3,8 +3,6 @@ from collections import OrderedDict
 
 import time
 from nose.plugins.attrib import attr
-
-from conans.test import revisions_enabled
 from conans.test.utils.tools import TestClient, TestServer, \
     inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
 

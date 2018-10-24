@@ -10,6 +10,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
     CONAN_MANIFEST, CONANINFO
+from conans.server.conf import DEFAULT_REVISION_V1
+from conans.server.store.server_store import ServerStore
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
@@ -157,12 +159,16 @@ class RemoveTest(unittest.TestCase):
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k])
+                if isinstance(base_path, ServerStore):
+                    folder += "/%s" % DEFAULT_REVISION_V1
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
                 else:
                     for value in (1, 2):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
+                        if isinstance(base_path, ServerStore):
+                            package_folder += "/%s" % DEFAULT_REVISION_V1
                         if value in shas:
                             self.assertTrue(os.path.exists(package_folder))
                         else:

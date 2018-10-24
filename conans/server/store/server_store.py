@@ -1,6 +1,14 @@
-from os.path import normpath, join, relpath
+from os.path import normpath, join
+from os.path import relpath
+
+from conans.errors import NotFoundException, ConanException
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import SimplePaths, EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths import PACKAGES_FOLDER
+from conans.paths import SimplePaths, EXPORT_FOLDER
+from conans.server.revision_list import RevisionList
+
+
+REVISIONS_FILE = "revisions.txt"
 
 
 class ServerStore(SimplePaths):
@@ -9,23 +17,30 @@ class ServerStore(SimplePaths):
         super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
         self._storage_adapter = storage_adapter
 
-    def conan(self, reference, resolve_latest=True):  # Ignored in non-revisions, but hard to remove
-        return normpath(join(self.store, "/".join(reference)))
+    def conan(self, reference, resolve_latest=True):
+        reference = self.ref_with_rev(reference) if resolve_latest else reference
+        tmp = normpath(join(self.store, "/".join(reference)))
+        return join(tmp, reference.revision) if reference.revision else tmp
 
     def packages(self, reference):
+        reference = self.ref_with_rev(reference)
         return join(self.conan(reference), PACKAGES_FOLDER)
 
     def package(self, p_reference, short_paths=None):
-        return join(self.packages(p_reference.conan), p_reference.package_id)
+        p_reference = self.p_ref_with_rev(p_reference)
+        tmp = join(self.packages(p_reference.conan), p_reference.package_id)
+        return join(tmp, p_reference.revision) if p_reference.revision else tmp
 
     def export(self, reference):
         return join(self.conan(reference), EXPORT_FOLDER)
 
     def get_conanfile_file_path(self, reference, filename):
+        reference = self.ref_with_rev(reference)
         abspath = join(self.export(reference), filename)
         return abspath
 
     def get_package_file_path(self, p_reference, filename):
+        p_reference = self.p_ref_with_rev(p_reference)
         p_path = self.package(p_reference)
         abspath = join(p_path, filename)
         return abspath
@@ -42,6 +57,7 @@ class ServerStore(SimplePaths):
     def get_package_snapshot(self, p_reference):
         """Returns a {filepath: md5} """
         assert isinstance(p_reference, PackageReference)
+        p_reference = self.p_ref_with_rev(p_reference)
         path = self.package(p_reference)
         return self._get_snapshot_of_files(path)
 
@@ -69,7 +85,10 @@ class ServerStore(SimplePaths):
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, reference):
         assert isinstance(reference, ConanFileReference)
-        result = self._storage_adapter.delete_folder(self.conan(reference))
+        result = self._storage_adapter.delete_folder(self.conan(reference, resolve_latest=False))
+        if reference.revision:
+            rev_file_path = self._recipe_revisions_file(reference)
+            self._remove_revision(rev_file_path, reference.revision)
         self._storage_adapter.delete_empty_dirs([reference])
         return result
 
@@ -101,7 +120,6 @@ class ServerStore(SimplePaths):
             self._storage_adapter.delete_file(path)
 
     # ONLY APIv1 URLS
-
     # ############ DOWNLOAD URLS
     def get_download_conanfile_urls(self, reference, files_subset=None, user=None):
         """Returns a {filepath: url} """
@@ -130,6 +148,7 @@ class ServerStore(SimplePaths):
         :return {filepath: url} """
         assert isinstance(package_reference, PackageReference)
         assert isinstance(filesizes, dict)
+
         return self._get_upload_urls(self.package(package_reference), filesizes, user)
 
     def _get_download_urls(self, relative_path, files_subset=None, user=None):
@@ -157,3 +176,118 @@ class ServerStore(SimplePaths):
             new_key = relpath(old_key, basepath)
             ret[new_key] = value
         return ret
+
+    # Methods to manage revisions
+    def get_last_revision(self, reference):
+        assert(isinstance(reference, ConanFileReference))
+        rev_file_path = self._recipe_revisions_file(reference)
+        return self._get_latest_revision(rev_file_path)
+
+    def get_last_revision_containing_package(self, package_ref):
+        assert(isinstance(package_ref, PackageReference))
+        rev_file_path = self._recipe_revisions_file(package_ref.conan)
+        revs = self._get_revisions(rev_file_path)
+        if not revs:
+            raise NotFoundException("Recipe not found: '%s'" % str(package_ref.conan))
+
+        for rev in revs.items():
+            pref = PackageReference(package_ref.conan.copy_with_revision(rev),
+                                    package_ref.package_id)
+            pref.revision = self.get_last_package_revision(pref)
+            try:
+                folder = self.package(pref)
+                if self._storage_adapter.path_exists(folder):
+                    return pref
+            except NotFoundException:
+                pass
+        raise NotFoundException("Package not found: '%s'" % str(package_ref))
+
+    def get_last_package_revision(self, p_reference):
+        assert(isinstance(p_reference, PackageReference))
+        rev_file_path = self._package_revisions_file(p_reference)
+        return self._get_latest_revision(rev_file_path)
+
+    def update_last_revision(self, reference):
+        assert(isinstance(reference, ConanFileReference))
+        rev_file_path = self._recipe_revisions_file(reference)
+        self._update_last_revision(rev_file_path, reference)
+
+    def update_last_package_revision(self, p_reference):
+        assert(isinstance(p_reference, PackageReference))
+        rev_file_path = self._package_revisions_file(p_reference)
+        self._update_last_revision(rev_file_path, p_reference)
+
+    def _update_last_revision(self, rev_file_path, reference):
+        if self._storage_adapter.path_exists(rev_file_path):
+            rev_file = self._storage_adapter.read_file(rev_file_path,
+                                                       lock_file=rev_file_path + ".lock")
+            rev_list = RevisionList.loads(rev_file)
+        else:
+            rev_list = RevisionList()
+        if not reference.revision:
+            raise ConanException("Invalid revision for: %s" % reference.full_repr())
+        rev_list.add_revision(reference.revision)
+        self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
+                                         lock_file=rev_file_path + ".lock")
+
+    def _get_revisions(self, rev_file_path):
+        if self._storage_adapter.path_exists(rev_file_path):
+            rev_file = self._storage_adapter.read_file(rev_file_path,
+                                                       lock_file=rev_file_path + ".lock")
+            rev_list = RevisionList.loads(rev_file)
+            return rev_list
+        else:
+            return None
+
+    def _get_latest_revision(self, rev_file_path):
+        rev_list = self._get_revisions(rev_file_path)
+        if not rev_list:
+            return None
+        return rev_list.latest_revision()
+
+    def _recipe_revisions_file(self, reference):
+        recipe_folder = normpath(join(self._store_folder, "/".join(reference)))
+        return join(recipe_folder, REVISIONS_FILE)
+
+    def _package_revisions_file(self, p_reference):
+        tmp = normpath(join(self._store_folder, "/".join(p_reference.conan)))
+        revision = {None: ""}.get(p_reference.conan.revision, p_reference.conan.revision)
+        p_folder = join(tmp, revision, PACKAGES_FOLDER, p_reference.package_id)
+        return join(p_folder, REVISIONS_FILE)
+
+    def ref_with_rev(self, reference):
+        if reference.revision:
+            return reference
+
+        latest = self.get_last_revision(reference)
+        if not latest:
+            raise NotFoundException("Recipe not found: '%s'" % reference.full_repr())
+
+        return reference.copy_with_revision(latest)
+
+    def p_ref_with_rev(self, p_reference):
+        if p_reference.revision and p_reference.conan.revision:
+            return p_reference
+
+        if not p_reference.conan.revision:
+            # Search the latest recipe revision with the requested package
+            p_reference = self.get_last_revision_containing_package(p_reference)
+            return p_reference
+
+        reference = self.ref_with_rev(p_reference.conan)
+        ret = PackageReference(reference, p_reference.package_id)
+
+        latest = self.get_last_package_revision(ret)
+        if not latest:
+            raise NotFoundException("Package not found: '%s'" % str(p_reference))
+
+        return ret.copy_with_revisions(reference.revision, latest)
+
+    def _remove_revision(self, rev_file_path, revision):
+        rev_file = self._storage_adapter.read_file(rev_file_path,
+                                                   lock_file=rev_file_path + ".lock")
+        rev_list = RevisionList.loads(rev_file)
+        rev_list.remove_revision(revision)
+        self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
+                                         lock_file=rev_file_path + ".lock")
+
