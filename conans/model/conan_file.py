@@ -280,7 +280,7 @@ class ConanFile(object):
         else:
             return "PROJECT"
 
-    @@property
+    @property
     def short_paths(self):
         return os.getenv("CONAN_USE_ALWAYS_SHORT_PATHS", self._conan_short_paths)
 
