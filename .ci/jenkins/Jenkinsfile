@@ -107,14 +107,14 @@ try{
                                 if(slave == "Linux"){
                                     sh "docker pull lasote/conantests"
                                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} -f ${flavor}")
+                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${arg_flavor}")
                                     }
                                 }
                                 else if(slave == "Windows"){
                                     try{
 
                                       withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}  -f ${flavor}")
+                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} ${arg_flavor}")
                                       }
                                     }
                                     finally{
@@ -125,7 +125,7 @@ try{
                                 else if(slave == "Macos"){
                                     try{
                                       withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} -f ${flavor}")
+                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${arg_flavor}")
                                       }
                                     }
                                     finally{
