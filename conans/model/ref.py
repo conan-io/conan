@@ -5,7 +5,7 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
-def check_valid_ref(ref, allow_pattern=False):
+def check_valid_ref(ref, allow_pattern):
     try:
         if not isinstance(ref, ConanFileReference):
             ref = ConanFileReference.loads(ref, validate=True)
