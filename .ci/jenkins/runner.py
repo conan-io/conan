@@ -104,6 +104,5 @@ if __name__ == "__main__":
     parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
     args = parser.parse_args()
 
-    print("Blocked v2: %s" % args.blocked_v2)
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
               args.exclude_tag, num_cores=args.num_cores)
