@@ -9,8 +9,8 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
-              excluded_tags, num_cores=3, verbosity=None, server_api=None):
+def run_tests(module_path, pyver, source_folder, tmp_folder, client_revisions,
+              excluded_tags, num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     venv_dest = os.path.join(tmp_folder, "venv")
@@ -20,9 +20,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    if flavor == "server_revisions":
-        excluded_tags.append("only_without_revisions")
-    elif flavor == "no_revisions":
+    if not client_revisions:
         excluded_tags.append("only_revisions")
 
     exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
@@ -71,7 +69,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     env["PYTHONPATH"] = source_folder
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
-    if server_api == "v2":
+    if client_revisions:
         env["CONAN_API_V2_BLOCKED"] = "False"
 
     with chdir(source_folder):
@@ -101,12 +99,12 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
-    parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--flavor', '-f', help='Flavor (server_revisions, no_revisions)')
+    parser.add_argument('--client_revisions', '-c', help='Flavor (client_revisions, no_revisions)',
+                        type=bool, default=False)
 
     args = parser.parse_args()
 
-    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              args.exclude_tag, num_cores=args.num_cores, server_api=args.server_api)
+    run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.client_revisions,
+              args.exclude_tag, num_cores=args.num_cores)

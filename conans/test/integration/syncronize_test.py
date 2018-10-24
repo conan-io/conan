@@ -1,4 +1,6 @@
 import unittest
+
+from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -21,6 +23,7 @@ class SynchronizeTest(unittest.TestCase):
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        conan_reference.revision = DEFAULT_REVISION_V1
         files = cpp_hello_conan_files("Hello0", "0.1")
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
