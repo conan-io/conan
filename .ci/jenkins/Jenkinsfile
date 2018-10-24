@@ -11,7 +11,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
 def slaves = ['Linux', 'Windows', 'Macos']
 def flavors = ["blocked_v2"]
 if(test_revisions){
-    flavors = ["allowed_v2", "blocked_v2"]
+    flavors = ["enabled_revisions", "disabled_revisions", "blocked_v2"]
 }
 def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
@@ -43,11 +43,6 @@ try{
                         continue;
                     }
                     def name = "${slave} - ${flavor} - ${pyver}"
-                    def arg_flavor = ""
-                    if(flavor == "blocked_v2"){
-                        arg_flavor = "--blocked_v2"
-                    }
-
                     builders[name] = {
                         node(slave) {
                             stage(name){
@@ -87,14 +82,14 @@ try{
                                 if(slave == "Linux"){
                                     sh "docker pull lasote/conantests"
                                     docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${arg_flavor}")
+                                        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor}")
                                     }
                                 }
                                 else if(slave == "Windows"){
                                     try{
 
                                       withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} ${arg_flavor}")
+                                        bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} --flavor ${flavor}")
                                       }
                                     }
                                     finally{
@@ -105,7 +100,7 @@ try{
                                 else if(slave == "Macos"){
                                     try{
                                       withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} ${arg_flavor}")
+                                          sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor}")
                                       }
                                     }
                                     finally{
