@@ -1,6 +1,4 @@
-
 import unittest
-
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.settings import Settings

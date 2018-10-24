@@ -13,7 +13,6 @@ from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
 from conans.client.output import Color
 from conans.client.tools.oss import os_info
-from conans.util.env_reader import get_env
 
 
 def create_options(conanfile):
@@ -280,4 +279,3 @@ class ConanFile(object):
             return "%s/%s@PROJECT" % (self.name, self.version)
         else:
             return "PROJECT"
-
