@@ -93,15 +93,9 @@ class ConanRemover(object):
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            result = self._remote_manager.remove(reference, remote)
-            self._registry.refs.remove(reference, remote_name=remote.name)
-            self._registry.prefs.remove_all(reference, remote_name=remote.name)
-            return result
+            return self._remote_manager.remove(reference, remote)
         else:
             tmp = self._remote_manager.remove_packages(reference, package_ids, remote)
-            for pid in package_ids:
-                pref = PackageReference(reference, pid)
-                self._registry.prefs.remove(pref, remote_name=remote.name)
             return tmp
 
     def _local_remove(self, reference, src, build_ids, package_ids):
