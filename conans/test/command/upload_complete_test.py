@@ -56,7 +56,6 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):

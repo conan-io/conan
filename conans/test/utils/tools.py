@@ -438,7 +438,10 @@ class TestClient(object):
         """
 
         if block_v2 is None:  # Until v2 is stable
-            block_v2 = not get_env("CONAN_API_V2_BLOCKED", True) and not revisions
+            block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
+
+        if revisions:
+            block_v2 = False
 
         self.block_v2 = block_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
