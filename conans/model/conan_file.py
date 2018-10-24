@@ -82,9 +82,9 @@ def get_env_context_manager(conanfile, without_python=False):
 class classproperty(object):
     def __init__(self, f):
         self.f = f
+
     def __get__(self, obj, owner):
         return self.f(owner)
-
 
 
 class ConanFile(object):
@@ -292,4 +292,8 @@ class ConanFile(object):
 
     @classproperty
     def short_paths(cls):
-        return get_env("CONAN_USE_ALWAYS_SHORT_PATHS", cls._conan_short_paths)
+        """ This property will be overriden by users assigning a bool value to it """
+        if get_env("CONAN_USE_ALWAYS_SHORT_PATHS", False):
+            return True
+        else:
+            return cls._conan_short_paths
