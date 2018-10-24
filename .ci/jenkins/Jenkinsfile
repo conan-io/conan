@@ -1,6 +1,5 @@
 // ########## CONFIGURATION ##################
 def full_py_vers = false
-def test_v2 = true
 def test_revisions = true
 // ############################
 
@@ -21,9 +20,6 @@ if (full_py_vers){
     pyvers = ['py37', 'py36', 'py34', 'py27']
 }
 
-else if(test_v2){
-    api_confs = ["v1", "v2"]
-}
 
 
 def module = "\"conans.test\""
@@ -42,27 +38,11 @@ try{
         for (x in slaves) {
             def slave = x
             for (y in pyvers) {
-                for (z in api_confs){
                     def pyver = y
                     if(slave != "Linux" && pyver=="py37"){
                         continue;
                     }
-
-                    def api_conf = z
-                    def name = "${slave} - ${flavor} - ${pyver} - API${api_conf}"
-
-                    /*if (api_conf == "v2" && slave != "Linux"){
-                        continue;
-                    }
-
-                    if (flavor != "blocked_v2" && api_conf == "v1"){
-                        continue;
-                    }
-
-                    if (flavor != "blocked_v2" && pyver == "py34"){
-                        continue;
-                    }*/
-
+                    def name = "${slave} - ${flavor} - ${pyver}"
                     def arg_flavor = ""
                     if(flavor == "blocked_v2"){
                         arg_flavor = "--blocked_v2"
@@ -86,9 +66,9 @@ try{
                                     commit = vars["GIT_COMMIT"].substring(0, 4)
                                     branch = vars["GIT_BRANCH"]
                                     def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
-                                    workdir = "${base_dir}${commit}/${pyver}/${api_conf}"
+                                    workdir = "${base_dir}${commit}/${pyver}/${flavor}"
                                     base_source = "${base_dir}source/${commit}"
-                                    sourcedir = "${base_source}/${pyver}/${api_conf}"
+                                    sourcedir = "${base_source}/${pyver}/${flavor}"
                                     while(fileExists(sourcedir)){
                                         sourcedir = sourcedir + "_"
                                     }
