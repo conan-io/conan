@@ -1,8 +1,9 @@
 import os
 import time
+
+from conans.client.revisions import get_recipe_revision, get_package_revision
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.conan_file import get_recipe_revision
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.search.search import search_recipes, search_packages
@@ -104,10 +105,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
 
-        # If there is a revision in the registry use it, otherwise it will use scm or summary hash
-        revision = get_recipe_revision(conan_ref, self._registry, conan_file, self._client_cache)
-        assert(revision is not None)
-        conan_ref.revision = revision
+        conan_ref.revision = get_recipe_revision(conan_ref, self._client_cache)
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
@@ -147,15 +145,16 @@ class CmdUpload(object):
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)
         current_remote = self._registry.refs.get(conan_reference)
+        conanfile = self._loader.load_class(conan_file_path)
+
         if remote != current_remote:
-            conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
         new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                                      policy=policy, remote_manifest=remote_manifest)
 
         cur_recipe_remote = self._registry.refs.get(conan_reference)
-        cur_revision = self._registry.revisions.get(conan_reference)
+        cur_revision = get_recipe_revision(conan_reference, self._client_cache)
         updated_ref = (cur_recipe_remote and
                        new_ref.copy_without_revision() == cur_recipe_remote and
                        new_ref.revision != cur_revision)
@@ -176,7 +175,7 @@ class CmdUpload(object):
 
         if pref.conan.revision:
             # Read the revisions and build a correct package reference for the server
-            package_revision = self._registry.revisions.get(pref)
+            package_revision = get_package_revision(pref, self._client_cache)
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revisions(pref.conan.revision, package_revision)
         else:

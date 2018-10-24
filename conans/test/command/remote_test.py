@@ -117,14 +117,6 @@ class HelloConan(ConanFile):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
-    def with_revisions_cannot_be_set_with_add_ref_test(self):
-        ref = ConanFileReference.loads("Hello/0.1@user/testing")
-        self.client.run("remote add_ref %s#revision remote0" % str(ref))
-        self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing", self.client.out)
-        rev = self.client.remote_registry.revisions.get(ref)
-        self.assertIsNone(rev)
-
     def remove_remote_test(self):
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)

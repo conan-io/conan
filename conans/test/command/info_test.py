@@ -297,6 +297,7 @@ class MyTest(ConanFile):
                 URL: myurl
                 License: MIT
                 Recipe: No remote
+                Revision: d67a47651a0532271e0090350f024c0f
                 Binary: Missing
                 Binary remote: None
                 Required by:
@@ -306,6 +307,7 @@ class MyTest(ConanFile):
                 URL: myurl
                 License: MIT
                 Recipe: No remote
+                Revision: 96a71455ed5d0181e6babf739e84f513
                 Binary: Missing
                 Binary remote: None
                 Required by:

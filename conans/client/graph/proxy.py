@@ -5,6 +5,7 @@ from requests.exceptions import RequestException
 from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
+from conans.client.revisions import get_recipe_revision
 from conans.errors import ConanException, NotFoundException
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
@@ -44,15 +45,13 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        reg_revision = self._registry.revisions.get(reference)
+        cur_revision = get_recipe_revision(reference, self._client_cache)
 
-        # In disk but not with the same revision
-        if reference.revision:
-            if reg_revision != reference.revision:
-                output.info("Requested different revision of %s..." % str(reference))
-                remote, new_ref = self._download_recipe(reference, output, remote_name, recorder)
-                status = RECIPE_UPDATED
-                return conanfile_path, status, remote, new_ref
+        # Check if we have a revision different from the requested one
+        if reference.revision and cur_revision != reference.revision:
+            check_updates = True
+
+        reference.revision = cur_revision
 
         remote = self._registry.refs.get(reference)
 
@@ -60,7 +59,6 @@ class ConanProxy(object):
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
             status = RECIPE_INCACHE
-            reference.revision = reg_revision
             return conanfile_path, status, remote, reference
 
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
@@ -82,11 +80,8 @@ class ConanProxy(object):
                 if update:
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
-                    # Unlock the revision to get updated from other revisions
-                    reference.revision = None
                     reference = self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.refs.set(reference, update_remote.name)
-                    self._registry.revisions.set(reference, reference.revision)
                     status = RECIPE_UPDATED
                     return conanfile_path, status, update_remote, reference
                 else:
@@ -96,15 +91,12 @@ class ConanProxy(object):
         else:
             status = RECIPE_INCACHE
 
-        # The revision is kept to the already present in the registry
-        reference.revision = reg_revision
         return conanfile_path, status, update_remote, reference
 
     def _download_recipe(self, conan_reference, output, remote_name, recorder):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             new_reference = self._remote_manager.get_recipe(conan_reference, the_remote)
-            # FIXME: If the reference has not revision?
             self._registry.refs.set(new_reference, the_remote.name)
             recorder.recipe_downloaded(conan_reference, the_remote.url)
             return new_reference

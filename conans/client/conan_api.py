@@ -242,6 +242,7 @@ class ConanAPIV1(object):
         resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
+
         self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
                                            self._remote_manager, self._loader, self._proxy, resolver)
         self._plugin_manager = plugin_manager
@@ -357,7 +358,7 @@ class ConanAPIV1(object):
             # Forcing an export!
             if not not_export:
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                           self._client_cache, self._plugin_manager, self._registry)
+                           self._client_cache, self._plugin_manager)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -418,7 +419,7 @@ class ConanAPIV1(object):
 
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
-                   self._client_cache, self._plugin_manager, self._registry)
+                   self._client_cache, self._plugin_manager)
 
         recorder = ActionRecorder()
         export_pkg(self._client_cache, self._graph_manager, self._plugin_manager, recorder,
@@ -694,7 +695,7 @@ class ConanAPIV1(object):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
-                   self._client_cache, self._plugin_manager, self._registry)
+                   self._client_cache, self._plugin_manager)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

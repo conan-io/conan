@@ -13,12 +13,13 @@ from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
     INSTALL_ERROR_BUILDING, \
     INSTALL_ERROR_MISSING
+from conans.client.revisions import get_recipe_revision
 from conans.client.source import config_source, complete_recipe_sources
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import get_env_context_manager, get_recipe_revision
+from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
@@ -126,8 +127,7 @@ class _ConanPackageBuilder(object):
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
         # If there is a revision in the registry use it, otherwise it will use scm or summary hash
-        revision = get_recipe_revision(self._conan_ref, self._registry,
-                                       self._conan_file, self._client_cache)
+        revision = get_recipe_revision(self._conan_ref, self._client_cache)
 
         self._conan_file.info.recipe_revision = revision
 
@@ -334,8 +334,6 @@ class ConanInstaller(object):
                                                                    node.binary_remote, output,
                                                                    self._recorder)
                         self._registry.prefs.set(new_ref, node.binary_remote.name)
-                        if new_ref.revision:
-                            self._registry.revisions.set(new_ref, new_ref.revision)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(package_ref)
@@ -408,16 +406,14 @@ class ConanInstaller(object):
                 if not skip_build:
                     builder.build()
                 builder.package()
-                # FIXME: It could be a parameter in the conan create to get a different one
-                package_revision = self._client_cache.package_summary_hash(package_ref)
-                self._registry.revisions.set(package_ref, package_revision)
             except ConanException as exc:
                 self._recorder.package_install_error(package_ref, INSTALL_ERROR_BUILDING,
                                                      str(exc), remote_name=None)
                 raise exc
             else:
                 # Log build
-                self._log_built_package(builder.build_folder, package_ref, time.time() - t1)
+                self._log_built_package(builder.build_folder, package_ref.copy_without_revision(),
+                                        time.time() - t1)
                 # FIXME: Conan 2.0 Clear the registry entry (package ref)
 
     def _log_built_package(self, build_folder, package_ref, duration):

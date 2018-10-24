@@ -5,7 +5,6 @@ from conans.client.remote_registry import RemoteRegistry, migrate_registry_file,
 from conans.client.remote_registry import (load_registry_txt)
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
@@ -41,7 +40,7 @@ other/1.0@lasote/testing conan.io
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}, {}))
+        save(f, dump_registry(default_remotes, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
 
         # Add
@@ -82,7 +81,7 @@ other/1.0@lasote/testing conan.io
 
     def refs_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}, {}))
+        save(f, dump_registry(default_remotes, {}, {}))
         registry = RemoteRegistry(f, TestBufferConanOutput())
         ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
 
@@ -128,7 +127,7 @@ other/1.0@lasote/testing conan.io
         f = os.path.join(temp_folder(), "aux_file")
         remotes, refs = load_registry_txt("conan.io https://server.conan.io True\n"
                                           "conan.io2 https://server2.conan.io True\n")
-        reg = dump_registry(remotes, refs, {}, {})
+        reg = dump_registry(remotes, refs, {})
         save(f, reg)
         return RemoteRegistry(f, TestBufferConanOutput())
 
@@ -140,48 +139,3 @@ other/1.0@lasote/testing conan.io
         registry.refs.set(ref, "conan.io", check_exists=True)
         with self.assertRaisesRegexp(ConanException, "already exists"):
             registry.refs.set(ref.copy_with_revision("revision"), "conan.io", check_exists=True)
-
-    def revisions_delete_test(self):
-        ref = "lib/1.0@user/channel"
-        registry = self._get_registry()
-        # Test delete without revision
-        registry.refs.set(ConanFileReference.loads(ref + "#revision"), "conan.io")
-        registry.refs.remove(ConanFileReference.loads(ref))
-        self.assertIsNone(registry.revisions.get(ConanFileReference.loads(ref)))
-
-    def revisions_get_test(self):
-        # Test get with revision, only if revision
-        ref = ConanFileReference.loads("lib/1.0@user/channel")
-        registry = self._get_registry()
-        ref_with_rev = ref.copy_with_revision("Revision")
-        registry.refs.set(ref_with_rev, "conan.io")
-        # The revision is not automatically recorded in the registry
-        self.assertIsNone(registry.revisions.get(ref))
-        # You have to update it explicitly
-        registry.revisions.set(ref_with_rev, ref_with_rev.revision)
-        self.assertEquals(registry.revisions.get(ref_with_rev), ref_with_rev.revision)
-
-    def revisions_update_test(self):
-        ref = ConanFileReference.loads("lib/1.0@user/channel")
-        registry = self._get_registry()
-        registry.refs.set(ref.copy_with_revision("revision"), "conan.io")
-        registry.refs.update(ref.copy_with_revision("revision"), "conan.io2")
-
-        self.assertEquals({'lib/1.0@user/channel': 'conan.io2'}, registry.refs.list)
-
-        registry.revisions.set(ref, "revision")
-        self.assertEquals({'lib/1.0@user/channel': 'revision'}, registry.revisions.list)
-
-        self.assertEquals(registry.refs.get(ref).name, "conan.io2")
-        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name, "conan.io2")
-
-        registry.refs.update(ref.copy_with_revision("revision"), "conan.io")
-        self.assertEquals(registry.refs.get(ref).name, "conan.io")
-        self.assertEquals(registry.refs.get(ref.copy_with_revision("revision")).name, "conan.io")
-
-        registry.refs.set(ref, "conan.io")
-        self.assertNotIn(ref.copy_with_revision("revision").full_repr(), registry.refs.list)
-        self.assertIn(str(ref), registry.refs.list)
-
-        registry.refs.set(ref.copy_with_revision("revision"), "conan.io")
-        self.assertEquals(registry.revisions.list[str(ref.copy_without_revision())], "revision")

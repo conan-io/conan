@@ -1,27 +1,25 @@
 import os
-import shutil
-from os.path import join, normpath
 from collections import OrderedDict
+from os.path import join, normpath
+
+import shutil
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
+from conans.client.package_properties import PackageProperties
 from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.model.scm import SCMData
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case, \
     CONAN_MANIFEST
+from conans.unicode import get_cwd
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
-from conans.unicode import get_cwd
-from conans.client.loader import ConanFileLoader
-from conans.client.graph.python_requires import ConanPythonRequire
-
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -122,7 +120,7 @@ class ClientCache(SimplePaths):
             else:
                 self._output.warn("Remotes registry file missing, "
                                   "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}, {}, {}))
+                save(reg_json_path, dump_registry(default_remotes, {}, {}))
         return reg_json_path
 
     @property
@@ -301,6 +299,12 @@ class ClientCache(SimplePaths):
 
     def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
+
+    def load_package_properties(self, conan_reference):
+        tmp = load(self.package_properties(conan_reference))
+        if not os.path.exists(tmp):
+            return None
+        return PackageProperties.loads(tmp)
 
 
 def _mix_settings_with_env(settings):

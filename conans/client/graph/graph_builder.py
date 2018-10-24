@@ -1,5 +1,8 @@
+import os
+
 import time
 
+from conans.client.revisions import get_recipe_revision
 from conans.model.conan_file import get_env_context_manager
 from conans.model.requires import Requirements
 from conans.model.ref import ConanFileReference
@@ -221,11 +224,13 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
+        output = ScopedOutput(str(requirement.conan_reference), self._output)
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
         if workspace_package:
             conanfile_path = workspace_package.conanfile_path
             recipe_status = RECIPE_WORKSPACE
             remote = WORKSPACE_FILE
+            new_ref = requirement.conan_reference
         else:
             try:
                 result = self._proxy.get_recipe(requirement.conan_reference,
@@ -236,24 +241,21 @@ class DepsGraphBuilder(object):
                                    % (requirement.conan_reference, base_ref))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
-            # new_ref could contain the resolved revision if enabled in the server
-            requirement.conan_reference = new_ref
 
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or requirement.conan_reference
+            alias_reference = alias_ref or new_ref
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
-            aliased[alias_reference] = requirement.conan_reference
+            aliased[alias_reference.copy_without_revision()] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
                                          remote_name, processed_profile, alias_ref=alias_reference)
 
-        new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node = Node(new_ref, dep_conanfile)
         new_node.recipe = recipe_status
         new_node.remote = remote
         dep_graph.add_node(new_node)

@@ -34,7 +34,7 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager, registry):
+               plugin_manager):
 
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
@@ -56,7 +56,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
 
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
-                          keep_source, registry)
+                          keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
     plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
@@ -95,7 +95,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
                                    scm_data)
 
-    return scm_data
+    scm_data
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -146,7 +146,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source, registry):
+def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source):
 
     exports_folder = client_cache.export(conan_ref)
     exports_source_folder = client_cache.export_sources(conan_ref, conanfile.short_paths)
@@ -154,8 +154,8 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
     _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    scm_data = _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                                        output, client_cache, conan_ref)
+    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
+                             output, client_cache, conan_ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -169,10 +169,6 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
         modified_recipe = True
 
     digest.save(exports_folder)
-
-    revision = scm_data.recipe_revision \
-        if scm_data else client_cache.load_manifest(conan_ref).summary_hash
-    registry.revisions.set(conan_ref, revision)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = client_cache.source(conan_ref, conanfile.short_paths)

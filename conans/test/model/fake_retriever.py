@@ -11,6 +11,7 @@ class Retriever(object):
         self.loader = loader
         self.output = output
         self.folder = temp_folder()
+        self._client_cache = None
 
     def root(self, content, processed_profile):
         conan_path = os.path.join(self.folder, "root.py")

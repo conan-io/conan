@@ -115,7 +115,7 @@ class RestV2Methods(RestCommonMethods):
         if not revisions_enabled:
             # Tell server v2 to find the latest package that matched the package ID
             # without taking into account the recipe revision
-            package_reference.conan.revision = None
+            package_reference = package_reference.copy_without_revision()
 
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
