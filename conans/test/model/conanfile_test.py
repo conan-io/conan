@@ -76,16 +76,24 @@ class Pkg(ConanFile):
 
     @parameterized.expand([(False,), (True,)])
     def test_legacy_behaviour(self, short_paths):
+        """ Assigning to ConanFile::short_paths will override the property itself """
         short_paths_str = "short_paths = True" if short_paths else "short_paths = False"
         save(self.tmp_conanfile, self.conanfile.format(short_paths=short_paths_str))
         conanfile = self.loader.load_class(self.tmp_conanfile)
         self.assertEqual(short_paths, conanfile.short_paths)
 
     @parameterized.expand([(False,), (True,)])
-    def test_override_environ(self, short_paths):
-        short_paths_str = "True" if short_paths else "False"
-        with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': short_paths_str}):
-            save(self.tmp_conanfile, self.conanfile.format(short_paths=""))
+    def test_use_always_short_paths(self, short_paths):
+        with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': "True"}):
+            short_paths_str = "_conan_short_paths = True" if short_paths else "_conan_short_paths = False"
+            save(self.tmp_conanfile, self.conanfile.format(short_paths=short_paths_str))
             conanfile = self.loader.load_class(self.tmp_conanfile)
+            self.assertEqual(True, conanfile.short_paths)
 
+    @parameterized.expand([(False,), (True,)])
+    def test_do_not_use_always_short_paths(self, short_paths):
+        with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': "False"}):
+            short_paths_str = "_conan_short_paths = True" if short_paths else "_conan_short_paths = False"
+            save(self.tmp_conanfile, self.conanfile.format(short_paths=short_paths_str))
+            conanfile = self.loader.load_class(self.tmp_conanfile)
             self.assertEqual(short_paths, conanfile.short_paths)
