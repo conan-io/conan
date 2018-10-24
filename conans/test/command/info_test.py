@@ -493,11 +493,11 @@ class MyTest(ConanFile):
         self.client.run("info ./subfolder")
 
         self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
-        self.assertNotIn("License: MIT", self.client.user_io.out)
-        self.assertNotIn("Author: John Doe", self.client.user_io.out)
+        self.assertNotIn("License:", self.client.user_io.out)
+        self.assertNotIn("Author:", self.client.user_io.out)
         self.assertNotIn("Topics:", self.client.user_io.out)
         self.assertNotIn("Homepage:", self.client.user_io.out)
-        self.assertNotIn("URL: https://foo.bar.baz", self.client.user_io.out)
+        self.assertNotIn("URL:", self.client.user_io.out)
 
     def test_full_attributes(self):
         self.client = TestClient()
