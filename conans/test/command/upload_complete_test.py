@@ -258,11 +258,23 @@ class TestConan(ConanFile):
         """
         # Upload conans
         self.client.run('upload %s' % str(self.conan_ref))
+        if not self.client.block_v2:
+            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
+            self.package_ref.conan.revision = self.conan_ref.revision
+            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+
+        self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
+
         self.assertTrue(os.path.exists(self.server_reg_folder))
-        self.assertFalse(os.path.exists(self.server_pack_folder))
+        if self.client.block_v2:
+            self.assertFalse(os.path.exists(self.server_pack_folder))
+
         # Upload package
         self.client.run('upload %s -p %s'
                         % (str(self.conan_ref), str(self.package_ref.package_id)))
+
+        self.server_pack_folder = self.test_server.paths.package(self.package_ref)
+
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
@@ -321,13 +333,30 @@ class TestConan(ConanFile):
                                  "Uploading conaninfo.txt",
                                  "Uploading conan_package.tgz",
                                  ])
-        self.assertTrue(os.path.exists(self.server_reg_folder))
-        self.assertTrue(os.path.exists(self.server_pack_folder))
+        if not self.client.block_v2:
+            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
+            self.package_ref.conan.revision = self.conan_ref.revision
+            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+
+        server_reg_folder = self.test_server.paths.export(self.conan_ref)
+        server_pack_folder = self.test_server.paths.package(self.package_ref)
+
+        self.assertTrue(os.path.exists(server_reg_folder))
+        self.assertTrue(os.path.exists(server_pack_folder))
 
     def force_test(self):
         '''Tries to upload a conans exported after than remote version.'''
         # Upload all conans and packages
         self.client.run('upload %s --all' % str(self.conan_ref))
+
+        if not self.client.block_v2:
+            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
+            self.package_ref.conan.revision = self.conan_ref.revision
+            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+
+        self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
+        self.server_pack_folder = self.test_server.paths.package(self.package_ref)
+
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
@@ -397,7 +426,9 @@ class TestConan(ConanFile):
                            "uploaded": [
                                {
                                    "recipe": {
-                                       "id": "test/0.1@danimtb/testing",
+                                       "id": "test/0.1@danimtb/testing%s" %
+                                             '#97667d20e2e23f1c45fb8dad3c5be893'
+                                       if not self.client.block_v2 else "",
                                        "remote_url": "unknown",
                                        "remote_name": "default",
                                        "time": "unknown"

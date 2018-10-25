@@ -7,6 +7,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.search.search import search_recipes, search_packages
+from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.util.log import logger
 
@@ -112,7 +113,8 @@ class CmdUpload(object):
         recorder.add_recipe(new_ref.full_repr(), recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
-            if new_ref.revision:
+            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            if revisions_enabled and new_ref.revision:
                 recipe_package_ids = []
                 for package_id in packages_ids:
                     pref = PackageReference(new_ref, package_id)
@@ -135,7 +137,7 @@ class CmdUpload(object):
                 p_remote = recipe_remote
                 self._upload_package(pref, index + 1, total, retry, retry_wait,
                                      integrity_check, policy, p_remote)
-                recorder.add_package(new_ref.full_repr(), package_id)
+                recorder.add_package(pref)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one

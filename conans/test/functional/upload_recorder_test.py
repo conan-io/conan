@@ -2,6 +2,7 @@ import unittest
 
 from datetime import datetime
 from conans.client.recorder.upload_recoder import UploadRecorder
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 class UploadRecorderTest(unittest.TestCase):
@@ -15,11 +16,12 @@ class UploadRecorderTest(unittest.TestCase):
         self.assertEqual(expected_result, info)
 
     def sequential_test(self):
-        self.recorder.add_recipe("fake/0.1@user/channel", "my_remote", "https://fake_url.com")
-        self.recorder.add_package("fake/0.1@user/channel", "fake_package_id")
-        self.recorder.add_recipe("fakefake/0.1@user/channel", "my_remote2", "https://fake_url2.com")
-        self.recorder.add_package("fakefake/0.1@user/channel", "fakefake_package_id1")
-        self.recorder.add_package("fakefake/0.1@user/channel", "fakefake_package_id2")
+        ref = ConanFileReference.loads("fake/0.1@user/channel")
+        self.recorder.add_recipe(ref, "my_remote", "https://fake_url.com")
+        self.recorder.add_package(PackageReference(ref, "fake_package_id"), "my_remote", "https://fake_url.com")
+        self.recorder.add_recipe(ref, "my_remote2", "https://fake_url2.com")
+        self.recorder.add_package(PackageReference(ref, "fakefake_package_id1"), "my_remote", "https://fake_url.com")
+        self.recorder.add_package(PackageReference(ref, "fakefake_package_id2"), "my_remote", "https://fake_url.com")
         info = self.recorder.get_info()
         expected_result_without_time = {
                                            "error": False,

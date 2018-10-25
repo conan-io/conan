@@ -138,7 +138,7 @@ class RemoveTest(unittest.TestCase):
             files["%s/%s/%s/%s" % ("/".join(pack_ref.conan),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,
-                                   CONAN_MANIFEST)] = str(expected_manifest)
+                                   CONAN_MANIFEST)] = repr(expected_manifest)
 
         client.save(files, client.client_cache.store)
 
@@ -158,8 +158,18 @@ class RemoveTest(unittest.TestCase):
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k])
+                ref = ConanFileReference(*self.root_folder[k].split("/"))
                 if isinstance(base_path, ServerStore):
-                    folder += "/%s" % DEFAULT_REVISION_V1
+                    if not self.client.block_v2:
+                        try:
+                            rev = self.client.get_revision(ref)
+                        except:
+                            # This whole test is a crap, we cannot guess remote revision
+                            # if the package is not in local anymore
+                            continue
+                    else:
+                        rev = DEFAULT_REVISION_V1
+                    folder += "/%s" % rev
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
                 else:
@@ -167,9 +177,19 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            package_folder += "/%s" % DEFAULT_REVISION_V1
+                            if not self.client.block_v2:
+                                pref = PackageReference(ref, sha)
+                                try:
+                                    prev = self.client.get_package_revision(pref)
+                                except:
+                                    # This whole test is a crap, we cannot guess remote revision
+                                    # if the package is not in local anymore
+                                    continue
+                            else:
+                                prev = DEFAULT_REVISION_V1
+                            package_folder += "/%s" % prev
                         if value in shas:
-                            self.assertTrue(os.path.exists(package_folder))
+                            self.assertTrue(os.path.exists(package_folder), "%s doesn't exist " % package_folder)
                         else:
                             self.assertFalse(os.path.exists(package_folder))
 

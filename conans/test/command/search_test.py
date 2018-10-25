@@ -1002,7 +1002,6 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
-
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords

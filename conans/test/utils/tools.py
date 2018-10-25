@@ -33,7 +33,7 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.revisions import get_recipe_revision
+from conans.client.revisions import get_recipe_revision, get_package_revision
 from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
@@ -629,6 +629,9 @@ class TestClient(object):
 
     def get_revision(self, conan_ref):
         return get_recipe_revision(conan_ref, self.client_cache)
+
+    def get_package_revision(self, package_ref):
+        return get_package_revision(package_ref, self.client_cache)
 
 
 class StoppableThreadBottle(threading.Thread):
