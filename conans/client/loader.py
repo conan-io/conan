@@ -100,7 +100,8 @@ class ConanFileLoader(object):
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
             tmp_settings = processed_profile._settings.copy()
-            if processed_profile._package_settings and conanfile.name in processed_profile._package_settings:
+            if (processed_profile._package_settings and
+                    conanfile.name in processed_profile._package_settings):
                 # Update the values, keeping old ones (confusing assign)
                 values_tuple = processed_profile._package_settings[conanfile.name]
                 tmp_settings.values = Values.from_list(values_tuple)
@@ -226,11 +227,27 @@ def _parse_file(conan_file_path):
         module_id = str(uuid.uuid1())
         current_dir = os.path.dirname(conan_file_path)
         sys.path.append(current_dir)
+        old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
             loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
+
+        # These lines are necessary, otherwise local conanfile imports with same name
+        # collide, but no error, and overwrite other packages imports!!
+        added_modules = set(sys.modules).difference(old_modules)
+        for added in added_modules:
+            module = sys.modules[added]
+            if module:
+                try:
+                    folder = os.path.dirname(module.__file__)
+                except AttributeError:  # some module doesn't have __file__
+                    pass
+                else:
+                    if folder.startswith(current_dir):
+                        module = sys.modules.pop(added)
+                        sys.modules["%s.%s" % (module_id, added)] = module
     except Exception:
         import traceback
         trace = traceback.format_exc().split('\n')
