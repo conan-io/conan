@@ -479,3 +479,27 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
+    def json_with_dependencies_test(self):
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({"conanfile_dep.py": conanfile,
+                     "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
+        client.run("export conanfile_dep.py  pkg1/1.0@danimtb/testing")
+        client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
+        json_path = os.path.join(client.current_folder, "output.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        output = json.loads(json_content)
+        self.assertEqual(output["error"], False)
+        self.assertEqual(output["installed"][0]["recipe"]["id"],
+                         "pkg2/1.0@danimtb/testing")
+        self.assertEqual(output["installed"][0]["recipe"]["dependency"], False)
+        self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                         "5825778de2dc9312952d865df314547576f129b3")
+        self.assertEqual(output["installed"][0]["packages"][0]["built"], True)
+        self.assertEqual(output["installed"][1]["recipe"]["id"],
+                         "pkg1/1.0@danimtb/testing")
+        self.assertEqual(output["installed"][1]["recipe"]["dependency"], True)
