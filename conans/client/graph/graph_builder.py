@@ -143,7 +143,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.conan_reference.name)
-            if n and n.conan_ref != req.conan_reference:
+            if n and n.conan_ref.copy_without_revision() != req.conan_reference.copy_without_revision():
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
