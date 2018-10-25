@@ -2,19 +2,10 @@ import os
 import time
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import PackageReference, ConanFileReference, check_valid_ref
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import load
 from conans.util.log import logger
-
-
-def _is_a_reference(ref):
-    try:
-        ConanFileReference.loads(ref)
-        return "*" not in ref  # If is a pattern, it is not a reference
-    except ConanException:
-        pass
-    return False
 
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -38,11 +29,11 @@ class CmdUpload(object):
                remote_name=None, query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
-        if package_id and not _is_a_reference(reference_or_pattern):
+        if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
         t1 = time.time()
-        if package_id or _is_a_reference(reference_or_pattern):  # Upload package
+        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):  # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             references = [ref, ]
             confirm = True
