@@ -13,6 +13,7 @@ class PackageIngrityTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": str(TestConanFile())})
         client.run("create . lasote/testing")
+        self.assertNotIn('does not contain a number!', client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         conan_folder = client.client_cache.conan(ref)
         self.assertIn("locks", os.listdir(conan_folder))

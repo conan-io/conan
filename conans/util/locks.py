@@ -60,7 +60,9 @@ class Lock(object):
     def _readers(self):
         try:
             return int(load(self._count_file))
-        except (IOError, UnicodeEncodeError, ValueError):
+        except IOError:
+            return 0
+        except (UnicodeEncodeError, ValueError):
             self._output.warn("%s does not contain a number!" % self._count_file)
             return 0
 
