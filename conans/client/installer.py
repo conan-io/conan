@@ -126,9 +126,7 @@ class _ConanPackageBuilder(object):
         manifest = self._client_cache.load_manifest(self._conan_ref)
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
-        # If there is a revision in the registry use it, otherwise it will use scm or summary hash
         revision = get_recipe_revision(self._conan_ref, self._client_cache)
-
         self._conan_file.info.recipe_revision = revision
 
         # Creating ***info.txt files

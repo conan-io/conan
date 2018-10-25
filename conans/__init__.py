@@ -15,7 +15,7 @@ from conans.util.files import load
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 CHECKSUM_DEPLOY = "checksum_deploy"  # Only when v2
 REVISIONS = "revisions"  # Only when enabled in config, not by default look at server_launcher.py
-SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Still without v2 because it is changing
+SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 
 __version__ = '1.9.0-dev'
 

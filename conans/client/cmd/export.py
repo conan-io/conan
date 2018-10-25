@@ -96,8 +96,6 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
                                    scm_data)
 
-    scm_data
-
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field

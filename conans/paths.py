@@ -40,7 +40,6 @@ CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
 SCM_FOLDER = "scm_folder.txt"
-PACKAGE_PROPERTIES = "properties.json"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -158,7 +157,3 @@ class SimplePaths(object):
 
     def scm_folder(self, conan_reference):
         return normpath(join(self.conan(conan_reference), SCM_FOLDER))
-
-    def package_properties(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self.conan(conan_reference), PACKAGE_PROPERTIES))

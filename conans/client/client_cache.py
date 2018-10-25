@@ -7,7 +7,6 @@ import shutil
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
-from conans.client.package_properties import PackageProperties
 from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
 from conans.errors import ConanException
@@ -299,12 +298,6 @@ class ClientCache(SimplePaths):
 
     def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
-
-    def load_package_properties(self, conan_reference):
-        tmp = load(self.package_properties(conan_reference))
-        if not os.path.exists(tmp):
-            return None
-        return PackageProperties.loads(tmp)
 
 
 def _mix_settings_with_env(settings):

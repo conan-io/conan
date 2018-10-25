@@ -136,7 +136,6 @@ class ConfigInstallTest(unittest.TestCase):
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
         self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
-
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
