@@ -21,7 +21,7 @@ class Migrator(object):
         old_version = self._load_old_version()
         if old_version != self.current_version:
             self._make_migrations(old_version)
-            self._update_version_file()
+            # self._update_version_file()
 
     def _make_migrations(self, old_version):
         raise NotImplementedError("Implement in subclass")

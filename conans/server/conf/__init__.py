@@ -22,6 +22,7 @@ from conans.util.log import logger
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 DEFAULT_REVISION_V1 = "0"
 
+
 class ConanServerConfigParser(ConfigParser):
     """ defines the configuration of the server. It can load
     values from environment variables or from file.
