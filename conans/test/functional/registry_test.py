@@ -138,4 +138,4 @@ other/1.0@lasote/testing conan.io
         # Test already exists
         registry.refs.set(ref, "conan.io", check_exists=True)
         with self.assertRaisesRegexp(ConanException, "already exists"):
-            registry.refs.set(ref.copy_with_revision("revision"), "conan.io", check_exists=True)
+            registry.refs.set(ref.copy_with_rev("revision"), "conan.io", check_exists=True)

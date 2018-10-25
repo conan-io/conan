@@ -191,7 +191,7 @@ class ServerStore(SimplePaths):
             raise NotFoundException("Recipe not found: '%s'" % str(package_ref.conan))
 
         for rev in revs.items():
-            pref = PackageReference(package_ref.conan.copy_with_revision(rev),
+            pref = PackageReference(package_ref.conan.copy_with_rev(rev),
                                     package_ref.package_id)
             pref.revision = self.get_last_package_revision(pref)
             try:
@@ -263,7 +263,7 @@ class ServerStore(SimplePaths):
         if not latest:
             raise NotFoundException("Recipe not found: '%s'" % reference.full_repr())
 
-        return reference.copy_with_revision(latest)
+        return reference.copy_with_rev(latest)
 
     def p_ref_with_rev(self, p_reference):
         if p_reference.revision and p_reference.conan.revision:
@@ -281,7 +281,7 @@ class ServerStore(SimplePaths):
         if not latest:
             raise NotFoundException("Package not found: '%s'" % str(p_reference))
 
-        return ret.copy_with_revisions(reference.revision, latest)
+        return ret.copy_with_revs(reference.revision, latest)
 
     def _remove_revision(self, rev_file_path, revision):
         rev_file = self._storage_adapter.read_file(rev_file_path,

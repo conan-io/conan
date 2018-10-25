@@ -18,7 +18,7 @@ class XZTest(TestCase):
     def test_error_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_revision(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         export = server.paths.export(ref)
         server.paths.update_last_revision(ref)
         save_files(export, {"conanfile.py": "#",
@@ -34,7 +34,7 @@ class XZTest(TestCase):
     def test_error_sources_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_revision(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         server.paths.update_last_revision(ref)
@@ -54,7 +54,7 @@ class Pkg(ConanFile):
     def test_error_package_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_revision(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         server.paths.update_last_revision(ref)
@@ -66,7 +66,7 @@ class Pkg(ConanFile):
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
         pkg_ref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        server.paths.update_last_package_revision(pkg_ref.copy_with_revisions(DEFAULT_REVISION_V1,
+        server.paths.update_last_package_revision(pkg_ref.copy_with_revs(DEFAULT_REVISION_V1,
                                                                               DEFAULT_REVISION_V1))
         package = server.paths.package(pkg_ref)
         save_files(package, {"conaninfo.txt": "#",

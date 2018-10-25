@@ -67,19 +67,19 @@ class ConanProxy(object):
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
             status = RECIPE_INCACHE
-            ref = reference.copy_with_revision(cur_revision)
+            ref = reference.copy_with_rev(cur_revision)
             return conanfile_path, status, remote, ref
 
         if not update_remote:
             status = RECIPE_NO_REMOTE
-            ref = reference.copy_with_revision(cur_revision)
+            ref = reference.copy_with_rev(cur_revision)
             return conanfile_path, status, None, ref
 
         try:  # get_conan_manifest can fail, not in server
             upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
-            ref = reference.copy_with_revision(cur_revision)
+            ref = reference.copy_with_rev(cur_revision)
             return conanfile_path, status, update_remote, ref
 
         export = self._client_cache.export(reference)
@@ -100,7 +100,7 @@ class ConanProxy(object):
         else:
             status = RECIPE_INCACHE
 
-        ref = reference.copy_with_revision(cur_revision)
+        ref = reference.copy_with_rev(cur_revision)
         return conanfile_path, status, update_remote, ref
 
     def _download_recipe(self, conan_reference, output, remote_name, recorder):

@@ -97,7 +97,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
 
-        ref = conan_ref.copy_with_revision(get_recipe_revision(conan_ref, self._client_cache))
+        ref = conan_ref.copy_with_rev(get_recipe_revision(conan_ref, self._client_cache))
         new_ref = self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
@@ -170,7 +170,7 @@ class CmdUpload(object):
             # Read the revisions and build a correct package reference for the server
             package_revision = get_package_revision(pref, self._client_cache)
             # Copy to not modify the original with the revisions
-            pref = pref.copy_with_revisions(pref.conan.revision, package_revision)
+            pref = pref.copy_with_revs(pref.conan.revision, package_revision)
         else:
             pref = pref.copy_clear_rev()
 

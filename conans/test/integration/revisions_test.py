@@ -400,7 +400,7 @@ class HelloConan(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev = self.client.get_revision(self.ref)
-        full_ref = self.ref.copy_with_revision(rev)
+        full_ref = self.ref.copy_with_rev(rev)
 
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
