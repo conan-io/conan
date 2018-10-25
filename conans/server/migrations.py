@@ -1,10 +1,10 @@
 import os
+
 import shutil
 
 from conans.migrations import Migrator
-from conans.model.ref import ConanFileReference
 from conans.model.version import Version
-from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths import PACKAGES_FOLDER
 from conans.server.conf import DEFAULT_REVISION_V1
 from conans.util.files import rmdir, list_folder_subdirs, mkdir
 
@@ -23,7 +23,7 @@ class ServerMigrator(Migrator):
             if self.store_path:
                 rmdir(self.store_path)
 
-        if old_version < Version("1.10"): # !!! REPLACE WITH THE FINAL VERSION WHERE WE RELEASE THIS
+        if old_version < Version("0.0.0"):  # !!! REPLACE WITH THE FINAL VERSION WHERE WE RELEASE THIS
             try:
                 self.migrate_to_revisions_layout()
             except Exception as e:
