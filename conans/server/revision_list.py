@@ -23,9 +23,12 @@ class RevisionList(object):
         if self.latest_revision() == revision_id:
             # Each uploaded file calls to update the revision
             return
-        if self._find_revision_index(revision_id) is not None:
-            raise ConanException("Revision already exists: %s" % revision_id)
-        now = time.time()
+        index = self._find_revision_index(revision_id)
+        if index:
+            self._data.pop(index)
+        else:
+            now = time.time()
+
         self._data.append({"id": revision_id, "time": now})
 
     def latest_revision(self):

@@ -29,7 +29,6 @@ class SynchronizeTest(unittest.TestCase):
         files["to_be_deleted2.txt"] = "delete me2"
 
         remote_paths = self.client.servers["default"].paths
-        server_conan_path = remote_paths.export(conan_reference)
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -38,6 +37,9 @@ class SynchronizeTest(unittest.TestCase):
         self.client.run("upload %s" % str(conan_reference))
 
         # Verify the files are there
+        if not self.client.block_v2:
+            conan_reference.revision = self.client.get_revision(conan_reference)
+        server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -48,6 +50,9 @@ class SynchronizeTest(unittest.TestCase):
         os.remove(os.path.join(self.client.current_folder, "to_be_deleted.txt"))
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
+        if not self.client.block_v2:
+            conan_reference.revision = self.client.get_revision(conan_reference)
+        server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -61,6 +66,10 @@ class SynchronizeTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
+
+        if not self.client.block_v2:
+            conan_reference.revision = self.client.get_revision(conan_reference)
+        server_conan_path = remote_paths.export(conan_reference)
 
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))

@@ -128,7 +128,7 @@ class CmdUpload(object):
                 p_remote = recipe_remote
                 self._upload_package(pref, index + 1, total, retry, retry_wait,
                                      integrity_check, policy, p_remote)
-                recorder.add_package(pref)
+                recorder.add_package(pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one

@@ -361,7 +361,7 @@ class MyPkg(ConanFile):
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Forbidden overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")

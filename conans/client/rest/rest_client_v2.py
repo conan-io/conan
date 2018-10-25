@@ -56,7 +56,7 @@ class RestV2Methods(RestCommonMethods):
         return snap, reference
 
     def _get_package_snapshot(self, p_ref):
-        url = self._package_url(p_ref, doing_upload=True)
+        url = self._package_url(p_ref)
         repr_ref = p_ref.full_repr()
         snap, p_reference = self._get_snapshot(url, repr_ref)
 
@@ -167,11 +167,11 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        url = self._recipe_url(conan_reference)
+        url = self._recipe_url(conan_reference, keep_revisions=True)
         self._upload_files(files_to_upload, url, retry, retry_wait)
 
     def _upload_package(self, package_reference, files_to_upload, retry, retry_wait):
-        url = self._package_url(package_reference, doing_upload=True)
+        url = self._package_url(package_reference, keep_revisions=True)
         self._upload_files(files_to_upload, url, retry, retry_wait)
 
     def _upload_files(self, files, base_url, retry, retry_wait):
@@ -216,30 +216,39 @@ class RestV2Methods(RestCommonMethods):
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
 
-    def _recipe_url(self, conan_reference):
+    def _recipe_url(self, conan_reference, keep_revisions=False):
+
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if not keep_revisions and not revisions_enabled:
+            # Without revisions check the latest except for the upload
+            conan_reference = conan_reference.copy_without_revision()
+
+        if keep_revisions and revisions_enabled:
+            assert(conan_reference.revision is not None)
+
         url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
 
         if conan_reference.revision:
             url += "/revisions/%s" % conan_reference.revision
         return url
 
-    def _package_url(self, p_reference, doing_upload=False):
+    def _package_url(self, p_reference, keep_revisions=False):
         if not p_reference.conan.revision and p_reference.revision:
             raise ConanException("It is needed to specify the recipe revision if you "
                                  "specify a package revision")
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if not doing_upload and not revisions_enabled:
+        if not keep_revisions and not revisions_enabled:
             # Search for the latest package id available in any revision (compatibility)
             # Doing upload is always necessary and with revisions it is not needed
             # but otherwise if we request a package it should look for the latest available
             p_reference = p_reference.copy_without_revision()
 
-        if doing_upload:
+        if keep_revisions and revisions_enabled:
             assert(p_reference.conan.revision is not None)
 
-        url = self._recipe_url(p_reference.conan)
+        url = self._recipe_url(p_reference.conan, keep_revisions=keep_revisions)
         url += "/packages/%s" % p_reference.package_id
-        if p_reference.revision and (doing_upload or revisions_enabled):
+        if p_reference.revision and (keep_revisions or revisions_enabled):
             assert(p_reference.revision is not None)
             url += "/revisions/%s" % p_reference.revision
         return url

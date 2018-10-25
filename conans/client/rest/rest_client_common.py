@@ -8,6 +8,7 @@ from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanExcep
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_packages
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -147,14 +148,14 @@ class RestCommonMethods(object):
         self.check_credentials()
 
         # Get the remote snapshot
-        remote_snapshot, conan_reference = self._get_recipe_snapshot(conan_reference)
+        remote_snapshot, ref_snapshot = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = remote_manifest or self.get_conan_manifest(conan_reference)
+            remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, conan_reference
+                return False, ref_snapshot
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -180,13 +181,15 @@ class RestCommonMethods(object):
 
         t1 = time.time()
         # Get the remote snapshot
-        remote_snapshot, package_reference = self._get_package_snapshot(package_reference)
+        pref = package_reference
+        remote_snapshot, pref_snapshot = self._get_package_snapshot(pref)
+
         if remote_snapshot:
-            remote_manifest = self.get_package_manifest(package_reference)
+            remote_manifest = self.get_package_manifest(pref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, package_reference
+                return False, pref_snapshot
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "

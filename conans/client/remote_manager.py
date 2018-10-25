@@ -67,8 +67,9 @@ class RemoteManager(object):
         ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
                                          retry_wait, policy, remote_manifest)
 
-        if policy in (UPLOAD_POLICY_NO_OVERWRITE,
-                      UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
+                                            UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
             self._output.warn("Remote '%s' uses revisions, argument "
                               "'--no-overwrite' is useless" % remote.name)
 

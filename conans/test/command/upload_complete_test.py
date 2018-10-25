@@ -426,9 +426,7 @@ class TestConan(ConanFile):
                            "uploaded": [
                                {
                                    "recipe": {
-                                       "id": "test/0.1@danimtb/testing%s" %
-                                             '#97667d20e2e23f1c45fb8dad3c5be893'
-                                       if not self.client.block_v2 else "",
+                                       "id": "test/0.1@danimtb/testing",
                                        "remote_url": "unknown",
                                        "remote_name": "default",
                                        "time": "unknown"
