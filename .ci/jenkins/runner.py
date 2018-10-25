@@ -20,9 +20,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    if flavor != 'enabled_revisions':
-        excluded_tags.append("only_revisions")
-
     exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
 
     pyenv = pylocations[pyver]

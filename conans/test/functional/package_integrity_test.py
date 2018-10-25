@@ -39,7 +39,8 @@ class PackageIngrityTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pkg_ref = PackageReference(ref, "12345")
         package_folder = client.client_cache.package(pkg_ref)
-        save(os.path.join(package_folder, "conaninfo.txt"), "")
+        recipe_rev = client.get_revision(ref)
+        save(os.path.join(package_folder, "conaninfo.txt"), "[recipe_revision]\n%s" % recipe_rev)
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 

@@ -1,8 +1,5 @@
-import os
-
 import time
 
-from conans.client.revisions import get_recipe_revision
 from conans.model.conan_file import get_env_context_manager
 from conans.model.requires import Requirements
 from conans.model.ref import ConanFileReference
@@ -240,7 +237,7 @@ class DepsGraphBuilder(object):
                                    % (requirement.conan_reference, base_ref))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
-
+            
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
 
@@ -252,7 +249,8 @@ class DepsGraphBuilder(object):
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
-                                         remote_name, processed_profile, alias_ref=alias_reference)
+                                         remote_name, processed_profile,
+                                         alias_ref=alias_reference)
 
         new_node = Node(new_ref, dep_conanfile)
         new_node.recipe = recipe_status

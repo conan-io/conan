@@ -123,8 +123,10 @@ class SynchronizeTest(unittest.TestCase):
         folder = uncompress_packaged_files(remote_paths, package_reference)
         remote_file_path = os.path.join(folder, "newlib.lib")
 
-        self.assertFalse(os.path.exists(remote_file_path))
-        self.assertNotEquals(remote_file_path, new_file_source_path)
+        # With revisions makes no sense because there is a new revision always that sources change
+        if not self.client.revisions:
+            self.assertFalse(os.path.exists(remote_file_path))
+            self.assertNotEquals(remote_file_path, new_file_source_path)
 
     def _create_manifest(self, package_reference):
         # Create the manifest to be able to upload the package

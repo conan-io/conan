@@ -1,8 +1,6 @@
 import os
 import unittest
 from collections import OrderedDict
-
-from nose.plugins.attrib import attr
 from time import sleep
 
 from conans import tools, REVISIONS
@@ -10,7 +8,8 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
 
-@attr('only_revisions')
+@unittest.skipUnless(TestClient().revisions,
+                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
 class RevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -22,7 +21,7 @@ class RevisionsTest(unittest.TestCase):
 
         self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
         self.users["remote_norevisions"] = [("lasote", "mypass")]
-        self.client = TestClient(servers=self.servers, users=self.users, revisions=True)
+        self.client = TestClient(servers=self.servers, users=self.users)
         self.conanfile = '''
 from conans import ConanFile
 
@@ -224,7 +223,7 @@ class HelloConan(ConanFile):
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
         sleep(1)
-        client2 = TestClient(servers=self.servers, users=self.users, revisions=True)
+        client2 = TestClient(servers=self.servers, users=self.users)
         conanfile2 = self.conanfile + "# Holaaa "
         client2.save({"conanfile.py": conanfile2})
         client2.run("create . %s" % str(self.ref))
@@ -287,7 +286,7 @@ class HelloConan(ConanFile):
 
         # Same recipe, but will generate different package
         sleep(1)
-        client2 = TestClient(servers=self.servers, users=self.users, revisions=True)
+        client2 = TestClient(servers=self.servers, users=self.users)
         client2.save({"conanfile.py": conanfile})
         client2.run("create . %s" % str(self.ref))
         client2.run("upload %s -c --all -r remote0" % str(self.ref))

@@ -7,6 +7,7 @@ from conans.client.remover import DiskRemover
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.revisions import get_recipe_revision
 from conans.errors import ConanException, NotFoundException
+from conans.util.env_reader import get_env
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
@@ -51,36 +52,35 @@ class ConanProxy(object):
         update_remote = named_remote or remote
 
         # Check if we have a revision different from the requested one
-        # !!! Here check if client revisions enabled
-        if reference.revision and cur_revision != reference.revision:
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if revisions_enabled and reference.revision and cur_revision != reference.revision:
             output.info("Different revision requested, removing current local recipe...")
             DiskRemover(self._client_cache).remove_recipe(reference)
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
-            reference = self._remote_manager.get_recipe(reference, update_remote)
-            self._registry.refs.set(reference, update_remote.name)
+            new_ref = self._remote_manager.get_recipe(reference, update_remote)
+            self._registry.refs.set(new_ref, update_remote.name)
             status = RECIPE_UPDATED
-            return conanfile_path, status, update_remote, reference
+            return conanfile_path, status, update_remote, new_ref
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
             status = RECIPE_INCACHE
-            reference.revision = cur_revision
-            return conanfile_path, status, remote, reference
-
+            ref = reference.copy_with_revision(cur_revision)
+            return conanfile_path, status, remote, ref
 
         if not update_remote:
             status = RECIPE_NO_REMOTE
-            reference.revision = cur_revision
-            return conanfile_path, status, None, reference
+            ref = reference.copy_with_revision(cur_revision)
+            return conanfile_path, status, None, ref
 
         try:  # get_conan_manifest can fail, not in server
             upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
-            reference.revision = cur_revision
-            return conanfile_path, status, update_remote, reference
+            ref = reference.copy_with_revision(cur_revision)
+            return conanfile_path, status, update_remote, ref
 
         export = self._client_cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
@@ -89,10 +89,10 @@ class ConanProxy(object):
                 if update:
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
-                    reference = self._remote_manager.get_recipe(reference, update_remote)
-                    self._registry.refs.set(reference, update_remote.name)
+                    new_reference = self._remote_manager.get_recipe(reference, update_remote)
+                    self._registry.refs.set(new_reference, update_remote.name)
                     status = RECIPE_UPDATED
-                    return conanfile_path, status, update_remote, reference
+                    return conanfile_path, status, update_remote, new_reference
                 else:
                     status = RECIPE_UPDATEABLE
             else:
@@ -100,8 +100,8 @@ class ConanProxy(object):
         else:
             status = RECIPE_INCACHE
 
-        reference.revision = cur_revision
-        return conanfile_path, status, update_remote, reference
+        ref = reference.copy_with_revision(cur_revision)
+        return conanfile_path, status, update_remote, ref
 
     def _download_recipe(self, conan_reference, output, remote_name, recorder):
         def _retrieve_from_remote(the_remote):

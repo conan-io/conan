@@ -444,9 +444,9 @@ class TestClient(object):
             block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
 
         if revisions is None:
-            revisions = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.revisions = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
 
-        if revisions:
+        if self.revisions:
             block_v2 = False
 
         self.block_v2 = block_v2
@@ -466,7 +466,7 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        if revisions:
+        if self.revisions:
             # Generate base file
             self.client_cache.conan_config
             replace_in_file(os.path.join(self.client_cache.conan_conf_path),

@@ -97,8 +97,8 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
 
-        conan_ref.revision = get_recipe_revision(conan_ref, self._client_cache)
-        new_ref = self._upload_recipe(conan_ref, retry, retry_wait, policy, recipe_remote,
+        ref = conan_ref.copy_with_revision(get_recipe_revision(conan_ref, self._client_cache))
+        new_ref = self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
         recorder.add_recipe(new_ref, recipe_remote.name, recipe_remote.url)

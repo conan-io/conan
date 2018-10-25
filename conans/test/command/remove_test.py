@@ -16,7 +16,6 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
-
 class RemoveOutdatedTest(unittest.TestCase):
 
     def remove_query_test(self):
@@ -51,6 +50,8 @@ class Test(ConanFile):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        if client.revisions:
+            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"
@@ -87,7 +88,9 @@ conaninfo = '''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
 [recipe_hash]
-''' +  fake_recipe_hash
+''' + fake_recipe_hash +  '''
+[recipe_revision]
+'''
 
 
 
@@ -123,7 +126,7 @@ class RemoveTest(unittest.TestCase):
                 pack_refs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
-                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i)
+                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
             exports_sources_dir = client.client_cache.export_sources(ref)

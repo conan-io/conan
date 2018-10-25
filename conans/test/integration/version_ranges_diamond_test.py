@@ -76,7 +76,8 @@ class HelloReuseConan(ConanFile):
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
 
-        # Make sure timestamp increases, in some machines in testing, it can fail due to same timestamp
+        # Make sure timestamp increases, in some machines in testing,
+        # it can fail due to same timestamp
         inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
         inc_package_manifest_timestamp(client2.client_cache,
                                        "Pkg/1.2@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
@@ -90,7 +91,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
 
         client.run("install . --update")
-        # Resolves to local package
+        # Resolves to remote new recipe and package
         self.assertIn("Pkg/1.2@lasote/testing: Package installed", client.out)
         self.assertNotIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO *1.2*", client.out)

@@ -56,6 +56,9 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
+@unittest.skipIf(TestClient().revisions,
+                 "We cannot know the folder of the revision without knowing the hash of "
+                 "the contents")
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):
