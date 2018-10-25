@@ -29,7 +29,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
@@ -249,7 +249,7 @@ class ConanAPIV1(object):
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
-        return ConanManager(self._client_cache, self._user_io, self._runner,
+        return ConanManager(self._client_cache, self._user_io,
                             self._remote_manager, action_recorder, self._registry,
                             self._graph_manager, self._plugin_manager)
 
@@ -295,9 +295,9 @@ class ConanAPIV1(object):
 
         result = OrderedDict()
         if not attributes:
-            attributes = ['name', 'version', 'url', 'license', 'author', 'description',
-                          'generators', 'exports', 'exports_sources', 'short_paths',
-                          'apply_env',  'build_policy']
+            attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
+                          'description', 'topics', 'generators', 'exports', 'exports_sources',
+                          'short_paths', 'apply_env', 'build_policy']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
@@ -434,10 +434,14 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        recorder = ActionRecorder()
-        download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
-                 self._client_cache, self._user_io.out, recorder, self._loader,
-                 self._plugin_manager)
+
+        if check_valid_ref(conan_ref, allow_pattern=False):
+            recorder = ActionRecorder()
+            download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
+                     self._client_cache, self._user_io.out, recorder, self._loader,
+                     self._plugin_manager)
+        else:
+            raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

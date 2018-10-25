@@ -18,16 +18,12 @@ from conans.client.graph.printer import print_graph
 
 
 class ConanManager(object):
-    """ Manage all the commands logic  The main entry point for all the client
-    business logic
-    """
-    def __init__(self, client_cache, user_io, runner, remote_manager,
+    def __init__(self, client_cache, user_io, remote_manager,
                  recorder, registry, graph_manager, plugin_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
-        self._runner = runner
         self._remote_manager = remote_manager
         self._recorder = recorder
         self._registry = registry

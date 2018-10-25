@@ -56,10 +56,11 @@ class Node(object):
         return [edge.dst for edge in self.dependencies]
 
     def public_neighbors(self):
-        return [edge.dst for edge in self.dependencies if not edge.private]
+        return [edge.dst for edge in self.dependencies
+                if not edge.private and not edge.build_require]
 
     def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private]
+        return [edge.dst for edge in self.dependencies if edge.private or edge.build_require]
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -106,10 +107,11 @@ class Node(object):
 
 
 class Edge(object):
-    def __init__(self, src, dst, private=False):
+    def __init__(self, src, dst, private=False, build_require=False):
         self.src = src
         self.dst = dst
         self.private = private
+        self.build_require = build_require
 
     def __eq__(self, other):
         return self.src == self.src and self.dst == other.dst
@@ -134,7 +136,7 @@ class DepsGraph(object):
 
         for e in graph.root.dependencies:
             e.src = node
-            e.private = True
+            e.build_require = build_require
 
         node.dependencies = graph.root.dependencies + node.dependencies
 
@@ -143,9 +145,9 @@ class DepsGraph(object):
             self.root = node
         self.nodes.add(node)
 
-    def add_edge(self, src, dst, private=False):
+    def add_edge(self, src, dst, private=False, build_require=False):
         assert src in self.nodes and dst in self.nodes
-        edge = Edge(src, dst, private)
+        edge = Edge(src, dst, private, build_require)
         src.add_edge(edge)
         dst.add_edge(edge)
 
@@ -257,11 +259,11 @@ class DepsGraph(object):
             for dep in node.dependencies:
                 src = result_node
                 dst = nodes_map[dep.dst]
-                result.add_edge(src, dst, dep.private)
+                result.add_edge(src, dst, dep.private, dep.build_require)
             for dep in node.dependants:
                 src = nodes_map[dep.src]
                 dst = result_node
-                result.add_edge(src, dst, dep.private)
+                result.add_edge(src, dst, dep.private, dep.build_require)
 
         return result
 

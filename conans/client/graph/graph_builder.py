@@ -25,11 +25,10 @@ class DepsGraphBuilder(object):
         self._workspace = workspace
         self._recorder = recorder
 
-    def load_graph(self, conanfile, check_updates, update, remote_name, processed_profile):
+    def load_graph(self, root_node, check_updates, update, remote_name, processed_profile):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node = Node(None, conanfile)
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         aliased = {}

@@ -160,6 +160,11 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
+            os_info.linux_distro = "neon"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()

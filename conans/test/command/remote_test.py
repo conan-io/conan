@@ -67,6 +67,7 @@ class HelloConan(ConanFile):
         self.client.run('remote list_pref lib/1.0@lasote/channel')
         self.assertIn("%s: remote1" % pref, self.client.out)
 
+
         # Remove package locally
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')

@@ -1,25 +1,16 @@
 import os
+
 import time
 
 from conans.client.revisions import get_recipe_revision, get_package_revision
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import PackageReference, ConanFileReference, check_valid_ref
 from conans.search.search import search_recipes, search_packages
 from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.util.log import logger
-
-
-def _is_a_reference(ref):
-    try:
-        ConanFileReference.loads(ref)
-        return "*" not in ref  # If is a pattern, it is not a reference
-    except ConanException:
-        pass
-    return False
-
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
@@ -42,11 +33,11 @@ class CmdUpload(object):
                remote_name=None, query=None):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
-        if package_id and not _is_a_reference(reference_or_pattern):
+        if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
         t1 = time.time()
-        if package_id or _is_a_reference(reference_or_pattern):  # Upload package
+        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):  # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             references = [ref, ]
             confirm = True
@@ -110,7 +101,7 @@ class CmdUpload(object):
         new_ref = self._upload_recipe(conan_ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
-        recorder.add_recipe(new_ref.full_repr(), recipe_remote.name, recipe_remote.url)
+        recorder.add_recipe(new_ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
@@ -230,4 +221,3 @@ class CmdUpload(object):
             self._user_io.out.info("\n%s" % ("-"*40))
         except Exception as e:
             self._user_io.out.info("Error printing information about the diff: %s" % str(e))
-

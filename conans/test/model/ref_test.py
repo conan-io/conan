@@ -1,4 +1,5 @@
 import unittest
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, check_valid_ref
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, ConanName, InvalidNameException
 from conans.model.ref import PackageReference
@@ -114,4 +115,23 @@ class ConanNameTestCase(unittest.TestCase):
     def validate_name_version_test_invalid(self):
         self._check_invalid_format("[no.close.bracket", True)
         self._check_invalid_format("no.open.bracket]", True)
+
+
+class CheckValidRefTest(unittest.TestCase):
+
+    def test_string(self):
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=False))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+
+        self.assertFalse(check_valid_ref("package/*@user/channel", allow_pattern=False))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+
+    def test_conanfileref(self):
+        ref = ConanFileReference.loads("package/1.0@user/channel")
+        self.assertTrue(check_valid_ref(ref, allow_pattern=False))
+        self.assertTrue(check_valid_ref(ref, allow_pattern=True))
+
+        ref_pattern = ConanFileReference.loads("package/*@user/channel")
+        self.assertFalse(check_valid_ref(ref_pattern, allow_pattern=False))
+        self.assertTrue(check_valid_ref(ref_pattern, allow_pattern=True))
 

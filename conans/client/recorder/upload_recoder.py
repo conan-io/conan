@@ -23,6 +23,8 @@ def _id_dict(ref):
     else:
         ret = {"id": ref.package_id}
 
+    # FIXME: When revisions feature is completely release this field should be always there
+    # with None if needed
     if ref.revision:
         ret["revision"] = ref.revision
     return ret
@@ -35,11 +37,12 @@ class UploadRecorder(object):
         self._info = OrderedDict()
 
     def add_recipe(self, reference, remote_name, remote_url):
-        self._info[reference] = {"recipe": _UploadElement(reference, remote_name, remote_url),
+
+        self._info[str(reference)] = {"recipe": _UploadElement(reference, remote_name, remote_url),
                                  "packages": []}
 
     def add_package(self, p_ref, remote_name, remote_url):
-        self._info[p_ref.conan]["packages"].append(_UploadElement(p_ref, remote_name, remote_url))
+        self._info[str(p_ref.conan)]["packages"].append(_UploadElement(p_ref, remote_name, remote_url))
 
     def get_info(self):
         info = {"error": self.error, "uploaded": []}
