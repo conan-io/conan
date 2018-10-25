@@ -23,7 +23,10 @@ class ServerMigrator(Migrator):
             if self.store_path:
                 rmdir(self.store_path)
 
-        if old_version < Version("0.0.0"):  # !!! REPLACE WITH THE FINAL VERSION WHERE WE RELEASE THIS
+        if old_version < Version("0.0.0"):  # !!! REPLACE WITH THE FINAL VERSION WE RELEASE THIS
+            if not os.path.exists(self.store_path) or not os.listdir(self.store_path):
+                # Empty storage
+                return
             try:
                 self.migrate_to_revisions_layout()
             except Exception as e:
