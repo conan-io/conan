@@ -113,7 +113,7 @@ class RestV2Methods(RestCommonMethods):
         if not revisions_enabled:
             # Tell server v2 to find the latest package that matched the package ID
             # without taking into account the recipe revision
-            package_reference = package_reference.copy_without_revision()
+            package_reference = package_reference.copy_clear_rev()
 
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
@@ -221,7 +221,7 @@ class RestV2Methods(RestCommonMethods):
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if not keep_revisions and not revisions_enabled:
             # Without revisions check the latest except for the upload
-            conan_reference = conan_reference.copy_without_revision()
+            conan_reference = conan_reference.copy_clear_rev()
 
         if keep_revisions and revisions_enabled:
             assert(conan_reference.revision is not None)
@@ -241,7 +241,7 @@ class RestV2Methods(RestCommonMethods):
             # Search for the latest package id available in any revision (compatibility)
             # Doing upload is always necessary and with revisions it is not needed
             # but otherwise if we request a package it should look for the latest available
-            p_reference = p_reference.copy_without_revision()
+            p_reference = p_reference.copy_clear_rev()
 
         if keep_revisions and revisions_enabled:
             assert(p_reference.conan.revision is not None)

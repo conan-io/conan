@@ -410,7 +410,7 @@ class ConanInstaller(object):
                 raise exc
             else:
                 # Log build
-                self._log_built_package(builder.build_folder, package_ref.copy_without_revision(),
+                self._log_built_package(builder.build_folder, package_ref.copy_clear_rev(),
                                         time.time() - t1)
                 # FIXME: Conan 2.0 Clear the registry entry (package ref)
 

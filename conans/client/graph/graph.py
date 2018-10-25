@@ -283,8 +283,8 @@ class DepsGraph(object):
         for level in self.by_levels():
             for node in level:
                 if node.binary == BINARY_BUILD:
-                    if node.conan_ref.copy_without_revision() not in ret:
-                        ret.append(node.conan_ref.copy_without_revision())
+                    if node.conan_ref.copy_clear_rev() not in ret:
+                        ret.append(node.conan_ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

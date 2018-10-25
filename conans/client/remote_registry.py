@@ -99,7 +99,7 @@ class _GenericReferencesRegistry(_Registry):
 
     @staticmethod
     def _key(ref):
-        return str(ref.copy_without_revision())
+        return str(ref.copy_clear_rev())
 
     def remove(self, ref, quiet=False, remote_name=None):
         assert(isinstance(ref, (ConanFileReference, PackageReference)))
@@ -195,7 +195,7 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             remotes, rrefs, prefs = self._load()
             ret = {}
             for p, r in prefs.items():
-                if PackageReference.loads(p).conan != ref.copy_without_revision():
+                if PackageReference.loads(p).conan != ref.copy_clear_rev():
                     ret[p] = r
             self._save(remotes, rrefs, ret)
 

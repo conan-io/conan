@@ -82,12 +82,12 @@ class HelloConan(ConanFile):
 
         # Create new package revision for the same recipe
         with tools.environment_append({"PACKAGE_CONTENTS": "2"}):
-            self._create_and_upload(conanfile, self.ref.copy_without_revision())
+            self._create_and_upload(conanfile, self.ref.copy_clear_rev())
         pkg_rev = self.servers["remote0"].paths.get_last_package_revision(p_ref)
         self.assertEquals(pkg_rev, "7200b02593a12d8cf214c92ddf805ea9")
 
         # Delete all from local
-        self.client.run("remove %s -f" % str(self.ref.copy_without_revision()))
+        self.client.run("remove %s -f" % str(self.ref.copy_clear_rev()))
 
         # Download specifying recipe with revisions and package with revisions
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"

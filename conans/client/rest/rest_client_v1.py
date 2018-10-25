@@ -272,7 +272,7 @@ class RestV1Methods(RestCommonMethods):
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
         snap = self._get_snapshot(url)
-        return snap, reference.copy_without_revision()
+        return snap, reference.copy_clear_rev()
 
     def _get_package_snapshot(self, package_reference):
         url = self._package_url(package_reference)

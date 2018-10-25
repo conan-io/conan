@@ -131,7 +131,7 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _conflicting_references(ref1, ref2):
-        if ref1.copy_without_revision() != ref2.copy_without_revision():
+        if ref1.copy_clear_rev() != ref2.copy_clear_rev():
             return 1
         if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
             return 2
@@ -143,7 +143,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.conan_reference.name)
-            if n and n.conan_ref.copy_without_revision() != req.conan_reference.copy_without_revision():
+            if n and n.conan_ref.copy_clear_rev() != req.conan_reference.copy_clear_rev():
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
@@ -244,7 +244,7 @@ class DepsGraphBuilder(object):
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or new_ref.copy_without_revision()
+            alias_reference = alias_ref or new_ref.copy_clear_rev()
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,

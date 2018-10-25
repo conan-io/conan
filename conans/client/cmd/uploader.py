@@ -149,7 +149,7 @@ class CmdUpload(object):
         cur_recipe_remote = self._registry.refs.get(conan_reference)
         cur_revision = get_recipe_revision(conan_reference, self._client_cache)
         updated_ref = (cur_recipe_remote and
-                       new_ref.copy_without_revision() == cur_recipe_remote and
+                       new_ref.copy_clear_rev() == cur_recipe_remote and
                        new_ref.revision != cur_revision)
         # The recipe wasn't in the registry or it has changed the revision field only
         if (not cur_recipe_remote or updated_ref) and policy != UPLOAD_POLICY_SKIP:
@@ -172,13 +172,13 @@ class CmdUpload(object):
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revisions(pref.conan.revision, package_revision)
         else:
-            pref = pref.copy_without_revision()
+            pref = pref.copy_clear_rev()
 
         new_pref = self._remote_manager.upload_package(pref, p_remote, retry, retry_wait,
                                                        integrity_check, policy)
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_ref = self._registry.prefs.get(pref.copy_without_revision())
+        cur_package_ref = self._registry.prefs.get(pref.copy_clear_rev())
         if (not cur_package_ref or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
             self._registry.prefs.set(pref, p_remote.name)
 

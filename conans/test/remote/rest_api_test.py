@@ -194,7 +194,7 @@ class RestApiTest(unittest.TestCase):
 
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
-        results = [r.copy_without_revision() for r in results]
+        results = [r.copy_clear_rev() for r in results]
         self.assertEqual(results, [conan_reference1])
 
     def remove_test(self):
