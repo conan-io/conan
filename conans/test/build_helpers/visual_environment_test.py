@@ -23,6 +23,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         conanfile.deps_cpp_info.cppflags.append("-mycppflag2")
         conanfile.deps_cpp_info.exelinkflags.append("-myexelinkflag")
         conanfile.deps_cpp_info.sharedlinkflags.append("-mysharedlinkflag")
+        conanfile.deps_cpp_info.libs.extend(['gdi32', 'user32.lib'])
 
         tool = VisualStudioBuildEnvironment(conanfile)
         self.assertEquals(tool.vars_dict, {
@@ -34,10 +35,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Ob0',
                    '-Od',
                    '-mycppflag',
-                   '-mycppflag2',
-                   '-myexelinkflag',
-                   '-mysharedlinkflag'],
+                   '-mycppflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = True
         self.assertEquals(tool.vars_dict, {
@@ -50,10 +50,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Od',
                    '-mycppflag',
                    '-mycppflag2',
-                   '-myexelinkflag',
-                   '-mysharedlinkflag',
                    '/MP%s' % tools.cpu_count()],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = False
 
@@ -72,10 +71,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Ob0',
                    '-Od',
                    '-mycppflag',
-                   '-mycppflag2',
-                   '-myexelinkflag',
-                   '-mysharedlinkflag'],
+                   '-mycppflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path"],
+            "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
 
         # Now try appending to environment
@@ -92,18 +90,18 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-Od',
                        '-mycppflag',
                        '-mycppflag2',
-                       '-myexelinkflag',
-                       '-mysharedlinkflag',
                        "-I/four/include/path -I/five/include/path"],
                 "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path", "/four/lib/path;/five/lib/path"],
+                "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
             })
 
             self.assertEquals(tool.vars, {
                 "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
                       '-mycflag -mycflag2 -Zi -Ob0 -Od '
-                      '-mycppflag -mycppflag2 -myexelinkflag -mysharedlinkflag '
+                      '-mycppflag -mycppflag2 '
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
+                "_LINK_": "-myexelinkflag -mysharedlinkflag gdi32.lib user32.lib"
             })
 
     def build_type_toolset_test(self):
