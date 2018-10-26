@@ -413,6 +413,7 @@ class ConanAPIV1(object):
                 profile = read_conaninfo_profile(install_folder)
 
             reference, conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
+            recorder.recipe_exported(reference)
             recorder.add_recipe_being_developed(reference)
             cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
                        self._client_cache, self._plugin_manager, self._registry)
