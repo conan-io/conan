@@ -47,6 +47,7 @@ class ConanFileToolsTest(ConanFile):
                 super(DownloadFilesBrokenRequester, self).__init__(*args, **kwargs)
 
             def get(self, url, **kwargs):
+                # conaninfo is skipped sometimes from the output, use manifest
                 if "conanmanifest.txt" in url and not self.first_fail:
                     self.first_fail = True
                     raise ConnectionError("Fake connection error exception")
