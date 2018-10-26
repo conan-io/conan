@@ -67,7 +67,9 @@ compiler:
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp, 
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0", "7.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
+                  "5.0", "6.0", "7.0",
+                  "8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
@@ -99,6 +101,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 # cache_no_locks = True               # Disable locking mechanism of local cache
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
+# use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
 # non_interactive = False             # environment CONAN_NON_INTERACTIVE
 
@@ -175,6 +178,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
+               "CONAN_USE_ALWAYS_SHORT_PATHS": self._env_c("general.use_always_short_paths", "CONAN_USE_ALWAYS_SHORT_PATHS", None),
                "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
@@ -290,8 +294,10 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point "
-                                     "to an absolute path.")
+                from conans.client.client_cache import PROFILES_FOLDER
+                profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
+                ret = os.path.abspath(os.path.join(profiles_folder, ret))
+
             if not os.path.exists(ret):
                 raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                                      "an existing profile file.")

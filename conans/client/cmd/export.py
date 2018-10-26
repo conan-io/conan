@@ -1,7 +1,7 @@
 import ast
 import os
 import shutil
-
+import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
@@ -10,10 +10,9 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.search.search import search_recipes
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
-from conans.search.search import search_recipes
-from conans.client.plugin_manager import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -35,7 +34,7 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager):
+               plugin_manager, registry):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -56,7 +55,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
 
     with client_cache.conanfile_write_lock(reference):
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
-                          keep_source)
+                          keep_source, registry)
     conanfile_cache_path = client_cache.conanfile(reference)
     plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
@@ -76,15 +75,16 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     scm = SCM(scm_data, conanfile_dir)
 
     if scm_data.url == "auto":
-        origin = scm.get_remote_url()
+        origin = scm.get_qualified_remote_url()
         if not origin:
             raise ConanException("Repo origin cannot be deduced by 'auto'")
-        if os.path.exists(origin):
+        if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
-            origin = origin.replace("\\", "/")
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm_data.url = origin
     if scm_data.revision == "auto":
+        if not scm.is_pristine():
+            output.warn("Repo status is not pristine: there might be modified files")
         scm_data.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
@@ -98,6 +98,19 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
+    headers = []
+
+    if six.PY2:
+        # Workaround for https://bugs.python.org/issue22221
+        lines_without_headers = []
+        lines = content.splitlines(True)
+        for line in lines:
+            if not lines_without_headers and line.startswith("#"):
+                headers.append(line)
+            else:
+                lines_without_headers.append(line)
+        content = ''.join(lines_without_headers)
+
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
@@ -126,10 +139,11 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
+    content = content if not headers else ''.join(headers) + content
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source, registry):
 
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
@@ -151,6 +165,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
     digest.save(exports_folder)
+
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False

@@ -1,5 +1,5 @@
 import unittest
-from conans.model.ref import ConanFileReference, ConanName, InvalidNameException
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, check_valid_ref
 from conans.errors import ConanException
 
 
@@ -43,6 +43,22 @@ class RefTest(unittest.TestCase):
         self.assertRaises(ConanException, ConanFileReference.loads,
                           "opencv/2.4.10@laso/testing%s" % "A" * 40)
 
+    def check_with_revision_test(self):
+        _br = ConanFileReference.loads
+        ref = _br("opencv/2.4.10@3rd-party/testing")
+        self.assertTrue(ref.matches_with_ref(ref))
+
+        self.assertFalse(ref.matches_with_ref(_br("opencv/2.4.10@3rd-party/testing#Revision")))
+        self.assertTrue(_br("opencv/2.4.10@3rd-party/testing#Revision").matches_with_ref(ref))
+
+        self.assertTrue(_br("opencv/2.4.10@3rd-party/"
+                            "testing#Revision").matches_with_ref(_br("opencv/2.4.10@3rd-party/"
+                                                                     "testing#Revision")))
+
+        self.assertFalse(_br("opencv/2.4.10@3rd-party/"
+                             "testing#Revision2").matches_with_ref(_br("opencv/2.4.10@3rd-party/"
+                                                                       "testing#Revision1")))
+
 
 class ConanNameTestCase(unittest.TestCase):
 
@@ -77,3 +93,22 @@ class ConanNameTestCase(unittest.TestCase):
     def validate_name_version_test_invalid(self):
         self._check_invalid_format("[no.close.bracket", True)
         self._check_invalid_format("no.open.bracket]", True)
+
+
+class CheckValidRefTest(unittest.TestCase):
+
+    def test_string(self):
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=False))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+
+        self.assertFalse(check_valid_ref("package/*@user/channel", allow_pattern=False))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+
+    def test_conanfileref(self):
+        ref = ConanFileReference.loads("package/1.0@user/channel")
+        self.assertTrue(check_valid_ref(ref, allow_pattern=False))
+        self.assertTrue(check_valid_ref(ref, allow_pattern=True))
+
+        ref_pattern = ConanFileReference.loads("package/*@user/channel")
+        self.assertFalse(check_valid_ref(ref_pattern, allow_pattern=False))
+        self.assertTrue(check_valid_ref(ref_pattern, allow_pattern=True))

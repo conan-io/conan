@@ -8,13 +8,13 @@ from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name, \
-    cmake_in_local_cache_var_name, in_local_cache_definition
+    cmake_in_local_cache_var_name
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.tools import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, get_abs_path, decode_text
+from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
 
 class CMake(object):
@@ -138,8 +138,10 @@ class CMake(object):
 
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
-        if compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles',
-                                                              'NMake Makefiles JOM']:
+        the_os = self._settings.get_safe("os")
+        is_clangcl = the_os == 'Windows' and compiler == 'clang'
+        is_msvc = compiler == 'Visual Studio'
+        if (is_msvc or is_clangcl) and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
             with tools.vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
@@ -180,9 +182,9 @@ class CMake(object):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
-                    self._conanfile.run(command)
+                    self._run(command)
             else:
-                self._conanfile.run(command)
+                self._run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -301,6 +303,7 @@ class CMake(object):
                 cmake.install()
                 cmake.patch_config_paths()
         """
+
         if not self._conanfile.should_install:
             return
         if not self._conanfile.name:
@@ -308,28 +311,27 @@ class CMake(object):
                                  "Define name in your recipe")
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
-        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
+        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake"):
                     path = os.path.join(root, f)
-                    tools.replace_in_file(path, pf, replstr, strict=False)
+                    tools.replace_path_in_file(path, pf, replstr, strict=False)
 
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
-                    path_content = tools.load(path)
                     for dep in self._conanfile.deps_cpp_info.deps:
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
-                        # try to replace only if from str is found
-                        if path_content.find(from_str) != -1:
-                            dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                            self._conanfile.output.info("Patching paths for %s: %s to %s" % (dep, from_str, dep_str))
-                            tools.replace_in_file(path, from_str, dep_str, strict=False)
+                        dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
+                        if ret:
+                            self._conanfile.output.info("Patched paths for %s: %s to %s"
+                                                        % (dep, from_str, dep_str))
 
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

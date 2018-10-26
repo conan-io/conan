@@ -109,14 +109,16 @@ class ConanLib(ConanFile):
         # Path with conanfile.txt
         error = client.run("test conanfile.txt other/0.2@user2/channel2", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("A conanfile.py is needed (not valid conanfile.txt)", client.out)
+        self.assertIn(
+            "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
+            client.out)
 
         # Path with wrong conanfile path
         error = client.run("test not_real_dir/conanfile.py other/0.2@user2/channel2",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Conanfile not found: %s" % os.path.join(client.current_folder, "not_real_dir",
-                                                               "conanfile.py"), client.out)
+        self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
+                                                                 "conanfile.py"), client.out)
 
     def build_folder_handling_test(self):
         test_conanfile = '''

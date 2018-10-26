@@ -22,13 +22,13 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, (list, tuple)):
+            if isinstance(default_options, (list, tuple, dict)):
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
-                raise ConanException("Please define your default_options as list or "
-                                     "multiline string")
+                raise ConanException("Please define your default_options as list, "
+                                     "multiline string or dictionary")
             options.values = default_values
         return options
     except Exception as e:
@@ -90,6 +90,8 @@ class ConanFile(object):
     license = None
     author = None  # Main maintainer/responsible for the package, any format
     description = None
+    topics = None
+    homepage = None
     build_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
@@ -104,6 +106,10 @@ class ConanFile(object):
     should_test = True
     in_local_cache = True
     develop = False
+
+    # Defaulting the reference fields
+    default_channel = None
+    default_user = None
 
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -165,7 +171,7 @@ class ConanFile(object):
     @property
     def channel(self):
         if not self._conan_channel:
-            self._conan_channel = os.getenv("CONAN_CHANNEL")
+            self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
                 raise ConanException("CONAN_CHANNEL environment variable not defined, "
                                      "but self.channel is used in conanfile")
@@ -174,15 +180,15 @@ class ConanFile(object):
     @property
     def user(self):
         if not self._conan_user:
-            self._conan_user = os.getenv("CONAN_USERNAME")
+            self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
                 raise ConanException("CONAN_USERNAME environment variable not defined, "
                                      "but self.user is used in conanfile")
         return self._conan_user
 
-    def collect_libs(self, folder="lib"):
-        self.output.warn("Use 'self.collect_libs' is deprecated, "
-                         "use tools.collect_libs(self) instead")
+    def collect_libs(self, folder=None):
+        self.output.warn("'self.collect_libs' is deprecated, "
+                         "use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property

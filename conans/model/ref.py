@@ -5,6 +5,16 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
+def check_valid_ref(ref, allow_pattern):
+    try:
+        if not isinstance(ref, ConanFileReference):
+            ref = ConanFileReference.loads(ref, validate=True)
+        return "*" not in ref or allow_pattern
+    except ConanException:
+        pass
+    return False
+
+
 class ConanName(object):
     _max_chars = 51
     _min_chars = 2
@@ -129,6 +139,14 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ret = ConanFileReference.loads(str(self))
         ret.revision = None
         return ret
+
+    def matches_with_ref(self, other):
+        # if other hasn't revision and the current obj has it, it matches
+        # otherwise the revision and the reference should be equal
+        if not other.revision:
+            return super(ConanFileReference, self).__eq__(other)
+        else:
+            return self == other
 
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):

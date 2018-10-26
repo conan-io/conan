@@ -1,17 +1,18 @@
-import unittest
 from collections import namedtuple, Counter
+import unittest
 
-from conans.test.utils.tools import TestBufferConanOutput
-from conans.paths import SimplePaths
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.model.ref import ConanFileReference
-from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.model.requires import Requirements
-from conans.client.graph.range_resolver import RangeResolver, satisfying
 from parameterized import parameterized
-from conans.errors import ConanException
-from conans.test.model.fake_retriever import Retriever
+
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.range_resolver import RangeResolver, satisfying
+from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.model.requires import Requirements
+from conans.paths import SimplePaths
+from conans.test.model.fake_retriever import Retriever
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -20,7 +21,8 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
         self.assertEqual(result, "1.1.111")
         # prereleases are ordered
-        result = satisfying(["1.1.1-a.1", "1.1.1-a.11", "1.1.1-a.111", "1.1.1-a.21"], "~1.1.1-a", output)
+        result = satisfying(["1.1.1-a.1", "1.1.1-a.11", "1.1.1-a.111", "1.1.1-a.21"], "~1.1.1-a",
+                            output)
         self.assertEqual(result, "1.1.1-a.111")
         result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
         self.assertEqual(result, "1.1.1")
@@ -131,7 +133,8 @@ class VersionRangesTest(unittest.TestCase):
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
         self.resolver = RangeResolver(self.output, paths, self.remote_search)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver, None, None)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
+                                        None, None)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
