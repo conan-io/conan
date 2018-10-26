@@ -95,6 +95,16 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("clang", "6", "17"), '-std=c++17')
         self.assertEquals(cppstd_flag("clang", "6", "20"), '-std=c++2a')
 
+        self.assertEquals(cppstd_flag("clang", "7", "11"), '-std=c++11')
+        self.assertEquals(cppstd_flag("clang", "7", "14"), '-std=c++14')
+        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++17')
+        self.assertEquals(cppstd_flag("clang", "7", "20"), '-std=c++2a')
+
+        self.assertEquals(cppstd_flag("clang", "8", "11"), '-std=c++11')
+        self.assertEquals(cppstd_flag("clang", "8", "14"), '-std=c++14')
+        self.assertEquals(cppstd_flag("clang", "8", "17"), '-std=c++17')
+        self.assertEquals(cppstd_flag("clang", "8", "20"), '-std=c++2a')
+
     def test_clang_cppstd_defaults(self):
         self.assertEquals(cppstd_default("clang", "2"), "gnu98")
         self.assertEquals(cppstd_default("clang", "2.1"), "gnu98")
