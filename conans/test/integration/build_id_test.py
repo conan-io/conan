@@ -265,3 +265,33 @@ class BuildIdTest(unittest.TestCase):
             _check()
             self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
             self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+
+    def failed_build_test(self):
+        conanfile = """from conans import ConanFile
+class MyTest(ConanFile):
+    settings = "os"
+    def build(self):
+        raise Exception("Failed build!!")
+"""
+        client = TestClient()
+        # NORMAL case, every create fails
+        client.save({"conanfile.py": conanfile})
+        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
+                      client.out)
+        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
+                      client.out)
+        # now test with build_id
+        client.save({"conanfile.py": conanfile +
+                     "    def build_id(self): self.info_build.settings.os = 'any'"})
+        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
+                      client.out)
+        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
+                      client.out)
