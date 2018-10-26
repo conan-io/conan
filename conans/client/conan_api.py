@@ -43,7 +43,7 @@ from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
 from conans.client.cmd.search import Search
 from conans.client.cmd.user import users_clean, users_list, user_set
 from conans.client.importer import undo_imports, run_imports
-from conans.client.cmd.export import cmd_export, export_alias, _execute_export
+from conans.client.cmd.export import cmd_export, export_alias, export_source, export_recipe
 from conans.unicode import get_cwd
 from conans.client.remover import ConanRemover
 from conans.client.cmd.download import download
@@ -663,7 +663,8 @@ class ConanAPIV1(object):
         conanfile_folder = os.path.dirname(conanfile_path)
         if conanfile_folder != source_folder:
             output.info("Executing exports to: %s" % source_folder)
-            _execute_export(conanfile_path, conanfile, source_folder, source_folder, output)
+            export_recipe(conanfile, conanfile_folder, source_folder, output)
+            export_source(conanfile, conanfile_folder, source_folder, output)
         config_source_local(source_folder, conanfile, conanfile_folder, output, conanfile_path,
                             self._plugin_manager)
 
@@ -876,7 +877,6 @@ class ConanAPIV1(object):
 
     def remote_clean(self):
         return self._registry.remotes.clean()
-
 
     @api_method
     def profile_list(self):

@@ -92,7 +92,7 @@ class _ConanPackageBuilder(object):
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out, conanfile_path, self._conan_ref,
-                      self._plugin_manager)
+                      self._plugin_manager, self._client_cache)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -374,6 +374,11 @@ class ConanInstaller(object):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
         t1 = time.time()
+        # It is necessary to complete the sources of python requires, which might be used
+        for python_require in conan_file.python_requires:
+            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                    conan_file, python_require.conan_ref)
+
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
                                        self._plugin_manager)
         if is_dirty(builder.build_folder):
