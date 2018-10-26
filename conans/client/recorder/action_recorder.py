@@ -130,15 +130,21 @@ class ActionRecorder(object):
         ret = {"error": self.install_errored or self.error,
                "installed": []}
 
-        def get_doc_for_ref(the_ref, the_action):
-            error = None if the_action.type != INSTALL_ERROR else the_action.doc
+        def get_doc_for_ref(the_ref, the_actions):
+            errors = [action.doc for action in the_actions if action.type == INSTALL_ERROR]
+            error = None if not errors else errors[0]
+            remotes = [action.doc.get("remote") for action in the_actions
+                       if action.doc.get("remote", None) is not None]
+            remote = None if not remotes else remotes[0]
+            action_types = [action.type for action in the_actions]
+            time = the_actions[0].time
+
             doc = {"id": str(the_ref),
-                   "downloaded": the_action.type == INSTALL_DOWNLOADED,
-                   "cache": the_action.type == INSTALL_CACHE,
-                   "exported": the_action.type == INSTALL_EXPORTED,
+                   "downloaded": INSTALL_DOWNLOADED in action_types,
+                   "exported": INSTALL_EXPORTED in action_types,
                    "error": error,
-                   "remote": the_action.doc.get("remote", None),
-                   "time": the_action.time}
+                   "remote": remote,
+                   "time": time}
             if isinstance(the_ref, ConanFileReference):
                 doc["dependency"] = not self.in_development_recipe(the_ref)
                 doc["name"] = the_ref.name
@@ -148,22 +154,19 @@ class ActionRecorder(object):
                 if the_ref.revision:
                     doc["revision"] = the_ref.revision
             else:
-                doc["built"] = the_action.type == INSTALL_BUILT
+                doc["built"] = INSTALL_BUILT in action_types
 
             if doc["remote"] is None and error:
                 doc["remote"] = error.get("remote", None)
             return doc
 
         for ref, actions in self._inst_recipes_actions.items():
-            # Could be a download and then an access to cache, we want the first one
-            action = actions[0]
-            recipe_doc = get_doc_for_ref(ref, action)
-            packages = self._get_installed_packages(ref)
-            tmp = {"recipe": recipe_doc,
+            tmp = {"recipe": get_doc_for_ref(ref, actions),
                    "packages": []}
 
+            packages = self._get_installed_packages(ref)
             for p_ref, p_action in packages:
-                p_doc = get_doc_for_ref(p_ref.package_id, p_action)
+                p_doc = get_doc_for_ref(p_ref.package_id, [p_action])
                 package_data = self._inst_packages_info.get(p_ref, {})
                 p_doc.update(package_data)
                 tmp["packages"].append(p_doc)

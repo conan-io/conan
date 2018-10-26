@@ -351,6 +351,7 @@ class ConanAPIV1(object):
             if not not_export:
                 cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                            self._client_cache, self._plugin_manager, self._registry)
+                recorder.recipe_exported(reference)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -361,7 +362,6 @@ class ConanAPIV1(object):
                                         cwd, self._client_cache)
 
             manager = self._init_manager(recorder)
-            recorder.recipe_exported(reference)
             recorder.add_recipe_being_developed(reference)
 
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
