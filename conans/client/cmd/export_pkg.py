@@ -49,4 +49,4 @@ def export_pkg(client_cache, graph_manager, plugin_manager, recorder, output,
         packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
                                 install_folder, package_output, plugin_manager, conan_file_path,
                                 reference, local=True)
-    recorder.package_built(pkg_reference)
+    recorder.package_exported(pkg_reference)

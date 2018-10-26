@@ -12,6 +12,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 INSTALL_CACHE = 0
 INSTALL_DOWNLOADED = 1
 INSTALL_BUILT = 2
+INSTALL_EXPORTED = 3
 INSTALL_ERROR = -1
 
 # Actions errors
@@ -32,10 +33,13 @@ class Action(namedtuple("Action", "type, doc, time")):
 class ActionRecorder(object):
 
     def __init__(self):
+        self.error = False
         self._inst_recipes_actions = OrderedDict()
         self._inst_packages_actions = OrderedDict()
         self._inst_recipes_develop = set()  # Recipes being created (to set dependency=False)
         self._inst_packages_info = defaultdict(dict)
+        self._export_recipes = set()
+        self._export_packages = set()
 
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, reference):
@@ -54,6 +58,9 @@ class ActionRecorder(object):
         self._inst_packages_actions[reference].append(action)
 
     # RECIPE METHODS
+    def recipe_exported(self, reference):
+        self._add_recipe_action(reference, Action(INSTALL_EXPORTED))
+
     def recipe_fetched_from_cache(self, reference):
         self._add_recipe_action(reference, Action(INSTALL_CACHE))
 
@@ -65,6 +72,9 @@ class ActionRecorder(object):
         self._add_recipe_action(reference, Action(INSTALL_ERROR, doc))
 
     # PACKAGE METHODS
+    def package_exported(self, reference):
+        self._add_package_action(reference, Action(INSTALL_EXPORTED))
+
     def package_built(self, reference):
         self._add_package_action(reference, Action(INSTALL_BUILT))
 
@@ -117,7 +127,7 @@ class ActionRecorder(object):
         return self.get_install_info()
 
     def get_install_info(self):
-        ret = {"error": self.install_errored,
+        ret = {"error": self.install_errored or self.error,
                "installed": []}
 
         def get_doc_for_ref(the_ref, the_action):
@@ -125,6 +135,7 @@ class ActionRecorder(object):
             doc = {"id": str(the_ref),
                    "downloaded": the_action.type == INSTALL_DOWNLOADED,
                    "cache": the_action.type == INSTALL_CACHE,
+                   "exported": the_action.type == INSTALL_EXPORTED,
                    "error": error,
                    "remote": the_action.doc.get("remote", None),
                    "time": the_action.time}
