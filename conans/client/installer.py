@@ -27,7 +27,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import (save, rmdir, mkdir, make_read_only,
-                               set_dirty, clean_dirty, load)
+                               set_dirty, clean_dirty, load, is_dirty)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
@@ -373,14 +373,16 @@ class ConanInstaller(object):
     def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
-        skip_build = conan_file.develop and keep_build
-        if skip_build:
-            output.info("Won't be built as specified by --keep-build")
-
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
                                        self._plugin_manager)
+        if is_dirty(builder.build_folder):
+            output.warn("Build folder is dirty, removing it: %s" % builder.build_folder)
+            rmdir(builder.build_folder)
 
+        skip_build = conan_file.develop and keep_build
+        if skip_build:
+            output.info("Won't be built as specified by --keep-build")
         if skip_build:
             if not os.path.exists(builder.build_folder):
                 msg = "--keep-build specified, but build folder not found"
@@ -390,6 +392,7 @@ class ConanInstaller(object):
                 raise ConanException(msg)
         else:
             with self._client_cache.conanfile_write_lock(conan_ref):
+                set_dirty(builder.build_folder)
                 complete_recipe_sources(self._remote_manager, self._client_cache,
                                         self._registry, conan_file, conan_ref)
                 builder.prepare_build()
@@ -398,6 +401,7 @@ class ConanInstaller(object):
             try:
                 if not skip_build:
                     builder.build()
+                    clean_dirty(builder.build_folder)
                 builder.package()
             except ConanException as exc:
                 self._recorder.package_install_error(package_ref, INSTALL_ERROR_BUILDING,
