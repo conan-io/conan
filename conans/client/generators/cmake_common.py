@@ -3,6 +3,7 @@ set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
 set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
 set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
+set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
@@ -41,7 +42,8 @@ def cmake_user_info_vars(deps_user_info):
     lines = []
     for dep, the_vars in deps_user_info.items():
         for name, value in the_vars.vars.items():
-            lines.append('set(CONAN_USER_%s_%s %s)' % (dep.upper(), name, _cmake_string_representation(value)))
+            lines.append('set(CONAN_USER_%s_%s %s)'
+                         % (dep.upper(), name, _cmake_string_representation(value)))
     return "\n".join(lines)
 
 
@@ -64,7 +66,8 @@ def cmake_settings_info(settings):
     for item in settings.items():
         key, value = item
         name = "CONAN_SETTINGS_%s" % key.upper().replace(".", "_")
-        settings_info += "set({key} {value})\n".format(key=name, value=_cmake_string_representation(value))
+        settings_info += "set({key} {value})\n".format(key=name,
+                                                       value=_cmake_string_representation(value))
     return settings_info
 
 

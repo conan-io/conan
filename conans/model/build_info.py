@@ -35,6 +35,7 @@ class _CppInfo(object):
         self._bin_paths = None
         self._build_paths = None
         self._res_paths = None
+        self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
 
