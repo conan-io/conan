@@ -1,26 +1,33 @@
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 
+from conans.model.ref import ConanFileReference
 
-class _UploadRecipe(namedtuple("UploadRecipe", "reference, remote_name, remote_url, time")):
+
+class _UploadElement(namedtuple("UploadElement", "reference, remote_name, remote_url, time")):
 
     def __new__(cls, reference, remote_name, remote_url):
         the_time = datetime.utcnow()
-        return super(cls, _UploadRecipe).__new__(cls, reference, remote_name, remote_url, the_time)
+        return super(cls, _UploadElement).__new__(cls, reference, remote_name, remote_url, the_time)
 
     def to_dict(self):
-        return {"id": self.reference, "remote_name": self.remote_name,
-                "remote_url": self.remote_url, "time": self.time}
+        ret = {"remote_name": self.remote_name,
+               "remote_url": self.remote_url, "time": self.time}
+        ret.update(_id_dict(self.reference))
+        return ret
 
 
-class _UploadPackage(namedtuple("UploadPackage", "package_id, time")):
+def _id_dict(ref):
+    if isinstance(ref, ConanFileReference):
+        ret = {"id": str(ref)}
+    else:
+        ret = {"id": ref.package_id}
 
-    def __new__(cls, package_id):
-        the_time = datetime.utcnow()
-        return super(cls, _UploadPackage).__new__(cls, package_id, the_time)
-
-    def to_dict(self):
-        return {"id": self.package_id, "time": self.time}
+    # FIXME: When revisions feature is completely release this field should be always there
+    # with None if needed
+    if ref.revision:
+        ret["revision"] = ref.revision
+    return ret
 
 
 class UploadRecorder(object):
@@ -30,11 +37,11 @@ class UploadRecorder(object):
         self._info = OrderedDict()
 
     def add_recipe(self, reference, remote_name, remote_url):
-        self._info[reference] = {"recipe": _UploadRecipe(reference, remote_name, remote_url),
+        self._info[str(reference)] = {"recipe": _UploadElement(reference, remote_name, remote_url),
                                  "packages": []}
 
-    def add_package(self, reference, package_id):
-        self._info[reference]["packages"].append(_UploadPackage(package_id))
+    def add_package(self, p_ref, remote_name, remote_url):
+        self._info[str(p_ref.conan)]["packages"].append(_UploadElement(p_ref, remote_name, remote_url))
 
     def get_info(self):
         info = {"error": self.error, "uploaded": []}
