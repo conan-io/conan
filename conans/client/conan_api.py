@@ -361,6 +361,7 @@ class ConanAPIV1(object):
                                         cwd, self._client_cache)
 
             manager = self._init_manager(recorder)
+            recorder.recipe_exported(reference)
             recorder.add_recipe_being_developed(reference)
 
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
