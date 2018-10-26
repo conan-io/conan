@@ -1869,6 +1869,8 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         svn.checkout(url=project_url)
         self.assertTrue(svn.is_pristine())
 
+        import time
+        time.sleep(1)
         shutil.rmtree(get_cased_path(repo_url))
         with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
             self.assertFalse(svn.is_pristine())
