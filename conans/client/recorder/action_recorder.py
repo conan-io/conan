@@ -38,8 +38,6 @@ class ActionRecorder(object):
         self._inst_packages_actions = OrderedDict()
         self._inst_recipes_develop = set()  # Recipes being created (to set dependency=False)
         self._inst_packages_info = defaultdict(dict)
-        self._export_recipes = set()
-        self._export_packages = set()
 
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, reference):
