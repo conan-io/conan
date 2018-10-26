@@ -76,6 +76,44 @@ class EnvValuesTest(unittest.TestCase):
         self.assertEquals(env.env_dicts(None), ({'VAR': '1'}, {}))
 
 
+class DepsEnvInfoTest(unittest.TestCase):
+
+    def test_loads(self):
+        # string
+        text = "[ENV_libname]\nvar1=value1"
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': 'value1'})
+        
+        # string with spaces
+        text = "[ENV_libname]\nvar1=value 1"
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': 'value 1'})
+        
+        # quoted string
+        text = "[ENV_libname]\nvar1=\"value 1\""
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': '\"value 1\"'})
+        
+        # quoted string
+        text = "[ENV_libname]\nvar1='value 1'"
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': '\'value 1\''})
+        
+        # number
+        text = "[ENV_libname]\nvar1=123"
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': '123'})
+        
+        # empty
+        text = "[ENV_libname]\nvar1="
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': ''})
+        
+        # mixed
+        text = "[ENV_libname]\nvar1=value1\nvar2=\nvar3=\"value3\""
+        ret = DepsEnvInfo.loads(text)
+        self.assertDictEqual(ret.vars, {'var1': 'value1', 'var2': '', 'var3': '\"value3\"'})
+        
 class EnvInfoTest(unittest.TestCase):
 
     def assign_test(self):

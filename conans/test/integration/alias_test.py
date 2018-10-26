@@ -448,10 +448,10 @@ class TestConan(ConanFile):
         client.run("install . --build=missing")
 
         self.assertIn("Hello/0.1@lasote/channel from local", client.user_io.out)
-        self.assertNotIn("Hello/0.X", client.user_io.out)
+        self.assertNotIn("Hello/0.X@lasote/channel", client.user_io.out)
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
-        self.assertNotIn("Hello/0.X", conaninfo)
+        self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
 
         client.run('upload "*" --all --confirm')
         client.run('remove "*" -f')

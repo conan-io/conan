@@ -1,22 +1,20 @@
+import errno
 import os
 import random
 import shlex
-import sys
-import threading
-import uuid
-import errno
 import stat
+import sys
+import tempfile
+import unittest
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
-import subprocess
-import unittest
-import tempfile
 
 import bottle
 import requests
 import shutil
 import six
+import subprocess
 import threading
 import time
 import uuid
@@ -25,7 +23,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit, quote
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
-from conans.client.client_cache import ClientCache, REGISTRY_JSON
+from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
 from conans.client.conan_command_output import CommandOutputer
@@ -35,12 +33,12 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools.files import chdir
+from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
+from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.client.tools.scm import Git, SVN
-from conans.client.userio import UserIO
-from conans.client.tools.files import chdir
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
@@ -350,7 +348,13 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             with chdir(tmp_project_dir):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-                rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+                    rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                else:
+                    import xml.etree.ElementTree as ET
+                    output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                    root = ET.fromstring(output)
+                    rev = root.findall("./entry")[0].get("revision")
             project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
             return project_url, rev
         finally:
@@ -456,7 +460,7 @@ class TestClient(object):
 
     def update_servers(self):
 
-        save(self.client_cache.registry, dump_registry({}, {}))
+        save(self.client_cache.registry, dump_registry({}, {}, {}))
 
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
