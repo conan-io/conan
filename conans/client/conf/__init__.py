@@ -68,9 +68,7 @@ compiler:
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
-                  "5", "5.0",
-                  "6", "6.0",
-                  "7", "7.0",
+                  "5.0", "6.0", "7.0",
                   "8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
