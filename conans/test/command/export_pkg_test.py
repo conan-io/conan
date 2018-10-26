@@ -12,6 +12,7 @@ from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         class RequesterMock(object):
@@ -451,14 +452,14 @@ class TestConan(ConanFile):
             self.assertEqual(output["error"], with_error)
             self.assertEqual(output["installed"][0]["recipe"]["id"],
                              "mypackage/0.1.0@danimtb/testing")
-            self.assertEqual(output["installed"][0]["recipe"]["dependency"], False)
-            self.assertEqual(output["installed"][0]["recipe"]["exported"], True)
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
                 self.assertEqual(output["installed"][0]["packages"], [])
             else:
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-                self.assertEqual(output["installed"][0]["packages"][0]["exported"], True)
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
 
         conanfile = """from conans import ConanFile
 class MyConan(ConanFile):
@@ -499,17 +500,17 @@ class MyConan(ConanFile):
             self.assertEqual(output["error"], with_error)
             self.assertEqual(output["installed"][0]["recipe"]["id"],
                              "pkg2/1.0@danimtb/testing")
-            self.assertEqual(output["installed"][0]["recipe"]["dependency"], False)
-            self.assertEqual(output["installed"][0]["recipe"]["exported"], True)
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
                 self.assertEqual(output["installed"][0]["packages"], [])
             else:
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "5825778de2dc9312952d865df314547576f129b3")
-                self.assertEqual(output["installed"][0]["packages"][0]["exported"], True)
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
                 self.assertEqual(output["installed"][1]["recipe"]["id"],
                                  "pkg1/1.0@danimtb/testing")
-                self.assertEqual(output["installed"][1]["recipe"]["dependency"], True)
+                self.assertTrue(output["installed"][1]["recipe"]["dependency"])
 
         conanfile = """from conans import ConanFile
 class MyConan(ConanFile):
