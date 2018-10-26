@@ -14,6 +14,7 @@ from six import StringIO
 from six.moves.urllib.parse import unquote
 
 from conans.client.client_cache import CONAN_CONF
+from conans.model.version import Version
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
@@ -45,6 +46,18 @@ class SystemPackageToolTest(unittest.TestCase):
     def setUp(self):
         out = TestBufferConanOutput()
         set_global_instances(out, requests)
+
+    def test_sudo_tty(self):
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",}):
+            self.assertFalse(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            self.assertTrue(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo --askpass ")
+
+            with mock.patch("sys.stdout.isatty", return_value=True):
+                self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
 
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
@@ -86,8 +99,11 @@ class SystemPackageToolTest(unittest.TestCase):
                 self.assertEqual(expected, command)
                 return ret
 
-        def _run_add_repository_test(repository, gpg_key, sudo, update):
-            sudo_cmd = "sudo " if sudo else ""
+        def _run_add_repository_test(repository, gpg_key, sudo, isatty, update):
+            sudo_cmd = ""
+            if sudo:
+                sudo_cmd = "sudo " if isatty else "sudo --askpass "
+
             runner = RunnerOrderedMock()
             runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if gpg_key:
@@ -110,12 +126,15 @@ class SystemPackageToolTest(unittest.TestCase):
         # Run several test cases
         repository = "deb http://repo/url/ saucy universe multiverse"
         gpg_key = 'http://one/key.gpg'
-        _run_add_repository_test(repository, gpg_key, sudo=True, update=True)
-        _run_add_repository_test(repository, gpg_key, sudo=True, update=False)
-        _run_add_repository_test(repository, gpg_key, sudo=False, update=True)
-        _run_add_repository_test(repository, gpg_key, sudo=False, update=False)
-        _run_add_repository_test(repository, gpg_key=None, sudo=True, update=True)
-        _run_add_repository_test(repository, gpg_key=None, sudo=False, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=True, isatty=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=True, isatty=False, update=False)
+        _run_add_repository_test(repository, gpg_key, sudo=False, isatty=False, update=True)
+        _run_add_repository_test(repository, gpg_key, sudo=False, isatty=False, update=False)
+        _run_add_repository_test(repository, gpg_key=None, sudo=True, isatty=False, update=True)
+        _run_add_repository_test(repository, gpg_key=None, sudo=False, isatty=True, update=False)
+
+        with mock.patch("sys.stdout.isatty", return_value=True):
+            _run_add_repository_test(repository, gpg_key, sudo=True, isatty=True, update=True)
 
     def system_package_tool_test(self):
 
@@ -129,41 +148,46 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo apt-get update")
+            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo apt-get update")
+            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "knoppix"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo apt-get update")
+            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+
+            os_info.linux_distro = "neon"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo yum update")
+            self.assertEquals(runner.command_called, "sudo --askpass yum update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
+            self.assertEquals(runner.command_called, "sudo --askpass zypper --non-interactive ref")
 
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo yum install -y a_package")
+            self.assertEquals(runner.command_called, "sudo --askpass yum install -y a_package")
 
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
-                self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
+                self.assertEquals(runner.command_called, "sudo --askpass apt-get install -y --no-install-recommends a_package")
 
             runner.return_ok = True
             spt.install("a_package", force=False)
@@ -184,9 +208,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo pkg update")
+            self.assertEquals(runner.command_called, "sudo --askpass pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo pkg install -y a_package")
+            self.assertEquals(runner.command_called, "sudo --askpass pkg install -y a_package")
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "pkg info a_package")
 
@@ -212,7 +236,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEquals(runner.command_called, "yum update")
+            self.assertEquals(runner.command_called, "yum update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
@@ -286,13 +310,13 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
-            runner = RunnerMultipleMock(["sudo apt-get update",
-                                         "sudo apt-get install -y --no-install-recommends yet_another_package"])
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update",
+                                         "sudo --askpass apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(7, runner.calls)
 
-            runner = RunnerMultipleMock(["sudo apt-get update"])
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             with self.assertRaises(ConanException):
                 spt.install(packages)
@@ -334,7 +358,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo apt-get update"])
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
@@ -349,7 +373,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo apt-get update"])
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertIn('\n'.join(packages), tools.system_pm._global_output)
@@ -360,7 +384,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_MODE": "EnAbLeD",
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
-            runner = RunnerMultipleMock(["sudo apt-get update"])
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
@@ -391,13 +415,13 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info = OSInfo()
             update_command = None
             if os_info.with_apt:
-                update_command = "sudo apt-get update"
+                update_command = "sudo --askpass apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo yum update"
+                update_command = "sudo --askpass yum update -y"
             elif os_info.with_zypper:
-                update_command = "sudo zypper --non-interactive ref"
+                update_command = "sudo --askpass zypper --non-interactive ref"
             elif os_info.with_pacman:
-                update_command = "sudo pacman -Syyu --noconfirm"
+                update_command = "sudo --askpass pacman -Syyu --noconfirm"
 
             return "Command '{0}' failed".format(update_command) if update_command is not None else None
 
@@ -1547,7 +1571,6 @@ class HelloConan(ConanFile):
 
 
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
-
     def test_clone(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -1606,8 +1629,9 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         self.assertFalse(svn.is_pristine())
         svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
-        self.assertTrue(svn.is_pristine())
-        # self.assertFalse(os.path.exists(new_file))
+        if svn.version >= SVN.API_CHANGE_VERSION:  # SVN::is_pristine returns always False.
+            self.assertTrue(svn.is_pristine())
+            # self.assertFalse(os.path.exists(new_file))
 
     def test_excluded_files(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
@@ -1659,7 +1683,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
         runner = MyRunner(svn)
         svn.checkout(url=project_url)
-        if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+        if svn.version >= SVN.API_CHANGE_VERSION:
             self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
         else:
             self.assertIn("--trust-server-cert", runner.calls[1])
@@ -1742,6 +1766,21 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
 
+class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
+    def run(self, *args, **kwargs):
+        try:
+            setattr(SVN, '_version', Version("1.5"))
+            self.assertTrue(SVN().version < SVN.API_CHANGE_VERSION)
+            super(SVNToolTestsBasicOldVersion, self).run(*args, **kwargs)
+        finally:
+            delattr(SVN, '_version')
+            assert SVN().version == SVN.get_version(), \
+                "{} != {}".format(SVN().version, SVN.get_version())
+
+    # Do not add tests to this class, all should be compatible with new version of SVN
+
+
+@unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def test_checkout(self):

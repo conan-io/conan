@@ -1,22 +1,23 @@
-import os
-import sys
 import imp
 import inspect
+import os
+import sys
+
 import uuid
 
+from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
+from conans.client.output import ScopedOutput
+from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
+from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
-from conans.client.output import ScopedOutput
-from conans.model.profile import Profile
-from conans.client.generators import registered_generators
-from conans.model.conan_generator import Generator
-from conans.client.tools.files import chdir
 
 
 class ProcessedProfile(object):
@@ -31,7 +32,6 @@ class ProcessedProfile(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
         # Make sure the paths are normalized first, so env_values can be just a copy
-        self._env_values.normalize_paths()
         self._dev_reference = create_reference
 
 
@@ -102,7 +102,8 @@ class ConanFileLoader(object):
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
             tmp_settings = processed_profile._settings.copy()
-            if processed_profile._package_settings and conanfile.name in processed_profile._package_settings:
+            if (processed_profile._package_settings and
+                    conanfile.name in processed_profile._package_settings):
                 # Update the values, keeping old ones (confusing assign)
                 values_tuple = processed_profile._package_settings[conanfile.name]
                 tmp_settings.values = Values.from_list(values_tuple)
@@ -187,7 +188,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_module(conanfile_module, filename):
+def _parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
@@ -195,16 +196,16 @@ def _parse_module(conanfile_module, filename):
     """
     result = None
     for name, attr in conanfile_module.__dict__.items():
-        if name[0] == "_":
+        if (name.startswith("_") or not inspect.isclass(attr) or
+                attr.__dict__.get("__module__") != module_id):
             continue
-        if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
-                attr.__dict__["__module__"] == filename):
+
+        if issubclass(attr, ConanFile) and attr != ConanFile:
             if result is None:
                 result = attr
             else:
                 raise ConanException("More than 1 conanfile in the file")
-        if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
-                attr.__dict__["__module__"] == filename):
+        elif issubclass(attr, Generator) and attr != Generator:
             registered_generators.add(attr.__name__, attr)
 
     if result is None:
@@ -224,19 +225,19 @@ def _parse_file(conan_file_path):
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
 
-    filename = os.path.splitext(os.path.basename(conan_file_path))[0]
-
     try:
+        module_id = str(uuid.uuid1())
         current_dir = os.path.dirname(conan_file_path)
         sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(filename, conan_file_path)
+            loaded = imp.load_source(module_id, conan_file_path)
             loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
-        # Put all imported files under a new package name
-        module_id = uuid.uuid1()
+
+        # These lines are necessary, otherwise local conanfile imports with same name
+        # collide, but no error, and overwrite other packages imports!!
         added_modules = set(sys.modules).difference(old_modules)
         for added in added_modules:
             module = sys.modules[added]
@@ -257,4 +258,4 @@ def _parse_file(conan_file_path):
     finally:
         sys.path.pop()
 
-    return loaded, filename
+    return loaded, module_id

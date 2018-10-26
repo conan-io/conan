@@ -447,13 +447,13 @@ class ConanLib(ConanFile):
         "type": "git",
         "url": "%s",
         "revision": "my_release",
-        "subfolder": "src"
+        "subfolder": "src/nested"
     }
 
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
-        assert(os.path.exists(os.path.join("src", "myfile")))
+        assert(os.path.exists(os.path.join("src", "nested", "myfile")))
         tools.save("cosa.txt", "contents")
 
     def build(self):
