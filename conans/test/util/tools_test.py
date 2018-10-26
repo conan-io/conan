@@ -22,7 +22,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict, vswhere
+from conans.client.tools.win import vcvars_dict, vswhere, get_cased_path
 from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
@@ -1869,7 +1869,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         svn.checkout(url=project_url)
         self.assertTrue(svn.is_pristine())
 
-        shutil.rmtree(repo_url)
+        shutil.rmtree(get_cased_path(repo_url))
         with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
             self.assertFalse(svn.is_pristine())
 
