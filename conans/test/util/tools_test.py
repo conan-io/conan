@@ -1869,9 +1869,6 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         svn.checkout(url=project_url)
         self.assertTrue(svn.is_pristine())
 
-        # drive, path = os.path.splitdrive(repo_url)
-        # repo_url = drive.upper() + get_cased_path(path)
-
         shutil.rmtree(repo_url, ignore_errors=False, onerror=try_remove_readonly)
         self.assertFalse(os.path.exists(repo_url))
         with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
