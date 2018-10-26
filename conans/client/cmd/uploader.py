@@ -97,7 +97,7 @@ class CmdUpload(object):
         if not cur_recipe_remote and policy != UPLOAD_POLICY_SKIP:
             self._registry.refs.set(conan_ref, recipe_remote.name)
 
-        recorder.add_recipe(str(conan_ref), recipe_remote.name, recipe_remote.url)
+        recorder.add_recipe(conan_ref, recipe_remote.name, recipe_remote.url)
 
         if packages_ids:
             # Can't use build_policy_always here because it's not loaded (only load_class)
@@ -117,7 +117,7 @@ class CmdUpload(object):
                     self._registry.prefs.set(pref, p_remote.name)
 
                 if ret_upload_package:
-                    recorder.add_package(str(conan_ref), package_id)
+                    recorder.add_package(pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
