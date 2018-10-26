@@ -33,7 +33,7 @@ from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
-    SVNLocalRepoTestCase, StoppableThreadBottle
+    SVNLocalRepoTestCase, StoppableThreadBottle, try_remove_readonly
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -1869,10 +1869,11 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         svn.checkout(url=project_url)
         self.assertTrue(svn.is_pristine())
 
-        drive, path = os.path.splitdrive(repo_url)
-        repo_url = drive.upper() + get_cased_path(path)
+        # drive, path = os.path.splitdrive(repo_url)
+        # repo_url = drive.upper() + get_cased_path(path)
 
-        shutil.rmtree(repo_url)
+        shutil.rmtree(repo_url, ignore_errors=False, onerror=try_remove_readonly)
+        self.assertFalse(os.path.exists(repo_url))
         with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
             self.assertFalse(svn.is_pristine())
 
