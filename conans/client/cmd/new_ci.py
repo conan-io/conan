@@ -10,6 +10,7 @@ env:
      {upload}
 linux: &linux
    os: linux
+   dist: xenial
    sudo: required
    language: python
    python: "3.6"
@@ -48,7 +49,7 @@ osx_config = """
         env: CONAN_APPLE_CLANG_VERSIONS={version}
 """
 
-build_py = """from conan.packager import ConanMultiPackager
+build_py = """from cpt.packager import ConanMultiPackager
 
 
 if __name__ == "__main__":
@@ -103,9 +104,7 @@ python build.py
 appveyor = r"""build: false
 
 environment:
-    PYTHON: "C:\\Python27"
-    PYTHON_VERSION: "2.7.8"
-    PYTHON_ARCH: "32"
+    PYTHON: "C:\\Python37"
 
     CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
