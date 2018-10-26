@@ -18,12 +18,14 @@ class VisualStudioBuildEnvironment(object):
     https://msdn.microsoft.com/en-us/library/6y6t9esh.aspx
 
     """
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, with_build_type_flags=True):
         """
         :param conanfile: ConanFile instance
         :param quote_paths: The path directories will be quoted. If you are using the vars together with
                             environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
         """
+        self._with_build_type_flags = with_build_type_flags
+
         self._settings = conanfile.settings
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._runtime = self._settings.get_safe("compiler.runtime")
@@ -45,7 +47,7 @@ class VisualStudioBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        ret.extend(vs_build_type_flags(self._settings))
+        ret.extend(vs_build_type_flags(self._settings, with_flags=self._with_build_type_flags))
         return ret
 
     def _get_cl_list(self, quotes=True):
@@ -121,16 +123,18 @@ class VisualStudioBuildEnvironment(object):
         return vs_std_cpp(self._settings)
 
 
-def vs_build_type_flags(settings):
+def vs_build_type_flags(settings, with_flags=True):
     build_type = settings.get_safe("build_type")
     ret = []
     btd = build_type_define(build_type=build_type)
     if btd:
         ret.extend(format_defines([btd]))
-    btfs = build_type_flags("Visual Studio", build_type=build_type,
-                            vs_toolset=settings.get_safe("compiler.toolset"))
-    if btfs:
-        ret.extend(btfs)
+    if with_flags:
+        # When using to build a vs project we don't want to adjust these flags
+        btfs = build_type_flags("Visual Studio", build_type=build_type,
+                                vs_toolset=settings.get_safe("compiler.toolset"))
+        if btfs:
+            ret.extend(btfs)
 
     return ret
 
