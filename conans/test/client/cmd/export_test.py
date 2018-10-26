@@ -4,6 +4,9 @@ import shutil
 import unittest
 from collections import namedtuple
 
+from conans.client.tools import chdir
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save, load
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.loader import _parse_file
@@ -79,3 +82,48 @@ class ConanLib(ConanFile):
         after_scm = ''
         after_recipe = ''
         self._do_actual_test(scm_data=scm_data, after_scm=after_scm, after_recipe=after_recipe)
+
+
+class SCMUpload(unittest.TestCase):
+
+    def scm_sources_test(self):
+        """ Test conan_sources.tgz is deleted in server when removing 'exports_sources' and using
+        'scm'"""
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "test"
+    version = "1.0"
+"""
+        exports_sources = """
+    exports_sources = "include/*"
+"""
+        servers = {"upload_repo": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                             users={"lasote": "mypass"})}
+        client = TestClient(servers=servers, users={"upload_repo": [("lasote", "mypass")]})
+        client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
+        client.run("create . danimtb/testing")
+        client.run("upload test/1.0@danimtb/testing -r upload_repo")
+        self.assertIn("Uploading conan_sources.tgz", client.out)
+        conan_ref = ConanFileReference("test", "1.0", "danimtb", "testing")
+        export_sources_path = os.path.join(servers["upload_repo"].paths.export(conan_ref),
+                                           "conan_sources.tgz")
+        self.assertTrue(os.path.exists(export_sources_path))
+
+        scm = """
+    scm = {"type": "git",
+           "url": "auto",
+           "revision": "auto"}
+"""
+        client.save({"conanfile.py": conanfile + scm})
+        with chdir(client.current_folder):
+            client.runner("git init")
+            client.runner('git config user.email "you@example.com"')
+            client.runner('git config user.name "Your Name"')
+            client.runner("git remote add origin https://github.com/fake/fake.git")
+            client.runner("git add .")
+            client.runner("git commit -m \"initial commit\"")
+        client.run("create . danimtb/testing")
+        self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
+        client.run("upload test/1.0@danimtb/testing -r upload_repo")
+        self.assertNotIn("Uploading conan_sources.tgz", client.out)
+        self.assertFalse(os.path.exists(export_sources_path))

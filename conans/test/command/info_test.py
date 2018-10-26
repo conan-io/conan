@@ -236,20 +236,20 @@ class AConan(ConanFile):
 
         self.client.run("info . --only None")
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
-                          "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
+                          "Hello1/0.1@lasote/stable"], str(self.client.out).splitlines()[-3:])
         self.client.run("info . --only=date")
         lines = [(line if "date" not in line else "Date")
-                 for line in str(self.client.user_io.out).splitlines()]
+                 for line in str(self.client.out).splitlines()]
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date"], lines)
 
         self.client.run("info . --only=invalid", ignore_error=True)
-        self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertNotIn("with --path specified, allowed values:", self.client.user_io.out)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertNotIn("with --path specified, allowed values:", self.client.out)
 
         self.client.run("info . --paths --only=bad", ignore_error=True)
-        self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertIn("with --path specified, allowed values:", self.client.out)
 
     def test_cwd(self):
         self.client = TestClient()
@@ -473,3 +473,58 @@ class AConan(ConanFile):
 
         self.client.run("info conanfile.txt", ignore_error=True)
         self.assertIn("ERROR: Conanfile not found", self.client.out)
+
+    def test_common_attributes(self):
+        self.client = TestClient()
+
+        conanfile = """from conans import ConanFile
+from conans.util.files import load, save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+    settings = "build_type"
+
+"""
+
+        self.client.save({"subfolder/conanfile.py": conanfile})
+        self.client.run("export ./subfolder lasote/testing")
+
+        self.client.run("info ./subfolder")
+
+        self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
+        self.assertNotIn("License:", self.client.user_io.out)
+        self.assertNotIn("Author:", self.client.user_io.out)
+        self.assertNotIn("Topics:", self.client.user_io.out)
+        self.assertNotIn("Homepage:", self.client.user_io.out)
+        self.assertNotIn("URL:", self.client.user_io.out)
+
+    def test_full_attributes(self):
+        self.client = TestClient()
+
+        conanfile = """from conans import ConanFile
+from conans.util.files import load, save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.2"
+    settings = "build_type"
+    author = "John Doe"
+    license = "MIT"
+    url = "https://foo.bar.baz"
+    homepage = "https://foo.bar.site"
+    topics = ["foo", "bar", "qux"]
+
+"""
+
+        self.client.save({"subfolder/conanfile.py": conanfile})
+        self.client.run("export ./subfolder lasote/testing")
+
+        self.client.run("info ./subfolder")
+
+        self.assertIn("Pkg/0.2@PROJECT", self.client.user_io.out)
+        self.assertIn("License: MIT", self.client.user_io.out)
+        self.assertIn("Author: John Doe", self.client.user_io.out)
+        self.assertIn("Topics: foo, bar, qux", self.client.user_io.out)
+        self.assertIn("URL: https://foo.bar.baz", self.client.user_io.out)
+        self.assertIn("Homepage: https://foo.bar.site", self.client.user_io.out)

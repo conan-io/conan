@@ -138,8 +138,10 @@ class CMake(object):
 
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
-        if compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles',
-                                                              'NMake Makefiles JOM']:
+        the_os = self._settings.get_safe("os")
+        is_clangcl = the_os == 'Windows' and compiler == 'clang'
+        is_msvc = compiler == 'Visual Studio'
+        if (is_msvc or is_clangcl) and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
             with tools.vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
@@ -180,9 +182,9 @@ class CMake(object):
             command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
-                    self._conanfile.run(command)
+                    self._run(command)
             else:
-                self._conanfile.run(command)
+                self._run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -323,12 +325,13 @@ class CMake(object):
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
                         ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False)
                         if ret:
-                            self._conanfile.output.info("Patched paths for %s: %s to %s" % (dep, from_str, dep_str))
+                            self._conanfile.output.info("Patched paths for %s: %s to %s"
+                                                        % (dep, from_str, dep_str))
 
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)
