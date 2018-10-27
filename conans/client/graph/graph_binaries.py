@@ -4,6 +4,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE
                                        BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
                                        BINARY_WORKSPACE)
 from conans.client.output import ScopedOutput
+from conans.client.package_metadata_manager import get_recipe_revision_from_package
 from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -31,8 +32,8 @@ class GraphBinariesAnalyzer(object):
 
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled:
-            recipe_rev_of_package = ConanInfo.load_from_package(package_folder).recipe_revision
-            if recipe_rev_of_package != node.conan_ref.revision:
+            rec_rev = get_recipe_revision_from_package(package_ref, self._client_cache)
+            if rec_rev != node.conan_ref.revision:
                 output.warn("Outdated package! The package doesn't belong "
                             "to the installed recipe revision: %s" % str(package_ref))
 

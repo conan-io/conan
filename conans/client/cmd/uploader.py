@@ -2,7 +2,8 @@ import os
 
 import time
 
-from conans.client.revisions import get_recipe_revision, get_package_revision
+from conans.client.package_metadata_manager import get_recipe_revision, get_package_revision, \
+    get_recipe_revision_from_package
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
@@ -109,8 +110,7 @@ class CmdUpload(object):
                 recipe_package_ids = []
                 for package_id in packages_ids:
                     pref = PackageReference(new_ref, package_id)
-                    package_folder = self._client_cache.package(pref, conan_file.short_paths)
-                    rec_rev = ConanInfo.load_from_package(package_folder).recipe_revision
+                    rec_rev = get_recipe_revision_from_package(pref, self._client_cache)
                     if new_ref.revision != rec_rev:
                         self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
                                                "the current recipe revision" % package_id)

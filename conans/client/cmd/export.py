@@ -6,6 +6,7 @@ import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
+from conans.client.package_metadata_manager import save_recipe_revision
 from conans.errors import ConanException
 from conans.model.conan_file import get_scm_data
 from conans.model.manifest import FileTreeManifest
@@ -96,6 +97,8 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
                                    scm_data)
 
+    return scm_data
+
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
@@ -156,8 +159,8 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
     _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                             output, client_cache, conan_ref)
+    scm_data = _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
+                                        output, client_cache, conan_ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -171,6 +174,9 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
         modified_recipe = True
 
     digest.save(exports_folder)
+
+    revision = scm_data.revision if scm_data else digest.summary_hash
+    save_recipe_revision(conan_ref, client_cache, revision)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = client_cache.source(conan_ref, conanfile.short_paths)

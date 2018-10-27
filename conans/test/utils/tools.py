@@ -33,7 +33,7 @@ from conans.client.plugin_manager import PluginManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.revisions import get_recipe_revision, get_package_revision
+from conans.client.package_metadata_manager import get_recipe_revision, get_package_revision
 from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN

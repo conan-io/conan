@@ -1,18 +1,18 @@
-import re
+import os
 from fnmatch import translate
+
+import jwt
+import re
 
 from conans import load
 from conans.errors import RequestErrorException, NotFoundException, ForbiddenException, \
     ConanException
-import os
-import jwt
-
 from conans.model.info import ConanInfo
-from conans.paths import CONANINFO
-from conans.util.files import mkdir, list_folder_subdirs
 from conans.model.ref import PackageReference, ConanFileReference
+from conans.paths import CONANINFO
+from conans.search.search import _partial_match, filter_packages
+from conans.util.files import mkdir, list_folder_subdirs
 from conans.util.log import logger
-from conans.search.search import _partial_match, filter_packages, search_packages
 
 
 class FileUploadDownloadService(object):
@@ -244,3 +244,41 @@ def _validate_conan_reg_filenames(files):
         if ".." in filename:
             # Log something
             raise RequestErrorException(message)
+
+
+def search_packages(paths, reference, query):
+    """ Return a dict like this:
+
+            {package_ID: {name: "OpenCV",
+                           version: "2.14",
+                           settings: {os: Windows}}}
+    param conan_ref: ConanFileReference object
+    """
+    if not os.path.exists(paths.conan(reference)):
+        raise NotFoundException("Recipe not found: %s" % str(reference))
+    infos = _get_local_infos_min(paths, reference)
+    return filter_packages(query, infos)
+
+
+def _get_local_infos_min(paths, reference):
+    result = {}
+    packages_path = paths.packages(reference)
+    subdirs = list_folder_subdirs(packages_path, level=1)
+    for package_id in subdirs:
+        # Read conaninfo
+        try:
+            package_reference = PackageReference(reference, package_id)
+            info_path = os.path.join(paths.package(package_reference,
+                                                   short_paths=None), CONANINFO)
+            if not os.path.exists(info_path):
+                raise NotFoundException("")
+            conan_info_content = load(info_path)
+            info = ConanInfo.loads(conan_info_content)
+            conan_vars_info = info.serialize_min()
+            result[package_id] = conan_vars_info
+
+        except Exception as exc:
+            logger.error("Package %s has no ConanInfo file" % str(package_reference))
+            if str(exc):
+                logger.error(str(exc))
+    return result

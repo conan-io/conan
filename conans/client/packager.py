@@ -95,6 +95,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
+
     plugin_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                            reference=reference, package_id=pkg_id)
 

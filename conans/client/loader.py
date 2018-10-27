@@ -32,7 +32,6 @@ class ProcessedProfile(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
         # Make sure the paths are normalized first, so env_values can be just a copy
-        self._env_values.normalize_paths()
         self._dev_reference = create_reference
 
 
@@ -44,9 +43,13 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
-        conanfile = load_class_without_python_requires(conanfile_path)
-        conanfile.python_requires = self._python_requires.references
-        return conanfile
+        loaded, filename = _parse_file(conanfile_path)
+        try:
+            conanfile = _parse_module(loaded, filename)
+            conanfile.python_requires = self._python_requires.references
+            return conanfile
+        except Exception as e:  # re-raise with file name
+            raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -93,8 +96,7 @@ class ConanFileLoader(object):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
-        if (processed_profile._dev_reference and reference and
-                processed_profile._dev_reference == reference.copy_clear_rev()):
+        if processed_profile._dev_reference and processed_profile._dev_reference == reference:
             conanfile.develop = True
         try:
             # Prepare the settings for the loaded conanfile
@@ -257,12 +259,3 @@ def _parse_file(conan_file_path):
         sys.path.pop()
 
     return loaded, module_id
-
-
-def load_class_without_python_requires(conanfile_path):
-    loaded, module_id = _parse_file(conanfile_path)
-    try:
-        conanfile = _parse_module(loaded, module_id)
-        return conanfile
-    except Exception as e:  # re-raise with file name
-        raise ConanException("%s: %s" % (conanfile_path, str(e)))

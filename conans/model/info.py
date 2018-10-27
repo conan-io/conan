@@ -232,7 +232,6 @@ class ConanInfo(object):
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
-        result.recipe_revision = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
@@ -243,8 +242,8 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "scope", "recipe_hash",
-                                     "recipe_revision", "env"], raise_unexpected_field=False)
+                                     "requires", "full_requires", "scope", "recipe_hash", "env"],
+                              raise_unexpected_field=False)
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
@@ -253,7 +252,6 @@ class ConanInfo(object):
         result.full_requires = RequirementsList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires)
         result.recipe_hash = parser.recipe_hash or None
-        result.recipe_revision = parser.recipe_revision or None
 
         # TODO: Missing handling paring of requires, but not necessary now
         result.env_values = EnvValues.loads(parser.env)
@@ -279,7 +277,6 @@ class ConanInfo(object):
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
-        result.append("\n[recipe_revision]\n%s" % indent(self.recipe_revision))
         result.append("\n[env]")
         result.append(indent(self.env_values.dumps()))
 
@@ -333,8 +330,7 @@ class ConanInfo(object):
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
                            "full_requires": self.full_requires.serialize(),
-                           "recipe_hash": self.recipe_hash,
-                           "recipe_revision": self.recipe_revision}
+                           "recipe_hash": self.recipe_hash}
         return conan_info_json
 
     def header_only(self):

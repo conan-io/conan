@@ -41,9 +41,6 @@ info_text = '''[settings]
 [recipe_hash]
     asdasdasd
 
-[recipe_revision]
-    7383838382
-
 [env]
     A_OTHERVAR=OTHERVALUES
     Z_OTHERVAR=OTHERVALUES
@@ -62,7 +59,6 @@ class ConanInfoTest(unittest.TestCase):
                      'zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3'],
                     'options': {'shared': 'False', 'fPIC': 'True', 'header_only': 'False'},
                     'recipe_hash': "asdasdasd",
-                    'recipe_revision': "7383838382",
                     'settings': {'arch': 'x86_64', 'compiler.libcxx': 'libstdc++11',
                                  'compiler.version': '5.2', 'os': 'Linux',
                                  'build_type': 'Debug', 'compiler': 'gcc'}}

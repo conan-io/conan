@@ -54,8 +54,8 @@ class PackageMetadata(object):
         ret = PackageMetadata()
         data = json.loads(content)
         ret.recipe = _RecipeMetadata.loads(data.get("recipe"))
-        ret.packages = {pid: _BinaryPackageMetadata.loads(v)
-                        for pid, v in data.get("packages").items()}
+        for pid, v in data.get("packages").items():
+            ret.packages[pid] = _BinaryPackageMetadata.loads(v)
         return ret
 
     def dumps(self):

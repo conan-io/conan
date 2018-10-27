@@ -11,6 +11,7 @@ from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -298,6 +299,13 @@ class ClientCache(SimplePaths):
 
     def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
+
+    def load_package_metadata(self, conan_reference):
+        text = load(self.package_metadata(conan_reference))
+        return PackageMetadata.loads(text)
+
+    def save_package_metadata(self, conan_reference, package_metadata):
+        return save(self.package_metadata(conan_reference), package_metadata.dumps())
 
 
 def _mix_settings_with_env(settings):

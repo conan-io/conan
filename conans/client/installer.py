@@ -1,7 +1,9 @@
 import os
 import platform
+
 import shutil
 import time
+
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators, TXTGenerator
@@ -9,11 +11,11 @@ from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
     BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
+from conans.client.package_metadata_manager import get_recipe_revision, save_package_revision
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
     INSTALL_ERROR_BUILDING, \
     INSTALL_ERROR_MISSING
-from conans.client.revisions import get_recipe_revision
 from conans.client.source import config_source, complete_recipe_sources
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, conanfile_exception_formatter,
@@ -21,6 +23,7 @@ from conans.errors import (ConanException, conanfile_exception_formatter,
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
@@ -30,7 +33,6 @@ from conans.util.files import (save, rmdir, mkdir, make_read_only,
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
-from conans.model.manifest import FileTreeManifest
 
 
 def build_id(conan_file):
@@ -126,9 +128,6 @@ class _ConanPackageBuilder(object):
         manifest = self._client_cache.load_manifest(self._conan_ref)
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
-        revision = get_recipe_revision(self._conan_ref, self._client_cache)
-        self._conan_file.info.recipe_revision = revision
-
         # Creating ***info.txt files
         save(os.path.join(self.build_folder, CONANINFO), self._conan_file.info.dumps())
         self._out.info("Generated %s" % CONANINFO)
@@ -149,6 +148,11 @@ class _ConanPackageBuilder(object):
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
                            self.package_folder, install_folder, self._out, self._plugin_manager,
                            conanfile_path, self._conan_ref)
+
+        recipe_revision = get_recipe_revision(self._conan_ref, self._client_cache)
+        revision = self._client_cache.package_summary_hash(self._package_reference)
+        save_package_revision(self._package_reference, self._client_cache, recipe_revision,
+                              revision)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
