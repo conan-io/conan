@@ -5,7 +5,6 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.client.source import complete_recipe_sources
-from conans.server.conf import DEFAULT_REVISION_V1
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
@@ -20,8 +19,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
 
     plugin_manager.execute("pre_download", reference=reference, remote=remote)
     # First of all download package recipe
-    new_ref = remote_manager.get_recipe(reference, remote)
-    save_recipe_revision(new_ref, client_cache, new_ref.revision or DEFAULT_REVISION_V1)
+    remote_manager.get_recipe(reference, remote)
 
     registry.refs.set(reference, remote.name)
     conan_file_path = client_cache.conanfile(reference)
@@ -61,6 +59,4 @@ def _download_binaries(reference, package_ids, client_cache, remote_manager, rem
         package_ref = PackageReference(reference, package_id)
         package_folder = client_cache.package(package_ref, short_paths=short_paths)
         output.info("Downloading %s" % str(package_ref))
-        new_ref = remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
-        save_package_revision(new_ref, client_cache, new_ref.conan.revision,
-                              new_ref.revision or DEFAULT_REVISION_V1)
+        remote_manager.get_package(package_ref, package_folder, remote, output, recorder)

@@ -148,14 +148,14 @@ class RestCommonMethods(object):
         self.check_credentials()
 
         # Get the remote snapshot
-        remote_snapshot, ref_snapshot = self._get_recipe_snapshot(conan_reference)
+        remote_snapshot, ref_snapshot, rev_time = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, ref_snapshot
+                return False, ref_snapshot, rev_time
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -170,7 +170,7 @@ class RestCommonMethods(object):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return (files_to_upload or deleted), conan_reference
+        return (files_to_upload or deleted), conan_reference, rev_time
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
         """
@@ -182,14 +182,14 @@ class RestCommonMethods(object):
         t1 = time.time()
         # Get the remote snapshot
         pref = package_reference
-        remote_snapshot, pref_snapshot = self._get_package_snapshot(pref)
+        remote_snapshot, pref_snapshot, rev_time = self._get_package_snapshot(pref)
 
         if remote_snapshot:
             remote_manifest = self.get_package_manifest(pref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, pref_snapshot
+                return False, pref_snapshot, rev_time
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
@@ -205,7 +205,7 @@ class RestCommonMethods(object):
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-        return files_to_upload or deleted, package_reference
+        return files_to_upload or deleted, package_reference, rev_time
 
     def search(self, pattern=None, ignorecase=True):
         """

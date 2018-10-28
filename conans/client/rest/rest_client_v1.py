@@ -185,7 +185,8 @@ class RestV1Methods(RestCommonMethods):
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files, conan_reference
+        rev_time = None
+        return zipped_files, conan_reference, rev_time
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)
@@ -207,7 +208,8 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_package_urls(package_reference)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files, package_reference
+        rev_time = None
+        return zipped_files, package_reference, rev_time
 
     def _get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
@@ -272,12 +274,14 @@ class RestV1Methods(RestCommonMethods):
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
         snap = self._get_snapshot(url)
-        return snap, reference.copy_clear_rev()
+        rev_time = None
+        return snap, reference.copy_clear_rev(), rev_time
 
     def _get_package_snapshot(self, package_reference):
         url = self._package_url(package_reference)
         snap = self._get_snapshot(url)
-        return snap, package_reference
+        rev_time = None
+        return snap, package_reference, rev_time
 
     def _recipe_url(self, conan_reference):
         return "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))

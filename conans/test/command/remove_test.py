@@ -244,10 +244,10 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 
@@ -261,10 +261,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+                                    "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+                                    "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 
@@ -278,10 +280,10 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 

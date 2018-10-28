@@ -44,24 +44,26 @@ class RestV2Methods(RestCommonMethods):
             data = self._get_file_list_json(url)
             files_list = [os.path.normpath(filename) for filename in data["files"]]
             reference = data["reference"]
+            rev_time = data["time"]
         except NotFoundException:
             files_list = []
-        return files_list, reference
+            rev_time = None
+        return files_list, reference, rev_time
 
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
         repr_ref = reference.full_repr()
-        snap, reference = self._get_snapshot(url, repr_ref)
+        snap, reference, rev_time = self._get_snapshot(url, repr_ref)
         reference = ConanFileReference.loads(reference)
-        return snap, reference
+        return snap, reference, rev_time
 
     def _get_package_snapshot(self, p_ref):
         url = self._package_url(p_ref)
         repr_ref = p_ref.full_repr()
-        snap, p_reference = self._get_snapshot(url, repr_ref)
+        snap, p_reference, rev_time = self._get_snapshot(url, repr_ref)
 
         reference = PackageReference.loads(p_reference)
-        return snap, reference
+        return snap, reference, rev_time
 
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
@@ -82,6 +84,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(conan_reference)
         data = self._get_file_list_json(url)
         files = data["files"]
+        rev_time = data["time"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
         reference = ConanFileReference.loads(data["reference"])
         if EXPORT_SOURCES_TGZ_NAME in files:
@@ -91,7 +94,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(reference)
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, reference
+        return ret, reference, rev_time
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         url = self._recipe_url(conan_reference)
@@ -118,13 +121,14 @@ class RestV2Methods(RestCommonMethods):
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
         files = data["files"]
+        rev_time = data["time"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         new_reference = PackageReference.loads(data["reference"])
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, new_reference
+        return ret, new_reference, rev_time
 
     def get_path(self, conan_reference, package_id, path):
 

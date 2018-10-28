@@ -6,11 +6,13 @@ class _RecipeMetadata(object):
 
     def __init__(self):
         self.revision = None
+        self.time = None
         self.properties = {}
 
     def to_dict(self):
         ret = {"revision": self.revision,
-               "properties": self.properties}
+               "properties": self.properties,
+               "time": self.time}
         return ret
 
     @staticmethod
@@ -18,6 +20,7 @@ class _RecipeMetadata(object):
         ret = _RecipeMetadata()
         ret.revision = data["revision"]
         ret.properties = data["properties"]
+        ret.time = data["time"]
         return ret
 
 
@@ -25,13 +28,15 @@ class _BinaryPackageMetadata(object):
 
     def __init__(self):
         self.revision = None
+        self.time = None
         self.recipe_revision = None
         self.properties = {}
 
     def to_dict(self):
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,
-               "properties": self.properties}
+               "properties": self.properties,
+               "time": self.time}
         return ret
 
     @staticmethod
@@ -40,6 +45,7 @@ class _BinaryPackageMetadata(object):
         ret.revision = data.get("revision")
         ret.recipe_revision = data.get("recipe_revision")
         ret.properties = data.get("properties")
+        ret.time = data.get("time")
         return ret
 
 

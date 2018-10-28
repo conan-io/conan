@@ -18,13 +18,15 @@ class ConanServiceV2(object):
     def get_recipe_file_list(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
         reference = self._server_store.ref_with_rev(reference)
+        the_time = self._server_store.get_revision_time(reference)
         file_list = self._server_store.get_recipe_file_list(reference)
         if not file_list:
             raise NotFoundException("conanfile not found")
 
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
-                "reference": reference.full_repr()}
+                "reference": reference.full_repr(),
+                "time": the_time}
 
     def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
@@ -49,10 +51,11 @@ class ConanServiceV2(object):
             raise NotFoundException("conanfile not found")
 
         p_reference = self._server_store.p_ref_with_rev(p_reference)
-
+        the_time = self._server_store.get_package_revision_time(p_reference)
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
-                "reference": p_reference.full_repr()}
+                "reference": p_reference.full_repr(),
+                "time": the_time}
 
     def get_package_file(self, p_reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, p_reference.conan)

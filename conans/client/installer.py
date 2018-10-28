@@ -152,7 +152,7 @@ class _ConanPackageBuilder(object):
         recipe_revision = get_recipe_revision(self._conan_ref, self._client_cache)
         revision = self._client_cache.package_summary_hash(self._package_reference)
         save_package_revision(self._package_reference, self._client_cache, recipe_revision,
-                              revision)
+                              revision, None)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)

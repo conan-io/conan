@@ -170,7 +170,7 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
 
     def validate(self):
         if self.revision:
-            ConanName.validate_name(self.revision, reference_token="revision")
+            ConanName.validate_revision(self.revision)
 
     @staticmethod
     def loads(text, validate=True):

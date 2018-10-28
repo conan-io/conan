@@ -176,7 +176,7 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
     digest.save(exports_folder)
 
     revision = scm_data.revision if scm_data else digest.summary_hash
-    save_recipe_revision(conan_ref, client_cache, revision)
+    save_recipe_revision(conan_ref, client_cache, revision, None)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = client_cache.source(conan_ref, conanfile.short_paths)

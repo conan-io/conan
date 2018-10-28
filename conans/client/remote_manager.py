@@ -7,6 +7,7 @@ import traceback
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
+from conans.client.package_metadata_manager import save_recipe_revision, save_package_revision
 from conans.client.remote_registry import Remote
 from conans.client.source import merge_directories
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
@@ -64,9 +65,12 @@ class RemoteManager(object):
         if policy == UPLOAD_POLICY_SKIP:
             return conan_reference
 
-        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
-                                         retry_wait, policy, remote_manifest)
+        ret, new_ref, rev_time = self._call_remote(remote, "upload_recipe", conan_reference,
+                                                   the_files, retry,
+                                                   retry_wait, policy, remote_manifest)
 
+        # Update package revision with the rev_time (Created locally but with rev_time None)
+        save_recipe_revision(new_ref, self._client_cache, new_ref.revision, rev_time)
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
                                             UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
@@ -153,9 +157,12 @@ class RemoteManager(object):
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        uploaded, new_pref = self._call_remote(remote, "upload_package", package_reference,
-                                               the_files, retry, retry_wait, policy)
+        uploaded, new_pref, rev_time = self._call_remote(remote, "upload_package", package_reference,
+                                                         the_files, retry, retry_wait, policy)
 
+        # Update package revision with the rev_time (Created locally but with rev_time None)
+        save_package_revision(new_pref, self._client_cache, new_pref.conan.revision,
+                              new_pref.revision, rev_time)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)
@@ -203,8 +210,8 @@ class RemoteManager(object):
         rmdir(dest_folder)
 
         t1 = time.time()
-        zipped_files, conan_reference = self._call_remote(remote, "get_recipe", conan_reference,
-                                                          dest_folder)
+        tmp = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        zipped_files, conan_reference, rev_time = tmp
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote.name, zipped_files)
 
@@ -215,6 +222,8 @@ class RemoteManager(object):
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._plugin_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                      reference=conan_reference, remote=remote)
+        save_recipe_revision(conan_reference, self._client_cache,
+                             conan_reference.revision, rev_time)
         return conan_reference
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
@@ -248,7 +257,11 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files, new_ref = self._call_remote(remote, "get_package", package_reference, dest_folder)
+            zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
+                                                                package_reference, dest_folder)
+            save_package_revision(new_ref, self._client_cache, new_ref.conan.revision,
+                                  new_ref.revision, rev_time)
+
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)

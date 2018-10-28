@@ -6,12 +6,11 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
                                        RECIPE_UPDATED, RECIPE_NEWER, RECIPE_UPDATEABLE,
                                        RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE)
 from conans.client.output import ScopedOutput
-from conans.client.package_metadata_manager import get_recipe_revision, save_recipe_revision
+from conans.client.package_metadata_manager import get_recipe_revision
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import FileTreeManifest
-from conans.server.conf import DEFAULT_REVISION_V1
 from conans.util.env_reader import get_env
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
@@ -60,8 +59,6 @@ class ConanProxy(object):
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
             new_ref = self._remote_manager.get_recipe(reference, update_remote)
-            save_recipe_revision(new_ref, self._client_cache,
-                                 new_ref.revision or DEFAULT_REVISION_V1)
             self._registry.refs.set(new_ref, update_remote.name)
             status = RECIPE_UPDATED
             return conanfile_path, status, update_remote, new_ref
@@ -93,8 +90,6 @@ class ConanProxy(object):
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(reference, update_remote)
-                    save_recipe_revision(new_ref, self._client_cache,
-                                         new_ref.revision or DEFAULT_REVISION_V1)
                     self._registry.refs.set(new_ref, update_remote.name)
                     status = RECIPE_UPDATED
                     return conanfile_path, status, update_remote, new_ref
@@ -112,8 +107,6 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             _new_ref = self._remote_manager.get_recipe(conan_reference, the_remote)
-            save_recipe_revision(_new_ref, self._client_cache,
-                                 _new_ref.revision or DEFAULT_REVISION_V1)
             self._registry.refs.set(_new_ref, the_remote.name)
             recorder.recipe_downloaded(conan_reference, the_remote.url)
             return _new_ref
