@@ -1,13 +1,12 @@
 
 import os
-import sys
-import re
+import platform
+import xml.etree.ElementTree as ET
 
+import re
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
-import platform
-import xml.etree.ElementTree as ET
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir

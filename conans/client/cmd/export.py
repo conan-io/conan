@@ -8,9 +8,8 @@ from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
 from conans.client.package_metadata_manager import save_recipe_revision
 from conans.errors import ConanException
-from conans.model.conan_file import get_scm_data
 from conans.model.manifest import FileTreeManifest
-from conans.model.scm import SCM
+from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.search.search import search_recipes
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load

@@ -11,7 +11,8 @@ from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
     BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
-from conans.client.package_metadata_manager import get_recipe_revision, save_package_revision
+from conans.client.package_metadata_manager import get_recipe_revision, save_package_revision, \
+    get_package_revision
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
     INSTALL_ERROR_BUILDING, \
@@ -150,9 +151,9 @@ class _ConanPackageBuilder(object):
                            conanfile_path, self._conan_ref)
 
         recipe_revision = get_recipe_revision(self._conan_ref, self._client_cache)
-        revision = self._client_cache.package_summary_hash(self._package_reference)
+        p_revision = self._client_cache.package_summary_hash(self._package_reference)
         save_package_revision(self._package_reference, self._client_cache, recipe_revision,
-                              revision, None)
+                              p_revision, None)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)

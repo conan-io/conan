@@ -294,9 +294,6 @@ class ClientCache(SimplePaths):
         self._default_profile = None
         self._no_lock = None
 
-    def recipe_summary_hash(self, conan_reference):
-        return self.load_manifest(conan_reference).summary_hash
-
     def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
 

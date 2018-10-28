@@ -1,8 +1,14 @@
 import json
-import sys
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+
+
+def get_scm_data(conanfile):
+    try:
+        return SCMData(conanfile)
+    except ConanException:
+        return None
 
 
 class SCMData(object):

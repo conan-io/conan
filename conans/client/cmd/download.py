@@ -1,10 +1,9 @@
 import os
 
-from conans.client.package_metadata_manager import save_recipe_revision, save_package_revision
-from conans.model.ref import PackageReference, ConanFileReference
 from conans.client.output import ScopedOutput
-from conans.errors import ConanException
 from conans.client.source import complete_recipe_sources
+from conans.errors import ConanException
+from conans.model.ref import PackageReference, ConanFileReference
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
@@ -20,7 +19,6 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     plugin_manager.execute("pre_download", reference=reference, remote=remote)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
-
     registry.refs.set(reference, remote.name)
     conan_file_path = client_cache.conanfile(reference)
     conanfile = loader.load_class(conan_file_path)
