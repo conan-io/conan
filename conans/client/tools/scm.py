@@ -272,23 +272,27 @@ class SVN(SCMBase):
     def is_pristine(self):
         # Check if working copy is pristine/consistent
         if self.version >= SVN.API_CHANGE_VERSION:
-            output = self.run("status -u -r {} --xml".format(self.get_revision()))
-            root = ET.fromstring(output)
+            try:
+                output = self.run("status -u -r {} --xml".format(self.get_revision()))
+            except subprocess.CalledProcessError:
+                return False
+            else:
+                root = ET.fromstring(output)
 
-            pristine_item_list = ['external', 'ignored', 'none', 'normal']
-            pristine_props_list = ['normal', 'none']
-            for item in root.findall('.//wc-status'):
-                if item.get('item', 'none') not in pristine_item_list:
-                    return False
-                if item.get('props', 'none') not in pristine_props_list:
-                    return False
+                pristine_item_list = ['external', 'ignored', 'none', 'normal']
+                pristine_props_list = ['normal', 'none']
+                for item in root.findall('.//wc-status'):
+                    if item.get('item', 'none') not in pristine_item_list:
+                        return False
+                    if item.get('props', 'none') not in pristine_props_list:
+                        return False
 
-            for item in root.findall('.//repos-status'):
-                if item.get('item', 'none') not in pristine_item_list:
-                    return False
-                if item.get('props', 'none') not in pristine_props_list:
-                    return False
-            return True
+                for item in root.findall('.//repos-status'):
+                    if item.get('item', 'none') not in pristine_item_list:
+                        return False
+                    if item.get('props', 'none') not in pristine_props_list:
+                        return False
+                return True
         else:
             import warnings
             warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
