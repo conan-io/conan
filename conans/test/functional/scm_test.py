@@ -838,3 +838,16 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
             self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_marked_readonly_recursive(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Add property needs-lock to my own copy (every file recursive)
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        with chdir(self.client.current_folder):
+            self.client.runner('svn propset svn:needs-lock * . -R')
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
