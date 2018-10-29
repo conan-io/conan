@@ -783,7 +783,8 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
     def _create_repo(self, auto_keywords):
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
         project_url, rev = self.create_project(files={"conanfile.py": conanfile,
-                                                      "myfile.txt": "My file is copied"})
+                                                      "myfile.txt": "My file is copied",
+                                                      "subdir/otherfile.txt": "More and more"})
         if not auto_keywords:
             client = TestClient()
 
@@ -804,7 +805,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn lock conanfile.py myfile.txt')
+            self.client.runner('svn lock conanfile.py myfile.txt subdir')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
@@ -817,13 +818,11 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client = TestClient()
         client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
         with chdir(client.current_folder):
-            client.runner('svn lock conanfile.py myfile.txt')
+            client.runner('svn lock conanfile.py myfile.txt subdir')
 
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
-        with chdir(self.client.current_folder):
-            self.client.runner('svn lock conanfile.py myfile.txt')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
@@ -836,6 +835,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt')
+            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
