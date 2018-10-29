@@ -4,7 +4,7 @@ import time
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
@@ -290,3 +290,11 @@ class RestV1Methods(RestCommonMethods):
         url = self._recipe_url(p_reference.conan)
         url += "/packages/%s" % p_reference.package_id
         return url
+
+    @handle_return_deserializer()
+    def _remove_conanfile_files(self, conan_reference, files):
+        """ Remove recipe files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = self._recipe_url(conan_reference) + "/remove_files"
+        return self._post_json(url, payload)

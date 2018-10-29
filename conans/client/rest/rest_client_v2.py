@@ -2,7 +2,7 @@ import os
 import time
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
@@ -256,3 +256,7 @@ class RestV2Methods(RestCommonMethods):
             assert(p_reference.revision is not None)
             url += "/revisions/%s" % p_reference.revision
         return url
+
+    def _remove_conanfile_files(self, conan_reference, files):
+        # V2 === revisions, do not remove files, it will create a new revision if the files changed
+        return
