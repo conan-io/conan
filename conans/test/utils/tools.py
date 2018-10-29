@@ -337,7 +337,7 @@ class SVNLocalRepoTestCase(unittest.TestCase):
         return tmp
 
     def create_project(self, files, rel_project_path=None, commit_msg='default commit message',
-                       delete_checkout=True, lock_repo=False):
+                       delete_checkout=True):
         tmp_dir = self.gimme_tmp()
         try:
             rel_project_path = rel_project_path or str(uuid.uuid4())
@@ -349,9 +349,6 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             with chdir(tmp_project_dir):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-                if lock_repo:
-                    for ff in files:
-                        subprocess.check_output('svn lock {}'.format(ff), shell=True)
                 if SVN.get_version() >= SVN.API_CHANGE_VERSION:
                     rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
                 else:

@@ -2,8 +2,10 @@ import json
 import os
 import unittest
 from collections import namedtuple
+from parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
+from conans.client.tools.files import chdir
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
@@ -561,41 +563,6 @@ class ConanLib(ConanFile):
                       str(self.client.out).lower())
         self.assertIn("My file is copied", self.client.out)
 
-    def test_with_locked_svn(self):
-        conanfile = base_svn.format(directory="None", url="auto", revision="auto")
-        project_url, rev = self.create_project(files={"conanfile.py": conanfile,
-                                                      "myfile.txt": "My file is copied"},
-                                               lock_repo=True)
-        project_url = project_url.replace(" ", "%20")
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-
-        curdir = self.client.current_folder.replace("\\", "/")
-        # Create the package, will copy the sources from the local folder
-        self.client.run("create . user/channel")
-        sources_dir = self.client.client_cache.scm_folder(self.reference)
-        self.assertEquals(load(sources_dir), curdir)
-        self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
-                      str(self.client.out).lower())
-        self.assertIn("Revision deduced by 'auto'", self.client.out)
-        self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
-        self.assertIn("My file is copied", self.client.out)
-        # Export again but now with absolute reference, so no pointer file is created nor kept
-        svn = SVN(curdir)
-        if not os.access(os.path.join(curdir, "conanfile.py"), os.W_OK):
-            os.chmod(os.path.join(curdir, "conanfile.py"),
-                     stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
-        self.client.save(
-            {"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
-        self.client.run("create . user/channel", ignore_error=False)
-        sources_dir = self.client.client_cache.scm_folder(self.reference)
-        self.assertFalse(os.path.exists(sources_dir))
-        self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)
-        self.assertNotIn("Revision deduced by 'auto'", self.client.out)
-        self.assertIn("Getting sources from url: '{}'".format(project_url).lower(),
-                      str(self.client.out).lower())
-        self.assertIn("My file is copied", self.client.out)
-
     def test_auto_subfolder(self):
         conanfile = base_svn.replace('"revision": "{revision}"',
                                      '"revision": "{revision}",\n        '
@@ -803,3 +770,69 @@ class ConanLib(ConanFile):
         the_json = str(scm_data)
         data2 = json.loads(the_json)
         self.assertEquals(data, data2)
+
+
+class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
+    def setUp(self):
+        self.reference = ConanFileReference.loads("lib/0.1@user/channel")
+        self.client = TestClient()
+
+    def _create_repo(self, auto_keywords):
+        conanfile = base_svn.format(directory="None", url="auto", revision="auto")
+        project_url, rev = self.create_project(files={"conanfile.py": conanfile,
+                                                      "myfile.txt": "My file is copied"})
+        if not auto_keywords:
+            client = TestClient()
+
+            with chdir(client.current_folder):
+                client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                               path=client.current_folder))
+                conanfile = base_svn.format(directory="None", url=project_url, revision=int(rev)+1)
+                save(os.path.join(client.current_folder, 'conanfile.py'), conanfile)
+                client.runner('svn commit -m "use full url-rev"')
+        return project_url, rev
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_lock_own_copy(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Locked own copy
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        with chdir(self.client.current_folder):
+            self.client.runner('svn lock conanfile.py myfile.txt')
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_locked_other_copy(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Lock other copy
+        client = TestClient()
+        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
+        with chdir(client.current_folder):
+            client.runner('svn lock conanfile.py myfile.txt')
+
+        # Work on my copy
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        with chdir(self.client.current_folder):
+            self.client.runner('svn lock conanfile.py myfile.txt')
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_marked_readonly(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Add property needs-lock to my own copy
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        with chdir(self.client.current_folder):
+            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt')
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
