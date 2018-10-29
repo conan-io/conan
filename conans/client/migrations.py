@@ -2,6 +2,7 @@ import os
 import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.tools import replace_in_file
 from conans.migrations import Migrator
 from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.util.files import load, save, list_folder_subdirs
@@ -109,6 +110,7 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
+            migrate_plugins_to_hooks(self.client_cache)
 
         if old_version < Version("1.0"):
             _migrate_lock_files(self.client_cache, self.out)
@@ -186,3 +188,11 @@ def migrate_c_src_export_source(client_cache, out):
             except Exception:
                 out.warn("Migration: Can't remove the '%s' directory, "
                          "remove it manually" % package_folder)
+
+
+def migrate_plugins_to_hooks(client_cache):
+    plugins_path = os.path.join(client_cache.conan_folder, "plugins")
+    if os.path.exists(plugins_path):
+        os.rename(plugins_path, client_cache.hooks_path)
+    conf_path = client_cache.conan_conf_path
+    replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False)
