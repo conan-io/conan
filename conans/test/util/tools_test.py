@@ -1860,7 +1860,6 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn.is_pristine())
 
     def test_missing_remote(self):
-        # TODO: Cannot reach remote, do we want to handle this issue?
         repo_url = self.gimme_tmp()
         subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
         project_url = SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
@@ -1871,8 +1870,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
         shutil.rmtree(repo_url, ignore_errors=False, onerror=try_remove_readonly)
         self.assertFalse(os.path.exists(repo_url))
-        with self.assertRaisesRegexp(subprocess.CalledProcessError, "non-zero exit status 1"):
-            self.assertFalse(svn.is_pristine())
+        self.assertFalse(svn.is_pristine())
 
 
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
