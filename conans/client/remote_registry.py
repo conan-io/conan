@@ -60,7 +60,7 @@ def dump_registry(remotes, refs, prefs):
 
 def load_registry(contents):
     """From json"""
-    data = json.loads(contents)
+    data = json.loads(contents, object_pairs_hook=OrderedDict)
     remotes = OrderedDict()
     refs = data.get("references", {})
     prefs = data.get("package_references", {})
