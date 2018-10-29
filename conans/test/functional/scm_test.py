@@ -774,6 +774,7 @@ class ConanLib(ConanFile):
         self.assertEquals(data, data2)
 
 
+@attr('svn')
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
     def setUp(self):
         self.reference = ConanFileReference.loads("lib/0.1@user/channel")
