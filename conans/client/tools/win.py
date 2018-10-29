@@ -581,7 +581,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # If is there any other env var that we know it contains paths, convert it to unix_path
         used_special_vars = [var for var in ["AR", "AS", "RANLIB", "LD", "STRIP", "CC", "CXX"]
                              if var in conanfile.env.keys()]
-        normalized_env = {p: unix_path(conanfile.env[p]) for p in used_special_vars}
+        normalized_env = {p: unix_path(conanfile.env[p], path_flavor=subsystem) for p in used_special_vars}
 
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
         with environment_append(normalized_env):
