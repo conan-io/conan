@@ -36,12 +36,12 @@ class ActionRecorderTest(unittest.TestCase):
         self.assertFalse(install_info["error"])
 
         first_installed = install_info["installed"][0]
-        self.assertFalse(first_installed["recipe"]["cache"])
+        self.assertNotIn("cache", first_installed["packages"][0])
         self.assertTrue(first_installed["recipe"]["downloaded"])
         self.assertIsNone(first_installed["recipe"]["error"])
         self.assertEquals(str(first_installed["recipe"]["id"]), "lib1/1.0@conan/stable")
 
-        self.assertFalse(first_installed["packages"][0]["cache"])
+        self.assertNotIn("cache", first_installed["packages"][0])
         self.assertTrue(first_installed["packages"][0]["downloaded"])
         self.assertIsNone(first_installed["packages"][0]["error"])
         self.assertEquals(first_installed["packages"][0]["remote"], 'http://drl.com')
@@ -64,26 +64,26 @@ class ActionRecorderTest(unittest.TestCase):
 
         first_installed = install_info["installed"][0]
 
-        self.assertTrue(first_installed["recipe"]["cache"])
+        self.assertNotIn("cache", first_installed["recipe"])
         self.assertFalse(first_installed["recipe"]["dependency"])
         self.assertFalse(first_installed["recipe"]["downloaded"])
         self.assertIsNone(first_installed["recipe"]["error"])
         self.assertEquals(str(first_installed["recipe"]["id"]), "lib1/1.0@conan/stable")
 
-        self.assertFalse(first_installed["packages"][0]["cache"])
+        self.assertNotIn("cache", first_installed["recipe"])
         self.assertTrue(first_installed["packages"][0]["downloaded"])
         self.assertIsNone(first_installed["packages"][0]["error"])
         self.assertEquals(first_installed["packages"][0]["remote"], 'http://drl.com')
         self.assertEquals(str(first_installed["packages"][0]["id"]), "1")
 
         second_installed = install_info["installed"][1]
-        self.assertFalse(second_installed["recipe"]["cache"])
+        self.assertNotIn("cache", first_installed["recipe"])
         self.assertTrue(second_installed["recipe"]["dependency"])
         self.assertTrue(second_installed["recipe"]["downloaded"])
         self.assertIsNone(second_installed["recipe"]["error"])
         self.assertEquals(str(second_installed["recipe"]["id"]), "lib2/1.0@conan/stable")
 
-        self.assertFalse(second_installed["packages"][0]["cache"])
+        self.assertNotIn("cache", first_installed["packages"][0])
         self.assertEquals(second_installed["packages"][0]["error"],
                           {'type': 'missing', 'description': 'no package found',
                            'remote': 'https://drl.com'})
@@ -92,7 +92,7 @@ class ActionRecorderTest(unittest.TestCase):
 
         third_installed = install_info["installed"][2]
         self.assertTrue(third_installed["recipe"]["dependency"])
-        self.assertFalse(third_installed["packages"][0]["cache"])
+        self.assertNotIn("cache", first_installed["packages"][0])
         self.assertFalse(third_installed["packages"][0]["error"])
         self.assertTrue(third_installed["packages"][0]["built"])
         self.assertIsNone(third_installed["packages"][0]["remote"])
