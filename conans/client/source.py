@@ -1,5 +1,4 @@
 import os
-import stat
 
 import shutil
 import six
@@ -65,8 +64,6 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 linkto = os.readlink(src_file)
                 os.symlink(linkto, dst_file)
             else:
-                if os.path.isfile(dst_file) and not os.access(dst_file, os.W_OK):
-                    os.chmod(dst_file, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
                 shutil.copy2(src_file, dst_file)
 
 
@@ -80,7 +77,8 @@ def _clean_source_folder(folder):
 
 
 def config_source(export_folder, export_source_folder, local_sources_path, src_folder,
-                  conanfile, output, conanfile_path, reference, plugin_manager, force=False):
+                  conanfile, output, conanfile_path, reference, plugin_manager,
+                  client_cache):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
@@ -99,10 +97,7 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    if force:
-        output.warn("Forced removal of source folder")
-        remove_source()
-    elif is_dirty(src_folder):
+    if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
     elif conanfile.build_policy_always:
@@ -132,6 +127,13 @@ def config_source(export_folder, export_source_folder, local_sources_path, src_f
                         local_sources_path = local_sources_path if captured else None
                         _fetch_scm(scm_data, dest_dir, local_sources_path, output)
 
+                    # Files from python requires are obtained before the self files
+                    from conans.client.cmd.export import export_source
+                    for python_require in conanfile.python_requires:
+                        src = client_cache.export_sources(python_require.conan_ref)
+                        export_source(conanfile, src, src_folder, output)
+
+                    # so self exported files have precedence over python_requires ones
                     merge_directories(export_folder, src_folder)
                     # Now move the export-sources to the right location
                     merge_directories(export_source_folder, src_folder)

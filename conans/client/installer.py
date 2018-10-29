@@ -30,7 +30,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import (save, rmdir, mkdir, make_read_only,
-                               set_dirty, clean_dirty, load)
+                               set_dirty, clean_dirty, load, is_dirty)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
@@ -96,7 +96,7 @@ class _ConanPackageBuilder(object):
         local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
         config_source(export_folder, export_source_folder, local_sources_path, self.source_folder,
                       self._conan_file, self._out, conanfile_path, self._conan_ref,
-                      self._plugin_manager)
+                      self._plugin_manager, self._client_cache)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -383,14 +383,22 @@ class ConanInstaller(object):
     def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile
 
-        skip_build = conan_file.develop and keep_build
-        if skip_build:
-            output.info("Won't be built as specified by --keep-build")
-
         t1 = time.time()
+        # It is necessary to complete the sources of python requires, which might be used
+        for python_require in conan_file.python_requires:
+            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                                    conan_file, python_require.conan_ref)
+
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
                                        self._plugin_manager, self._registry)
 
+        if is_dirty(builder.build_folder):
+            output.warn("Build folder is dirty, removing it: %s" % builder.build_folder)
+            rmdir(builder.build_folder)
+
+        skip_build = conan_file.develop and keep_build
+        if skip_build:
+            output.info("Won't be built as specified by --keep-build")
         if skip_build:
             if not os.path.exists(builder.build_folder):
                 msg = "--keep-build specified, but build folder not found"
@@ -400,6 +408,7 @@ class ConanInstaller(object):
                 raise ConanException(msg)
         else:
             with self._client_cache.conanfile_write_lock(conan_ref):
+                set_dirty(builder.build_folder)
                 complete_recipe_sources(self._remote_manager, self._client_cache,
                                         self._registry, conan_file, conan_ref)
                 builder.prepare_build()
@@ -408,6 +417,7 @@ class ConanInstaller(object):
             try:
                 if not skip_build:
                     builder.build()
+                    clean_dirty(builder.build_folder)
                 builder.package()
             except ConanException as exc:
                 self._recorder.package_install_error(package_ref, INSTALL_ERROR_BUILDING,

@@ -138,8 +138,10 @@ class CMake(object):
 
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
-        if compiler == 'Visual Studio' and self.generator in ['Ninja', 'NMake Makefiles',
-                                                              'NMake Makefiles JOM']:
+        the_os = self._settings.get_safe("os")
+        is_clangcl = the_os == 'Windows' and compiler == 'clang'
+        is_msvc = compiler == 'Visual Studio'
+        if (is_msvc or is_clangcl) and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
             with tools.vcvars(self._settings, force=True, filter_known_paths=False):
                 self._conanfile.run(command)
         else:
