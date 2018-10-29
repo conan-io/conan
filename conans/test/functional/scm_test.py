@@ -3,6 +3,7 @@ import os
 import unittest
 from collections import namedtuple
 from parameterized import parameterized
+from nose.plugins.attrib import attr
 
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.files import chdir
@@ -38,6 +39,7 @@ base_git = base % "git"
 base_svn = base % "svn"
 
 
+@attr('git')
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -479,6 +481,7 @@ class ConanLib(ConanFile):
         self.assertEquals(data, data2)
 
 
+@attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -486,7 +489,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.client = TestClient()
 
     def _commit_contents(self):
-        # self.client.runner('svn co "{url}" "{path}"'.format(url=self.repo_url, path=self.client.current_folder))
         self.client.runner("svn add *", cwd=self.client.current_folder)
         self.client.runner('svn commit -m  "commiting"', cwd=self.client.current_folder)
 
