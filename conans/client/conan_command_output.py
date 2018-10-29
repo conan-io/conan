@@ -6,6 +6,7 @@ from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.files import save
 from conans.unicode import get_cwd
+from conans.search.binary_html_table import html_binary_graph
 
 
 class CommandOutputer(object):
@@ -79,7 +80,8 @@ class CommandOutputer(object):
         Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.client_cache, package_filter=package_filter,
+                                             path_resolver=self.client_cache,
+                                             package_filter=package_filter,
                                              show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
@@ -100,9 +102,8 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table,
-                                outdated=False):
+                              outdated=False):
         if table:
-            from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
