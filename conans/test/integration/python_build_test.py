@@ -383,6 +383,41 @@ class Pkg2(base.Base):
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header Pkg!!", client.out)
 
+    def transitive_imports_conflicts_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+import myhelper
+class SourceBuild(ConanFile):
+    exports = "*.py"
+"""
+        helper = """def myhelp(output):
+    output.info("MyHelperOutput!")
+"""
+        client.save({"conanfile.py": conanfile,
+                     "myhelper.py": helper})
+        client.run("export . base1/1.0@user/channel")
+        client.save({"myhelper.py": helper.replace("MyHelperOutput!", "MyOtherHelperOutput!")})
+        client.run("export . base2/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+base2 = python_requires("base2/1.0@user/channel")
+base1 = python_requires("base1/1.0@user/channel")
+
+class MyConanfileBase(ConanFile):
+    def build(self):
+        base1.myhelper.myhelp(self.output)
+        base2.myhelper.myhelp(self.output)
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
+
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
+
 
 class PythonBuildTest(unittest.TestCase):
 
