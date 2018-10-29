@@ -431,7 +431,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                if "plugins." in args.item:
+                if "hooks." in args.item:
                     key, value = args.item.split("=", 1)[0], None
                 else:
                     raise ConanException("Please specify 'key=value'")

@@ -35,13 +35,13 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager, registry):
+               hook_manager, registry):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference)
+    hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=reference)
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
@@ -58,7 +58,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
-    plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
+    hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
 
 
