@@ -577,5 +577,12 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
+
+        # If is there any other env var that we know it contains paths, convert it to unix_path
+        used_special_vars = [var for var in ["AR", "AS", "RANLIB", "LD", "STRIP", "CC", "CXX"]
+                             if var in conanfile.env.keys()]
+        normalized_env = {p: unix_path(conanfile.env[p]) for p in used_special_vars}
+
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
-        return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
+        with environment_append(normalized_env):
+            return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
