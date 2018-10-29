@@ -140,7 +140,7 @@ path = ~/.conan/data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
-[plugins]  # environment CONAN_PLUGINS
+[hooks]    # environment CONAN_HOOKS
 attribute_checker
 
 # Default settings now declared in the default profile
@@ -205,7 +205,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None)
+               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None)
                }
 
         # Filter None values
@@ -232,7 +232,7 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("'%s' is not a section of conan.conf" % section_name)
         if len(tokens) == 1:
             result = []
-            if section_name == "plugins":
+            if section_name == "hooks":
                 for key, _ in section:
                     result.append(key)
                 return ",".join(result)

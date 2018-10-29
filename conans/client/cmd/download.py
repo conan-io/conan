@@ -7,7 +7,7 @@ from conans.client.source import complete_recipe_sources
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
-             client_cache, out, recorder, loader, plugin_manager):
+             client_cache, out, recorder, loader, hook_manager):
 
     assert(isinstance(reference, ConanFileReference))
     output = ScopedOutput(str(reference), out)
@@ -16,7 +16,7 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
     if not package:  # Search the reference first, and raise if it doesn't exist
         raise ConanException("'%s' not found in remote" % str(reference))
 
-    plugin_manager.execute("pre_download", reference=reference, remote=remote)
+    hook_manager.execute("pre_download", reference=reference, remote=remote)
     # First of all download package recipe
     remote_manager.get_recipe(reference, remote)
     registry.refs.set(reference, remote.name)
@@ -41,8 +41,8 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
             else:
                 _download_binaries(reference, list(packages_props.keys()), client_cache,
                                    remote_manager, remote, output, recorder, loader)
-    plugin_manager.execute("post_download", conanfile_path=conan_file_path, reference=reference,
-                           remote=remote)
+    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=reference,
+                         remote=remote)
 
 
 def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,
