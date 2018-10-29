@@ -2,13 +2,13 @@ import os
 import unittest
 
 from conans import load
-from conans.client.plugin_manager import PluginManager
+from conans.client.hook_manager import HookManager
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
-my_plugin = """
+my_hook = """
 def pre_export(output, **kwargs):
     output.info("pre_export()")
 
@@ -59,55 +59,55 @@ def post_download_package(output, **kwargs):
 """
 
 
-class PluginManagerTest(unittest.TestCase):
+class HookManagerTest(unittest.TestCase):
 
     def _init(self):
         temp_dir = temp_folder()
-        plugin_path = os.path.join(temp_dir, "my_plugin.py")
-        save(os.path.join(temp_dir, "my_plugin.py"), my_plugin)
+        hook_path = os.path.join(temp_dir, "my_hook.py")
+        save(os.path.join(temp_dir, "my_hook.py"), my_hook)
         output = TestBufferConanOutput()
-        plugin_manager = PluginManager(temp_dir, ["my_plugin"], output)
-        return plugin_manager, output, plugin_path
+        hook_manager = HookManager(temp_dir, ["my_hook"], output)
+        return hook_manager, output, hook_path
 
     def load_test(self):
-        plugin_manager, output, _ = self._init()
-        self.assertEqual({}, plugin_manager.plugins)
-        self.assertEqual(["my_plugin"], plugin_manager._plugin_names)
-        plugin_manager.load_plugins()
-        self.assertEqual(16, len(plugin_manager.plugins))  # Checks number of methods loaded
+        hook_manager, output, _ = self._init()
+        self.assertEqual({}, hook_manager.hooks)
+        self.assertEqual(["my_hook"], hook_manager._hook_names)
+        hook_manager.load_hooks()
+        self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
 
     def check_output_test(self):
-        plugin_manager, output, _ = self._init()
-        plugin_manager.load_plugins()
-        methods = plugin_manager.plugins.keys()
+        hook_manager, output, _ = self._init()
+        hook_manager.load_hooks()
+        methods = hook_manager.hooks.keys()
         for method in methods:
-            plugin_manager.execute(method)
-            self.assertIn("[PLUGIN - my_plugin] %s(): %s()" % (method, method), output)
+            hook_manager.execute(method)
+            self.assertIn("[HOOK - my_hook] %s(): %s()" % (method, method), output)
 
     def no_error_with_no_method_test(self):
-        plugin_manager, output, plugin_path = self._init()
-        other_plugin = """
+        hook_manager, output, hook_path = self._init()
+        other_hook = """
 def my_custom_function():
     pass
 """
-        save(plugin_path, other_plugin)
-        self.assertEqual(other_plugin, load(plugin_path))
-        plugin_manager.execute("pre_source")
+        save(hook_path, other_hook)
+        self.assertEqual(other_hook, load(hook_path))
+        hook_manager.execute("pre_source")
         self.assertEqual("", output)
 
     def exception_in_method_test(self):
-        plugin_manager, output, plugin_path = self._init()
-        my_plugin = """
+        hook_manager, output, hook_path = self._init()
+        my_hook = """
 from conans.errors import ConanException
 
 def pre_build(output, **kwargs):
     raise Exception("My custom exception")
 """
-        save(plugin_path, my_plugin)
+        save(hook_path, my_hook)
         with self.assertRaisesRegexp(ConanException, "My custom exception"):
-            plugin_manager.execute("pre_build")
+            hook_manager.execute("pre_build")
         # Check traceback output
         try:
-            plugin_manager.execute("pre_build")
+            hook_manager.execute("pre_build")
         except ConanException as e:
-            self.assertIn("[PLUGIN - my_plugin] pre_build(): My custom exception", str(e))
+            self.assertIn("[HOOK - my_hook] pre_build(): My custom exception", str(e))

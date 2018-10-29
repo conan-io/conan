@@ -21,13 +21,13 @@ UPLOAD_POLICY_SKIP = "skip-upload"
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry, loader, plugin_manager):
+    def __init__(self, client_cache, user_io, remote_manager, registry, loader, hook_manager):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._registry = registry
         self._loader = loader
-        self._plugin_manager = plugin_manager
+        self._hook_manager = hook_manager
 
     def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
@@ -88,8 +88,8 @@ class CmdUpload(object):
         conanfile_path = self._client_cache.conanfile(conan_ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
-        self._plugin_manager.execute("pre_upload", conanfile_path=conanfile_path,
-                                     reference=conan_ref, remote=recipe_remote)
+        self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
+                                   reference=conan_ref, remote=recipe_remote)
 
         if policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self._check_recipe_date(conan_ref, recipe_remote)
@@ -132,8 +132,8 @@ class CmdUpload(object):
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
-        self._plugin_manager.execute("post_upload", conanfile_path=conanfile_path,
-                                     reference=conan_ref, remote=recipe_remote)
+        self._hook_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                   reference=conan_ref, remote=recipe_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)

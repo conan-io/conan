@@ -5,13 +5,15 @@ import os
 import platform
 import unittest
 import uuid
+import shutil
+import subprocess
 
 from collections import namedtuple
 
 import six
 from mock.mock import patch, mock_open
 from six import StringIO
-from six.moves.urllib.parse import unquote
+from six.moves.urllib.parse import quote
 
 from conans.client.client_cache import CONAN_CONF
 from conans.model.version import Version
@@ -20,7 +22,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict, vswhere
+from conans.client.tools.win import vcvars_dict, vswhere, get_cased_path
 from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
@@ -31,7 +33,7 @@ from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
-    SVNLocalRepoTestCase, StoppableThreadBottle
+    SVNLocalRepoTestCase, StoppableThreadBottle, try_remove_readonly
 
 from conans.tools import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -1630,9 +1632,8 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         self.assertFalse(svn.is_pristine())
         svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
-        if svn.version >= SVN.API_CHANGE_VERSION:  # SVN::is_pristine returns always False.
-            self.assertTrue(svn.is_pristine())
-            # self.assertFalse(os.path.exists(new_file))
+        self.assertEqual(open(mod_file).read(), "contents")
+        self.assertFalse(svn.is_pristine())
 
     def test_excluded_files(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
@@ -1812,9 +1813,10 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
         svn.checkout(url=self.repo_url)
+        self.assertTrue(svn.is_pristine())
         with open(os.path.join(tmp_folder, "not_tracked.txt"), "w") as f:
             f.write("content")
-        self.assertTrue(svn.is_pristine())
+        self.assertFalse(svn.is_pristine())
 
     def test_ignored_file(self):
         tmp_folder = self.gimme_tmp()
@@ -1854,6 +1856,146 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn2.is_pristine())
         svn2.run('revert . -R')
         self.assertTrue(svn2.is_pristine())
+
+    def test_mixed_revisions(self):
+        project_url, _ = self.create_project(files={'myfile': "cc", 'another': 'aa'})
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        with open(os.path.join(svn.folder, 'myfile'), "a") as f:
+            f.write('more')
+        svn.run('commit -m "up version"')
+        self.assertFalse(svn.is_pristine())
+
+    def test_missing_remote(self):
+        repo_url = self.gimme_tmp()
+        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        project_url = SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url=project_url)
+        self.assertTrue(svn.is_pristine())
+
+        shutil.rmtree(repo_url, ignore_errors=False, onerror=try_remove_readonly)
+        self.assertFalse(os.path.exists(repo_url))
+        self.assertFalse(svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
+
+    def _propset_cmd(self, relpath, rev, url):
+        return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
+
+    def setUp(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, rev = self.create_project(files={'nestedfile': "contents"})
+
+        self.svn = SVN(folder=self.gimme_tmp())
+        self.svn.checkout(url=project_url)
+        self.svn.run(self._propset_cmd("subrepo_nestedfile", rev, project2_url + '/nestedfile'))
+        self.svn.run('commit -m "add external"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
+
+    def test_modified_external(self):
+        with open(os.path.join(self.svn.folder, "subrepo_nestedfile"), "a") as f:
+            f.write("cosass")
+        self.assertFalse(self.svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
+
+    def _propset_cmd(self, relpath, url):
+        return 'propset svn:externals "{} {}" .'.format(relpath, url)
+
+    def setUp(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, _ = self.create_project(files={'nestedfile': "contents"})
+
+        self.svn = SVN(folder=self.gimme_tmp())
+        self.svn.checkout(url=project_url)
+        self.svn.run(self._propset_cmd("subrepo", project2_url))
+        self.svn.run('commit -m "add external"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
+
+        self.svn2 = SVN(folder=self.gimme_tmp())
+        self.svn2.checkout(url=project2_url)
+        self.assertTrue(self.svn.is_pristine())
+
+    def test_modified_external(self):
+        with open(os.path.join(self.svn2.folder, "nestedfile"), "a") as f:
+            f.write("cosass")
+        self.svn2.run('commit -m "another"')
+        self.svn2.update()
+        self.assertTrue(self.svn2.is_pristine())
+
+        # Known: without fixed external, it won't be pristine if there is something new in remote.
+        self.assertFalse(self.svn.is_pristine())
+
+
+class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
+
+    def _propset_cmd(self, relpath, rev, url):
+        return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
+
+    def setUp(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        project2_url, rev = self.create_project(files={'nestedfile': "contents"})
+
+        self.svn = SVN(folder=self.gimme_tmp())
+        self.svn.checkout(url=project_url)
+        self.svn.run(self._propset_cmd("subrepo", rev, project2_url))
+        self.svn.run('commit -m "add external"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
+
+        self.svn_subrepo = SVN(folder=os.path.join(self.svn.folder, 'subrepo'))
+        self.assertTrue(self.svn_subrepo.is_pristine())
+
+    def test_modified_external(self):
+        with open(os.path.join(self.svn.folder, "subrepo", "nestedfile"), "a") as f:
+            f.write("cosass")
+        self.assertFalse(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+    def test_commit_external(self):
+        with open(os.path.join(self.svn.folder, "subrepo", "nestedfile"), "a") as f:
+            f.write("cosass")
+        self.svn_subrepo.run('commit -m "up external"')
+        self.assertFalse(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+        self.svn_subrepo.update()
+        self.assertTrue(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+    def test_untracked_external(self):
+        with open(os.path.join(self.svn.folder, "subrepo", "other_file"), "w") as f:
+            f.write("cosass")
+        self.assertFalse(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+    def test_ignored_external(self):
+        file_to_ignore = "secret.txt"
+        with open(os.path.join(self.svn_subrepo.folder, file_to_ignore), "w") as f:
+            f.write("cosas")
+
+        self.svn_subrepo.run("propset svn:ignore {} .".format(file_to_ignore))
+        self.assertFalse(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+        self.svn_subrepo.run('commit -m "add ignored file"')
+        self.assertTrue(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+        subrepo_rev = self.svn_subrepo.get_revision()
+        self.svn.run(self._propset_cmd("subrepo", subrepo_rev, self.svn_subrepo.get_remote_url()))
+        self.assertTrue(self.svn_subrepo.is_pristine())
+        self.assertFalse(self.svn.is_pristine())
+
+        self.svn.run('commit -m "change property"')
+        self.svn.update()
+        self.assertTrue(self.svn.is_pristine())
 
 
 @attr("slow")

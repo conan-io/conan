@@ -12,14 +12,14 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, plugin_manager,
+def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, hook_manager,
                conanfile_path, reference):
     mkdir(package_folder)
     conanfile.package_folder = src_package_folder
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
-    plugin_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference, package_id=pkg_id)
+    hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=reference, package_id=pkg_id)
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
@@ -33,12 +33,12 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, pl
     digest.save(package_folder)
     output.success("Package '%s' created" % pkg_id)
     conanfile.package_folder = package_folder
-    plugin_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference, package_id=pkg_id)
+    hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=reference, package_id=pkg_id)
 
 
 def create_package(conanfile, pkg_id, source_folder, build_folder, package_folder, install_folder,
-                   output, plugin_manager, conanfile_path, reference, local=False, copy_info=False):
+                   output, hook_manager, conanfile_path, reference, local=False, copy_info=False):
     """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
     """
@@ -54,8 +54,8 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
 
-        plugin_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                               reference=reference, package_id=pkg_id)
+        hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
+                             reference=reference, package_id=pkg_id)
 
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
@@ -95,8 +95,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
-
-    plugin_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
+    hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                            reference=reference, package_id=pkg_id)
 
 

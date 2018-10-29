@@ -31,7 +31,8 @@ class SearchRecorder(object):
             self._info[remote_name] = OrderedDict()
         self._info[remote_name][reference.full_repr()] = {"recipe": recipe, "packages": []}
 
-    def add_package(self, remote_name, reference, package_id, options, settings, requires, outdated):
+    def add_package(self, remote_name, reference, package_id, options, settings, requires,
+                    outdated):
         sp = _SearchPackage(package_id, options, settings, requires, outdated)
         self._info[remote_name][reference.full_repr()]["packages"].append(sp)
 

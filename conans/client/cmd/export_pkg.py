@@ -9,7 +9,7 @@ from conans.model.ref import PackageReference
 from conans.client.graph.graph_manager import load_deps_info
 
 
-def export_pkg(client_cache, graph_manager, plugin_manager, recorder, output,
+def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
                reference, source_folder, build_folder, package_folder, install_folder,
                profile, force):
 
@@ -44,9 +44,9 @@ def export_pkg(client_cache, graph_manager, plugin_manager, recorder, output,
     package_output = ScopedOutput(str(reference), output)
     if package_folder:
         packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder, package_output,
-                            plugin_manager, conan_file_path, reference)
+                            hook_manager, conan_file_path, reference)
     else:
         packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
-                                install_folder, package_output, plugin_manager, conan_file_path,
+                                install_folder, package_output, hook_manager, conan_file_path,
                                 reference, local=True)
     recorder.package_exported(pkg_reference)

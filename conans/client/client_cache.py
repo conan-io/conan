@@ -27,7 +27,7 @@ LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
-PLUGINS_FOLDER = "plugins"
+HOOKS_FOLDER = "hooks"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -157,11 +157,11 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
-    def plugins_path(self):
+    def hooks_path(self):
         """
-        :return: Plugins folder in client cache
+        :return: Hooks folder in client cache
         """
-        return join(self.conan_folder, PLUGINS_FOLDER)
+        return join(self.conan_folder, HOOKS_FOLDER)
 
     @property
     def default_profile(self):
@@ -211,13 +211,13 @@ class ClientCache(SimplePaths):
         return self._settings
 
     @property
-    def plugins(self):
-        """Returns a list of plugins inside the plugins folder"""
-        plugins = []
-        for plugin_name in os.listdir(self.plugins_path):
-            if os.path.isfile(plugin_name) and plugin_name.endswith(".py"):
-                plugins.append(plugin_name[:-3])
-        return plugins
+    def hooks(self):
+        """Returns a list of hooks inside the hooks folder"""
+        hooks = []
+        for hook_name in os.listdir(self.hooks_path):
+            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
+                hooks.append(hook_name[:-3])
+        return hooks
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """

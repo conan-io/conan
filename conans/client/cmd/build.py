@@ -9,7 +9,7 @@ from conans.util.files import mkdir
 from conans.model.conan_file import get_env_context_manager
 
 
-def build(graph_manager, plugin_manager, conanfile_path, output,
+def build(graph_manager, hook_manager, conanfile_path, output,
           source_folder, build_folder, package_folder, install_folder,
           test=False, should_configure=True, should_build=True, should_install=True,
           should_test=True):
@@ -50,14 +50,14 @@ def build(graph_manager, plugin_manager, conanfile_path, output,
         conan_file.source_folder = source_folder
         conan_file.package_folder = package_folder
         conan_file.install_folder = install_folder
-        plugin_manager.execute("pre_build", conanfile=conan_file,
-                               conanfile_path=conanfile_path)
+        hook_manager.execute("pre_build", conanfile=conan_file,
+                             conanfile_path=conanfile_path)
         with get_env_context_manager(conan_file):
             output.highlight("Running build()")
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
-            plugin_manager.execute("post_build", conanfile=conan_file,
-                                   conanfile_path=conanfile_path)
+            hook_manager.execute("post_build", conanfile=conan_file,
+                                 conanfile_path=conanfile_path)
             if test:
                 output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
