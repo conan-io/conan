@@ -41,7 +41,7 @@ from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
-from conans.tools import os_info as global_os_info, get_global_instances
+from conans.tools import get_global_instances
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -1212,8 +1212,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
     def detect_windows_subsystem_test(self):
         # Dont raise test
-        result = global_os_info.detect_windows_subsystem()
-        if not global_os_info.bash_path() or platform.system() != "Windows":
+        result = OSInfo.detect_windows_subsystem()
+        if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1275,7 +1275,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return filepath
 
         fp = save_file(b"a line\notherline\n")
-        if not global_os_info.is_windows:
+        if platform.system() != "Windows":
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
@@ -1295,7 +1295,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
-        if not global_os_info.is_windows:
+        if platform.system() != "Windows":
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
