@@ -1,6 +1,7 @@
 import platform
 import subprocess
 import unittest
+from mock import mock
 
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestBufferConanOutput
@@ -51,3 +52,10 @@ class DetectTest(unittest.TestCase):
         self.assertIsNone(result.get("compiler", None))
         self.assertIn("gcc detected as a frontend using apple-clang", output)
         self.assertIsNotNone(output.error)
+
+    @mock.patch("platform.machine", return_value="")
+    def test_detect_empty_arch(self, _):
+        result = detect_defaults_settings(output=TestBufferConanOutput())
+        result = dict(result)
+        self.assertTrue("arch" not in result)
+        self.assertTrue("arch_build" not in result)

@@ -20,17 +20,18 @@ class MSBuildTest(unittest.TestCase):
                                  "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        self.assertEquals(msbuild.build_env.flags, ["-Zi", "-Ob0", "-Od"])
+        self.assertEquals(msbuild.build_env.flags, [])
         template = msbuild._get_props_file_contents()
 
-        self.assertIn("-Ob0", template)
-        self.assertIn("-Od", template)
+        self.assertNotIn("-Ob0", template)
+        self.assertNotIn("-Od", template)
 
         msbuild.build_env.flags = ["-Zi"]
         template = msbuild._get_props_file_contents()
 
         self.assertNotIn("-Ob0", template)
         self.assertNotIn("-Od", template)
+        self.assertIn("-Zi", template)
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", template)
 
     def without_runtime_test(self):

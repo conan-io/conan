@@ -29,6 +29,7 @@ class BaseConan(ConanFile):
         self.env_info.SPECIAL_VAR = "baseValue"
         self.env_info.BASE_LIST = ["baseValue1", "baseValue2"]
         self.env_info.CPPFLAGS = ["-baseFlag1", "-baseFlag2"]
+        self.env_info.BCKW_SLASH = r"base\\value"
 """
 
         dep2 = """
@@ -46,6 +47,7 @@ class DummyConan(ConanFile):
         self.env_info.SPECIAL_VAR = "dummyValue"
         self.env_info.BASE_LIST = ["dummyValue1", "dummyValue2"]
         self.env_info.CPPFLAGS = ["-flag1", "-flag2"]
+        self.env_info.BCKW_SLASH = r"dummy\\value"
 """
         base = '''
 [requires]
@@ -69,6 +71,7 @@ virtualenv
             self.assertIn('SET LD_LIBRARY_PATH=dummydir\\lib;basedir\\lib;%LD_LIBRARY_PATH%', activate)
             self.assertIn('SET PATH=dummydir\\bin;basedir\\bin;samebin;%PATH%', activate)
             self.assertIn('SET SPECIAL_VAR=dummyValue', activate)
+            self.assertIn('SET BCKW_SLASH=dummy\\value', activate)
 
             activate = load(os.path.join(client.current_folder, "activate.ps1"))
             self.assertIn('$env:BASE_LIST = "dummyValue1;dummyValue2;baseValue1;baseValue2;$env:BASE_LIST"', activate)
@@ -77,6 +80,7 @@ virtualenv
             self.assertIn('$env:LD_LIBRARY_PATH = "dummydir\\lib;basedir\\lib;$env:LD_LIBRARY_PATH"', activate)
             self.assertIn('$env:PATH = "dummydir\\bin;basedir\\bin;samebin;$env:PATH"', activate)
             self.assertIn('$env:SPECIAL_VAR = "dummyValue"', activate)
+            self.assertIn('$env:BCKW_SLASH = "dummy\\value"', activate)
 
             deactivate = load(os.path.join(client.current_folder, "deactivate.bat"))
             self.assertIn('SET PROMPT=%s' % env.setdefault('PROMPT', ''), deactivate)
@@ -86,6 +90,7 @@ virtualenv
             self.assertIn('SET LD_LIBRARY_PATH=%s' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
             self.assertIn('SET PATH=%s' % env.setdefault('PATH', ''), deactivate)
             self.assertIn('SET SPECIAL_VAR=%s' % env.setdefault('SPECIAL_VAR', ''), deactivate)
+            self.assertIn('SET BCKW_SLASH=%s' % env.setdefault('BCKW_SLASH', ''), deactivate)
 
             deactivate = load(os.path.join(client.current_folder, "deactivate.ps1"))
             self.assertIn('$env:BASE_LIST = "%s"' % env.setdefault('BASE_LIST', ''), deactivate)
@@ -94,6 +99,7 @@ virtualenv
             self.assertIn('$env:LD_LIBRARY_PATH = "%s"' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
             self.assertIn('$env:PATH = "%s"' % env.setdefault('PATH', ''), deactivate)
             self.assertIn('$env:SPECIAL_VAR = "%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
+            self.assertIn('$env:BCKW_SLASH = "%s"' % env.setdefault('BCKW_SLASH', ''), deactivate)
 
         activate = load(os.path.join(client.current_folder, "activate.sh"))
         self.assertIn('OLD_PS1="$PS1"', activate)
@@ -108,6 +114,8 @@ virtualenv
         self.assertIn('export CPPFLAGS', activate)
         self.assertIn('SPECIAL_VAR="dummyValue"', activate)
         self.assertIn('export SPECIAL_VAR', activate)
+        self.assertIn('BCKW_SLASH="dummy\\value"', activate)
+        self.assertIn('export BCKW_SLASH', activate)
         if os_info.is_windows:
             self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib":$LD_LIBRARY_PATH', activate)
             self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin":$PATH', activate)
@@ -127,6 +135,7 @@ virtualenv
             self.assertIn('PATH="%s"' % env.setdefault('PATH', ''), deactivate)
             self.assertIn('export PATH', deactivate)
             self.assertIn('unset SPECIAL_VAR', deactivate)
+            self.assertIn('unset BCKW_SLASH', deactivate)
         else:
             self.assertIn('OLD_PS1="%s"' % env.setdefault('OLD_PS1', ''), deactivate)
             self.assertIn('PS1=$OLD_PS1', deactivate)
@@ -145,6 +154,8 @@ virtualenv
             self.assertIn('export PATH', deactivate)
             self.assertIn('SPECIAL_VAR="%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
             self.assertIn('export SPECIAL_VAR', deactivate)
+            self.assertIn('BCKW_SLASH="%s"' % env.setdefault('BCKW_SLASH', ''), deactivate)
+            self.assertIn('export BCKW_SLASH', deactivate)
 
     def environment_test(self):
         env = {"PROMPT": "old_PROMPT",
@@ -154,6 +165,7 @@ virtualenv
                "BASE_VAR": "old_BASE_VAR",
                "CPPFLAGS": "old_CPPFLAGS",
                "LD_LIBRARY_PATH": "old_LD_LIBRARY_PATH",
-               "SPECIAL_VAR": "old_SPECIAL_VAR"}
+               "SPECIAL_VAR": "old_SPECIAL_VAR",
+               "BCKW_SLASH": "old_BCKW_SLASH"}
         with tools.environment_append(env):
             self.basic_test(posix_empty_vars=False)

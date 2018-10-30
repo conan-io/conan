@@ -91,6 +91,8 @@ class ConanFile(object):
     license = None
     author = None  # Main maintainer/responsible for the package, any format
     description = None
+    topics = None
+    homepage = None
     build_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles

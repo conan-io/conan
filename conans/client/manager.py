@@ -18,21 +18,17 @@ from conans.client.graph.printer import print_graph
 
 
 class ConanManager(object):
-    """ Manage all the commands logic  The main entry point for all the client
-    business logic
-    """
-    def __init__(self, client_cache, user_io, runner, remote_manager,
-                 recorder, registry, graph_manager, plugin_manager):
+    def __init__(self, client_cache, user_io, remote_manager,
+                 recorder, registry, graph_manager, hook_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
-        self._runner = runner
         self._remote_manager = remote_manager
         self._recorder = recorder
         self._registry = registry
         self._graph_manager = graph_manager
-        self._plugin_manager = plugin_manager
+        self._hook_manager = hook_manager
 
     def install_workspace(self, profile, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
@@ -46,7 +42,7 @@ class ConanManager(object):
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder, workspace=workspace,
-                                   plugin_manager=self._plugin_manager)
+                                   hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False)
         workspace.generate()
 
@@ -102,7 +98,7 @@ class ConanManager(object):
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder, workspace=None,
-                                   plugin_manager=self._plugin_manager)
+                                   hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:
