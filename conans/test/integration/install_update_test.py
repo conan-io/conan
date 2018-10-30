@@ -1,11 +1,14 @@
+
+import os
+import time
 import unittest
+from collections import OrderedDict
+from time import sleep
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
-import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
-from time import sleep
-import time
 from conans.paths import CONAN_MANIFEST
 
 
@@ -66,7 +69,9 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     pass
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers['r1'] = TestServer()
+        servers['r2'] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
         ref = "Pkg/0.1@lasote/testing"
@@ -90,7 +95,9 @@ class Pkg(ConanFile):
     def package(self):
         tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers["r1"] = TestServer()
+        servers["r2"] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
 
@@ -225,6 +232,8 @@ class Pkg(ConanFile):
 
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client2.run("install Hello0/1.0@lasote/stable")
+
+        self.assertEquals(str(client2.out).count("Downloading conaninfo.txt"), 1)
 
         files["helloHello0.h"] = "//EMPTY!"
         self.client.save(files, clean_first=True)

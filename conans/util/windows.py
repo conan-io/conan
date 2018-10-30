@@ -1,8 +1,9 @@
 import os
 import subprocess
+import tempfile
 
 from conans.util.files import load, mkdir, save, rmdir
-import tempfile
+from conans.util.env_reader import get_env
 
 
 CONAN_LINK = ".conan_link"
@@ -37,6 +38,9 @@ def path_shortener(path, short_paths):
     True: Always shorten the path, create link if not existing
     None: Use shorten path only if already exists, not create
     """
+    use_always_short_paths = get_env("CONAN_USE_ALWAYS_SHORT_PATHS", False)
+    short_paths = use_always_short_paths or short_paths
+
     if short_paths is False or os.getenv("CONAN_USER_HOME_SHORT") == "None":
         return path
     link = os.path.join(path, CONAN_LINK)

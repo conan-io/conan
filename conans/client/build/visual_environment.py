@@ -10,18 +10,22 @@ class VisualStudioBuildEnvironment(object):
     """
     - LIB: library paths with semicolon separator
     - CL: /I (include paths)
+    - _LINK_: linker options and libraries
 
     https://msdn.microsoft.com/en-us/library/19z1t1wy.aspx
     https://msdn.microsoft.com/en-us/library/fwkeyyhe.aspx
     https://msdn.microsoft.com/en-us/library/9s7c9wdw.aspx
+    https://msdn.microsoft.com/en-us/library/6y6t9esh.aspx
 
     """
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, with_build_type_flags=True):
         """
         :param conanfile: ConanFile instance
         :param quote_paths: The path directories will be quoted. If you are using the vars together with
                             environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
         """
+        self._with_build_type_flags = with_build_type_flags
+
         self._settings = conanfile.settings
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._runtime = self._settings.get_safe("compiler.runtime")
@@ -32,6 +36,7 @@ class VisualStudioBuildEnvironment(object):
         self.flags = self._configure_flags()
         self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
         self.link_flags = self._configure_link_flags()
+        self.libs = conanfile.deps_cpp_info.libs
         self.std = self._std_cpp()
         self.parallel = False
 
@@ -42,7 +47,7 @@ class VisualStudioBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        ret.extend(vs_build_type_flags(self._settings))
+        ret.extend(vs_build_type_flags(self._settings, with_flags=self._with_build_type_flags))
         return ret
 
     def _get_cl_list(self, quotes=True):
@@ -60,7 +65,6 @@ class VisualStudioBuildEnvironment(object):
         ret.extend(format_defines(self.defines))
         ret.extend(self.flags)
         ret.extend(self.cxx_flags)
-        ret.extend(self.link_flags)
 
         if self.parallel:  # Build source in parallel
             ret.append(parallel_compiler_cl_flag())
@@ -70,20 +74,34 @@ class VisualStudioBuildEnvironment(object):
 
         return ret
 
+    def _get_link_list(self):
+        def format_lib(lib):
+            return lib if lib.endswith('.lib') else '%s.lib' % lib
+
+        ret = [flag for flag in self.link_flags]  # copy
+        ret.extend([format_lib(lib) for lib in self.libs])
+
+        return ret
+
     @property
     def vars(self):
         """Used in conanfile with environment_append"""
         flags = self._get_cl_list()
+        link_flags = self._get_link_list()
+
         cl_args = " ".join(flags) + _environ_value_prefix("CL")
+        link_args = " ".join(link_flags)
         lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + _environ_value_prefix("LIB", ";")
         return {"CL": cl_args,
-                "LIB": lib_paths}
+                "LIB": lib_paths,
+                "_LINK_": link_args}
 
     @property
     def vars_dict(self):
         """Used in virtualbuildenvironment"""
         # Here we do not quote the include paths, it's going to be used by virtual environment
         cl = self._get_cl_list(quotes=False)
+        link = self._get_link_list()
 
         lib = [lib for lib in self.lib_paths]  # copy
 
@@ -93,24 +111,30 @@ class VisualStudioBuildEnvironment(object):
         if os.environ.get("LIB", None):
             lib.append(os.environ.get("LIB"))
 
+        if os.environ.get("_LINK_", None):
+            link.append(os.environ.get("_LINK_"))
+
         ret = {"CL": cl,
-               "LIB": lib}
+               "LIB": lib,
+               "_LINK_": link}
         return ret
 
     def _std_cpp(self):
         return vs_std_cpp(self._settings)
 
 
-def vs_build_type_flags(settings):
+def vs_build_type_flags(settings, with_flags=True):
     build_type = settings.get_safe("build_type")
     ret = []
     btd = build_type_define(build_type=build_type)
     if btd:
         ret.extend(format_defines([btd]))
-    btfs = build_type_flags("Visual Studio", build_type=build_type,
-                            vs_toolset=settings.get_safe("compiler.toolset"))
-    if btfs:
-        ret.extend(btfs)
+    if with_flags:
+        # When using to build a vs project we don't want to adjust these flags
+        btfs = build_type_flags("Visual Studio", build_type=build_type,
+                                vs_toolset=settings.get_safe("compiler.toolset"))
+        if btfs:
+            ret.extend(btfs)
 
     return ret
 

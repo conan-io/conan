@@ -22,7 +22,8 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
-        self.assertTrue(my_json["installed"][0]["recipe"]["cache"])
+        self.assertTrue(my_json["installed"][0]["recipe"]["exported"])
+        self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
@@ -38,7 +39,6 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
         self.assertTrue(my_json["installed"][0]["recipe"]["dependency"])
-        self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
@@ -52,7 +52,6 @@ class JsonOutputTest(unittest.TestCase):
 
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
-        self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertFalse(my_json["installed"][0]["packages"][0]["built"])
@@ -66,7 +65,6 @@ class JsonOutputTest(unittest.TestCase):
 
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
-        self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertIsNotNone(my_json["installed"][0]["recipe"]["remote"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["built"])
@@ -82,7 +80,6 @@ class JsonOutputTest(unittest.TestCase):
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertTrue(my_json["error"])
         self.assertEquals(len(my_json["installed"]), 1)
-        self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertEquals(my_json["installed"][0]["recipe"]["error"],
                           {'type': 'missing', 'remote': None,
@@ -101,11 +98,9 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(error)
         self.assertTrue(my_json["error"])
         self.assertEquals(len(my_json["installed"]), 1)
-        self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
         self.assertTrue(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][0]["recipe"]["error"])
         self.assertEquals(len(my_json["installed"][0]["packages"]), 1)
-        self.assertFalse(my_json["installed"][0]["packages"][0]["cache"])
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
         self.assertEquals(my_json["installed"][0]["packages"][0]["error"]["type"], "missing")
         self.assertIsNone(my_json["installed"][0]["packages"][0]["error"]["remote"])
@@ -175,6 +170,6 @@ AA*: CC/1.0@private_user/channel
         # Installed the build require CC with two options
         self.assertEquals(len(my_json["installed"][2]["packages"]), 2)
         self.assertEquals(my_json["installed"][2]["recipe"]["id"], "CC/1.0@private_user/channel")
-        self.assertTrue(my_json["installed"][2]["recipe"]["cache"])
-        self.assertTrue(my_json["installed"][2]["packages"][0]["cache"])
-        self.assertTrue(my_json["installed"][2]["packages"][1]["cache"])
+        self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
+        self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])
+        self.assertFalse(my_json["installed"][2]["packages"][1]["downloaded"])

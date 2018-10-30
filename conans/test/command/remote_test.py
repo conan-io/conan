@@ -37,11 +37,11 @@ class HelloConan(ConanFile):
         self.client.run('remote list_ref')
         self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
 
-        # Upload again to remote2 and remove from remote1, the ref should be removed
+        # Upload again to remote2 and remove from remote1, the ref shouldm't be removed
         self.client.run('upload "*" -c -r remote2')
         self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
         self.client.run('remote list_ref')
-        self.assertNotIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
 
         # Test the packages references now
         self.client.run('upload "*" -c -r remote1 --all')
@@ -57,13 +57,13 @@ class HelloConan(ConanFile):
         self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
                       self.client.out)
 
-        # Upload again to remote2 and remove from remote1, the ref should be removed
+        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote1')
         self.client.run('remote list_ref')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
                          self.client.out)
 
         # Remove package locally

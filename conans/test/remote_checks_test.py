@@ -10,7 +10,11 @@ from conans.test.utils.tools import TestClient, TestServer, \
 class RemoteChecksTest(unittest.TestCase):
 
     def test_recipe_updates(self):
-        servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
+        servers = OrderedDict()
+        servers["server1"] = TestServer()
+        servers["server2"] = TestServer()
+        servers["server3"] = TestServer()
+
         client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
                                                     "server2": [("lasote", "mypass")],
                                                     "server3": [("lasote", "mypass")]})
@@ -243,7 +247,9 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
 
     def test_binaries_from_different_remotes(self):
-        servers = {"server1": TestServer(), "server2": TestServer()}
+        servers = OrderedDict()
+        servers["server1"] = TestServer()
+        servers["server2"] = TestServer()
         client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
                                                     "server2": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile

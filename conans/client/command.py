@@ -434,7 +434,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                if "plugins." in args.item:
+                if "hooks." in args.item:
                     key, value = args.item.split("=", 1)[0], None
                 else:
                     raise ConanException("Please specify 'key=value'")
@@ -797,24 +797,37 @@ class Command(object):
         parser.add_argument("-s", "--settings", nargs=1, action=Extender,
                             help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information will be '
+                            'written')
         args = parser.parse_args(*args)
+
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
-        return self._conan.export_pkg(conanfile_path=args.path,
-                                      name=name,
-                                      version=version,
-                                      source_folder=args.source_folder,
-                                      build_folder=args.build_folder,
-                                      package_folder=args.package_folder,
-                                      install_folder=args.install_folder,
-                                      profile_name=args.profile,
-                                      env=args.env,
-                                      settings=args.settings,
-                                      options=args.options,
-                                      force=args.force,
-                                      user=user,
-                                      channel=channel)
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            info = self._conan.export_pkg(conanfile_path=args.path,
+                                          name=name,
+                                          version=version,
+                                          source_folder=args.source_folder,
+                                          build_folder=args.build_folder,
+                                          package_folder=args.package_folder,
+                                          install_folder=args.install_folder,
+                                          profile_name=args.profile,
+                                          env=args.env,
+                                          settings=args.settings,
+                                          options=args.options,
+                                          force=args.force,
+                                          user=user,
+                                          channel=channel)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def export(self, *args):
         """Copies the recipe (conanfile.py & associated files) to your local cache.

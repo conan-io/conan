@@ -1,3 +1,4 @@
+import json
 import unittest
 import platform
 import os
@@ -11,6 +12,7 @@ from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         class RequesterMock(object):
@@ -439,3 +441,93 @@ class TestConan(ConanFile):
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
+
+    def export_pkg_json_test(self):
+
+        def _check_json_output(with_error=False):
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(output["error"], with_error)
+            self.assertEqual(output["installed"][0]["recipe"]["id"],
+                             "mypackage/0.1.0@danimtb/testing")
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
+            if with_error:
+                self.assertEqual(output["installed"][0]["packages"], [])
+            else:
+                self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
+
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    name = "mypackage"
+    version = "0.1.0"
+"""
+        self.client = TestClient()
+        self.client.save({"conanfile.py": conanfile})
+
+        # Wrong folders
+        error = self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
+                                "--json output.json", ignore_error=True)
+        self.assertTrue(error)
+        _check_json_output(with_error=True)
+
+        # Deafult folders
+        self.client.run("export-pkg . danimtb/testing --json output.json --force")
+        _check_json_output()
+
+        # Without package_folder
+        self.client.save({"sources/kk.cpp": "", "build/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -bf build -sf sources --json output.json "
+                        "--force")
+        _check_json_output()
+
+        # With package_folder
+        self.client.save({"package/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
+        _check_json_output()
+
+    def json_with_dependencies_test(self):
+
+        def _check_json_output(with_error=False):
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(output["error"], with_error)
+            self.assertEqual(output["installed"][0]["recipe"]["id"],
+                             "pkg2/1.0@danimtb/testing")
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
+            if with_error:
+                self.assertEqual(output["installed"][0]["packages"], [])
+            else:
+                self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                                 "5825778de2dc9312952d865df314547576f129b3")
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
+                self.assertEqual(output["installed"][1]["recipe"]["id"],
+                                 "pkg1/1.0@danimtb/testing")
+                self.assertTrue(output["installed"][1]["recipe"]["dependency"])
+
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    pass
+"""
+        self.client = TestClient()
+        self.client.save({"conanfile_dep.py": conanfile,
+                     "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
+        self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
+        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
+        _check_json_output()
+
+        # Error on missing dependency
+        self.client.run("remove pkg1/1.0@danimtb/testing --force")
+        self.client.run("remove pkg2/1.0@danimtb/testing --force")
+        error = self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing "
+                                "--json output.json",
+                                ignore_error=True)
+        self.assertTrue(error)
+        _check_json_output(with_error=True)
