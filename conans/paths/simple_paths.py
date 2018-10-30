@@ -1,4 +1,4 @@
-from conans.client.package_layouts import get_package_layout
+from conans.paths.package_layouts import get_package_layout
 
 
 class SimplePaths(object):

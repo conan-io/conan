@@ -15,7 +15,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import CONAN_MANIFEST, PUT_HEADERS
 from conans.paths.simple_paths import SimplePaths
-from conans.client.package_layouts import check_ref_case
+from conans.paths.package_layouts import check_ref_case
 from conans.util.files import save, load, normalize, list_folder_subdirs
 from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
 from conans.unicode import get_cwd
