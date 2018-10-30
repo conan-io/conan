@@ -134,10 +134,47 @@ class Pkg(ConanFile):
         self.assertIn("""name: MyPkg
 version: 1.2.3
 url: None
+homepage: None
 license: None
 author: None
 description: None
+topics: None
 generators: ['txt']
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+""", client.out)
+
+    def test_inspect_filled_attributes(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    name = "MyPkg"
+    version = "1.2.3"
+    author = "John Doe"
+    url = "https://john.doe.com"
+    homepage = "https://john.company.site"
+    license = "MIT"
+    description = "Yet Another Test"
+    generators = "cmake"
+    topics = ["foo", "bar", "qux"]
+    _private = "Nothing"
+    def build(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertIn("""name: MyPkg
+version: 1.2.3
+url: https://john.doe.com
+homepage: https://john.company.site
+license: MIT
+author: John Doe
+description: Yet Another Test
+topics: ['foo', 'bar', 'qux']
+generators: cmake
 exports: None
 exports_sources: None
 short_paths: False

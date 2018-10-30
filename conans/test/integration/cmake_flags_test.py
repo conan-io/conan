@@ -1,11 +1,12 @@
+import os
 import platform
 import unittest
-import os
+
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.model.version import Version
 from conans.client.build.cmake import CMake
+from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 
 

@@ -10,6 +10,7 @@ env:
      {upload}
 linux: &linux
    os: linux
+   dist: xenial
    sudo: required
    language: python
    python: "3.6"
@@ -48,7 +49,7 @@ osx_config = """
         env: CONAN_APPLE_CLANG_VERSIONS={version}
 """
 
-build_py = """from conan.packager import ConanMultiPackager
+build_py = """from cpt.packager import ConanMultiPackager
 
 
 if __name__ == "__main__":
@@ -103,9 +104,7 @@ python build.py
 appveyor = r"""build: false
 
 environment:
-    PYTHON: "C:\\Python27"
-    PYTHON_VERSION: "2.7.8"
-    PYTHON_ARCH: "32"
+    PYTHON: "C:\\Python37"
 
     CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
@@ -268,7 +267,8 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
     xcode_map = {"7.3": "7.3",
                  "8.1": "8.3",
                  "9.0": "9.2",
-                 "9.1": "9.3"}
+                 "9.1": "9.3",
+                 "10.0": "10"}
     for apple_clang in osx_clang_versions:
         xcode = xcode_map[apple_clang]
         config.append(osx_config.format(xcode=xcode, version=apple_clang))
@@ -361,8 +361,8 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
             gitlab_gcc_versions or gitlab_clang_versions or circleci_gcc_versions or
             circleci_clang_versions or circleci_osx_versions):
         return {}
-    gcc_versions = ["4.9", "5", "6", "7"]
-    clang_versions = ["3.9", "4.0"]
+    gcc_versions = ["4.9", "5", "6", "7", "8"]
+    clang_versions = ["3.9", "4.0", "5.0", "6.0", "7.0"]
     if visual_versions is True:
         visual_versions = ["12", "14", "15"]
     if linux_gcc_versions is True:
@@ -378,7 +378,7 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
     if circleci_clang_versions is True:
         circleci_clang_versions = clang_versions
     if osx_clang_versions is True:
-        osx_clang_versions = ["7.3", "8.1", "9.0", "9.1"]
+        osx_clang_versions = ["7.3", "8.1", "9.0", "9.1", "10.0"]
     if circleci_osx_versions is True:
         circleci_osx_versions = ["7.3", "8.1", "9.0"]
     if not visual_versions:

@@ -1,10 +1,17 @@
 import os
 import platform
 import unittest
+import tempfile
+import shutil
+from parameterized import parameterized
+from mock import mock
+
 from conans.paths import conan_expand_user, EXPORT_FOLDER, BUILD_FOLDER, PACKAGES_FOLDER
 from conans.paths.simple_paths import SimplePaths
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
+from conans.client.tools.env import environment_append
+from conans.util.windows import path_shortener
 
 
 class PathsTest(unittest.TestCase):
@@ -37,3 +44,43 @@ class PathsTest(unittest.TestCase):
         self.assertEqual(paths.package(package_ref),
                          os.path.join(paths.store, expected_base, PACKAGES_FOLDER,
                                       "456fa678eae68"))
+
+
+@mock.patch("subprocess.check_output", return_value=None)
+class PathShortenerTest(unittest.TestCase):
+
+    def run(self, *args, **kwargs):
+        self.home_short = tempfile.mkdtemp(suffix='_home_short')
+        self.home = tempfile.mkdtemp(suffix="_home")
+        try:
+            with environment_append({"CONAN_USER_HOME_SHORT": self.home_short,
+                                     "USERNAME": "jgsogo"}):
+                super(PathShortenerTest, self).run(*args, **kwargs)
+        finally:
+            shutil.rmtree(self.home_short, ignore_errors=True)
+            shutil.rmtree(self.home, ignore_errors=True)
+
+    @parameterized.expand([(False,), (True,)])
+    def test_default(self, _, short_paths):
+        p = tempfile.mkdtemp(dir=self.home)
+        r = path_shortener(path=p, short_paths=short_paths)
+
+        self.assertEqual(self.home_short in r, short_paths)
+        self.assertEqual(self.home in r, not short_paths)
+
+    @parameterized.expand([(False,), (True,)])
+    def test_with_env_variable(self, _, short_paths):
+        with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': "True"}):
+            p = tempfile.mkdtemp(dir=self.home)
+            r = path_shortener(path=p, short_paths=short_paths)
+
+            self.assertEqual(self.home_short in r, True)
+            self.assertEqual(self.home in r, False)
+
+        with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': "False"}):
+            p = tempfile.mkdtemp(dir=self.home)
+            r = path_shortener(path=p, short_paths=short_paths)
+
+            self.assertEqual(self.home_short in r, short_paths)
+            self.assertEqual(self.home in r, not short_paths)
+

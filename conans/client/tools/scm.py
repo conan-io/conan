@@ -1,6 +1,5 @@
 
 import os
-import sys
 import re
 
 import subprocess
@@ -251,7 +250,7 @@ class SVN(SCMBase):
         excluded_list = []
         output = self.run("status --no-ignore")
         for it in output.splitlines():
-            if it[0] == 'I':  # Only ignored files
+            if it.startswith('I'):  # Only ignored files
                 filepath = it[8:].strip()
                 excluded_list.append(os.path.normpath(filepath))
         return excluded_list
@@ -273,16 +272,27 @@ class SVN(SCMBase):
     def is_pristine(self):
         # Check if working copy is pristine/consistent
         if self.version >= SVN.API_CHANGE_VERSION:
-            output = self.run("status -u -r {}".format(self.get_revision()))
-            offending_columns = [0, 1, 2, 3, 4, 6, 7, 8]  # 5th column informs if the file is locked (7th is always blank)
+            try:
+                output = self.run("status -u -r {} --xml".format(self.get_revision()))
+            except subprocess.CalledProcessError:
+                return False
+            else:
+                root = ET.fromstring(output)
 
-            for item in output.splitlines()[:-1]:
-                if item[0] == '?':  # Untracked file
-                    continue
-                if any(item[i] != ' ' for i in offending_columns):
-                    return False
+                pristine_item_list = ['external', 'ignored', 'none', 'normal']
+                pristine_props_list = ['normal', 'none']
+                for item in root.findall('.//wc-status'):
+                    if item.get('item', 'none') not in pristine_item_list:
+                        return False
+                    if item.get('props', 'none') not in pristine_props_list:
+                        return False
 
-            return True
+                for item in root.findall('.//repos-status'):
+                    if item.get('item', 'none') not in pristine_item_list:
+                        return False
+                    if item.get('props', 'none') not in pristine_props_list:
+                        return False
+                return True
         else:
             import warnings
             warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
