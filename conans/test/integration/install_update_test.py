@@ -95,7 +95,9 @@ class Pkg(ConanFile):
     def package(self):
         tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers["r1"] = TestServer()
+        servers["r2"] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
 

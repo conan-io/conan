@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import OrderedDict
 
 from parameterized import parameterized
 
@@ -99,8 +100,9 @@ class HelloReuseConan(ConanFile):
 class VersionRangesMultiRemoteTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"default": TestServer(),
-                        "other": TestServer()}
+        self.servers = OrderedDict()
+        self.servers["default"] = TestServer()
+        self.servers["other"] = TestServer()
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
                                                               "other": [("lasote", "mypass")]})
 
