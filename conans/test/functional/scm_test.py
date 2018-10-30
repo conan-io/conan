@@ -805,12 +805,13 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn lock conanfile.py myfile.txt subdir')
+            self.client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
+            self.client.runner('svn commit -m "lock some files"')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
-    def test_locked_other_copy(self, auto_keywords):
+    def test_lock_other_copy(self, auto_keywords):
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -818,7 +819,8 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client = TestClient()
         client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
         with chdir(client.current_folder):
-            client.runner('svn lock conanfile.py myfile.txt subdir')
+            client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
+            client.runner('svn commit -m "lock some files"')
 
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
@@ -827,7 +829,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
-    def test_marked_readonly(self, auto_keywords):
+    def test_propset_own(self, auto_keywords):
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -835,12 +837,31 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir')
+            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir/otherfile.txt')
+            self.client.runner('svn commit -m "lock some files"')
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
-    def test_marked_readonly_recursive(self, auto_keywords):
+    def test_propset_other_copy(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Add property needs-lock to other copy
+        client = TestClient()
+        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
+        with chdir(client.current_folder):
+            client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir/otherfile.txt')
+            client.runner('svn commit -m "lock some files"')
+
+        # Work on my copy
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_propset_recursive_own(self, auto_keywords):
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -849,5 +870,24 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
             self.client.runner('svn propset svn:needs-lock * . -R')
+            self.client.runner('svn commit -m "lock some files"')
+        self.client.run("create . user/channel")
+        self.client.run("create . user/channel")
+
+    @parameterized.expand([(True,), (False,), ])
+    def test_propset_recursive_other_copy(self, auto_keywords):
+        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
+        project_url = project_url.replace(" ", "%20")
+
+        # Add property needs-lock to other copy
+        client = TestClient()
+        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
+        with chdir(client.current_folder):
+            client.runner('svn propset svn:needs-lock * . -R')
+            client.runner('svn commit -m "lock some files"')
+
+        # Work on my copy
+        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                            path=self.client.current_folder))
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
