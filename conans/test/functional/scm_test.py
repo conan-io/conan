@@ -787,14 +787,22 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
                                                       "subdir/otherfile.txt": "More and more"})
         if not auto_keywords:
             client = TestClient()
-
             with chdir(client.current_folder):
                 client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                                path=client.current_folder))
-                conanfile = base_svn.format(directory="None", url=project_url, revision=int(rev)+1)
-                save(os.path.join(client.current_folder, 'conanfile.py'), conanfile)
-                client.runner('svn commit -m "use full url-rev"')
+                self._save_fixed_conanfile(client)
+
         return project_url, rev
+
+    @classmethod
+    def _save_fixed_conanfile(cls, client):
+        svn = SVN(client.current_folder)
+        url = svn.get_remote_url()
+        revision = int(svn.get_revision()) + 1
+
+        conanfile = base_svn.format(directory="None", url=url, revision=revision)
+        save(os.path.join(client.current_folder, 'conanfile.py'), conanfile)
+        svn.run('commit -m "update conanfile to fix last revision"')
 
     @parameterized.expand([(True,), (False,), ])
     def test_lock_own_copy(self, auto_keywords):
@@ -807,6 +815,8 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         with chdir(self.client.current_folder):
             self.client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
             self.client.runner('svn commit -m "lock some files"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(self.client)
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
@@ -821,6 +831,8 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         with chdir(client.current_folder):
             client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
             client.runner('svn commit -m "lock some files"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(client)
 
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
@@ -830,6 +842,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     @parameterized.expand([(True,), (False,), ])
     def test_propset_own(self, auto_keywords):
+        """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -837,13 +850,20 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir/otherfile.txt')
+            self.client.runner('svn propset svn:needs-lock '
+                               'conanfile.py myfile.txt subdir subdir/otherfile.txt')
             self.client.runner('svn commit -m "lock some files"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(self.client)
+
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
+
     @parameterized.expand([(True,), (False,), ])
     def test_propset_other_copy(self, auto_keywords):
+        """ Apply svn:needs-lock property to every file in a different
+        working-copy of the repository """
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -851,8 +871,11 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client = TestClient()
         client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
         with chdir(client.current_folder):
-            client.runner('svn propset svn:needs-lock conanfile.py myfile.txt subdir/otherfile.txt')
+            client.runner('svn propset svn:needs-lock '
+                          'conanfile.py myfile.txt subdir subdir/otherfile.txt')
             client.runner('svn commit -m "lock some files"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(client)
 
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
@@ -861,21 +884,28 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
-    def test_propset_recursive_own(self, auto_keywords):
+    def test_propset_root_own(self, auto_keywords):
+        """ Apply svn:needs-lock property to the root folder of the own
+        working-copy of the repository """
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
-        # Add property needs-lock to my own copy (every file recursive)
+        # Add property needs-lock to my own copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         with chdir(self.client.current_folder):
-            self.client.runner('svn propset svn:needs-lock * . -R')
-            self.client.runner('svn commit -m "lock some files"')
+            self.client.runner('svn propset svn:needs-lock . conanfile.py')
+            self.client.runner('svn commit -m "lock root folder"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(self.client)
+
         self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
-    def test_propset_recursive_other_copy(self, auto_keywords):
+    def test_propset_root_other_copy(self, auto_keywords):
+        """ Apply svn:needs-lock property to the root folder of another
+        working-copy of the repository """
         project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
@@ -883,8 +913,10 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client = TestClient()
         client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
         with chdir(client.current_folder):
-            client.runner('svn propset svn:needs-lock * . -R')
+            client.runner('svn propset svn:needs-lock . conanfile.py')
             client.runner('svn commit -m "lock some files"')
+            if not auto_keywords:
+                self._save_fixed_conanfile(client)
 
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
