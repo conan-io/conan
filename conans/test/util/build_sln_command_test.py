@@ -16,7 +16,6 @@ from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
 import os
 from conans.client import tools
-from conans.tools import set_global_instances
 
 
 @attr('visual_studio')

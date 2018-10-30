@@ -545,7 +545,6 @@ class TestClient(object):
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
             return output, self.requester
-            # TODO: set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
