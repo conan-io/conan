@@ -1,12 +1,9 @@
-import imp
-import sys
-import os
-
-from conans.model.ref import ConanFileReference
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.model.requires import Requirement
 from collections import namedtuple
-from conans.client.loader import _parse_file
+
+from conans.client.loader import parse_conanfile
+from conans.client.recorder.action_recorder import ActionRecorder
+from conans.model.ref import ConanFileReference
+from conans.model.requires import Requirement
 
 
 PythonRequire = namedtuple("PythonRequire", "conan_ref module")
@@ -37,7 +34,7 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            module, _ = _parse_file(path)
+            module, _ = parse_conanfile(path)
             python_require = PythonRequire(reference, module)
             self._cached_requires[require] = python_require
         self._requires.append(python_require)
