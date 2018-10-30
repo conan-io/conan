@@ -1,18 +1,18 @@
+import os
 import re
 import unittest
-from collections import namedtuple
 
-from conans.client.generators.cmake_multi import CMakeMultiGenerator
-from conans.model.settings import Settings
-from conans.model.conan_file import ConanFile
-from conans.client.generators.cmake import CMakeGenerator
-from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
+from collections import namedtuple
 from conans.client.conf import default_settings_yml
+from conans.client.generators.cmake import CMakeGenerator
+from conans.client.generators.cmake_multi import CMakeMultiGenerator
+from conans.model.build_info import CppInfo
+from conans.model.conan_file import ConanFile
+from conans.model.env_info import EnvValues
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-import os
-from conans.model.env_info import EnvValues
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -70,9 +70,8 @@ class CMakeGeneratorTest(unittest.TestCase):
     def paths_cmake_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock(None, None, None,
-                                                        lambda x, raise_undefined_field: x,
-                                                        lambda: {}), EnvValues())
+        conanfile.initialize(settings_mock(None, None, None, lambda x, raise_undefined_field: x,
+                                           lambda: {}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")

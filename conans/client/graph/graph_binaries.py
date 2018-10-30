@@ -1,14 +1,14 @@
 import os
 
-from conans.util.files import rmdir, is_dirty
-from conans.model.ref import PackageReference
-from conans.client.output import ScopedOutput
-from conans.errors import NotFoundException, NoRemoteAvailable
-from conans.model.manifest import FileTreeManifest
-from conans.model.info import ConanInfo
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
                                        BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
                                        BINARY_WORKSPACE)
+from conans.client.output import ScopedOutput
+from conans.errors import NotFoundException, NoRemoteAvailable
+from conans.model.info import ConanInfo
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference
+from conans.util.files import rmdir, is_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -26,7 +26,7 @@ class GraphBinariesAnalyzer(object):
         except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
             return False
 
-    def _check_update(self, package_folder, package_ref, remote, output):
+    def _check_update(self, package_folder, package_ref, remote, output, node):
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
@@ -39,6 +39,7 @@ class GraphBinariesAnalyzer(object):
             if upstream_manifest != read_manifest:
                 if upstream_manifest.time > read_manifest.time:
                     output.warn("Current package is older than remote upstream one")
+                    node.update_manifest = upstream_manifest
                     return True
                 else:
                     output.warn("Current package is newer than remote upstream one")
@@ -78,15 +79,15 @@ class GraphBinariesAnalyzer(object):
                 rmdir(package_folder)
 
         if remote_name:
-            remote = self._registry.remote(remote_name)
+            remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.get_recipe_remote(conan_ref)
-        remotes = self._registry.remotes
+            remote = self._registry.prefs.get(package_ref)
+        remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):
             if update:
                 if remote:
-                    if self._check_update(package_folder, package_ref, remote, output):
+                    if self._check_update(package_folder, package_ref, remote, output, node):
                         node.binary = BINARY_UPDATE
                         if build_mode.outdated:
                             package_hash = self._get_package_info(package_ref, remote).recipe_hash

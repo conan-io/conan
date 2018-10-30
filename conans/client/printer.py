@@ -91,7 +91,7 @@ class Printer(object):
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
-                reg_remote = registry.get_recipe_remote(ref)
+                reg_remote = registry.refs.get(ref)
             except:
                 reg_remote = None
 
@@ -111,10 +111,14 @@ class Printer(object):
                 else:
                     self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
             url = getattr(conan, "url", None)
+            homepage = getattr(conan, "homepage", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)
+            topics = getattr(conan, "topics", None)
             if url and show("url"):
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
+            if homepage and show("homepage"):
+                self._out.writeln("    Homepage: %s" % homepage, Color.BRIGHT_GREEN)
 
             if license_ and show("license"):
                 if isinstance(license_, (list, tuple, set)):
@@ -123,6 +127,11 @@ class Printer(object):
                     self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
             if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
+            if topics and show("topics"):
+                if isinstance(topics, (list, tuple, set)):
+                    self._out.writeln("    Topics: %s" % ", ".join(topics), Color.BRIGHT_GREEN)
+                else:
+                    self._out.writeln("    Topics: %s" % topics, Color.BRIGHT_GREEN)
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
