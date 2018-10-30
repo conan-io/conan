@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 from collections import namedtuple
+from nose.plugins.attrib import attr
 
 from conans.client.tools.scm import Git, SVN
 from conans.model.ref import ConanFileReference, PackageReference
@@ -36,6 +37,7 @@ base_git = base % "git"
 base_svn = base % "svn"
 
 
+@attr('git')
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -447,13 +449,13 @@ class ConanLib(ConanFile):
         "type": "git",
         "url": "%s",
         "revision": "my_release",
-        "subfolder": "src"
+        "subfolder": "src/nested"
     }
 
     def source(self):
         self.output.warn("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
-        assert(os.path.exists(os.path.join("src", "myfile")))
+        assert(os.path.exists(os.path.join("src", "nested", "myfile")))
         tools.save("cosa.txt", "contents")
 
     def build(self):
@@ -477,6 +479,7 @@ class ConanLib(ConanFile):
         self.assertEquals(data, data2)
 
 
+@attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -484,7 +487,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.client = TestClient()
 
     def _commit_contents(self):
-        # self.client.runner('svn co "{url}" "{path}"'.format(url=self.repo_url, path=self.client.current_folder))
         self.client.runner("svn add *", cwd=self.client.current_folder)
         self.client.runner('svn commit -m  "commiting"', cwd=self.client.current_folder)
 

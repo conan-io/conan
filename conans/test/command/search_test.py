@@ -1,5 +1,7 @@
 import json
 import os
+from collections import OrderedDict
+
 import shutil
 import unittest
 
@@ -84,8 +86,9 @@ conan_vars4 = """[settings]
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"local": TestServer(server_capabilities=[]),
-                        "search_able": TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])}
+        self.servers = OrderedDict()
+        self.servers["local"] = TestServer(server_capabilities=[])
+        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
         self.client = TestClient(servers=self.servers)
 
         # No conans created

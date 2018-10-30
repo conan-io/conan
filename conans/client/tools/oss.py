@@ -119,7 +119,7 @@ class OSInfo(object):
     @property
     def with_apt(self):
         return self.is_linux and self.linux_distro in \
-                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
+                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
 
     @property
     def with_yum(self):

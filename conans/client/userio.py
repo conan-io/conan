@@ -39,9 +39,11 @@ class UserIO(object):
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
-        if self._interactive:
-            self.out.write("Remote '%s' username: " % remote_name)
-        username = self.get_username(remote_name)
+
+        if not username:
+            if self._interactive:
+                self.out.write("Remote '%s' username: " % remote_name)
+            username = self.get_username(remote_name)
 
         if self._interactive:
             self.out.write('Please enter a password for "%s" account: ' % username)

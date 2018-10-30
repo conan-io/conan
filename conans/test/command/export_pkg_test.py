@@ -1,3 +1,4 @@
+import json
 import unittest
 import platform
 import os
@@ -11,6 +12,7 @@ from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         class RequesterMock(object):
@@ -28,6 +30,36 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
+
+    def test_transitive_without_settings(self):
+        # https://github.com/conan-io/conan/issues/3367
+        conanfile = """from conans import ConanFile
+class PkgC(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgC/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgB(ConanFile):
+    settings = "arch"
+    requires = "PkgC/0.1@user/testing"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create . PkgB/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class PkgA(ConanFile):
+    requires = "PkgB/0.1@user/testing"
+    def build(self):
+        self.output.info("BUILDING PKGA")
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("install . -if=build")
+        client.run("build . -bf=build")
+        client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
+        self.assertIn("PkgA/0.1@user/testing: Package "
+                      "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",
+                      client.out)
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
@@ -179,45 +211,42 @@ class TestConan(ConanFile):
                       client.user_io.out)
 
         # Now repeat
-        client.save({CONANFILE: conanfile}, clean_first=True)
-        client.save({"include/header.h": "//Windows header2"})
+        client.save({CONANFILE: conanfile,
+                     "include/header.h": "//Windows header2"}, clean_first=True)
+        # Without force it fails
         err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows",
                          ignore_error=True)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
         self.assertTrue(err)
-
-        # Will fail because it finds the info files in the curdir.
-        client.run("install . -s os=Windows")
-        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f", ignore_error=True)
-        self.assertTrue(err)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.out)
-
-        client.save({CONANFILE: conanfile, "include/header.h": "//Windows header2"},
-                    clean_first=True)
+        # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header2")
 
-        # Now use --install-folder and avoid the -s os=Windows, should fail without  -f
+        # Now use --install-folder
+        client.save({CONANFILE: conanfile,
+                     "include/header.h": "//Windows header3"}, clean_first=True)
+        # Without force it fails
         client.run("install . --install-folder=inst -s os=Windows")
         err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", ignore_error=True)
         self.assertTrue(err)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
+        # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
+        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
+                      " created", client.out)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header2")
+                         "//Windows header3")
 
-        # Try to specify a setting and the install folder
-        error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -s os=Linux", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
-
-        error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f --profile=default",
-                           ignore_error=True)
-        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
-        self.assertTrue(error)
+        # we can specify settings too
+        client.save({"include/header.h": "//Windows header4"})
+        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f -s os=Windows")
+        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
+                      " created", client.out)
+        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
+                         "//Windows header4")
 
         # Try to specify a install folder with no files
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", ignore_error=True)
@@ -376,7 +405,8 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . anyname/1.222@conan/stable")
-        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' file: file.txt", client.out)
+        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' file: file.txt",
+                      client.out)
 
     def test_with_deps(self):
         client = TestClient()
@@ -411,3 +441,93 @@ class TestConan(ConanFile):
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
+
+    def export_pkg_json_test(self):
+
+        def _check_json_output(with_error=False):
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(output["error"], with_error)
+            self.assertEqual(output["installed"][0]["recipe"]["id"],
+                             "mypackage/0.1.0@danimtb/testing")
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
+            if with_error:
+                self.assertEqual(output["installed"][0]["packages"], [])
+            else:
+                self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
+
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    name = "mypackage"
+    version = "0.1.0"
+"""
+        self.client = TestClient()
+        self.client.save({"conanfile.py": conanfile})
+
+        # Wrong folders
+        error = self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
+                                "--json output.json", ignore_error=True)
+        self.assertTrue(error)
+        _check_json_output(with_error=True)
+
+        # Deafult folders
+        self.client.run("export-pkg . danimtb/testing --json output.json --force")
+        _check_json_output()
+
+        # Without package_folder
+        self.client.save({"sources/kk.cpp": "", "build/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -bf build -sf sources --json output.json "
+                        "--force")
+        _check_json_output()
+
+        # With package_folder
+        self.client.save({"package/kk.lib": ""})
+        self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
+        _check_json_output()
+
+    def json_with_dependencies_test(self):
+
+        def _check_json_output(with_error=False):
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(output["error"], with_error)
+            self.assertEqual(output["installed"][0]["recipe"]["id"],
+                             "pkg2/1.0@danimtb/testing")
+            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
+            self.assertTrue(output["installed"][0]["recipe"]["exported"])
+            if with_error:
+                self.assertEqual(output["installed"][0]["packages"], [])
+            else:
+                self.assertEqual(output["installed"][0]["packages"][0]["id"],
+                                 "5825778de2dc9312952d865df314547576f129b3")
+                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
+                self.assertEqual(output["installed"][1]["recipe"]["id"],
+                                 "pkg1/1.0@danimtb/testing")
+                self.assertTrue(output["installed"][1]["recipe"]["dependency"])
+
+        conanfile = """from conans import ConanFile
+class MyConan(ConanFile):
+    pass
+"""
+        self.client = TestClient()
+        self.client.save({"conanfile_dep.py": conanfile,
+                     "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
+        self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
+        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
+        _check_json_output()
+
+        # Error on missing dependency
+        self.client.run("remove pkg1/1.0@danimtb/testing --force")
+        self.client.run("remove pkg2/1.0@danimtb/testing --force")
+        error = self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing "
+                                "--json output.json",
+                                ignore_error=True)
+        self.assertTrue(error)
+        _check_json_output(with_error=True)

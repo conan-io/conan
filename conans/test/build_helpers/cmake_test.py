@@ -5,6 +5,7 @@ import sys
 import unittest
 import platform
 import mock
+from parameterized.parameterized import parameterized
 
 from collections import namedtuple
 
@@ -1087,6 +1088,35 @@ build_type: [ Release]
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
         return ' '.join(pattern % i for i in args.split())
+
+    @parameterized.expand([('Ninja', 'Visual Studio', 15),
+                           ('NMake Makefiles', 'Visual Studio', 15),
+                           ('NMake Makefiles JOM', 'Visual Studio', 15),
+                           ('Ninja', 'clang', 6.0),
+                           ('NMake Makefiles', 'clang', 6.0),
+                           ('NMake Makefiles JOM', 'clang', 6.0)
+                           ])
+    def test_vcvars_applied(self, generator, compiler, version):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = compiler
+        settings.compiler.version = version
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator=generator)
+
+        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+            vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.configure()
+            self.assertTrue(vcvars_mock.called, "vcvars weren't called")
+
+        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+            vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.build()
+            self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
 
 class ConanFileMock(ConanFile):

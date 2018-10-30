@@ -10,7 +10,7 @@ import codecs
 import six
 
 from conans.util.files import load
-from conans.test.utils.tools import handleRemoveReadonly
+from conans.test.utils.tools import try_remove_readonly
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 
 
@@ -35,7 +35,7 @@ class LibConan(ConanFile):
         try:
             super(ASTReplacementTest, self).run(*args, **kwargs)
         finally:
-            shutil.rmtree(self._tmp_folder, ignore_errors=False, onerror=handleRemoveReadonly)
+            shutil.rmtree(self._tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
     def _get_conanfile(self, header='', author="jgsogo", encoding="ascii"):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))

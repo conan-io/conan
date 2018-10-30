@@ -19,7 +19,8 @@ class MSBuild(object):
             self._conanfile = conanfile
             self._settings = self._conanfile.settings
             self._output = self._conanfile.output
-            self.build_env = VisualStudioBuildEnvironment(self._conanfile)
+            self.build_env = VisualStudioBuildEnvironment(self._conanfile,
+                                                          with_build_type_flags=False)
         else:  # backwards compatible with build_sln_command
             self._settings = conanfile
             self.build_env = None
@@ -123,7 +124,7 @@ class MSBuild(object):
             flags = copy.copy(self.build_env.flags)
             flags.append(self.build_env.std)
         else:  # To be removed when build_sln_command is deprecated
-            flags = vs_build_type_flags(self._settings)
+            flags = vs_build_type_flags(self._settings, with_flags=False)
             flags.append(vs_std_cpp(self._settings))
 
         flags_str = " ".join(list(filter(None, flags))) # Removes empty and None elements

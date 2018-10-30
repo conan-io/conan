@@ -61,6 +61,8 @@ class NewTest(unittest.TestCase):
         content = load(os.path.join(root, "conanfile.py"))
         self.assertIn('name = "MyPackage"', content)
         self.assertIn('version = "1.3"', content)
+        self.assertIn('topics = (', content)
+        self.assertNotIn('homepage', content)
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/conanfile.py")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
@@ -78,6 +80,8 @@ class NewTest(unittest.TestCase):
         self.assertIn('name = "MyPackage"', content)
         self.assertIn('version = "1.3"', content)
         self.assertIn('exports_sources', content)
+        self.assertIn('topics = (', content)
+        self.assertNotIn('homepage', content)
         self.assertNotIn('source()', content)
         # assert they are correct at least
         client.run("export . myuser/testing")
@@ -93,6 +97,8 @@ class NewTest(unittest.TestCase):
         self.assertIn('name = "MyPackage"', content)
         self.assertIn('version = "1.3"', content)
         self.assertIn('del self.settings.compiler.libcxx', content)
+        self.assertIn('topics = (', content)
+        self.assertNotIn('homepage', content)
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
@@ -129,6 +135,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
         self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
         self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
+        self.assertIn(r'PYTHON: "C:\\Python37"', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 12', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 14', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 15', appveyor)
@@ -138,7 +145,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
         self.assertIn('- CONAN_USERNAME: "myuser"', travis)
         self.assertIn('- CONAN_CHANNEL: "testing"', travis)
-        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=lasote/conangcc5',
+        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
