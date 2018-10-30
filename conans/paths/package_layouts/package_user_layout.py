@@ -1,10 +1,10 @@
 # coding=utf-8
 
 from conans.util.files import load
-from conans.paths.package_layouts import PackageBaseLayout
+from conans.paths.package_layouts.package_base_layout import PackageBaseLayout
 
 
-LINKED_FOLDER_SENTINEL = '.linked_package'
+LINKED_FOLDER_SENTINEL = '.linked_package'  # TODO: Move this to conans.path.__init__
 
 
 class PackageUserLayout(PackageBaseLayout):

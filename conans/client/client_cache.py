@@ -245,7 +245,6 @@ class ClientCache(SimplePaths):
         """conan_id = sha(zip file)"""
         assert isinstance(conan_reference, ConanFileReference)
         export_folder = self.export(conan_reference)
-        check_ref_case(conan_reference, self.store)
         return FileTreeManifest.load(export_folder)
 
     def load_package_manifest(self, package_reference):
