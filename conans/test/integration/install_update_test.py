@@ -1,11 +1,14 @@
+
+import os
+import time
 import unittest
+from collections import OrderedDict
+from time import sleep
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
-import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
-from time import sleep
-import time
 from conans.paths import CONAN_MANIFEST
 
 
@@ -66,7 +69,9 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     pass
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers['r1'] = TestServer()
+        servers['r2'] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
         ref = "Pkg/0.1@lasote/testing"
