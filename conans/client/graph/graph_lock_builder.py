@@ -154,7 +154,8 @@ class DepsGraphLockBuilder(object):
         self._recorder = recorder
 
     def expand_build_requires(self, node, graph_lock):
-        
+        pass
+
     def load_graph(self, root_node, remote_name, processed_profile, graph_lock,
                    graph_lock_root_node):
         dep_graph = DepsGraph()

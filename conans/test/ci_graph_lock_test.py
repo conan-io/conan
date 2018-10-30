@@ -99,8 +99,66 @@ class Pkg(ConanFile):
 
         # Info also works
         client.run("info . --lock-file=default.lock")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2/user/channel", client.out)
+
+    def build_require_multi_lock_test(self):
+        # locking a version range
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Tool/0.1@user/channel")
+        client.run("create . Tool2/0.1@user/channel")
+
+        # Use a consumer with a version range
+        consumer = """from conans import ConanFile
+class Pkg(ConanFile):
+    build_requires = "Tool/[>=0.1]@user/channel", "Tool2/[>=0.1]@user/channel"
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
+        print client.out
+        client.run("graph lock . --lock-file=default.lock")
+        self.assertIn("Tool/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.out)
+        self.assertIn("Tool2/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.out)
+        lock_file = load(os.path.join(client.current_folder, "default.lock"))
+        self.assertIn("Tool/0.1@user/channel", lock_file)
+        self.assertIn("Tool2/0.1@user/channel", lock_file)
+
+        # If we create a new PkgA version
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Tool/0.2@user/channel")
+        client.run("create . Tool2/0.2@user/channel")
+
+        # Normal install will use it
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
         self.assertIn("Tool/0.2@user/channel", client.out)
-        self.assertNotIn("Tool/0.1/user/channel", client.out)
+        self.assertNotIn("Tool/0.1@user/channel", client.out)
+        self.assertIn("Tool2/0.2@user/channel", client.out)
+        self.assertNotIn("Tool2/0.1@user/channel", client.out)
+
+        # Locked install will use PkgA/0.1
+        client.run("install . --lock-file=default.lock -g=cmake")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2@user/channel", client.out)
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("Tool/0.1/user/channel", cmake)
+        self.assertNotIn("Tool/0.2/user/channel", cmake)
+        self.assertIn("Tool2/0.1/user/channel", cmake)
+        self.assertNotIn("Tool2/0.2/user/channel", cmake)
+
+        # Info also works
+        client.run("info . --lock-file=default.lock")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2/user/channel", client.out)
+        self.assertIn("Tool2/0.1@user/channel", client.out)
+        self.assertNotIn("Tool2/0.2/user/channel", client.out)
 
     def option_lock_test(self):
         client = TestClient()
