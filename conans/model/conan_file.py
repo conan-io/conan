@@ -13,7 +13,7 @@ from conans.paths import RUN_LOG_NAME
 from conans.client.tools.env import environment_append, no_op
 from conans.client.output import Color
 from conans.client import tools
-from conans.tools import os_info
+from conans.client.tools.oss import OSInfo
 
 
 def create_options(conanfile):
@@ -252,7 +252,7 @@ class ConanFile(object):
                                              msys_mingw=msys_mingw)
         if run_environment:
             with tools.run_environment(self):
-                if os_info.is_macos:
+                if OSInfo().is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                                              command)
                 retcode = _run()

@@ -6,7 +6,6 @@ from conans.test.utils.tools import TestClient
 from conans.client.tools.oss import OSInfo
 from conans.util.files import load
 from conans.client import tools
-from conans.tools import os_info
 
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
@@ -62,6 +61,7 @@ virtualenv
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
+        os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
             activate = load(os.path.join(client.current_folder, "activate.bat"))
             self.assertIn('SET PROMPT=(conanenv) %PROMPT%', activate)

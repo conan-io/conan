@@ -8,8 +8,8 @@ from conans.client import tools
 from conans import load
 from conans.client.remote_registry import RemoteRegistry, load_registry_txt
 from conans.errors import ConanException
-from conans.tools import unzip
 from conans.util.files import rmdir, mkdir, walk
+from conans.client.tools.files import unzip
 
 
 def _hide_password(resource):

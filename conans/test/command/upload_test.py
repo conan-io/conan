@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
-from conans.tools import environment_append
+from conans.client.tools.env import environment_append
 from conans.util.files import save, is_dirty, gzopen_without_timestamps
 from mock import mock
 

@@ -20,7 +20,7 @@ from conans.unicode import get_cwd
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 import json
-from conans.tools import save
+from conans.client.tools.files import save
 from conans.client.printer import Printer
 
 
