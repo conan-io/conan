@@ -12,7 +12,6 @@
 
 from __future__ import print_function
 
-import sys
 import requests
 
 from conans.client.output import ConanOutput
