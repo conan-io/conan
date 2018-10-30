@@ -5,6 +5,7 @@ from time import sleep
 
 from conans import tools, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
 
@@ -506,6 +507,56 @@ class HelloConan(ConanFile):
         # Remove one package in a ref (last) (check dirs cleaned)
         # Remove one revision of a package
         pass
+
+    def test_v1_with_revisions_behavior(self):
+
+        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    
+    def build(self):
+        self.output.warn("Hello")     
+'''
+        client_no_rev.save({"conanfile.py": conanfile})
+        client_no_rev.run("create . %s" % str(self.ref))
+        client_no_rev.run("upload %s -c --all -r remote0" % str(self.ref))
+
+        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        self.assertEquals(rev1, DEFAULT_REVISION_V1)
+
+        # An upload from the other client with revisions puts a new revision as latest
+        self.client.save({"conanfile.py": conanfile.replace("Hello", "Bye")})
+        self.client.run("create . %s" % str(self.ref))
+        self.client.run("upload %s -c --all -r remote0" % str(self.ref))
+
+        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        self.assertNotEquals(rev1, DEFAULT_REVISION_V1)
+
+        client_no_rev.run('remove "*" -f')
+        client_no_rev.run("install %s --build" % str(self.ref))
+        # Client v1 never receives revision but 0
+        self.assertEquals(client_no_rev.get_revision(self.ref), DEFAULT_REVISION_V1)
+        self.assertIn("Bye", client_no_rev.out)
+
+        # If client v1 uploads again the recipe it is the latest again, but with rev0
+        client_no_rev.save({"conanfile.py": conanfile.replace("Hello", "Foo")})
+        client_no_rev.run("create . %s" % str(self.ref))
+        client_no_rev.run("upload %s -c --all -r remote0" % str(self.ref))
+
+        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        self.assertEquals(rev1, DEFAULT_REVISION_V1)
+
+        # Even for the client with revision, now the latest is 0
+        self.client.run('remove "*" -f')
+        self.client.run("install %s --build" % str(self.ref))
+        self.assertIn("Foo", self.client.out)
+        self.assertEquals(self.client.get_revision(self.ref), DEFAULT_REVISION_V1)
+
+
+
+
 
 
 

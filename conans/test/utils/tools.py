@@ -440,7 +440,9 @@ class TestClient(object):
         if block_v2 is None:  # Until v2 is stable
             block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
 
-        if revisions is None:
+        if block_v2:
+            self.revisions = False
+        elif revisions is None:
             self.revisions = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
 
         if self.revisions:
