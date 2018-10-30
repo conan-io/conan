@@ -2,6 +2,7 @@ import json
 import unittest
 
 import os
+from collections import OrderedDict
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -24,10 +25,9 @@ class UserTest(unittest.TestCase):
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
         """
-        servers = {
-            "default": TestServer(),
-            "test_remote_1": TestServer(),
-        }
+        servers = OrderedDict()
+        servers["default"] = TestServer()
+        servers["test_remote_1"] = TestServer()
         client = TestClient(servers=servers)
 
         # Test with wrong remote right error is reported
@@ -179,7 +179,9 @@ class ConanLib(ConanFile):
 
     def authenticated_test(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
-        servers = {"default": test_server, "other_server": TestServer()}
+        servers = OrderedDict()
+        servers["default"] = test_server
+        servers["other_server"] = TestServer()
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
@@ -218,7 +220,9 @@ class ConanLib(ConanFile):
 
         default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         other_server = TestServer()
-        servers = {"default": default_server, "other_server": other_server}
+        servers = OrderedDict()
+        servers["default"] = default_server
+        servers["other_server"] = other_server
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
