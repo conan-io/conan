@@ -4,9 +4,6 @@ from conans.util.files import load
 from conans.paths.package_layouts.package_base_layout import PackageBaseLayout
 
 
-LINKED_FOLDER_SENTINEL = '.linked_package'  # TODO: Move this to conans.path.__init__
-
-
 class PackageUserLayout(PackageBaseLayout):
 
     def __init__(self, linked_package_file, conan_ref, short_paths=False):

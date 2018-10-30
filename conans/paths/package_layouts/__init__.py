@@ -5,8 +5,8 @@ import os
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-from conans.paths.package_layouts.package_user_layout import PackageUserLayout, LINKED_FOLDER_SENTINEL
-from conans.paths import is_case_insensitive_os
+from conans.paths.package_layouts.package_user_layout import PackageUserLayout
+from conans.paths import is_case_insensitive_os, LINKED_FOLDER_SENTINEL
 
 if is_case_insensitive_os():
     def check_ref_case(conan_reference, store_folder):

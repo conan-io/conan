@@ -51,6 +51,7 @@ EXPORT_SOURCES_DIR_OLD = ".c_src"
 RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
+LINKED_FOLDER_SENTINEL = '.linked_package'
 
 # Directories
 EXPORT_FOLDER = "export"
