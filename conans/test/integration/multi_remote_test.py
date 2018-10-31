@@ -118,7 +118,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
-    def package_binary_remote_iteration_test(self):
+    def package_binary_remote_test(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
 class ConanFileToolsTest(ConanFile):
@@ -150,3 +150,14 @@ class ConanFileToolsTest(ConanFile):
         self.assertEquals(registry["package_references"],
                           {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
                            "remote2"})
+
+        client = TestClient(servers=self.servers, users=self.users)
+        client.save({"conanfile.py": conanfile + " # Comment"})
+        client.run("create . %s" % ref)
+        client.run("upload %s -r=remote2 --all" % ref)
+        self.client.run("install %s --update" % ref)
+        self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
+                         self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
+                      self.client.out)
+        self.assertIn("Downloading conan_package.tgz", self.client.out)
