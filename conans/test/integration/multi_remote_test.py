@@ -1,6 +1,6 @@
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestServer, TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict
 

@@ -5,7 +5,8 @@ from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
+    NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load, save
 
 
@@ -104,8 +105,8 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: Package installed "
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
 
     def reuse_version_ranges_test(self):
         client = TestClient()
@@ -258,8 +259,8 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: Package installed "
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
 
     def reuse_scm_test(self):
         client = TestClient()

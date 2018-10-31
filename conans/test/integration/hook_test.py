@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 conanfile_basic = """
 from conans import ConanFile
@@ -134,7 +134,7 @@ def post_download_package(output, conanfile_path, reference, package_id, remote,
 HEADER = "[HOOK - complete_hook] {method_name}():"
 REFERENCE_LOCAL = "basic/0.1@PROJECT"
 REFERENCE_CACHE = "basic/0.1@danimtb/testing"
-PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+PACKAGE_ID = NO_SETTINGS_PACKAGE_ID
 
 custom_module = """
 def my_printer(output):
