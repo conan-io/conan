@@ -1,7 +1,6 @@
 from bottle import Bottle
 
 from conans.server.rest.api_v1 import ApiV1
-from conans.server.rest.controllers.delete_controller import DeleteController
 from conans.server.rest.controllers.ping_controller import PingController
 from conans.server.rest.controllers.search_controller import SearchController
 from conans.server.rest.controllers.users_controller import UsersController
@@ -26,7 +25,7 @@ class ApiV2(ApiV1):
         PingController("").attach_to(self)
 
         SearchController("/conans").attach_to(self)
-        DeleteController("/conans").attach_to(self)
+        # DeleteController("/conans").attach_to(self)
         ConanControllerV2("/conans").attach_to(self)
 
         # Install users controller

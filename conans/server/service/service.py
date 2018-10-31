@@ -181,13 +181,22 @@ class ConanService(object):
         self._server_store.remove_conanfile(reference)
 
     def remove_packages(self, reference, package_ids_filter):
+        """If the revision is not specified it will remove the packages from all the recipes
+        (v1 compatibility)"""
         for package_id in package_ids_filter:
-            ref = PackageReference(reference, package_id)
-            self._authorizer.check_delete_package(self._auth_user, ref)
+            pref = PackageReference(reference, package_id)
+            self._authorizer.check_delete_package(self._auth_user, pref)
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, reference)
 
-        self._server_store.remove_packages(reference, package_ids_filter)
+        if reference.revision:
+            references = [reference]
+        else:
+            references = [reference.copy_with_rev(rev.revision)
+                          for rev in self._server_store.get_recipe_revisions(reference)]
+
+        for ref in references:
+            self._server_store.remove_packages(ref, package_ids_filter)
 
     def remove_conanfile_files(self, reference, files):
         self._authorizer.check_delete_conan(self._auth_user, reference)

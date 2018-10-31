@@ -230,6 +230,11 @@ class ServerStore(SimplePaths):
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
 
+    def get_recipe_revisions(self, reference):
+        tmp = self._recipe_revisions_file(reference)
+        ret = self._get_revisions(tmp)
+        return ret.items()
+
     def _get_revisions(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,

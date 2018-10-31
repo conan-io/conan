@@ -499,13 +499,30 @@ class HelloConan(ConanFile):
         self.assertIn("os: Linux", self.client.out)
         self.assertNotIn("os: Windows", self.client.out)
 
-    def test_revision_remove(self):
-        # Pending to better index
-        # Remove all by global ref?
-        # Remove by ref + rev
-        # Remove all packages in a ref
-        # Remove one package in a ref (last) (check dirs cleaned)
-        # Remove one revision of a package
+    def test_remove_all_revs_with_v1(self):
+        # Check if v1 with several versions in the server will:
+        # Remove all the revisions and packages if I remove by reference
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile): 
+    pass
+'''
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        # Upload three revisions of A and its packages
+        self._create_and_upload(conanfile, ref)
+        self._create_and_upload(conanfile + "\n", ref)
+        self._create_and_upload(conanfile + "\n\n", ref)
+
+        # Create a v1 client
+        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        client_no_rev.run("remove %s -f -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
+                          "-r remote0" % str(ref))
+        self.assertIn("cosa", client_no_rev.all_output)
+
+    def test_remove_packages_from_all_revs_with_v1(self):
+        # Check if v1 with several versions in the server will:
+        # Remove the specified packages from ALL the recipe revisions if I try to remove a pid
         pass
 
     def test_v1_with_revisions_behavior(self):
