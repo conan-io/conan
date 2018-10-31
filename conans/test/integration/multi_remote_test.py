@@ -1,8 +1,9 @@
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
+from collections import OrderedDict
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from collections import OrderedDict
+from conans.test.utils.tools import TestServer, TestClient
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -116,6 +117,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
     def package_remote_follows_recipe_remote_test(self):
+        # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
 class ConanFileToolsTest(ConanFile):
     pass
@@ -125,15 +127,18 @@ class ConanFileToolsTest(ConanFile):
         ref = "Hello/0.1@lasote/stable"
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
         self.client.run("upload %s -r=remote1 --all" % ref)
-        self.client.run("upload %s -r=remote2 --all" % ref)
 
         # Remove only binary from remote1 and everything in local
-        self.client.run("remove -f %s -p5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -r remote1" % ref)
-        self.client.run('remove %s -f' % ref)
+        self.client.run("remove -f %s -p -r remote0" % ref)
+        self.client.run('remove "*" -f')
 
+        self.servers.pop("remote1")
+        self.servers.pop("remote2")
         # Now install it from a client, it won't find the binary in remote2
         error = self.client.run("install %s" % ref, ignore_error=True)
+        print self.client.out
         self.assertTrue(error)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
         self.assertNotIn("remote2", self.client.out)
