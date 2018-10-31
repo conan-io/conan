@@ -113,6 +113,8 @@ project({name} CXX)
             for _, workspace_package in self._workspace_packages.items():
                 build_folder = workspace_package.build_folder
                 build_folder = build_folder.replace("\\", "/")
+                if build_folder.startswith(self._install_folder):
+                    build_folder = build_folder.replace(self._install_folder, '${CMAKE_BINARY_DIR}', 1)
                 cmake += 'add_subdirectory(%s "%s")\n' % (workspace_package.local_cmakedir, build_folder)
             cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
             if os.path.exists(cmake_path) and not load(cmake_path).startswith("# conanws"):
