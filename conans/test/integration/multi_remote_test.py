@@ -1,9 +1,11 @@
 import unittest
 from collections import OrderedDict
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
+from conans.util.files import load
+import json
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -116,43 +118,35 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
-    def package_remote_follows_recipe_remote_test(self):
+    def package_binary_remote_iteration_test(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
 class ConanFileToolsTest(ConanFile):
     pass
 """
-
         # Upload recipe + package to remote1 and remote2
         ref = "Hello/0.1@lasote/stable"
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % ref)
         self.client.run("upload %s -r=remote0 --all" % ref)
-        self.client.run("upload %s -r=remote1 --all" % ref)
+        self.client.run("upload %s -r=remote2 --all" % ref)
 
         # Remove only binary from remote1 and everything in local
         self.client.run("remove -f %s -p -r remote0" % ref)
         self.client.run('remove "*" -f')
 
         self.servers.pop("remote1")
-        self.servers.pop("remote2")
         # Now install it from a client, it won't find the binary in remote2
         error = self.client.run("install %s" % ref, ignore_error=True)
-        print self.client.out
         self.assertTrue(error)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
         self.assertNotIn("remote2", self.client.out)
 
-        self.client.run("install %s -r remote2" % ref, ignore_error=False)
+        self.client.run("install %s -r remote2" % ref)
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
-
-        ref = ConanFileReference.loads(ref)
-        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-
-        # Package from remote2
-        remote = self.client.remote_registry.prefs.get(pref)
-        self.assertEquals(remote.name, "remote2")
-
-        # But recipe from remote1
-        remote = self.client.remote_registry.refs.get(ref)
-        self.assertEquals(remote.name, "remote1")
+        registry = load(self.client.client_cache.registry)
+        registry = json.loads(registry)
+        self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
+        self.assertEquals(registry["package_references"],
+                          {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
+                           "remote2"})
