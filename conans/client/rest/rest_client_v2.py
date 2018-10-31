@@ -260,3 +260,17 @@ class RestV2Methods(RestCommonMethods):
     def _remove_conanfile_files(self, conan_reference, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
+
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        if not package_ids:
+            url = self._recipe_url(conan_reference) + "/packages"
+            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                  verify=self.verify_ssl)
+            return
+        for pid in package_ids:
+            pref = PackageReference(conan_reference, pid)
+            url = self._package_url(pref)
+            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                  verify=self.verify_ssl)

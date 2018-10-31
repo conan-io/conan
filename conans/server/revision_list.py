@@ -30,9 +30,8 @@ class RevisionList(object):
         index = self._find_revision_index(revision_id)
         if index:
             self._data.pop(index)
-        else:
-            now = time.time()
 
+        now = time.time()
         self._data.append(_RevisionEntry(revision_id, now))
 
     def latest_revision(self):

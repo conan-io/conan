@@ -198,9 +198,44 @@ class ConanService(object):
         for ref in references:
             self._server_store.remove_packages(ref, package_ids_filter)
 
+    def remove_package(self, package_reference):
+        self._authorizer.check_delete_package(self._auth_user, package_reference)
+
+        if not package_reference.conan.revision:
+            recipe_revisions = [r.revision for r in
+                                self._server_store.get_recipe_revisions(package_reference.conan)]
+        else:
+            recipe_revisions = [package_reference.conan.revision]
+
+        for recipe_rev in recipe_revisions:
+            ref = package_reference.conan.copy_with_rev(recipe_rev)
+            if not package_reference.revision:
+                pref = PackageReference(ref, package_reference.package_id)
+                package_revisions = [r.revision
+                                     for r in self._server_store.get_package_revisions(pref)]
+            else:
+                package_revisions = [package_reference.revision]
+
+            for prev in package_revisions:
+                full_pref = PackageReference(ref, package_reference.package_id)
+                full_pref.revision = prev
+                self._server_store.remove_package(full_pref)
+
+    def remove_all_packages(self, reference):
+        if reference.revision:
+            references = [reference]
+        else:
+            references = [reference.copy_with_rev(rev.revision)
+                          for rev in self._server_store.get_recipe_revisions(reference)]
+        for ref in references:
+            self._server_store.remove_all_packages(ref)
+
     def remove_conanfile_files(self, reference, files):
         self._authorizer.check_delete_conan(self._auth_user, reference)
         self._server_store.remove_conanfile_files(reference, files)
+
+    def remove_conanfile_file(self, reference, path):
+        self.remove_conanfile_files(reference, [path])
 
     # Package methods
     def get_package_snapshot(self, package_reference):

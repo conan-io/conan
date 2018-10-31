@@ -4,6 +4,7 @@ from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
+from conans.server.rest.controllers.v2 import get_package_ref
 from conans.server.service.service_v2 import ConanServiceV2
 
 
@@ -70,8 +71,3 @@ class ConanControllerV2(Controller):
             conan_service.upload_recipe_file(request.body, request.headers, reference, the_path,
                                              auth_user)
 
-
-def get_package_ref(name, version, username, channel, package_id, revision, p_revision):
-    reference = ConanFileReference(name, version, username, channel, revision)
-    package_id = "%s#%s" % (package_id, p_revision) if p_revision else package_id
-    return PackageReference(reference, package_id)

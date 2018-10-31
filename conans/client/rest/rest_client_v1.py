@@ -298,3 +298,11 @@ class RestV1Methods(RestCommonMethods):
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = self._recipe_url(conan_reference) + "/remove_files"
         return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        payload = {"package_ids": package_ids}
+        url = self._recipe_url(conan_reference) + "/packages/delete"
+        return self._post_json(url, payload)

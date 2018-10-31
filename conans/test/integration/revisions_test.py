@@ -499,6 +499,81 @@ class HelloConan(ConanFile):
         self.assertIn("os: Linux", self.client.out)
         self.assertNotIn("os: Windows", self.client.out)
 
+    def _upload_two_revisions(self, ref, different_binary=False):
+            conanfile = '''
+import os
+import uuid
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile): 
+    pass
+'''
+            if different_binary:  # Same pid but different binary hash
+                conanfile += """
+    def package(self):
+        tools.save(os.path.join(self.package_folder, "file"), str(uuid.uuid4()))
+"""
+            self._create_and_upload(conanfile, ref)
+            _rev1 = self.client.get_revision(ref)
+            self._create_and_upload(conanfile + "\n", ref)
+            _rev2 = self.client.get_revision(ref)
+            return _rev1, _rev2
+
+    def test_remove_recipe_v2_test(self):
+
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        rev1, rev2 = self._upload_two_revisions(ref)
+
+        # If I specify rev2 only rev2 is removed
+        self.client.run("remove %s#%s -f -r remote0" % (str(ref), rev2))
+        latestrev = self.servers["remote0"].paths.get_last_revision(ref).revision
+        self.assertEquals(latestrev, rev1)
+
+        self._upload_two_revisions(ref)
+        # If I don't specify revision all the revisions are removed
+        self.client.run("remove %s -f -r remote0" % str(ref))
+        latestrev = self.servers["remote0"].paths.get_last_revision(ref)
+        self.assertIsNone(latestrev)
+
+    def test_remove_packages_v2_test(self):
+        # If I don't specify a recipe revision it will remove all the packages from all recipe
+        # revisions
+        pid = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        rev1, rev2 = self._upload_two_revisions(ref)
+        full_pr1 = PackageReference(ref.copy_with_rev(rev1), pid)
+        full_pr2 = PackageReference(ref.copy_with_rev(rev2), pid)
+        path1 = self.servers["remote0"].paths.package(full_pr1)
+        path2 = self.servers["remote0"].paths.package(full_pr2)
+        self.assertTrue(os.path.exists(path1))
+        self.assertTrue(os.path.exists(path2))
+
+        self.client.run("remove %s -f -r remote0 -p %s" % (str(ref), pid))
+        self.assertFalse(os.path.exists(path1))
+        self.assertFalse(os.path.exists(path2))
+
+        # Now specify the recipe revision
+        self._upload_two_revisions(ref)
+        self.client.run("remove %s#%s -f -r remote0 -p %s" % (str(ref), rev1, pid))
+        self.assertFalse(os.path.exists(path1))
+        self.assertTrue(os.path.exists(path2))
+
+        # Now generate different package revisions also
+        rev1, rev2 = self._upload_two_revisions(ref, different_binary=True)
+        full_pr1 = PackageReference(ref.copy_with_rev(rev1), pid)
+        prevs = [el.revision for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+        self.assertEquals(len(prevs), 1)
+        self._upload_two_revisions(ref, different_binary=True)
+        prevs = [el.revision for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+        self.assertEquals(len(prevs), 2)
+
+        # Remove a concrete package reference
+        self.client.run("remove %s#%s -f -r remote0 -p %s#%s" % (str(ref), rev1, pid, prevs[0]))
+        prevs_now = [el.revision
+                     for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+        self.assertEquals(len(prevs_now), 1)
+        self.assertEquals(prevs_now[0], prevs[1])
+
     def test_remove_all_revs_with_v1(self):
         # Check if v1 with several versions in the server will:
         # Remove all the revisions and packages if I remove by reference
@@ -511,19 +586,48 @@ class HelloConan(ConanFile):
         ref = ConanFileReference.loads("lib/1.0@lasote/testing")
         # Upload three revisions of A and its packages
         self._create_and_upload(conanfile, ref)
-        self._create_and_upload(conanfile + "\n", ref)
-        self._create_and_upload(conanfile + "\n\n", ref)
+        rev1 = self.client.get_revision(ref)
 
-        # Create a v1 client
+        self._create_and_upload(conanfile + "\n", ref)
+        rev2 = self.client.get_revision(ref)
+
+        self._create_and_upload(conanfile + "\n\n", ref)
+        rev3 = self.client.get_revision(ref)
+
+        self._create_and_upload(conanfile + "\n\n\n", ref)
+        rev4 = self.client.get_revision(ref)
+
+        self.assertNotEquals(rev1, rev2)
+        self.assertNotEquals(rev2, rev3)
+        self.assertNotEquals(rev1, rev3)
+
+        # Remove all locally
+        self.client.run("remove '*' -f")
+
+        # First a pre-check, if I remove only the package for the rev4 the rest is there
+        self.client.run("remove %s#%s -f -r remote0" % (ref, rev4))
+        latestrev = self.servers["remote0"].paths.get_last_revision(ref).revision
+        self.assertEquals(latestrev, rev3)
+        self.client.run("install %s#%s" % (self.ref, rev3))
+
+        # Create a v1 client and remove the pid
         client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
         client_no_rev.run("remove %s -f -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
                           "-r remote0" % str(ref))
-        self.assertIn("cosa", client_no_rev.all_output)
 
-    def test_remove_packages_from_all_revs_with_v1(self):
-        # Check if v1 with several versions in the server will:
-        # Remove the specified packages from ALL the recipe revisions if I try to remove a pid
-        pass
+        # Remove all locally again
+        self.client.run("remove '*' -f")
+
+        # Use the regular v2 client and try to install specifying revisions
+        error = self.client.run("install %s#%s" % (self.ref, rev1), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
+        error = self.client.run("install %s#%s" % (self.ref, rev2), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
+        error = self.client.run("install %s#%s" % (self.ref, rev3), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
 
     def test_v1_with_revisions_behavior(self):
 
@@ -571,9 +675,56 @@ class HelloConan(ConanFile):
         self.assertIn("Foo", self.client.out)
         self.assertEquals(self.client.get_revision(self.ref), DEFAULT_REVISION_V1)
 
+    def package_iterating_remote_same_recipe_revision_test(self):
+        """If remote1 and remote2 has the same recipe revisions it will
+        look for binaries iterating"""
+        pid = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        # https://github.com/conan-io/conan/issues/3882
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    pass
+"""
+        # Upload recipe + package to remote1 and remote2
+        ref = "Hello/0.1@lasote/stable"
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
+        self.client.run("upload %s -r=remote2 --all" % ref)
 
+        # Remove only binary from remote1 and everything in local
+        self.client.run("remove -f %s -p -r remote0" % ref)
+        self.client.run('remove "*" -f')
 
+        # Now install it from a client, it will find the binary in remote2
+        # because the recipe revision is the same
+        self.client.run("install %s" % ref)
+        self.assertIn("Retrieving package %s from remote 'remote2' " % pid, self.client.out)
 
+    def package_iterating_remote_different_recipe_revision_test(self):
+        """If remote1 and remote2 has the same recipe revisions it wont
+        look for binaries iterating"""
+        # https://github.com/conan-io/conan/issues/3882
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    pass
+"""
+        # Upload recipe + package to remote1 and remote2
+        ref = "Hello/0.1@lasote/stable"
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
 
+        self.client.save({"conanfile.py": conanfile + "\n"})
+        self.client.run("create . %s" % ref)
+        self.client.run("upload %s -r=remote2 --all" % ref)
 
+        # Remove only binary from remote1 and everything in local
+        self.client.run("remove -f %s -p -r remote0" % ref)
+        self.client.run('remove "*" -f')
+
+        # Now install it from a client, it won't find the binary in remote2
+        # because the recipe revision is NOT the same
+        error = self.client.run("install %s" % ref, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
 

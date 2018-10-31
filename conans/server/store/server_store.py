@@ -87,7 +87,7 @@ class ServerStore(SimplePaths):
         assert isinstance(reference, ConanFileReference)
         result = self._storage_adapter.delete_folder(self.conan(reference, resolve_latest=False))
         if reference.revision:
-            self._remove_revision(reference)
+            self._remove_revision_from_index(reference)
         self._storage_adapter.delete_empty_dirs([reference])
         return result
 
@@ -104,7 +104,20 @@ class ServerStore(SimplePaths):
                 package_folder = self.package(package_ref)
                 self._storage_adapter.delete_folder(package_folder)
         self._storage_adapter.delete_empty_dirs([reference])
-        return
+
+    def remove_package(self, package_ref):
+        assert isinstance(package_ref, PackageReference)
+        assert package_ref.revision is not None
+        assert package_ref.conan.revision is not None
+        package_folder = self.package(package_ref)
+        self._storage_adapter.delete_folder(package_folder)
+        self._remove_package_revision_from_index(package_ref)
+
+    def remove_all_packages(self, reference):
+        assert reference.revision is not None
+        assert isinstance(reference, ConanFileReference)
+        packages_folder = self.packages(reference)
+        self._storage_adapter.delete_folder(packages_folder)
 
     def remove_conanfile_files(self, reference, files):
         subpath = self.export(reference)
@@ -235,6 +248,12 @@ class ServerStore(SimplePaths):
         ret = self._get_revisions(tmp)
         return ret.items()
 
+    def get_package_revisions(self, p_reference):
+        assert p_reference.conan.revision is not None
+        tmp = self._package_revisions_file(p_reference)
+        ret = self._get_revisions(tmp)
+        return ret.items()
+
     def _get_revisions(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
@@ -303,10 +322,15 @@ class ServerStore(SimplePaths):
 
         return ret.copy_with_revs(reference.revision, latest_p.revision)
 
-    def _remove_revision(self, reference):
+    def _remove_revision_from_index(self, reference):
         rev_list = self._load_revision_list(reference)
         rev_list.remove_revision(reference.revision)
         self._save_revision_list(rev_list, reference)
+
+    def _remove_package_revision_from_index(self, p_reference):
+        rev_list = self._load_package_revision_list(p_reference)
+        rev_list.remove_revision(p_reference.revision)
+        self._save_package_revision_list(rev_list, p_reference)
 
     def _load_revision_list(self, reference):
         path = self._recipe_revisions_file(reference)
@@ -315,6 +339,10 @@ class ServerStore(SimplePaths):
 
     def _save_revision_list(self, rev_list, reference):
         path = self._recipe_revisions_file(reference)
+        self._storage_adapter.write_file(path, rev_list.dumps(), lock_file=path + ".lock")
+
+    def _save_package_revision_list(self, rev_list, p_reference):
+        path = self._package_revisions_file(p_reference)
         self._storage_adapter.write_file(path, rev_list.dumps(), lock_file=path + ".lock")
 
     def _load_package_revision_list(self, pref):

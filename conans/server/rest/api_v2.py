@@ -5,6 +5,7 @@ from conans.server.rest.controllers.ping_controller import PingController
 from conans.server.rest.controllers.search_controller import SearchController
 from conans.server.rest.controllers.users_controller import UsersController
 from conans.server.rest.controllers.v2.conan_controller import ConanControllerV2
+from conans.server.rest.controllers.v2.delete_controller import DeleteControllerV2
 
 
 class ApiV2(ApiV1):
@@ -25,7 +26,7 @@ class ApiV2(ApiV1):
         PingController("").attach_to(self)
 
         SearchController("/conans").attach_to(self)
-        # DeleteController("/conans").attach_to(self)
+        DeleteControllerV2("/conans").attach_to(self)
         ConanControllerV2("/conans").attach_to(self)
 
         # Install users controller

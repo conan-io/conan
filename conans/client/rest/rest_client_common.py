@@ -8,7 +8,6 @@ from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanExcep
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.search.search import filter_packages
-from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -255,14 +254,6 @@ class RestCommonMethods(object):
                                          headers=self.custom_headers,
                                          verify=self.verify_ssl)
         return response
-
-    @handle_return_deserializer()
-    def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any packages specified by package_ids"""
-        self.check_credentials()
-        payload = {"package_ids": package_ids}
-        url = self._recipe_url(conan_reference) + "/packages/delete"
-        return self._post_json(url, payload)
 
     def _post_json(self, url, payload):
         response = self.requester.post(url,
