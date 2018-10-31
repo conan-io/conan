@@ -6,6 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import load
 import json
+import time
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -152,6 +153,7 @@ class ConanFileToolsTest(ConanFile):
                            "remote2"})
 
         client = TestClient(servers=self.servers, users=self.users)
+        time.sleep(1)  # Make sure timestamps increase
         client.save({"conanfile.py": conanfile + " # Comment"})
         client.run("create . %s" % ref)
         client.run("upload %s -r=remote2 --all" % ref)
