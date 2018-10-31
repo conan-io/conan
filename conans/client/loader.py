@@ -43,7 +43,7 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
-        loaded, filename = _parse_file(conanfile_path)
+        loaded, filename = parse_conanfile(conanfile_path)
         try:
             conanfile = _parse_module(loaded, filename)
             conanfile.python_requires = self._python_requires.requires
@@ -218,17 +218,17 @@ def _invalid_python_requires(require):
     raise ConanException("Invalid use of python_requires(%s)" % require)
 
 
-def _parse_file(conan_file_path):
+def parse_conanfile(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
 
+    module_id = str(uuid.uuid1())
+    current_dir = os.path.dirname(conan_file_path)
+    sys.path.insert(0, current_dir)
     try:
-        module_id = str(uuid.uuid1())
-        current_dir = os.path.dirname(conan_file_path)
-        sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
@@ -256,6 +256,6 @@ def _parse_file(conan_file_path):
         raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                      '\n'.join(trace[3:])))
     finally:
-        sys.path.pop()
+        sys.path.pop(0)
 
     return loaded, module_id

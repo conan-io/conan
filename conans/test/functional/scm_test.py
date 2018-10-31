@@ -2,12 +2,14 @@ import json
 import os
 import unittest
 from collections import namedtuple
+from nose.plugins.attrib import attr
 
 from conans.client.tools.scm import Git, SVN
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
+    SVNLocalRepoTestCase, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load, rmdir, save, to_file_bytes
 from conans.client.tools.win import get_cased_path
 
@@ -36,6 +38,7 @@ base_git = base % "git"
 base_svn = base % "svn"
 
 
+@attr('git')
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -212,7 +215,7 @@ other_folder/excluded_subfolder
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
-                                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                NO_SETTINGS_PACKAGE_ID)
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -474,6 +477,7 @@ class ConanLib(ConanFile):
         self.assertEquals(data, data2)
 
 
+@attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -481,7 +485,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.client = TestClient()
 
     def _commit_contents(self):
-        # self.client.runner('svn co "{url}" "{path}"'.format(url=self.repo_url, path=self.client.current_folder))
         self.client.runner("svn add *", cwd=self.client.current_folder)
         self.client.runner('svn commit -m  "commiting"', cwd=self.client.current_folder)
 
@@ -607,7 +610,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
-                                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                NO_SETTINGS_PACKAGE_ID)
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))

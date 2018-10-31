@@ -1,11 +1,12 @@
 import os
 import unittest
+from collections import OrderedDict
 
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer, \
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp
+    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load
 
 
@@ -80,7 +81,7 @@ class HelloReuseConan(ConanFile):
         # it can fail due to same timestamp
         inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
         inc_package_manifest_timestamp(client2.client_cache,
-                                       "Pkg/1.2@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                       "Pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                                        1)
 
         client2.run("upload Pkg* -r=default --all --confirm")
@@ -100,8 +101,9 @@ class HelloReuseConan(ConanFile):
 class VersionRangesMultiRemoteTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"default": TestServer(),
-                        "other": TestServer()}
+        self.servers = OrderedDict()
+        self.servers["default"] = TestServer()
+        self.servers["other"] = TestServer()
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
                                                               "other": [("lasote", "mypass")]})
 

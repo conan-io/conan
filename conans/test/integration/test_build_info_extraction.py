@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 import sys
+from collections import OrderedDict
 
 from nose.plugins.attrib import attr
 
@@ -18,7 +19,9 @@ class MyBuildInfo(unittest.TestCase):
     def setUp(self):
         test_server = TestServer(users={"lasote": "lasote"})
         test_server2 = TestServer(users={"lasote": "lasote"})
-        self.servers = {"default": test_server, "alternative": test_server2}
+        self.servers = OrderedDict()
+        self.servers["default"] = test_server
+        self.servers["alternative"] = test_server2
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "lasote")],
                                                               "alternative": [("lasote", "lasote")]})
 

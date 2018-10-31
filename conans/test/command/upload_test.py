@@ -5,7 +5,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.tools import environment_append
 from conans.util.files import save, is_dirty, gzopen_without_timestamps
 from mock import mock
@@ -153,9 +153,8 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        CONAN_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
-                                             CONAN_PACKAGE_ID)
+                                             NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -173,7 +172,7 @@ class UploadTest(unittest.TestCase):
 
         client.run("upload * --confirm --all")
         self.assertIn("WARN: Hello0/1.2.1@user/testing:%s: "
-                      "Removing conan_package.tgz, marked as dirty" % CONAN_PACKAGE_ID,
+                      "Removing conan_package.tgz, marked as dirty" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))

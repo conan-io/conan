@@ -2,7 +2,7 @@ import unittest
 import os
 from conans import tools
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 conanfile = '''
 from conans import ConanFile
@@ -46,7 +46,7 @@ class TestConanLib(ConanFile):
 
         self.assertNotIn("Exporting package recipe", client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
-        self.assertNotIn("Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created", client.out)
+        self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 

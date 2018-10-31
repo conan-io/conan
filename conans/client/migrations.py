@@ -192,7 +192,7 @@ def migrate_c_src_export_source(client_cache, out):
 
 def migrate_plugins_to_hooks(client_cache):
     plugins_path = os.path.join(client_cache.conan_folder, "plugins")
-    if os.path.exists(plugins_path):
+    if os.path.exists(plugins_path) and not os.path.exists(client_cache.hooks_path):
         os.rename(plugins_path, client_cache.hooks_path)
     conf_path = client_cache.conan_conf_path
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False)

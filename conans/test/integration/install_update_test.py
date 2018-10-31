@@ -1,12 +1,16 @@
 import os
-import time
 import unittest
+from collections import OrderedDict
+
+import time
+from time import sleep
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
-from time import sleep
 
 
 class InstallUpdateTest(unittest.TestCase):
@@ -66,7 +70,9 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     pass
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers['r1'] = TestServer()
+        servers['r2'] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
         ref = "Pkg/0.1@lasote/testing"
@@ -81,7 +87,7 @@ class Pkg(ConanFile):
 
         # It should upload both to r1 (default), not taking into account the pref to r2
         client.run("upload Pkg/0.1@lasote/testing --all")
-        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'r1'",
+        self.assertIn("Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
     def install_update_following_pref_test(self):
@@ -92,7 +98,9 @@ class Pkg(ConanFile):
     def package(self):
         tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
 """
-        servers = {"r1": TestServer(), "r2": TestServer()}
+        servers = OrderedDict()
+        servers["r1"] = TestServer()
+        servers["r2"] = TestServer()
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
 
@@ -117,7 +125,7 @@ class Pkg(ConanFile):
         client.run("install %s --update" % ref)
         self.assertIn("Pkg/0.1@lasote/testing from 'r1' - Cache", client.out)
         self.assertIn("Retrieving package "
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'r2'", client.out)
+                      "%s from remote 'r2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
     def update_binaries_failed_test(self):
         conanfile = """from conans import ConanFile
@@ -141,7 +149,7 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing")
         client.run("remote add_pref Pkg/0.1@lasote/testing:"
-                   "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 myremote")
+                   "%s myremote" % NO_SETTINGS_PACKAGE_ID)
         client.run("install Pkg/0.1@lasote/testing --update")
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
@@ -271,9 +279,10 @@ class ConanLib(ConanFile):
         upload("mycontent2")
 
         client.run("install Pkg/0.1@lasote/channel -u")
-        self.assertIn("Pkg/0.1@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client.out)
-        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package 5ab84d6acfe1f2", client.out)
+        self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
+        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
         conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
-        pkg_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pkg_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
         header = os.path.join(client.client_cache.package(pkg_ref), "header.h")
         self.assertEqual(load(header), "mycontent2")

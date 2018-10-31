@@ -1,14 +1,16 @@
 import json
 import os
-import shutil
 import unittest
+from collections import OrderedDict
 
+import shutil
+
+from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
 from conans.server.conf import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
-from conans.model.manifest import FileTreeManifest
-from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.util.files import load, list_folder_subdirs
 
 conan_vars1 = '''
@@ -85,8 +87,10 @@ conan_vars4 = """[settings]
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"local": TestServer(),
-                        "search_able": TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])}
+        self.servers = OrderedDict()
+        self.servers["local"] = TestServer(server_capabilities=[])
+        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+
         self.client = TestClient(servers=self.servers)
 
         # No conans created

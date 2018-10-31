@@ -9,7 +9,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import unzip, save
 from conans.util.files import load, save_files
 from conans.errors import ConanException
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -65,9 +65,10 @@ class Pkg(ConanFile):
 """
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
-        pkg_ref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pkg_ref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         server.paths.update_last_package_revision(pkg_ref.copy_with_revs(DEFAULT_REVISION_V1,
-                                                                              DEFAULT_REVISION_V1))
+                                                                         DEFAULT_REVISION_V1))
+
         package = server.paths.package(pkg_ref)
         save_files(package, {"conaninfo.txt": "#",
                              "conanmanifest.txt": "1",

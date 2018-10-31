@@ -1,4 +1,4 @@
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 import unittest
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.model.ref import PackageReference
@@ -122,8 +122,7 @@ class AConan(ConanFile):
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py")
-        ref = PackageReference.loads("Hello/0.1@lasote/testing:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         package_folder = client.paths.package(ref).replace("\\", "/")
         self.assertIn("Project: INCLUDE PATH: %s/include" % package_folder, client.user_io.out)
         self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)

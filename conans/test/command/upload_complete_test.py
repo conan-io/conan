@@ -3,6 +3,9 @@ import os
 import platform
 import stat
 import unittest
+
+from requests.packages.urllib3.exceptions import ConnectionError
+
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -12,10 +15,10 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_source_files, temp_folder, \
     hello_conan_files
 from conans.test.utils.test_files import uncompress_packaged_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.tools import untargz
 from conans.util.files import load, mkdir, save
-from requests.packages.urllib3.exceptions import ConnectionError
 
 myconan1 = """
 from conans import ConanFile
@@ -436,7 +439,7 @@ class TestConan(ConanFile):
                                    },
                                    "packages": [
                                        {
-                                           "id": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                           "id": NO_SETTINGS_PACKAGE_ID,
                                            "time": "unknown"
                                        }
                                    ]
