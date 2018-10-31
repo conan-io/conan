@@ -11,8 +11,6 @@ matrix:
         - python: 3.5
           if: branch =~ (^release.*)|(^master)
         - python: 3.6
-        - python: 3.7
-          dist: xenial
         - language: generic
           os: osx
           osx_image: xcode8.3
