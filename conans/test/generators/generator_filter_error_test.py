@@ -1,5 +1,5 @@
 import unittest
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load
 import os
 
@@ -44,5 +44,5 @@ llvm/5.0@user/channel
                                     "test_package/build/91852f76fac8dd11832a54cf197288f5fd7d18f4"
                                     "/conanbuildinfo.txt"))
         self.assertIn(".conan/data/MyLib/0.1/user/channel/package/"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
+                      "%s/include" % NO_SETTINGS_PACKAGE_ID,
                       content)

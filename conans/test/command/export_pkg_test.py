@@ -4,7 +4,7 @@ import platform
 import os
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load, mkdir
 from conans.test.utils.conanfile import TestConanFile
@@ -332,7 +332,7 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.client_cache.package(package_ref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -458,7 +458,7 @@ class TestConan(ConanFile):
                 self.assertEqual(output["installed"][0]["packages"], [])
             else:
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
-                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                 NO_SETTINGS_PACKAGE_ID)
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
 
         conanfile = """from conans import ConanFile
