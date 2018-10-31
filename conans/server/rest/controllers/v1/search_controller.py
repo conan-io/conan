@@ -21,14 +21,13 @@ class SearchController(Controller):
             if isinstance(ignorecase, str):
                 ignorecase = False if 'false' == ignorecase.lower() else True
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            references = [ref for ref in search_service.search(pattern, ignorecase)]
+            references = [str(ref) for ref in search_service.search(pattern, ignorecase)]
             return {"results": references}
 
         @app.route('%s/search' % r.recipe, method=["GET"])
-        @app.route('%s/search' % r.recipe_revision, method=["GET"])
-        def search_packages(name, version, username, channel, auth_user, revision=None):
+        def search_packages(name, version, username, channel, auth_user):
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            conan_reference = ConanFileReference(name, version, username, channel, revision)
+            conan_reference = ConanFileReference(name, version, username, channel)
             info = search_service.search_packages(conan_reference, query)
             return info
