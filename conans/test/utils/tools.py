@@ -50,6 +50,8 @@ from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 
+NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
     conan_ref = ConanFileReference.loads(str(conan_ref))

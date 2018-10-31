@@ -5,7 +5,7 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
@@ -79,13 +79,12 @@ class Pkg(ConanFile):
         client.run("create . %s" % ref)
         client.run("upload %s --all -r r2" % ref)
         client.run("remote list_pref %s" % ref)
-        self.assertIn("%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: r2" % ref, client.out)
+        self.assertIn("%s:%s: r2" % (ref, NO_SETTINGS_PACKAGE_ID), client.out)
         client.run("remote remove_ref %s" % ref)
 
         # It should upload both to r1 (default), not taking into account the pref to r2
         client.run("upload %s --all" % ref)
-        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'r1'",
-                      client.out)
+        self.assertIn("Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
     def install_update_following_pref_test(self):
         conanfile = """
@@ -122,7 +121,7 @@ class Pkg(ConanFile):
         client.run("install %s --update" % ref)
         self.assertIn("Pkg/0.1@lasote/testing from 'r1' - Cache", client.out)
         self.assertIn("Retrieving package "
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 from remote 'r2'", client.out)
+                      "%s from remote 'r2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
     def update_binaries_failed_test(self):
         conanfile = """from conans import ConanFile
@@ -146,7 +145,7 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg/0.1@lasote/testing")
         client.run("remote add_pref Pkg/0.1@lasote/testing:"
-                   "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 myremote")
+                   "%s myremote" % NO_SETTINGS_PACKAGE_ID)
         client.run("install Pkg/0.1@lasote/testing --update")
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
@@ -273,9 +272,10 @@ class ConanLib(ConanFile):
         upload("mycontent2")
 
         client.run("install Pkg/0.1@lasote/channel -u")
-        self.assertIn("Pkg/0.1@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client.out)
-        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package 5ab84d6acfe1f2", client.out)
+        self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
+        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
         conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
-        pkg_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pkg_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
         header = os.path.join(client.client_cache.package(pkg_ref), "header.h")
         self.assertEqual(load(header), "mycontent2")

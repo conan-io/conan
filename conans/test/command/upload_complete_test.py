@@ -6,7 +6,7 @@ import stat
 
 from requests.packages.urllib3.exceptions import ConnectionError
 
-from conans.test.utils.tools import TestClient, TestServer, TestRequester
+from conans.test.utils.tools import TestClient, TestServer, TestRequester, NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO, CONANFILE
@@ -400,7 +400,7 @@ class TestConan(ConanFile):
                                    },
                                    "packages": [
                                        {
-                                           "id": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                                           "id": NO_SETTINGS_PACKAGE_ID,
                                            "time": "unknown"
                                        }
                                    ]
