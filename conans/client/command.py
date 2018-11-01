@@ -542,7 +542,8 @@ class Command(object):
                                     profile_name=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
-                                    build=args.dry_build)
+                                    build=args.dry_build,
+                                    lock_file=args.lock_file)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:

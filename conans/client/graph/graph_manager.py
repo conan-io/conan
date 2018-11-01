@@ -114,7 +114,9 @@ class GraphManager(object):
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
-            # create without test_package and install <ref>
+            if graph_lock:
+                graph_lock_node_id = graph_lock.get_node_from_ref(reference)
+                graph_lock_root_node = graph_lock.insert_virtual([graph_lock_node_id])
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
             if graph_lock:
@@ -214,30 +216,33 @@ class GraphManager(object):
             # FIXME: Broken get node from ref, NOT UNIQUE!!
             graph_lock_node_id = graph_lock.get_node_from_ref(node.conan_ref)
             build_requires = OrderedDict()
+            build_requires_lock_ids = []
             for dependency in graph_lock.dependencies(graph_lock_node_id):
                 if dependency.build_require:
                     dep_id = dependency.node_id
+                    build_requires_lock_ids.append(dep_id)
                     dep_ref = graph_lock.conan_ref(dep_id)
                     build_requires[dep_ref.name] = dep_ref
             if build_requires:
-                build_requires_options = node.conanfile.build_requires_options
-                virtual = self._loader.load_virtual(build_requires.values(),
-                                                    scope_options=False,
-                                                    build_requires_options=build_requires_options,
-                                                    processed_profile=processed_profile)
-                virtual_node = Node(None, virtual)
+                graph_lock_root_node = graph_lock.insert_virtual(build_requires_lock_ids)
+                virtual_conanfile = self._loader.load_virtual(build_requires.values(),
+                                                              processed_profile,
+                                                              scope_options=False)
+                virtual_node = Node(None, virtual_conanfile)
                 build_requires_graph = self._load_graph(virtual_node, check_updates, update,
                                                         build_mode, remote_name,
                                                         build_requires,
                                                         recorder, workspace,
                                                         processed_profile,
-                                                        graph_lock)
+                                                        graph_lock,
+                                                        graph_lock_root_node)
                 graph.add_graph(node, build_requires_graph, build_require=True)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile,
                     graph_lock=None, graph_lock_root_node=None):
         if graph_lock:
+            assert graph_lock_root_node, "NODE NOT PROVIDED TO GRAPH LOCK!!"
             builder = DepsGraphLockBuilder(self._proxy, self._output, self._loader, recorder)
             graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock,
                                        graph_lock_root_node)
@@ -254,9 +259,8 @@ class GraphManager(object):
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         if graph_lock:
-            self._recurse_build_requires_lock(graph, graph_lock, processed_profile,
-                                              check_updates, update, build_mode, remote_name,
-                                              recorder,  workspace)
+            self._recurse_build_requires_lock(graph, graph_lock, processed_profile, check_updates,
+                                              update, build_mode, remote_name, recorder, workspace)
         else:
             self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
                                          profile_build_requires, recorder, workspace,

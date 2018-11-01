@@ -52,8 +52,8 @@ class Pkg(ConanFile):
 
         # Info also works
         client.run("info . --lock-file=default.lock")
-        self.assertIn("PkgA/0.2@user/channel", client.out)
-        self.assertNotIn("PkgA/0.1/user/channel", client.out)
+        self.assertIn("PkgA/0.1@user/channel", client.out)
+        self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
     def build_require_lock_test(self):
         # locking a version range
@@ -72,7 +72,6 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": consumer})
         client.run("install .")
-        print client.out
         client.run("graph lock . --lock-file=default.lock")
         self.assertIn("Tool/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                       client.out)

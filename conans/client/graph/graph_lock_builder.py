@@ -34,6 +34,14 @@ class GraphLock(object):
 
             self._nodes[id_] = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
 
+    def insert_virtual(self, node_ids):
+        new_node = GraphLockNode(None, None, OptionsValues(),
+                                 [GraphLockDependency(node_id, False, False)
+                                  for node_id in node_ids])
+        id_ = str(id(new_node))
+        self._nodes[id_] = new_node
+        return id_
+
     @property
     def profile(self):
         return self._profile
@@ -153,9 +161,6 @@ class DepsGraphLockBuilder(object):
         self._loader = loader
         self._recorder = recorder
 
-    def expand_build_requires(self, node, graph_lock):
-        pass
-
     def load_graph(self, root_node, remote_name, processed_profile, graph_lock,
                    graph_lock_root_node):
         dep_graph = DepsGraph()
@@ -170,17 +175,12 @@ class DepsGraphLockBuilder(object):
         return dep_graph
 
     def _load_deps(self, node, dep_graph, visited_deps, remote_name, processed_profile,
-                   graph_lock, current_node_id):
+                   graph_lock, current_node_id, build_require=False):
 
-        if current_node_id:
-            options_values = graph_lock.options_values(current_node_id)
-            self._config_node(node, options_values)
-            dependencies = graph_lock.dependencies(current_node_id)
-        else:
-            # This is a virtual, we need to extract the required reference
-            ref = node.conanfile.requires.values()[0].conan_reference
-            node_ref = graph_lock.get_node_from_ref(ref)
-            dependencies = [GraphLockDependency(node_ref, False, False)]
+        options_values = graph_lock.options_values(current_node_id)
+        self._config_node(node, options_values)
+        dependencies = graph_lock.dependencies(current_node_id)
+
         # Defining explicitly the requires
         requires = Requirements()
         for dependency in dependencies:
@@ -193,8 +193,9 @@ class DepsGraphLockBuilder(object):
             previous = visited_deps.get(dep_ref)
             if not previous:  # new node, must be added and expanded
                 new_node = self._create_new_node(node, dep_graph, dep_ref,
-                                                 dependency.private,
+                                                 dependency.private, False,
                                                  remote_name, processed_profile)
+                new_node.build_require = build_require
                 # RECURSION!
                 self._load_deps(new_node, dep_graph, visited_deps, remote_name, processed_profile,
                                 graph_lock, dep_id)
@@ -225,7 +226,7 @@ class DepsGraphLockBuilder(object):
         except Exception as e:
             raise ConanException(e)
 
-    def _create_new_node(self, current_node, dep_graph, reference, private,
+    def _create_new_node(self, current_node, dep_graph, reference, private, build_require,
                          remote_name, processed_profile):
         try:
             result = self._proxy.get_recipe(reference,
@@ -243,5 +244,5 @@ class DepsGraphLockBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
         dep_graph.add_node(new_node)
-        dep_graph.add_edge(current_node, new_node, private)
+        dep_graph.add_edge(current_node, new_node, private, build_require)
         return new_node
