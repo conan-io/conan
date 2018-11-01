@@ -1,6 +1,6 @@
 import json
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from collections import OrderedDict
 from conans.util.files import load
 import re
@@ -47,34 +47,34 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
                       self.client.out)
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote2')
+                        '-p %s -f -r remote2' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
                       self.client.out)
 
         # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f -r remote1')
+                        '-p %s -f -r remote1' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_ref')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
                          self.client.out)
 
         # Remove package locally
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
                       self.client.out)
         self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 -f')
+                        '-p %s -f' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("lib/1.0@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: remote1",
+        self.assertNotIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
                          self.client.out)
 
         # If I remove all in local, I also remove packages

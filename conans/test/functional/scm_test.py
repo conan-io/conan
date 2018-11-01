@@ -8,7 +8,8 @@ from conans.client.tools.scm import Git, SVN
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
+    SVNLocalRepoTestCase, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load, rmdir, save, to_file_bytes
 from conans.client.tools.win import get_cased_path
 
@@ -215,7 +216,7 @@ other_folder/excluded_subfolder
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
-                                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                NO_SETTINGS_PACKAGE_ID)
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -612,7 +613,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1/user/channel"),
-                                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                NO_SETTINGS_PACKAGE_ID)
         bf = self.client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
