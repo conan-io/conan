@@ -6,18 +6,34 @@ from conans.search.search import search_recipes
 def satisfying(list_versions, versionexpr, output):
     """ returns the maximum version that satisfies the expression
     if some version cannot be converted to loose SemVer, it is discarded with a msg
-    This provides some woraround for failing comparisons like "2.1" not matching "<=2.1"
+    This provides some workaround for failing comparisons like "2.1" not matching "<=2.1"
     """
     from semver import SemVer, max_satisfying
-    version_range = versionexpr.replace(",", " ")
+    version_range = versionexpr.split(",")
+
+    include_prerelease = False
+    if "include_prerelease=True" in version_range:
+        version_range.remove("include_prerelease=True")
+        include_prerelease = True
+    if "include_prerelease=False" in version_range:
+        version_range.remove("include_prerelease=False")
+
+    loose = True
+    if "loose=True" in version_range:
+        version_range.remove("loose=True")
+    if "loose=False" in version_range:
+        version_range.remove("loose=False")
+        loose = False
+
+    version_range = " ".join(map(str, version_range))
     candidates = {}
     for v in list_versions:
         try:
-            ver = SemVer(v, loose=True)
+            ver = SemVer(v, loose=loose)
             candidates[ver] = v
         except (ValueError, AttributeError):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
-    result = max_satisfying(candidates, version_range, loose=True)
+    result = max_satisfying(candidates, version_range, loose=loose, include_prerelease=include_prerelease)
     return candidates.get(result)
 
 
