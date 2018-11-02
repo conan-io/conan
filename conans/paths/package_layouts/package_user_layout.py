@@ -1,6 +1,10 @@
 # coding=utf-8
 
 import os
+import re
+import configparser
+import ntpath
+import posixpath
 
 from conans.util.files import load
 from conans.model.ref import ConanFileReference
@@ -16,3 +20,26 @@ class PackageUserLayout(object):
     def conan(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
+
+
+def parse_package_layout_content(content, base_path=None):
+    """ Returns a dictionary containing information about paths for a CppInfo object: includes,
+    libraries, resources, binaries,... """
+    ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
+
+    def make_abs(value):
+        value = re.sub(r'\\\\+', r'\\', value)
+        value = value.replace('\\', '/')
+        isabs = ntpath.isabs(value) or posixpath.isabs(value)
+        if base_path and not isabs:
+            value = os.path.abspath(os.path.join(base_path, value))
+        value = os.path.normpath(value)
+        return value
+    
+    parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
+    parser.optionxform = str
+    parser.read_string(content)
+    for section in ret.keys():
+        if section in parser:
+            ret[section] = [make_abs(value) for value in parser[section]]
+    return ret
