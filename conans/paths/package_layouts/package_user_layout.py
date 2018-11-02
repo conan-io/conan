@@ -10,7 +10,7 @@ from conans.util.files import load
 from conans.model.ref import ConanFileReference
 
 
-class PackageUserLayout(object):
+class PackageEditableLayout(object):
 
     def __init__(self, linked_package_file, conan_ref):
         assert isinstance(conan_ref, ConanFileReference)
@@ -35,7 +35,7 @@ def parse_package_layout_content(content, base_path=None):
             value = os.path.abspath(os.path.join(base_path, value))
         value = os.path.normpath(value)
         return value
-    
+
     parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
     parser.optionxform = str
     parser.read_string(content)

@@ -1,6 +1,6 @@
 import os
 
-from conans.paths.package_layouts import PackageUserLayout, PackageCacheLayout
+from conans.paths.package_layouts import PackageEditableLayout, PackageCacheLayout
 from conans.model.ref import ConanFileReference
 from conans.paths import LINKED_FOLDER_SENTINEL, is_case_insensitive_os
 from conans.errors import ConanException
@@ -46,8 +46,8 @@ class SimplePaths(object):
 
         linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
         if os.path.exists(linked_package_file):
-            return PackageUserLayout(linked_package_file=linked_package_file,
-                                     conan_ref=conan_reference)
+            return PackageEditableLayout(linked_package_file=linked_package_file,
+                                         conan_ref=conan_reference)
         else:
             check_ref_case(conan_reference, self.store)
             return PackageCacheLayout(base_folder=base_folder,
