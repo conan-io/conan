@@ -7,8 +7,9 @@ from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
 from conans.client.output import ScopedOutput
 from conans.util.log import logger
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE, RECIPE_EDITABLE
 from conans.model.workspace import WORKSPACE_FILE
+from conans.model.conan_file import ConanFileEditable
 
 
 class DepsGraphBuilder(object):
@@ -223,8 +224,12 @@ class DepsGraphBuilder(object):
             conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
+        editable = recipe_status == RECIPE_EDITABLE
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
+
+        if editable:
+            dep_conanfile = ConanFileEditable(dep_conanfile)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile

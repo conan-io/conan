@@ -11,7 +11,7 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
                                        RECIPE_UPDATED, RECIPE_NEWER, RECIPE_UPDATEABLE,
-                                       RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE)
+                                       RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE, RECIPE_EDITABLE)
 
 
 class ConanProxy(object):
@@ -42,9 +42,14 @@ class ConanProxy(object):
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
-            status = RECIPE_INCACHE
-            log_recipe_got_from_local_cache(reference)
-            recorder.recipe_fetched_from_cache(reference)
+            if self._client_cache.installed_as_editable(reference):
+                status = RECIPE_EDITABLE
+                # TODO: log_recipe_got_from_editable(reference)
+                # TODO: recorder.recipe_fetched_as_editable(reference)
+            else:
+                status = RECIPE_INCACHE
+                log_recipe_got_from_local_cache(reference)
+                recorder.recipe_fetched_from_cache(reference)
             return conanfile_path, status, remote, reference
 
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None

@@ -9,6 +9,7 @@ from conans.paths.package_layouts.package_user_layout import CONAN_PACKAGE_LAYOU
 from conans.test import CONAN_TEST_FOLDER
 from conans.util.files import save
 from conans.paths import LINKED_FOLDER_SENTINEL
+from conans.model.ref import ConanFileReference
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -56,7 +57,8 @@ src/include
         self.save({"src/include/hello.hpp": self.header.format(word=hello_word)})
 
     def make_editable(self, full_reference):
-        cache_dir = self.client_cache.conan(full_reference)
+        conan_ref = ConanFileReference.loads(full_reference)
+        cache_dir = self.client_cache.conan(conan_ref)
         save(os.path.join(cache_dir, LINKED_FOLDER_SENTINEL), content=self.current_folder)
 
 
@@ -68,7 +70,7 @@ class EditableReferenceTest(unittest.TestCase):
 
         # Editable project
         client_editable = HeaderOnlyLibTestClient(base_folder=base_folder)
-        client_editable.make_editable()
+        client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
         # client_editable.run("editable . MyLib/0.1@user/editable")  # 'Install' as editable
 
         # Consumer project
