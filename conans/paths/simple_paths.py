@@ -1,4 +1,31 @@
-from conans.paths.package_layouts import get_package_layout
+import os
+
+from conans.paths.package_layouts import PackageUserLayout, PackageCacheLayout
+from conans.model.ref import ConanFileReference
+from conans.paths import LINKED_FOLDER_SENTINEL, is_case_insensitive_os
+from conans.errors import ConanException
+
+
+if is_case_insensitive_os():
+    def check_ref_case(conan_reference, store_folder):
+        if not os.path.exists(store_folder):
+            return
+
+        tmp = store_folder
+        for part in conan_reference:
+            items = os.listdir(tmp)
+            try:
+                idx = [item.lower() for item in items].index(part.lower())
+                if part != items[idx]:
+                    raise ConanException("Requested '%s' but found case incompatible '%s'\n"
+                                         "Case insensitive filesystem can't manage this"
+                                         % (str(conan_reference), items[idx]))
+                tmp = os.path.normpath(tmp + os.sep + part)
+            except ValueError:
+                return
+else:
+    def check_ref_case(conan_reference, store_folder):  # @UnusedVariable
+        pass
 
 
 class SimplePaths(object):
@@ -14,8 +41,17 @@ class SimplePaths(object):
         return self._store_folder
 
     def package_layout(self, conan_reference, short_paths=False):
-        package_layout = get_package_layout(self.store, conan_reference, short_paths=short_paths)
-        return package_layout
+        assert isinstance(conan_reference, ConanFileReference)
+        base_folder = os.path.normpath(os.path.join(self.store, "/".join(conan_reference)))
+
+        linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
+        if os.path.exists(linked_package_file):
+            return PackageUserLayout(linked_package_file=linked_package_file,
+                                     conan_ref=conan_reference, short_paths=short_paths)
+        else:
+            check_ref_case(conan_reference, self.store)
+            return PackageCacheLayout(base_folder=base_folder,
+                                      conan_ref=conan_reference, short_paths=short_paths)
 
     def conan(self, conan_reference):
         """ the base folder for this package reference, for each ConanFileReference
