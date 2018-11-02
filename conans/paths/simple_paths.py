@@ -90,3 +90,6 @@ class SimplePaths(object):
 
     def scm_folder(self, conan_reference):
         return self.package_layout(conan_reference).scm_folder()
+
+    def installed_as_editable(self, conan_reference):
+        return self.package_layout(conan_reference).installed_as_editable()

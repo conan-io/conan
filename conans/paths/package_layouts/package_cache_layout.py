@@ -78,3 +78,6 @@ class PackageCacheLayout(object):
 
     def scm_folder(self):
         return os.path.join(self.conan(), SCM_FOLDER)
+
+    def installed_as_editable(self):
+        return False
