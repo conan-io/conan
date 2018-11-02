@@ -106,7 +106,7 @@ class TestConan(ConanFile):
         cmake.build()   
 
         os.chdir("bin")
-        self.run("./hello")
+        self.run(".%shello" % os.sep)
 
 """
         cmakelists = """
