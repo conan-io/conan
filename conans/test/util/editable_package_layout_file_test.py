@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import six
 import unittest
 from parameterized import parameterized
 
@@ -16,14 +17,14 @@ def _make_abs(base_path, *args):
 
 
 class ParseContentExplicitTestCase(unittest.TestCase):
-    content = """
+    content = six.u("""
 [includedirs]
 {includedirs_pack}
 
 [libdirs]
 [resdirs]
 [bindirs]
-"""
+""")
 
     @parameterized.expand([(False, ), (True, )])
     def test_empty(self, make_abs):
@@ -31,14 +32,14 @@ class ParseContentExplicitTestCase(unittest.TestCase):
         base_path = os.path.dirname(__file__) if make_abs else None
         expected = {'includedirs': [], 'libdirs': [], 'resdirs': [], 'bindirs': []}
 
-        data = parse_package_layout_content(content="", base_path=base_path)
+        data = parse_package_layout_content(content=u"", base_path=base_path)
         self.assertDictEqual(data, expected)
 
         data = parse_package_layout_content(content=self.content.format(includedirs_pack=""),
                                             base_path=base_path)
         self.assertDictEqual(data, expected)
 
-        data = parse_package_layout_content(content="[other_section]\nvalue", base_path=base_path)
+        data = parse_package_layout_content(content=u"[other_section]\nvalue", base_path=base_path)
         self.assertDictEqual(data, expected)
 
     @parameterized.expand([(False, ), (True, )])
@@ -107,12 +108,12 @@ class ParsePlaceholdersTestCase(unittest.TestCase):
     @parameterized.expand([(False,), (True,)])
     def test_parse_placeholders(self, make_abs):
         base_path = os.path.dirname(__file__) if make_abs else None
-        content = r"""
+        content = six.u(r"""
 [includedirs]
 src/{compiler}{compiler.version}/{build_type}/include
-C:\\{compiler}\include\
+C:\\{compiler}\\include\\
 /usr/path with spaces/{compiler}/dir
-"""
+""")
         data = parse_package_layout_content(content, base_path=base_path)
         includedirs = data['includedirs']
         self.assertIn(_make_abs(base_path, 'src', '{compiler}{compiler.version}', '{build_type}', 'include'), includedirs)
