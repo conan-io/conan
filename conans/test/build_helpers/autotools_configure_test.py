@@ -12,9 +12,8 @@ from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
-from conans.test.utils.tools import TestClient
 from conans.client import tools
-
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
                       "--sbindir", "--oldincludedir", "--libexecdir"]
@@ -767,7 +766,7 @@ AC_OUTPUT
         client.run("create . danimtb/testing")
         pkg_path = client.client_cache.package(
             PackageReference.loads(
-                "test/1.0@danimtb/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"))
+                "test/1.0@danimtb/testing:%s" % NO_SETTINGS_PACKAGE_ID))
 
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 

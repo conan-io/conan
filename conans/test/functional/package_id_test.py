@@ -1,5 +1,5 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class PackageIdTest(unittest.TestCase):
@@ -39,12 +39,12 @@ class TestConan(ConanFile):
         client.run("create . Pkg/0.1@user/testing -s os=Windows")
         self.assertIn("Pkg/0.1@user/testing: OPTION OPT=False", client.out)
         self.assertIn("Pkg/0.1@user/testing: Package "
-                      "'5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+                      "'%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
         client.run("create . Pkg/0.1@user/testing -s os=Linux -o Pkg:opt=True")
         self.assertIn("Pkg/0.1@user/testing: OPTION OPT=True", client.out)
         self.assertIn("Pkg/0.1@user/testing: Package "
-                      "'5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+                      "'%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
     def value_parse_test(self):
