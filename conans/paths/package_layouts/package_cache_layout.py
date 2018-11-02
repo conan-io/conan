@@ -6,7 +6,7 @@ import platform
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER
 from conans.model.ref import PackageReference
-from conans.paths.package_layouts.package_base_layout import PackageBaseLayout
+from conans.model.ref import ConanFileReference
 
 
 def short_path(func):
@@ -21,8 +21,18 @@ def short_path(func):
         return func
 
 
-class PackageCacheLayout(PackageBaseLayout):
+class PackageCacheLayout(object):
     """ This is the package layout for Conan cache """
+
+    def __init__(self, base_folder, conan_ref, short_paths):
+        assert isinstance(conan_ref, ConanFileReference)
+        self._conan_ref = conan_ref
+        self._base_folder = os.path.normpath(base_folder)
+        self._short_paths = short_paths
+
+    def conan(self):
+        """ Returns the base folder for this package reference """
+        return self._base_folder
 
     def export(self):
         return os.path.join(self.conan(), EXPORT_FOLDER)
