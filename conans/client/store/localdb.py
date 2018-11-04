@@ -31,6 +31,7 @@ class LocalDB(object):
             cursor = self.connection.cursor()
             if clean:
                 cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
+                cursor.execute("vacuum")  # Make sure the DB is cleaned, drop doesn't do that
             cursor.execute("create table if not exists %s "
                            "(remote_url TEXT UNIQUE, user TEXT, token TEXT)" % REMOTES_USER_TABLE)
         except Exception as e:
