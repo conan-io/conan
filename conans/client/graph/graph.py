@@ -33,6 +33,17 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self._id = None
+
+    @property
+    def id(self):
+        if self._id is None:
+            self._id = str(id(self))
+        return self._id
+
+    @id.setter
+    def id(self, id_):
+        self._id = id_
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)
@@ -43,6 +54,7 @@ class Node(object):
         result.remote = self.remote
         result.binary_remote = self.binary_remote
         result.build_require = self.build_require
+        result._id = self._id
         return result
 
     def add_edge(self, edge):

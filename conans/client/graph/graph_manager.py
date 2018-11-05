@@ -16,7 +16,8 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
-from conans.client.graph.graph_lock_builder import DepsGraphLockBuilder
+from conans.client.graph.graph_lock_builder import DepsGraphLockBuilder,\
+    GraphLockNode
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -116,6 +117,15 @@ class GraphManager(object):
         elif isinstance(reference, ConanFileReference):
             if graph_lock:
                 graph_lock_node_id = graph_lock.get_node_from_ref(reference)
+                # If we are creating, the root, virtual node is None, and the create_reference
+                # Might not be there
+                if graph_lock_node_id is None and reference:
+                    graph_lock_node_id = graph_lock.get_node_from_ref(None)
+                    node = graph_lock._nodes[graph_lock_node_id]
+                    graph_lock._nodes[graph_lock_node_id] = GraphLockNode(reference,
+                                                                          node.binary_id,
+                                                                          node.options_values,
+                                                                          node.dependencies)
                 graph_lock_root_node = graph_lock.insert_virtual([graph_lock_node_id])
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
@@ -132,13 +142,13 @@ class GraphManager(object):
 
         build_mode = BuildMode(build_mode, self._output)
         root_node = Node(None, conanfile)
+        root_node.id = graph_lock_root_node
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile,
-                                      graph_lock=graph_lock,
-                                      graph_lock_root_node=graph_lock_root_node)
+                                      graph_lock=graph_lock)
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -213,8 +223,7 @@ class GraphManager(object):
                 continue
             if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
                 continue
-            # FIXME: Broken get node from ref, NOT UNIQUE!!
-            graph_lock_node_id = graph_lock.get_node_from_ref(node.conan_ref)
+            graph_lock_node_id = node.id
             build_requires = OrderedDict()
             build_requires_lock_ids = []
             for dependency in graph_lock.dependencies(graph_lock_node_id):
@@ -229,23 +238,21 @@ class GraphManager(object):
                                                               processed_profile,
                                                               scope_options=False)
                 virtual_node = Node(None, virtual_conanfile)
+                virtual_node.id = graph_lock_root_node
                 build_requires_graph = self._load_graph(virtual_node, check_updates, update,
                                                         build_mode, remote_name,
                                                         build_requires,
                                                         recorder, workspace,
                                                         processed_profile,
-                                                        graph_lock,
-                                                        graph_lock_root_node)
+                                                        graph_lock)
                 graph.add_graph(node, build_requires_graph, build_require=True)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile,
-                    graph_lock=None, graph_lock_root_node=None):
+                    graph_lock=None):
         if graph_lock:
-            assert graph_lock_root_node, "NODE NOT PROVIDED TO GRAPH LOCK!!"
             builder = DepsGraphLockBuilder(self._proxy, self._output, self._loader, recorder)
-            graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock,
-                                       graph_lock_root_node)
+            graph = builder.load_graph(root_node, remote_name, processed_profile, graph_lock)
         else:
             builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                        workspace, recorder)

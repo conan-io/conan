@@ -1,8 +1,10 @@
+import json
 import os
 import sys
-import requests
 
 from collections import OrderedDict
+
+import requests
 
 import conans
 from conans import __version__ as client_version, tools
@@ -33,11 +35,10 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, exception_message_safe, mkdir, load,\
-    save
+from conans.util.files import save_files, exception_message_safe, mkdir, load
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.tools import set_global_instances
+from conans.tools import set_global_instances, save
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
@@ -58,8 +59,7 @@ from conans.client import packager
 from conans.client.source import config_source_local
 from conans.client.cmd.build import build
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.graph.printer import print_graph
-from conans.client.graph.graph_lock_builder import GraphLock, GraphLockNode
+from conans.client.graph.graph_lock_builder import GraphLock
 
 
 default_manifest_folder = '.conan_manifests'
@@ -312,7 +312,7 @@ class ConanAPIV1(object):
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
              remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
-             lock_file=None):
+             input_lock_file=None, output_lock_file=None):
 
         settings = settings or []
         options = options or []
@@ -320,15 +320,16 @@ class ConanAPIV1(object):
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
-        profile, graph_lock = install_input(profile_name, settings, options, env, cwd, lock_file,
-                                            self._client_cache)
+        profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
+                                            input_lock_file, self._client_cache)
         reference = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         pt = PackageTester(manager, self._user_io)
         pt.install_build_and_test(conanfile_path, reference, profile, remote_name,
                                   update, build_modes=build_modes,
-                                  test_build_folder=test_build_folder, graph_lock=graph_lock)
+                                  test_build_folder=test_build_folder, graph_lock=graph_lock,
+                                  output_lock_file=output_lock_file)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -338,7 +339,7 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lock_file=None):
+               input_lock_file=None, output_lock_file=None):
         """
         API method to create a conan package
 
@@ -355,8 +356,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd, lock_file,
-                                                self._client_cache)
+            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
+                                                input_lock_file, self._client_cache)
 
             reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
                                                             channel)
@@ -380,7 +381,7 @@ class ConanAPIV1(object):
 
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
-                   test_build_folder, test_folder, conanfile_path, graph_lock)
+                   test_build_folder, test_folder, conanfile_path, graph_lock, output_lock_file)
 
             return recorder.get_info()
 
@@ -461,55 +462,18 @@ class ConanAPIV1(object):
             raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
-    def graph_root(self, lock_file, reference):
-        graph_lock = GraphLock.loads(load(lock_file))
-        # Assign the current reference to the root consuming node FIXME
-        id_ = graph_lock.get_node_from_ref(None)
-        node = graph_lock._nodes[id_]
-        graph_lock._nodes[id_] = GraphLockNode(reference, node.binary_id,
-                                               node.options_values, node.dependencies)
-        save(lock_file, graph_lock.dumps())
-
-    @api_method
-    def graph_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
-                   profile_name=None, update=False, build=None):
-        try:
-            reference = ConanFileReference.loads(reference)
-        except ConanException:
-            reference = _get_conanfile_path(reference, cwd=None, py=None)
-        profile = profile_from_args(profile_name, settings, options, env=env,
-                                    cwd=get_cwd(), client_cache=self._client_cache)
-        self._user_io.out.info("Configuration:")
-        self._user_io.out.writeln(profile.dumps())
-        recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, build, update,
-                                                          False, remote_name, recorder,
-                                                          workspace=None)
-
-        print_graph(deps_graph, self._user_io.out)
-        # write serialized graph
-        graph_lock = GraphLock(deps_graph, profile)
-        return graph_lock
-
-    @api_method
-    def graph_build_order(self, lock_file):
-        graph_lock = GraphLock.loads(load(lock_file))
-        build_order = graph_lock.build_order(None)
-        return build_order
-
-    @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lock_file=None):
+                          input_lock_file=None, output_lock_file=None):
 
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
 
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd, lock_file,
-                                                self._client_cache)
+            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
+                                                input_lock_file, self._client_cache)
 
             install_folder = _make_abs_path(install_folder, cwd)
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
@@ -525,7 +489,8 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators, graph_lock=graph_lock
+                            generators=generators, graph_lock=graph_lock,
+                            output_lock_file=output_lock_file
                             )
             return recorder.get_info()
         except ConanException as exc:
@@ -538,7 +503,10 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lock_file=None):
+                input_lock_file=None, output_lock_file=None):
+
+        if input_lock_file and output_lock_file:
+            raise ConanException("Specifying both input and output lock file is not possible")
 
         try:
             recorder = ActionRecorder()
@@ -546,8 +514,8 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd, lock_file,
-                                                self._client_cache)
+            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
+                                                input_lock_file, self._client_cache)
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -566,6 +534,8 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
+            if output_lock_file:
+                output_lock_file = _make_abs_path(output_lock_file, cwd)
             manager = self._init_manager(recorder)
             manager.install(reference=conanfile_path,
                             install_folder=install_folder,
@@ -578,7 +548,9 @@ class ConanAPIV1(object):
                             manifest_interactive=manifest_interactive,
                             generators=generators,
                             no_imports=no_imports,
-                            graph_lock=graph_lock)
+                            graph_lock=graph_lock,
+                            output_lock_file=output_lock_file)
+
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
@@ -634,24 +606,31 @@ class ConanAPIV1(object):
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, remote_name=None, build_order=None, check_updates=None,
-                         install_folder=None, lock_file=None):
+                         install_folder=None, input_lock_file=None):
         reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
                                                                 profile_name, settings, options, env,
-                                                                lock_file)
+                                                                input_lock_file)
         recorder = ActionRecorder()
         deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"],
                                                           check_updates, False, remote_name,
                                                           recorder, workspace=None,
                                                           graph_lock=graph_lock)
+        if input_lock_file:
+            build_order = graph_lock.build_order(node_id=None)
+            build_order = [[str(n) for n in level] for level in build_order]
+            basename, _ = os.path.splitext(input_lock_file)
+            basename += "_build_order.json"
+            save(basename, json.dumps(build_order))
+
         return deps_graph.build_order(build_order)
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote_name=None, check_updates=None,
-                            install_folder=None, lock_file=None):
+                            install_folder=None, input_lock_file=None):
         reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
                                                                 profile_name, settings, options, env,
-                                                                lock_file)
+                                                                input_lock_file)
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile,
                                                                   build_modes, check_updates,
@@ -663,15 +642,22 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_name=None, update=False, install_folder=None, build=None, lock_file=None):
+             profile_name=None, update=False, install_folder=None, build=None, input_lock_file=None,
+             output_lock_file=None):
         reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
                                                                 profile_name, settings, options, env,
-                                                                lock_file)
+                                                                input_lock_file)
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build,
                                                                   update, False, remote_name,
                                                                   recorder, workspace=None,
                                                                   graph_lock=graph_lock)
+        if output_lock_file:
+            graph_lock = GraphLock(deps_graph, profile)
+            serialized_graph_str = graph_lock.dumps()
+            filename = output_lock_file
+            self._user_io.out.info("Saving graph lock file: %s" % filename)
+            save(filename, serialized_graph_str)
         return deps_graph, conanfile
 
     @api_method

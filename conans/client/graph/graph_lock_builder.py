@@ -23,7 +23,6 @@ class GraphLock(object):
         self._profile = profile
         self._nodes = {}  # id: conan_ref, binaryID, options_values, dependencies
         for node in graph.nodes:
-            id_ = str(id(node))
             conan_ref = node.conan_ref
             binary_id = node.conanfile.info.package_id()
             options_values = node.conanfile.options.values
@@ -32,7 +31,7 @@ class GraphLock(object):
                 dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private,
                                                         edge.build_require))
 
-            self._nodes[id_] = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
+            self._nodes[node.id] = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
 
     def insert_virtual(self, node_ids):
         new_node = GraphLockNode(None, None, OptionsValues(),
@@ -161,22 +160,21 @@ class DepsGraphLockBuilder(object):
         self._loader = loader
         self._recorder = recorder
 
-    def load_graph(self, root_node, remote_name, processed_profile, graph_lock,
-                   graph_lock_root_node):
+    def load_graph(self, root_node, remote_name, processed_profile, graph_lock):
         dep_graph = DepsGraph()
-        current_node_id = graph_lock_root_node
         dep_graph.add_node(root_node)
         # enter recursive computation
         visited_deps = {}
         self._load_deps(root_node, dep_graph, visited_deps, remote_name, processed_profile,
-                        graph_lock, current_node_id)
+                        graph_lock)
         dep_graph.compute_package_ids()
         # TODO: Implement BinaryID check against graph_lock
         return dep_graph
 
     def _load_deps(self, node, dep_graph, visited_deps, remote_name, processed_profile,
-                   graph_lock, current_node_id, build_require=False):
+                   graph_lock, build_require=False):
 
+        current_node_id = node.id
         options_values = graph_lock.options_values(current_node_id)
         self._config_node(node, options_values)
         dependencies = graph_lock.dependencies(current_node_id)
@@ -196,6 +194,7 @@ class DepsGraphLockBuilder(object):
                                                  dependency.private, False,
                                                  remote_name, processed_profile)
                 new_node.build_require = build_require
+                new_node.id = dep_id
                 # RECURSION!
                 self._load_deps(new_node, dep_graph, visited_deps, remote_name, processed_profile,
                                 graph_lock, dep_id)

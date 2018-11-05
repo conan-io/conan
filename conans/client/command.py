@@ -297,7 +297,8 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lock_file=args.lock_file)
+                                      input_lock_file=args.input_lock,
+                                      output_lock_file=args.output_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -383,7 +384,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lock_file=args.lock_file)
+                                           input_lock_file=args.input_lock,
+                                           output_lock_file=args.output_lock)
             else:
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
@@ -395,7 +397,8 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     lock_file=args.lock_file)
+                                                     input_lock_file=args.input_lock,
+                                                     output_lock_file=args.output_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -512,7 +515,8 @@ class Command(object):
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
-                                               install_folder=args.install_folder)
+                                               install_folder=args.install_folder,
+                                               input_lock_file=args.input_lock)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, get_cwd())
@@ -543,7 +547,8 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    lock_file=args.lock_file)
+                                    input_lock_file=args.input_lock,
+                                    output_lock_file=args.output_lock)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -560,47 +565,6 @@ class Command(object):
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             else:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
-
-    def graph(self, *args):
-        """
-        """
-        parser = argparse.ArgumentParser(description=self.graph.__doc__, prog="conan graph")
-
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        lock_subparser = subparsers.add_parser('lock', help='Create a lock file')
-        lock_subparser.add_argument("path_or_reference")
-        _add_common_install_arguments(lock_subparser, build_help="build_help")
-
-        build_order_subparser = subparsers.add_parser('build-order', help='Compute the build order')
-        build_order_subparser.add_argument("lock_file")
-
-        root_subparser = subparsers.add_parser('root', help='Define the reference for the root')
-        root_subparser.add_argument("lock_file")
-        root_subparser.add_argument("reference")
-        args = parser.parse_args(*args)
-
-        if args.subcommand == "lock":
-            graph_lock = self._conan.graph_lock(args.path_or_reference,
-                                                remote_name=args.remote,
-                                                settings=args.settings,
-                                                options=args.options,
-                                                env=args.env,
-                                                profile_name=args.profile,
-                                                update=args.update,
-                                                build=args.build)
-            serialized_graph_str = graph_lock.dumps()
-            filename = args.lock_file or "conan_graph.lock"
-            self._user_io.out.info("Saving graph lock file: %s" % filename)
-            save(filename, serialized_graph_str)
-        elif args.subcommand == "build-order":
-            build_order = self._conan.graph_build_order(args.lock_file)
-            build_order = [[str(n) for n in level] for level in build_order]
-            filename = args.lock_file
-            basename, _ = os.path.splitext(filename)
-            basename += "_build_order.json"
-            save(basename, json.dumps(build_order))
-        elif args.subcommand == "root":
-            self._conan.graph_root(args.lock_file, args.reference)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method.
@@ -1385,7 +1349,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "graph", "help"))]
+                                   "alias", "download", "inspect", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1555,7 +1519,8 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
-    parser.add_argument("-l", "--lock-file", action=OnceArgument)
+    parser.add_argument("-il", "--input-lock", action=OnceArgument)
+    parser.add_argument("-ol", "--output-lock", action=OnceArgument)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

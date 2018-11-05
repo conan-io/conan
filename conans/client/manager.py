@@ -15,6 +15,7 @@ from conans.paths import CONANINFO
 from conans.util.files import save, normalize
 
 from conans.client.graph.printer import print_graph
+from conans.client.graph.graph_lock_builder import GraphLock
 
 
 class ConanManager(object):
@@ -49,7 +50,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False, graph_lock=None):
+                keep_build=False, graph_lock=None, output_lock_file=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -114,6 +115,12 @@ class ConanManager(object):
                                          interactive=manifest_interactive)
             manifest_manager.print_log()
 
+        if output_lock_file:
+            graph_lock = GraphLock(deps_graph, profile)
+            serialized_graph_str = graph_lock.dumps()
+            filename = output_lock_file
+            self._user_io.out.info("Saving graph lock file: %s" % filename)
+            save(filename, serialized_graph_str)
         if install_folder:
             # Write generators
             if generators is not False:
@@ -136,3 +143,5 @@ class ConanManager(object):
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder, output)
+
+        return deps_graph
