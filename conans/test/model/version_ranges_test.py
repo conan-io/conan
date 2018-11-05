@@ -33,20 +33,22 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.3")
 
-    def loose_versions_test(self):
+    def strict_versions_test(self):
         output = TestBufferConanOutput()
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,loose=False", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,strict", output)
         self.assertEqual(result, "4.2.2")
-        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=False", output)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,strict", output)
         self.assertEqual(result, None)
-        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=True", output)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3, strict", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
 
-    def include_prereleases_versions_test(self):
+    def prereleases_versions_test(self):
         output = TestBufferConanOutput()
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease=True", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,prerelease", output)
         self.assertEqual(result, "4.2.3-pre")
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease=False", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", output)
         self.assertEqual(result, "4.2.2")
 
     def basic_test(self):
@@ -77,9 +79,9 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "1.2.1")
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<1.3", output)
         self.assertEqual(result, "1.2.1")
-#       result = satisfying(["1.a.1", "master", "X.2", "1.2.1", "1.3", "2.1"], "1.3", output)
-#       self.assertIn("Version 'master' is not semver", output)
-#       self.assertEqual(result, "1.3")
+        result = satisfying(["1.a.1", "master", "X.2", "1.2.1", "1.3", "2.1"], "1.3", output)
+        self.assertIn("Version 'master' is not semver", output)
+        self.assertEqual(result, "1.3")
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
 

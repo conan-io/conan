@@ -12,18 +12,16 @@ def satisfying(list_versions, versionexpr, output):
     version_range = versionexpr.split(",")
 
     include_prerelease = False
-    if "include_prerelease=True" in version_range:
-        version_range.remove("include_prerelease=True")
-        include_prerelease = True
-    if "include_prerelease=False" in version_range:
-        version_range.remove("include_prerelease=False")
-
     loose = True
-    if "loose=True" in version_range:
-        version_range.remove("loose=True")
-    if "loose=False" in version_range:
-        version_range.remove("loose=False")
-        loose = False
+
+    for keyword in version_range:
+        keyword_stripped = keyword.strip()
+        if "prerelease" == keyword_stripped:
+            version_range.remove(keyword)
+            include_prerelease = True
+        if "strict" == keyword_stripped:
+            version_range.remove(keyword)
+            loose = False
 
     version_range = " ".join(map(str, version_range))
     candidates = {}
