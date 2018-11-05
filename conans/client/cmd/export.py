@@ -2,6 +2,7 @@ import ast
 import os
 import shutil
 import six
+import stat
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -92,8 +93,8 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     # Generate the scm_folder.txt file pointing to the src_path
     src_path = scm.get_repo_root()
     save(scm_src_file, src_path.replace("\\", "/"))
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
-                                   scm_data)
+
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -141,6 +142,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
+    if not os.access(conanfile_path, os.W_OK):
+        os.chmod(conanfile_path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
     save(conanfile_path, content)
 
 
