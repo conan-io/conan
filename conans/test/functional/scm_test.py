@@ -820,7 +820,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
             if not auto_keywords:
                 self._save_fixed_conanfile(self.client)
         self.client.run("create . user/channel")
-        self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
     def test_lock_other_copy(self, auto_keywords):
@@ -840,7 +839,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         self.client.run("create . user/channel")
-        self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
     def test_propset_own(self, auto_keywords):
@@ -859,8 +857,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
                 self._save_fixed_conanfile(self.client)
 
         self.client.run("create . user/channel")
-        self.client.run("create . user/channel")
-
 
     @parameterized.expand([(True,), (False,), ])
     def test_propset_other_copy(self, auto_keywords):
@@ -883,7 +879,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
         self.client.run("create . user/channel")
-        self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
     def test_propset_root_own(self, auto_keywords):
@@ -901,7 +896,6 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
             if not auto_keywords:
                 self._save_fixed_conanfile(self.client)
 
-        self.client.run("create . user/channel")
         self.client.run("create . user/channel")
 
     @parameterized.expand([(True,), (False,), ])
@@ -923,5 +917,4 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         # Work on my copy
         self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
                                                             path=self.client.current_folder))
-        self.client.run("create . user/channel")
         self.client.run("create . user/channel")
