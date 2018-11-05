@@ -3,6 +3,7 @@ import os
 import io
 import time
 from requests.exceptions import ConnectionError
+from six.moves.urllib.parse import urlparse
 
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.util.progress_bar import progress_bar, tqdm_file_defaults
@@ -24,7 +25,8 @@ def download(requester, output, verify_ssl,
         except OSError:
             pass
 
-    pb_description = "Downloading {}".format(os.path.basename(url))
+    o = urlparse(url)
+    pb_description = "Downloading {}".format(os.path.basename(o.path))
     for n_retry in range(retry):
         buffer = open(file_path, 'wb') if file_path else io.BytesIO()
         try:

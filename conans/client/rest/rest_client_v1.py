@@ -43,7 +43,7 @@ class RestV1Methods(RestCommonMethods):
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             auth, _ = self._file_server_capabilities(resource_url)
-            contents = download(requester=self.requester, output=self._output,
+            contents = download(requester=self.requester, output=output,
                                 verify_ssl=self.verify_ssl, url=resource_url, file_path=None,
                                 auth=auth)
             yield os.path.normpath(filename), contents
