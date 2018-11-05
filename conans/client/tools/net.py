@@ -1,7 +1,5 @@
-import sys
-
 import os
-from conans.client.output import ConanOutput
+
 from conans.client.rest.uploader_downloader import Downloader
 from conans.client.tools.files import unzip, check_md5, check_sha1, check_sha256
 from conans.errors import ConanException
