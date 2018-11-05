@@ -34,9 +34,9 @@ class LocalDB(object):
                 cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
                 try:
                     # https://github.com/ghaering/pysqlite/issues/109
-                    cursor.isolation_level = None
+                    self.connection.isolation_level = None
                     cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
-                    cursor.isolation_level = ''  # note this is  default value of isolation_level
+                    self.connection.isolation_level = ''  # default value of isolation_level
                 except OperationalError:
                     pass
 
