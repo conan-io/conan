@@ -1,7 +1,6 @@
 import os
 from contextlib import contextmanager
 
-# TODO: from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
