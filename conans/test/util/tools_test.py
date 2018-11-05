@@ -150,45 +150,45 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_linux = True
             os_info.is_windows = False
             os_info.linux_distro = "debian"
-            new_out = StringIO()
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
+
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "ubuntu"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "knoppix"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "neon"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
             os_info.linux_distro = "fedora"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass yum update -y")
 
             os_info.linux_distro = "opensuse"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass zypper --non-interactive ref")
 
             os_info.linux_distro = "redhat"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo --askpass yum install -y a_package")
 
             os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
@@ -202,7 +202,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_linux = False
             os_info.is_windows = False
 
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "brew update")
             spt.install("a_package", force=True)
@@ -211,7 +211,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_freebsd = True
             os_info.is_macos = False
 
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass pkg update")
             spt.install("a_package", force=True)
@@ -223,7 +223,8 @@ class SystemPackageToolTest(unittest.TestCase):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_freebsd = False
                 os_info.is_windows = True
-                spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                        tool=ChocolateyTool(output=self.out))
                 spt.update()
                 self.assertEquals(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
@@ -237,14 +238,14 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info = OSInfo()
             os_info.is_linux = True
             os_info.linux_distro = "redhat"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "yum install -y a_package")
             spt.update()
             self.assertEquals(runner.command_called, "yum update -y")
 
             os_info.linux_distro = "ubuntu"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
 
@@ -254,7 +255,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
 
             spt.update()
             self.assertEquals(runner.command_called, "brew update")
@@ -265,7 +266,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = False
             os_info.is_windows = False
 
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "pkg update")
             spt.install("a_package", force=True)
@@ -277,7 +278,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_freebsd = False
             os_info.is_windows = False
 
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, "pkgutil --catalog")
             spt.install("a_package", force=True)
@@ -290,7 +291,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 os_info.is_solaris = False
                 os_info.is_windows = True
 
-                spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                        tool=ChocolateyTool(output=self.out))
                 spt.update()
                 self.assertEquals(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
@@ -311,19 +313,18 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            out = ConanOutput(StringIO())
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertEquals(2, runner.calls)
             runner = RunnerMultipleMock(["sudo --askpass apt-get update",
                                          "sudo --askpass apt-get install -y --no-install-recommends yet_another_package"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertEquals(7, runner.calls)
 
             runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException):
                 spt.install(packages)
             self.assertEquals(7, runner.calls)
@@ -351,8 +352,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             runner = RunnerMultipleMock([])
-            new_out = StringIO()
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=ConanOutput(new_out))
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
@@ -366,7 +366,7 @@ class SystemPackageToolTest(unittest.TestCase):
         }):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
             runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=self.out)
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
@@ -381,7 +381,7 @@ class SystemPackageToolTest(unittest.TestCase):
         }):
             packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
             runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=self.out)
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertIn('\n'.join(packages), self.out)
             self.assertEquals(0, runner.calls)
@@ -392,7 +392,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
@@ -406,7 +406,7 @@ class SystemPackageToolTest(unittest.TestCase):
         spt = SystemPackageTool()
         expected_package = "git"
         if platform.system() == "Windows" and which("choco.exe"):
-            spt = SystemPackageTool(tool=ChocolateyTool())
+            spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
             # Git is not installed by default on Chocolatey
             expected_package = "chocolatey"
         # The expected should be installed on development/testing machines
@@ -439,9 +439,9 @@ class SystemPackageToolTest(unittest.TestCase):
         }
 
         runner = RunnerMock(return_ok=False)
-        new_out = StringIO()
-        pkg_tool = ChocolateyTool(output=ConanOutput(new_out)) if which("choco.exe") else None
-        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
+        output = ConanOutput(StringIO())
+        pkg_tool = ChocolateyTool(output=output) if which("choco.exe") else None
+        spt = SystemPackageTool(runner=runner, tool=pkg_tool, output=output)
 
         msg = platform_update_error_msg.get(platform.system(), None)
         if msg is not None:
