@@ -794,8 +794,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
         return project_url, rev
 
-    @classmethod
-    def _save_fixed_conanfile(cls, client):
+    def _save_fixed_conanfile(self, client):
         svn = SVN(client.current_folder)
         url = svn.get_remote_url()
         revision = int(svn.get_revision()) + 1
@@ -803,6 +802,8 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         conanfile = base_svn.format(directory="None", url=url, revision=revision)
         save(os.path.join(client.current_folder, 'conanfile.py'), conanfile)
         svn.run('commit -m "update conanfile to fix last revision"')
+        svn.update()
+        self.assertEquals(revision, int(svn.get_revision()))
 
     @parameterized.expand([(True,), (False,), ])
     def test_lock_own_copy(self, auto_keywords):
