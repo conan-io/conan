@@ -22,7 +22,8 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     if sha256:
         check_sha256(filename, sha256)
 
-    unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern)
+    unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern,
+          output=output)
     os.unlink(filename)
 
 
