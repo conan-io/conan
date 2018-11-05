@@ -111,6 +111,11 @@ class ConanFile(object):
     default_channel = None
     default_user = None
 
+    # Settings and Options
+    settings = None
+    options = None
+    default_options = None
+
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = output

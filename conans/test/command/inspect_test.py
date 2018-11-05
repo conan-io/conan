@@ -145,7 +145,9 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
-""", client.out)
+settings: None
+options: None
+default_options: None""", client.out)
 
     def test_inspect_filled_attributes(self):
         client = TestClient()
@@ -160,6 +162,9 @@ class Pkg(ConanFile):
     description = "Yet Another Test"
     generators = "cmake"
     topics = ("foo", "bar", "qux")
+    settings = "os", "arch", "build_type", "compiler"
+    options = {"foo": [True, False], "bar": [True, False]}
+    default_options = {"foo": True, "bar": False}
     _private = "Nothing"
     def build(self):
         pass
@@ -179,4 +184,11 @@ exports: None
 exports_sources: None
 short_paths: False
 apply_env: True
-build_policy: None""", client.out)
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options
+    bar: [True, False]
+    foo: [True, False]
+default_options
+    bar: False
+    foo: True""", client.out)
