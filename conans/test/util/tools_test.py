@@ -7,6 +7,7 @@ import unittest
 import uuid
 import shutil
 import subprocess
+import sys
 
 from collections import namedtuple
 
@@ -85,7 +86,8 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.linux_distro = "fedora"  # Will instantiate YumTool
 
         with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
-            spt = SystemPackageTool(os_info=os_info)
+            new_out = StringIO()
+            spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
                                repo_key=None)
 
@@ -119,7 +121,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 os_info.is_linux = True
                 os_info.is_windows = False
                 os_info.linux_distro = "debian"
-                spt = SystemPackageTool(runner=runner, os_info=os_info)
+                new_out = StringIO()
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
 
                 spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
                 self.assertEqual(len(runner.commands), 0)
@@ -147,7 +150,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_linux = True
             os_info.is_windows = False
             os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            new_out = StringIO()
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
             spt.update()
             self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
 
@@ -307,18 +311,19 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            out = ConanOutput(StringIO())
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
             spt.install(packages)
             self.assertEquals(2, runner.calls)
             runner = RunnerMultipleMock(["sudo --askpass apt-get update",
                                          "sudo --askpass apt-get install -y --no-install-recommends yet_another_package"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
             spt.install(packages)
             self.assertEquals(7, runner.calls)
 
             runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=out)
             with self.assertRaises(ConanException):
                 spt.install(packages)
             self.assertEquals(7, runner.calls)
@@ -346,7 +351,8 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             runner = RunnerMultipleMock([])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            new_out = StringIO()
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=ConanOutput(new_out))
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
@@ -433,7 +439,8 @@ class SystemPackageToolTest(unittest.TestCase):
         }
 
         runner = RunnerMock(return_ok=False)
-        pkg_tool = ChocolateyTool() if which("choco.exe") else None
+        new_out = StringIO()
+        pkg_tool = ChocolateyTool(output=ConanOutput(new_out)) if which("choco.exe") else None
         spt = SystemPackageTool(runner=runner, tool=pkg_tool)
 
         msg = platform_update_error_msg.get(platform.system(), None)
@@ -471,8 +478,9 @@ class ReplaceInFileTest(unittest.TestCase):
             handler.write(text)
 
     def test_replace_in_file(self):
-        replace_in_file(self.win_file, "nis", "nus")
-        replace_in_file(self.bytes_file, "nis", "nus")
+        output = ConanOutput(sys.stdout)
+        replace_in_file(self.win_file, "nis", "nus", output=output)
+        replace_in_file(self.bytes_file, "nis", "nus", output=output)
 
         content = tools.load(self.win_file)
         self.assertNotIn("nis", content)
@@ -491,30 +499,36 @@ class ToolsTest(unittest.TestCase):
         replace_with = "MYPATH"
         expected = 'Some other contentsMYPATH"finally all text'
 
+        out = TestBufferConanOutput()
         save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with, windows_paths=True)
+        ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with,
+                                         windows_paths=True, output=out)
         self.assertEquals(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, windows_paths=True)
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with,
+                                         windows_paths=True, output=out)
         self.assertEquals(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
-        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False,
+                                         windows_paths=True, output=out)
         self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         self.assertFalse(ret)
 
         # Multiple matches
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
-        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False, windows_paths=True)
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
+                                         windows_paths=True, output=out)
         self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
-        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
+                                         output=out)
         if platform.system() == "Windows":
             self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
             self.assertTrue(ret)
@@ -533,11 +547,12 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
 
     def cpu_count_test(self):
-        cpus = tools.cpu_count()
+        output = ConanOutput(sys.stdout)
+        cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
-            self.assertEquals(tools.cpu_count(), 34)
+            self.assertEquals(tools.cpu_count(output=output), 34)
 
     def get_env_unit_test(self):
         """
@@ -830,10 +845,14 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
         with self.assertRaisesRegexp(ConanException, "VS non-existing installation: Visual Studio 5"):
-            tools.vcvars_command(settings)
+            output = ConanOutput(StringIO())
+            tools.vcvars_command(settings, output=output)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_constrained_test(self):
+        new_out = StringIO()
+        output = ConanOutput(new_out)
+
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -844,10 +863,8 @@ compiler:
         settings.compiler = "Visual Studio"
         with self.assertRaisesRegexp(ConanException,
                                      "compiler.version setting required for vcvars not defined"):
-            tools.vcvars_command(settings)
+            tools.vcvars_command(settings, output=output)
 
-        new_out = StringIO()
-        output = ConanOutput(new_out)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings, output=output)
@@ -1058,16 +1075,16 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests)
+                           overwrite=True, requester=requests, out=out)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests)
+                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
-                       requester=requests)
+                       requester=requests, out=out)
         http_server.stop()
 
     def get_gnu_triplet_test(self):
@@ -1244,15 +1261,16 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         thread.run_server()
 
+        out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with self.assertRaisesRegexp(ConanException,
                                      "Cannot deduce file name form url. Use 'filename' parameter."):
-            tools.get("http://localhost:%s/?file=1" % thread.port)
+            tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
-                      requester=requests)
+                      requester=requests, output=out)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
@@ -1260,9 +1278,9 @@ ProgramFiles(x86)=C:\Program Files (x86)
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                          requester=requests)
+                          requester=requests, output=out)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz", requester=requests)
+                      filename="sample.tar.gz", requester=requests, output=out)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 

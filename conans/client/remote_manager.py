@@ -41,7 +41,6 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
-
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest):
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

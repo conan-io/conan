@@ -194,5 +194,5 @@ def format_libraries(libraries, compiler=None):
     return [pattern % library for library in libraries if library]
 
 
-def parallel_compiler_cl_flag():
-    return "/MP%s" % cpu_count()
+def parallel_compiler_cl_flag(output=None):
+    return "/MP%s" % cpu_count(output=output)
