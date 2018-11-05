@@ -2,6 +2,7 @@ import os
 import sqlite3
 
 from conans.errors import ConanException
+from sqlite3 import OperationalError
 
 
 REMOTES_USER_TABLE = "users_remotes"
@@ -31,7 +32,14 @@ class LocalDB(object):
             cursor = self.connection.cursor()
             if clean:
                 cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
-                cursor.execute("vacuum")  # Make sure the DB is cleaned, drop doesn't do that
+                try:
+                    # https://github.com/ghaering/pysqlite/issues/109
+                    cursor.isolation_level = None
+                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
+                    cursor.isolation_level = ''  # note this is  default value of isolation_level
+                except OperationalError:
+                    pass
+
             cursor.execute("create table if not exists %s "
                            "(remote_url TEXT UNIQUE, user TEXT, token TEXT)" % REMOTES_USER_TABLE)
         except Exception as e:
