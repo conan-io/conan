@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+import six
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -10,10 +11,9 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM
 from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.search.search import search_recipes
 from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
 from conans.util.log import logger
-from conans.search.search import search_recipes
-from conans.client.plugin_manager import PluginManager
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -35,13 +35,13 @@ class AliasConanfile(ConanFile):
 
 
 def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager):
+               hook_manager, registry):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference)
+    hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=reference)
     logger.debug("Exporting %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
@@ -58,7 +58,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
         _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
                           keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
-    plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
+    hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
                            reference=reference)
 
 
@@ -99,6 +99,19 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
+    headers = []
+
+    if six.PY2:
+        # Workaround for https://bugs.python.org/issue22221
+        lines_without_headers = []
+        lines = content.splitlines(True)
+        for line in lines:
+            if not lines_without_headers and line.startswith("#"):
+                headers.append(line)
+            else:
+                lines_without_headers.append(line)
+        content = ''.join(lines_without_headers)
+
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
@@ -127,15 +140,17 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
+    content = content if not headers else ''.join(headers) + content
     save(conanfile_path, content)
 
 
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
-
     exports_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    origin_folder = os.path.dirname(conanfile_path)
+    export_recipe(conanfile, origin_folder, exports_folder, output)
+    export_source(conanfile, origin_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
     _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
@@ -152,6 +167,8 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
     digest.save(exports_folder)
+
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
 
     source = paths.source(conan_ref, conanfile.short_paths)
     remove = False
@@ -194,28 +211,34 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
-                    output):
+def _classify_patterns(patterns):
+    patterns = patterns or []
+    included, excluded = [], []
+    for p in patterns:
+        if p.startswith("!"):
+            excluded.append(p[1:])
+        else:
+            included.append(p)
+    return included, excluded
 
-    if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
+
+def export_source(conanfile, origin_folder, destination_source_folder, output):
     if isinstance(conanfile.exports_sources, str):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
-    origin_folder = os.path.dirname(conanfile_path)
+    included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
+    copier = FileCopier(origin_folder, destination_source_folder)
+    for pattern in included_sources:
+        copier(pattern, links=True, excludes=excluded_sources)
+    package_output = ScopedOutput("%s exports_sources" % output.scope, output)
+    copier.report(package_output)
 
-    def classify_patterns(patterns):
-        patterns = patterns or []
-        included, excluded = [], []
-        for p in patterns:
-            if p.startswith("!"):
-                excluded.append(p[1:])
-            else:
-                included.append(p)
-        return included, excluded
 
-    included_exports, excluded_exports = classify_patterns(conanfile.exports)
-    included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
+def export_recipe(conanfile, origin_folder, destination_folder, output):
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+
+    included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
@@ -225,8 +248,5 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    copier = FileCopier(origin_folder, destination_source_folder)
-    for pattern in included_sources:
-        copier(pattern, links=True, excludes=excluded_sources)
-    package_output = ScopedOutput("%s export" % output.scope, output)
+    package_output = ScopedOutput("%s exports" % output.scope, output)
     copier.report(package_output)

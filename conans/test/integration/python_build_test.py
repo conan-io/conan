@@ -1,11 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer,\
-    create_local_git_repo
-from conans.paths import CONANFILE, BUILD_INFO
-from conans.util.files import load, save
 import os
-from conans.test.utils.test_files import temp_folder
+import unittest
+
 from conans.model.info import ConanInfo
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, BUILD_INFO
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
+    NO_SETTINGS_PACKAGE_ID
+from conans.util.files import load, save
 
 
 conanfile = """from conans import ConanFile
@@ -103,7 +105,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
     def reuse_version_ranges_test(self):
@@ -137,7 +139,8 @@ class PkgTest(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4", client.out)
         self.assertIn('base = python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
-        self.assertIn("Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)", client.out)
+        self.assertIn("Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
+                      client.out)
 
     def transitive_multiple_reuse_test(self):
         client = TestClient()
@@ -256,7 +259,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
     def reuse_scm_test(self):
@@ -299,6 +302,127 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
+
+    def reuse_exports_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    exports_sources = "*.h"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "my header"})
+        client.run("export . Base/0.1@user/testing")
+        conanfile = """from conans import python_requires, load
+base = python_requires("Base/0.1@user/testing")
+class Pkg2(base.Pkg):
+    def build(self):
+        self.output.info("Exports sources: %s" % self.exports_sources)
+        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+"""
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header", client.out)
+
+    def reuse_class_members_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyConanfileBase(ConanFile):
+    license = "MyLicense"
+    author = "author@company.com"
+    exports = "*.txt"
+    exports_sources = "*.h"
+    short_paths = True
+    generators = "cmake"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Base/1.1@lasote/testing")
+
+        reuse = """from conans import python_requires
+import os
+base = python_requires("Base/1.1@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    def build(self):
+        self.output.info("Exports sources! %s" % self.exports_sources)
+        self.output.info("Short paths! %s" % self.short_paths)
+        self.output.info("License! %s" % self.license)
+        self.output.info("Author! %s" % self.author)
+        assert os.path.exists("conanbuildinfo.cmake")
+"""
+        client.save({"conanfile.py": reuse,
+                     "file.h": "header",
+                     "other.txt": "text"})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Exports sources! *.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing exports: Copied 1 '.txt' file: other.txt",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing exports_sources: Copied 1 '.h' file: file.h",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Short paths! True", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: License! MyLicense", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Author! author@company.com", client.out)
+        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        self.assertTrue(os.path.exists(os.path.join(client.client_cache.export(ref),
+                                                    "other.txt")))
+
+    def reuse_exports_conflict_test(self):
+        conanfile = """from conans import ConanFile
+class Base(ConanFile):
+    exports_sources = "*.h"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "my header Base!!"})
+        client.run("export . Base/0.1@user/testing")
+        conanfile = """from conans import python_requires, load
+base = python_requires("Base/0.1@user/testing")
+class Pkg2(base.Base):
+    def build(self):
+        self.output.info("Exports sources: %s" % self.exports_sources)
+        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+"""
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "my header Pkg!!"}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header Pkg!!", client.out)
+
+    def transitive_imports_conflicts_test(self):
+        # https://github.com/conan-io/conan/issues/3874
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+import myhelper
+class SourceBuild(ConanFile):
+    exports = "*.py"
+"""
+        helper = """def myhelp(output):
+    output.info("MyHelperOutput!")
+"""
+        client.save({"conanfile.py": conanfile,
+                     "myhelper.py": helper})
+        client.run("export . base1/1.0@user/channel")
+        client.save({"myhelper.py": helper.replace("MyHelperOutput!", "MyOtherHelperOutput!")})
+        client.run("export . base2/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+base2 = python_requires("base2/1.0@user/channel")
+base1 = python_requires("base1/1.0@user/channel")
+
+class MyConanfileBase(ConanFile):
+    def build(self):
+        base1.myhelper.myhelp(self.output)
+        base2.myhelper.myhelp(self.output)
+"""
+        # This should work, even if there is a local "myhelper.py" file, which could be
+        # accidentaly imported (and it was, it was a bug)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
+
+        # Now, the same, but with "clean_first=True", should keep working
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
 
 
 class PythonBuildTest(unittest.TestCase):
@@ -511,7 +635,8 @@ class ConanToolPackage(ConanFile):
         client.run("export . lasote/stable")
 
         # We can't build the package without our PYTHONPATH
-        self.assertRaises(Exception, client.run, "install conantool/1.0@lasote/stable --build missing")
+        self.assertRaises(Exception, client.run,
+                          "install conantool/1.0@lasote/stable --build missing")
 
         # But we can inject the PYTHONPATH
         client.run("install conantool/1.0@lasote/stable -e PYTHONPATH=['%s']" % external_dir)
@@ -565,4 +690,5 @@ def external_baz():
         client.save({CONANFILE: conanfile_simple})
         client.run("export . lasote/stable")
         # Should work even if PYTHONPATH is not declared as [], only external resource needed
-        client.run('install Hello/0.1@lasote/stable --build missing -e PYTHONPATH="%s"' % external_dir)
+        client.run('install Hello/0.1@lasote/stable --build missing -e PYTHONPATH="%s"'
+                   % external_dir)

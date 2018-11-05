@@ -1,11 +1,11 @@
+import os
 import unittest
 
 from conans import tools
-from conans.test.utils.tools import TestClient
-import os
 from conans.paths import CONANFILE
-from conans.util.files import load, mkdir
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, mkdir
 from parameterized import parameterized
 
 
@@ -70,14 +70,16 @@ class PackageLocalCommandTest(unittest.TestCase):
         error = client.run("package conanfile.txt --build-folder build2 --install-folder build",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("A conanfile.py is needed (not valid conanfile.txt)", client.out)
+        self.assertIn(
+            "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
+            client.out)
 
         # Path with wrong conanfile path
         error = client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
                            ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Conanfile not found: %s" % os.path.join(client.current_folder, "not_real_dir",
-                                                               "conanfile.py"), client.out)
+        self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
+                                                                 "conanfile.py"), client.out)
 
     def package_with_reference_errors_test(self):
         client = TestClient()

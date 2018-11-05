@@ -1,6 +1,6 @@
 import json
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from collections import OrderedDict
 from conans.util.files import load
 import re
@@ -17,6 +17,72 @@ class RemoteTest(unittest.TestCase):
             self.users["remote%d" % i] = [("lasote", "mypass")]
 
         self.client = TestClient(servers=self.servers, users=self.users)
+
+    def test_removed_references(self):
+        conanfile = """
+from conans import ConanFile
+class HelloConan(ConanFile):
+    pass
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . lib/1.0@lasote/channel")
+        self.client.run('upload "*" -c -r remote1')
+        self.client.run('upload "*" -c -r remote2')
+
+        self.client.run('remote list_ref')
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Remove from remote2, the reference should be kept there
+        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote2')
+        self.client.run('remote list_ref')
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Upload again to remote2 and remove from remote1, the ref shouldm't be removed
+        self.client.run('upload "*" -c -r remote2')
+        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
+        self.client.run('remote list_ref')
+        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+
+        # Test the packages references now
+        self.client.run('upload "*" -c -r remote1 --all')
+        self.client.run('upload "*" -c -r remote2 --all')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
+                      self.client.out)
+
+        # Remove from remote2, the reference should be kept there
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p %s -f -r remote2' % NO_SETTINGS_PACKAGE_ID)
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
+                      self.client.out)
+
+        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
+        self.client.run('upload "*" -c -r remote2 --all')
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p %s -f -r remote1' % NO_SETTINGS_PACKAGE_ID)
+        self.client.run('remote list_ref')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
+                         self.client.out)
+
+        # Remove package locally
+        self.client.run('upload "*" -c -r remote1 --all')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
+                      self.client.out)
+        self.client.run('remove "lib/1.0@lasote/channel" '
+                        '-p %s -f' % NO_SETTINGS_PACKAGE_ID)
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertNotIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
+                         self.client.out)
+
+        # If I remove all in local, I also remove packages
+        self.client.run("create . lib/1.0@lasote/channel")
+        self.client.run('upload "*" -c -r remote1')
+        self.client.run('remove "lib/1.0@lasote/channel" -f')
+        self.client.run('remote list_pref lib/1.0@lasote/channel')
+        self.assertEquals("", self.client.out)
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
@@ -82,6 +148,14 @@ class RemoteTest(unittest.TestCase):
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
+    def clean_remote_test(self):
+        self.client.run("remote add_ref Hello/0.1@user/testing remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
     def add_force_test(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
@@ -139,6 +213,11 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r3: https://r3", lines[2])
         client.run("remote list_ref")
         self.assertIn("Hello/0.1@user/testing: mynewr2", client.out)
+
+        # Rename to an existing one
+        error = client.run("remote rename r2 r1", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Remote 'r1' already exists", client.out)
 
     def insert_test(self):
         self.client.run("remote add origin https://myurl --insert")
@@ -265,3 +344,28 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
         self.assertIn("Hello1/0.1@user/testing: remote2", self.client.user_io.out)
+
+    def package_refs_test(self):
+
+        self.client.run("remote add_pref Hello/0.1@user/testing:555 remote0")
+        self.client.run("remote list_pref Hello/0.1@user/testing")
+        self.assertIn("Hello/0.1@user/testing:555: remote0", self.client.user_io.out)
+
+        self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote1")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote1", self.client.user_io.out)
+
+        self.client.run("remote remove_pref Hello1/0.1@user/testing:555")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertNotIn("Hello1/0.1@user/testing:555", self.client.user_io.out)
+
+        self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote0")
+        self.client.run("remote add_pref Hello1/0.1@user/testing:666 remote1")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote0", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)
+
+        self.client.run("remote update_pref Hello1/0.1@user/testing:555 remote2")
+        self.client.run("remote list_pref Hello1/0.1@user/testing")
+        self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)

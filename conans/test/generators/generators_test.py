@@ -1,8 +1,11 @@
 import os
 import platform
 import unittest
-from conans.test.utils.tools import TestClient
+
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load
+from conans.model.ref import ConanFileReference
+import re
 
 
 class GeneratorsTest(unittest.TestCase):
@@ -38,17 +41,38 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        virtualenvFiles = ["activate.sh", "deactivate.sh"]
+        venv_files = ["activate.sh", "deactivate.sh"]
         if platform.system() == "Windows":
-            virtualenvFiles.extend(["activate.bat", "deactivate.bat", "activate.ps1",
-                                    "deactivate.ps1"])
+            venv_files.extend(["activate.bat", "deactivate.bat", "activate.ps1",
+                               "deactivate.ps1"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
-                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py'] + virtualenvFiles),
+                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py'] + venv_files),
                          sorted(os.listdir(client.current_folder)))
+
+    def test_srcdirs(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+import os
+class TestConan(ConanFile):
+    def package(self):
+        save(os.path.join(self.package_folder, "src/file.h"), "//header")
+    def package_info(self):
+        self.cpp_info.srcdirs = ["src"]
+"""
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . mysrc/0.1@user/testing")
+        client.run("install mysrc/0.1@user/testing -g cmake")
+
+        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
+        self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
+                      src_dirs)
 
     def test_qmake(self):
         client = TestClient()

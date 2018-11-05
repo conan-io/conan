@@ -1,13 +1,12 @@
 import os
-
 from conans.client.remote_registry import Remote
 from conans.errors import ConanException
-from conans.util.log import logger
+from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.model.ref import ConanFileReference
-from conans.search.search import filter_outdated, search_recipes,\
+from conans.search.search import filter_outdated, search_recipes, \
     search_packages
+from conans.util.log import logger
 
 
 class DiskRemover(object):
@@ -94,13 +93,10 @@ class ConanRemover(object):
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            result = self._remote_manager.remove(reference, remote)
-            current_remote = self._registry.refs.get(reference)
-            if current_remote == remote:
-                self._registry.refs.remove(reference)
-            return result
+            return self._remote_manager.remove(reference, remote)
         else:
-            return self._remote_manager.remove_packages(reference, package_ids, remote)
+            tmp = self._remote_manager.remove_packages(reference, package_ids, remote)
+            return tmp
 
     def _local_remove(self, reference, src, build_ids, package_ids):
         # Make sure to clean the locks too
@@ -112,6 +108,9 @@ class ConanRemover(object):
             remover.remove_builds(reference, build_ids)
         if package_ids is not None:
             remover.remove_packages(reference, package_ids)
+            for pid in package_ids:
+                pref = PackageReference(reference, pid)
+                self._registry.prefs.remove(pref)
         if not src and build_ids is None and package_ids is None:
             remover.remove(reference)
             self._registry.refs.remove(reference, quiet=True)

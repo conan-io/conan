@@ -98,7 +98,7 @@ class RestV1Methods(RestCommonMethods):
             raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
                                                                               CONANINFO))
         # Get the info (in memory)
-        contents = self._download_files({CONANINFO: urls[CONANINFO]})
+        contents = self._download_files({CONANINFO: urls[CONANINFO]}, quiet=True)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])

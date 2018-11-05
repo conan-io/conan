@@ -3,6 +3,7 @@ set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
 set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
 set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
+set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
@@ -41,7 +42,8 @@ def cmake_user_info_vars(deps_user_info):
     lines = []
     for dep, the_vars in deps_user_info.items():
         for name, value in the_vars.vars.items():
-            lines.append('set(CONAN_USER_%s_%s %s)' % (dep.upper(), name, _cmake_string_representation(value)))
+            lines.append('set(CONAN_USER_%s_%s %s)'
+                         % (dep.upper(), name, _cmake_string_representation(value)))
     return "\n".join(lines)
 
 
@@ -64,7 +66,8 @@ def cmake_settings_info(settings):
     for item in settings.items():
         key, value = item
         name = "CONAN_SETTINGS_%s" % key.upper().replace(".", "_")
-        settings_info += "set({key} {value})\n".format(key=name, value=_cmake_string_representation(value))
+        settings_info += "set({key} {value})\n".format(key=name,
+                                                       value=_cmake_string_representation(value))
     return settings_info
 
 
@@ -364,7 +367,20 @@ function(check_compiler_version)
         if(NOT ${_CHECK_VERSION} VERSION_EQUAL CONAN_COMPILER_VERSION)
             conan_error_compiler_version()
         endif()
-    elseif(CONAN_COMPILER MATCHES "clang" OR CONAN_COMPILER STREQUAL "sun-cc")
+    elseif(CONAN_COMPILER STREQUAL "clang")
+        set(_CHECK_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
+        if(NOT ${CONAN_COMPILER_VERSION} VERSION_LESS 8.0)
+            message(STATUS "Conan: Compiler Clang>=8, checking major version ${CONAN_COMPILER_VERSION}")
+            conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
+            if("${CONAN_COMPILER_MINOR}" STREQUAL "")
+                set(_CHECK_VERSION ${VERSION_MAJOR})
+            endif()
+        endif()
+        message(STATUS "Conan: Checking correct version: ${_CHECK_VERSION}")
+        if(NOT ${_CHECK_VERSION} VERSION_EQUAL CONAN_COMPILER_VERSION)
+            conan_error_compiler_version()
+        endif()
+    elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc")
         conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
         if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
            conan_error_compiler_version()

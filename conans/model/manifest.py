@@ -1,10 +1,10 @@
-import os
 import calendar
-import time
-from conans.util.files import md5sum, md5, save, load, walk
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
-from conans.errors import ConanException
 import datetime
+import os
+import time
+from conans.errors import ConanException
+from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
+from conans.util.files import md5sum, md5, save, load, walk
 
 
 def discarded_file(filename):
@@ -39,9 +39,9 @@ def gather_files(folder):
 
 class FileTreeManifest(object):
 
-    def __init__(self, time, file_sums):
+    def __init__(self, the_time, file_sums):
         """file_sums is a dict with filepaths and md5's: {filepath/to/file.txt: md5}"""
-        self.time = time
+        self.time = the_time
         self.file_sums = file_sums
 
     def files(self):
@@ -63,14 +63,14 @@ class FileTreeManifest(object):
         ConanDigest
         """
         tokens = text.split("\n")
-        time = int(tokens[0])
+        the_time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
             if md5line:
                 filename, file_md5 = md5line.split(": ")
                 if not discarded_file(filename):
                     file_sums[filename] = file_md5
-        return FileTreeManifest(time, file_sums)
+        return FileTreeManifest(the_time, file_sums)
 
     @staticmethod
     def load(folder):
@@ -78,16 +78,25 @@ class FileTreeManifest(object):
         return FileTreeManifest.loads(text)
 
     def __repr__(self):
-        ret = ["%s" % (self.time)]
-        for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret.append("%s: %s" % (filepath, file_md5))
+        ret = ["%s" % self.time]
+        for file_path, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s: %s" % (file_path, file_md5))
+        ret.append("")
+        content = "\n".join(ret)
+        return content
+
+    def __str__(self):
+        dt = datetime.datetime.utcfromtimestamp(self.time).strftime('%Y-%m-%d %H:%M:%S')
+        ret = ["Time: %s" % dt]
+        for file_path, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s, MD5: %s" % (file_path, file_md5))
         ret.append("")
         content = "\n".join(ret)
         return content
 
     def save(self, folder, filename=CONAN_MANIFEST):
         path = os.path.join(folder, filename)
-        save(path, str(self))
+        save(path, repr(self))
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):
