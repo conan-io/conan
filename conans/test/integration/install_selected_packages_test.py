@@ -1,9 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE
+import unittest
+
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
@@ -52,7 +53,8 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
     def download_packages_twice_test(self):
         expected_header_contents = self.files["helloHello0.h"]
-        package_folder = self.new_client.paths.package(PackageReference(self.ref, self.package_ids[0]))
+        package_folder = self.new_client.paths.package(PackageReference(self.ref,
+                                                                        self.package_ids[0]))
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
@@ -88,7 +90,8 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.files = cpp_hello_conan_files("Hello0", "0.1")
         # No build.
-        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):", "def build(self):\n        return\n")
+        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):",
+                                                              "def build(self):\n        return\n")
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
