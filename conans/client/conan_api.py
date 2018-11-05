@@ -417,7 +417,8 @@ class ConanAPIV1(object):
 
             build_folder = _make_abs_path(build_folder, cwd)
             install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
-            source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
+            source_folder = _make_abs_path(source_folder, cwd,
+                                           default=os.path.dirname(conanfile_path))
 
             # Checks that no both settings and info files are specified
             infos_present = existing_info_files(install_folder)
