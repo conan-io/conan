@@ -146,7 +146,7 @@ class ConanHTMLGrapher(object):
                                    ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
                                    ("license", conanfile.license),
                                    ("author", conanfile.author),
-                                   ("topics", conanfile.topics)]:
+                                   ("topics", str(conanfile.topics))]:
                     if data:
                         data = data.replace("'", '"')
                         fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
