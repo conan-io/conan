@@ -51,9 +51,17 @@ def download(url, filename, verify=True, out=None, retry=2, retry_wait=5, overwr
              auth=None, headers=None, requester=None):
     if out is None:
         import warnings
-        warnings.warn("Call 'conans.client.tools.net.download' with out parameter specified",
+        warnings.warn("Call 'conans.client.tools[.net].download' with 'out' parameter specified",
                       PendingDeprecationWarning)
-        out = ConanOutput(sys.stdout, color=True)
+        from conans.tools import _global_output
+        out = _global_output
+
+    if requester is None:
+        import warnings
+        warnings.warn("Call 'conans.client.tools[.net].download' with 'requester'"
+                      " parameter specified", PendingDeprecationWarning)
+        from conans.tools import _global_requester
+        requester = _global_requester
 
     downloader = Downloader(requester=requester, output=out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
