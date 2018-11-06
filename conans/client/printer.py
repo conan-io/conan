@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from conans.paths import SimplePaths
 from conans.client.output import Color
+from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
@@ -26,11 +27,17 @@ class Printer(object):
     def print_inspect(self, inspect):
         for k, v in inspect.items():
             if isinstance(v, dict):
-                self._out.writeln("%s" % k)
+                self._out.writeln("%s:" % k)
                 for sk, sv in sorted(v.items()):
                     self._out.writeln("    %s: %s" % (sk, str(sv)))
             else:
-                self._out.writeln("%s: %s" % (k, str(v)))
+                if '\n' in str(v):
+                    self._out.writeln("%s:" % k)
+                    option_values = OptionsValues.loads(v)
+                    for ok, ov in option_values.items():
+                        self._out.writeln("    %s: %s" % (ok, ov))
+                else:
+                    self._out.writeln("%s: %s" % (k, str(v)))
 
     def _print_paths(self, ref, conan, path_resolver, show):
         if isinstance(ref, ConanFileReference):

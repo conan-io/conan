@@ -98,7 +98,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect . -a=options -a=default_options")
-        self.assertEquals(client.out, """options
+        self.assertEquals(client.out, """options:
     option1: [True, False]
     option2: [1, 2, 3]
     option3: ANY
@@ -131,7 +131,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertIn("""name: MyPkg
+        self.assertEqual("""name: MyPkg
 version: 1.2.3
 url: None
 homepage: None
@@ -147,7 +147,8 @@ apply_env: True
 build_policy: None
 settings: None
 options: None
-default_options: None""", client.out)
+default_options: None
+""", client.out)
 
     def test_inspect_filled_attributes(self):
         client = TestClient()
@@ -186,9 +187,103 @@ short_paths: False
 apply_env: True
 build_policy: None
 settings: ('os', 'arch', 'build_type', 'compiler')
-options
+options:
     bar: [True, False]
     foo: [True, False]
-default_options
+default_options:
     bar: False
     foo: True""", client.out)
+
+    def test_default_options_list(self):
+        client = TestClient()
+        conanfile = r"""from conans import ConanFile
+class OpenSSLConan(ConanFile):
+    name = "OpenSSL"
+    version = "1.0.2o"
+    settings = "os", "compiler", "arch", "build_type"
+    url = "http://github.com/lasote/conan-openssl"
+    license = "The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html"
+    description = "OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured " \
+                  "toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols"
+    options = {"no_threads": [True, False],
+               "no_zlib": [True, False],
+               "shared": [True, False],
+               "no_asm": [True, False],
+               "386": [True, False],
+               "no_sse2": [True, False],
+               "no_bf": [True, False],
+               "no_cast": [True, False],
+               "no_des": [True, False],
+               "no_dh": [True, False],
+               "no_dsa": [True, False],
+               "no_hmac": [True, False],
+               "no_md2": [True, False],
+               "no_md5": [True, False],
+               "no_mdc2": [True, False],
+               "no_rc2": [True, False],
+               "no_rc4": [True, False],
+               "no_rc5": [True, False],
+               "no_rsa": [True, False],
+               "no_sha": [True, False]}
+    default_options = "=False\n".join(options.keys()) + '=False'
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertEqual("""name: OpenSSL
+version: 1.0.2o
+url: http://github.com/lasote/conan-openssl
+homepage: None
+license: The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html
+author: None
+description: OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols
+topics: None
+generators: ['txt']
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'compiler', 'arch', 'build_type')
+options:
+    386: [True, False]
+    no_asm: [True, False]
+    no_bf: [True, False]
+    no_cast: [True, False]
+    no_des: [True, False]
+    no_dh: [True, False]
+    no_dsa: [True, False]
+    no_hmac: [True, False]
+    no_md2: [True, False]
+    no_md5: [True, False]
+    no_mdc2: [True, False]
+    no_rc2: [True, False]
+    no_rc4: [True, False]
+    no_rc5: [True, False]
+    no_rsa: [True, False]
+    no_sha: [True, False]
+    no_sse2: [True, False]
+    no_threads: [True, False]
+    no_zlib: [True, False]
+    shared: [True, False]
+default_options:
+    386: False
+    no_asm: False
+    no_bf: False
+    no_cast: False
+    no_des: False
+    no_dh: False
+    no_dsa: False
+    no_hmac: False
+    no_md2: False
+    no_md5: False
+    no_mdc2: False
+    no_rc2: False
+    no_rc4: False
+    no_rc5: False
+    no_rsa: False
+    no_sha: False
+    no_sse2: False
+    no_threads: False
+    no_zlib: False
+    shared: False
+""", client.out)
