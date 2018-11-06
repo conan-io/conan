@@ -812,6 +812,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         except CalledProcessError as e:
             print(e.returncode)
             print(e.output)
+            raise
         svn.run('commit -m "update conanfile to fix last revision"')
         svn.update()
         self.assertEquals(revision, int(svn.get_revision()))
