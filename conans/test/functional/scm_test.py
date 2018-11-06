@@ -804,7 +804,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         conanfile_path = os.path.join(client.current_folder, 'conanfile.py')
         from subprocess import CalledProcessError
         try:
-            os.system('ls -la "{}"'.format(os.path.dirname(conanfile_path)))
+            print(os.system('ls -la "{}"'.format(os.path.dirname(conanfile_path))))
             if needs_lock_set:
                 svn.run('lock "{}"'.format(conanfile_path))
             save(conanfile_path, conanfile)
