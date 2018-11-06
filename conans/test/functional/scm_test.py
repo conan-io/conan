@@ -802,11 +802,16 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
         conanfile = base_svn.format(directory="None", url=url, revision=revision)
         conanfile_path = os.path.join(client.current_folder, 'conanfile.py')
-        if needs_lock_set:
-            svn.run('lock "{}"'.format(conanfile_path))
-        save(conanfile_path, conanfile)
-        if needs_lock_set:
-            svn.run('unlock "{}"'.format(conanfile_path))
+        from subprocess import CalledProcessError
+        try:
+            if needs_lock_set:
+                svn.run('lock "{}"'.format(conanfile_path))
+            save(conanfile_path, conanfile)
+            if needs_lock_set:
+                svn.run('unlock "{}"'.format(conanfile_path))
+        except CalledProcessError as e:
+            print(e.returncode)
+            print(e.output)
         svn.run('commit -m "update conanfile to fix last revision"')
         svn.update()
         self.assertEquals(revision, int(svn.get_revision()))
