@@ -8,6 +8,60 @@ from conans.util.files import load
 
 
 class CIGraphLockTest(unittest.TestCase):
+    def python_requires_lock_test(self):
+        # locking a version range
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+var = 42
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Tool/0.1@user/channel")
+
+        # Use a consumer with a version range
+        consumer = """from conans import ConanFile, python_requires
+dep = python_requires("Tool/[>=0.1]@user/channel")
+
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("VAR=%s" % dep.var)
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("create . Pkg/0.1@user/channel --output-lock=default.lock")
+        out = "".join(str(client.out).splitlines())
+        self.assertIn("Python requires    Tool/0.1@user/channel", out)
+        self.assertIn("Pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+                      out)
+        self.assertIn("Pkg/0.1@user/channel: VAR=42", out)
+        lock_file = load(os.path.join(client.current_folder, "default.lock"))
+        self.assertIn("Pkg/0.1@user/channel", lock_file)
+        self.assertIn("Tool/0.1@user/channel", lock_file)
+
+        # If we create a new Tool version
+        client.save({"conanfile.py": conanfile.replace("42", "24")})
+        client.run("create . Tool/0.2@user/channel")
+
+        # Normal install will use it
+        client.save({"conanfile.py": consumer})
+        client.run("create . Pkg/0.1@user/channel")
+        print client.out
+        out = "".join(str(client.out).splitlines())
+        self.assertIn("Python requires    Tool/0.2@user/channel", out)
+        self.assertIn("Pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+                      out)
+        self.assertIn("Pkg/0.1@user/channel: VAR=24", out)
+
+        # Locked install will use Tool/0.1
+        client.run("create . Pkg/0.1@user/channel --input-lock=default.lock")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2@user/channel", client.out)
+
+        # Info also works
+        client.run("info . --input-lock=default.lock")
+        print client.out
+        self.assertIn("PkgA/0.1@user/channel", client.out)
+        self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
     def version_ranges_lock_test(self):
         # locking a version range

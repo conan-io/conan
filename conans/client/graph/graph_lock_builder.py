@@ -11,10 +11,12 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.requires import Requirements
+from conans.util.files import save
 
 
 GraphLockDependency = namedtuple("GraphLockDependency", "node_id private build_require")
-GraphLockNode = namedtuple("GraphLockNode", "conan_ref binary_id options_values dependencies")
+GraphLockNode = namedtuple("GraphLockNode", "conan_ref binary_id options_values dependencies "
+                                            "python_requires")
 
 
 class GraphLock(object):
@@ -31,12 +33,15 @@ class GraphLock(object):
                 dependencies.append(GraphLockDependency(str(id(edge.dst)), edge.private,
                                                         edge.build_require))
 
-            self._nodes[node.id] = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
+            python_requires = [r.conan_ref for r in getattr(node.conanfile, "python_requires", [])]
+
+            self._nodes[node.id] = GraphLockNode(conan_ref, binary_id, options_values, dependencies,
+                                                 python_requires)
 
     def insert_virtual(self, node_ids):
         new_node = GraphLockNode(None, None, OptionsValues(),
                                  [GraphLockDependency(node_id, False, False)
-                                  for node_id in node_ids])
+                                  for node_id in node_ids], [])
         id_ = str(id(new_node))
         self._nodes[id_] = new_node
         return id_
@@ -137,9 +142,14 @@ class GraphLock(object):
             options_values = OptionsValues.loads(graph_node["options"])
             dependencies = [GraphLockDependency(n[0], n[1], n[2])
                             for n in graph_node["dependencies"]]
-            node = GraphLockNode(conan_ref, binary_id, options_values, dependencies)
+            python_requires = [ConanFileReference.loads(r) for r in graph_node["python_requires"]]
+            node = GraphLockNode(conan_ref, binary_id, options_values, dependencies, python_requires)
             graph_lock._nodes[id_] = node
         return graph_lock
+
+    def save(self, filename):
+        serialized_graph_str = self.dumps()
+        save(filename, serialized_graph_str)
 
     def dumps(self):
         result = {"profile": self._profile.dumps()}
@@ -148,7 +158,8 @@ class GraphLock(object):
             graph[id_] = {"conan_ref": str(node.conan_ref),
                           "binary_id": node.binary_id,
                           "options": node.options_values.dumps(),
-                          "dependencies": node.dependencies}
+                          "dependencies": node.dependencies,
+                          "python_requires": [r.full_repr() for r in node.python_requires]}
         result["graph"] = graph
         return json.dumps(result, indent=True)
 

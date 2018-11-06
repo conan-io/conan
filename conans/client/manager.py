@@ -116,11 +116,9 @@ class ConanManager(object):
             manifest_manager.print_log()
 
         if output_lock_file:
+            self._user_io.out.info("Saving graph lock file: %s" % output_lock_file)
             graph_lock = GraphLock(deps_graph, profile)
-            serialized_graph_str = graph_lock.dumps()
-            filename = output_lock_file
-            self._user_io.out.info("Saving graph lock file: %s" % filename)
-            save(filename, serialized_graph_str)
+            graph_lock.save(output_lock_file)
         if install_folder:
             # Write generators
             if generators is not False:

@@ -378,6 +378,8 @@ class ConanAPIV1(object):
 
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(reference)
+            if output_lock_file:
+                output_lock_file = _make_abs_path(output_lock_file, cwd)
 
             create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
@@ -653,11 +655,10 @@ class ConanAPIV1(object):
                                                                   recorder, workspace=None,
                                                                   graph_lock=graph_lock)
         if output_lock_file:
+            self._user_io.out.info("Saving graph lock file: %s" % output_lock_file)
             graph_lock = GraphLock(deps_graph, profile)
-            serialized_graph_str = graph_lock.dumps()
-            filename = output_lock_file
-            self._user_io.out.info("Saving graph lock file: %s" % filename)
-            save(filename, serialized_graph_str)
+            graph_lock.save(output_lock_file)
+
         return deps_graph, conanfile
 
     @api_method
