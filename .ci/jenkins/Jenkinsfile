@@ -3,10 +3,14 @@ def full_py_vers = false
 def test_revisions = true
 // ############################
 
+if(env.JOB_NAME == "ConanNightly"){
+    full_py_vers = true
+    test_revisions = true
+}
+
 if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_py_vers = true
 }
-
 
 def slaves = ['Linux', 'Windows', 'Macos']
 def flavors = ["blocked_v2"]
