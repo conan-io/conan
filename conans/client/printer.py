@@ -31,7 +31,7 @@ class Printer(object):
                 for sk, sv in sorted(v.items()):
                     self._out.writeln("    %s: %s" % (sk, str(sv)))
             else:
-                if '\n' in str(v):
+                if isinstance(v, tuple):
                     self._out.writeln("%s:" % k)
                     option_values = OptionsValues.loads(v)
                     for ok, ov in option_values.items():
