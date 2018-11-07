@@ -98,7 +98,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect . -a=options -a=default_options")
-        self.assertEquals(client.out, """options:
+        self.assertEqual(client.out, """options:
     option1: [True, False]
     option2: [1, 2, 3]
     option3: ANY
@@ -172,7 +172,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertIn("""name: MyPkg
+        self.assertEqual("""name: MyPkg
 version: 1.2.3
 url: https://john.doe.com
 homepage: https://john.company.site
@@ -192,7 +192,8 @@ options:
     foo: [True, False]
 default_options:
     bar: False
-    foo: True""", client.out)
+    foo: True
+""", client.out)
 
     def test_default_options_list(self):
         client = TestClient()
@@ -286,4 +287,47 @@ default_options:
     no_threads: False
     no_zlib: False
     shared: False
+""", client.out)
+
+    def test_mixed_options_instances(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    name = "MyPkg"
+    version = "1.2.3"
+    author = "John Doe"
+    url = "https://john.doe.com"
+    homepage = "https://john.company.site"
+    license = "MIT"
+    description = "Yet Another Test"
+    generators = "cmake"
+    topics = ("foo", "bar", "qux")
+    settings = "os", "arch", "build_type", "compiler"
+    options = {"foo": [True, False], "bar": [True, False]}
+    default_options = "foo=True", "bar=True"
+    _private = "Nothing"
+    def build(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertEqual("""name: MyPkg
+version: 1.2.3
+url: https://john.doe.com
+homepage: https://john.company.site
+license: MIT
+author: John Doe
+description: Yet Another Test
+topics: ('foo', 'bar', 'qux')
+generators: cmake
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options:
+    bar: [True, False]
+    foo: [True, False]
+default_options: ('foo=True', 'bar=True')
 """, client.out)
