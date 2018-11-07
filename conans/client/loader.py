@@ -18,6 +18,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
+from contextlib import contextmanager
 
 
 class ProcessedProfile(object):
@@ -41,6 +42,13 @@ class ConanFileLoader(object):
         self._output = output
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
+
+    @contextmanager
+    def lock_versions(self, refs):
+        if refs:
+            self._python_requires._locked_versions = {r.name: r for r in refs}
+        yield
+        self._python_requires._locked_versions = None
 
     def load_class(self, conanfile_path):
         loaded, filename = parse_conanfile(conanfile_path)

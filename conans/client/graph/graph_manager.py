@@ -125,7 +125,8 @@ class GraphManager(object):
                     graph_lock._nodes[graph_lock_node_id] = GraphLockNode(reference,
                                                                           node.binary_id,
                                                                           node.options_values,
-                                                                          node.dependencies)
+                                                                          node.dependencies,
+                                                                          [])
                 graph_lock_root_node = graph_lock.insert_virtual([graph_lock_node_id])
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:

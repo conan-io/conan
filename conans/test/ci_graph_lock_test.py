@@ -54,6 +54,7 @@ class Pkg(ConanFile):
 
         # Locked install will use Tool/0.1
         client.run("create . Pkg/0.1@user/channel --input-lock=default.lock")
+        print client.out
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
 

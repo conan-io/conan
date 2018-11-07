@@ -120,6 +120,9 @@ class GraphLock(object):
     def conan_ref(self, node_id):
         return self._nodes[node_id].conan_ref
 
+    def python_requires(self, node_id):
+        return self._nodes[node_id].python_requires
+
     def options_values(self, node_id):
         return self._nodes[node_id].options_values
 
@@ -201,9 +204,11 @@ class DepsGraphLockBuilder(object):
 
             previous = visited_deps.get(dep_ref)
             if not previous:  # new node, must be added and expanded
+                python_requires = graph_lock.python_requires(dep_id)
                 new_node = self._create_new_node(node, dep_graph, dep_ref,
                                                  dependency.private, False,
-                                                 remote_name, processed_profile)
+                                                 remote_name, processed_profile,
+                                                 python_requires)
                 new_node.build_require = build_require
                 new_node.id = dep_id
                 # RECURSION!
@@ -237,7 +242,7 @@ class DepsGraphLockBuilder(object):
             raise ConanException(e)
 
     def _create_new_node(self, current_node, dep_graph, reference, private, build_require,
-                         remote_name, processed_profile):
+                         remote_name, processed_profile, python_requires):
         try:
             result = self._proxy.get_recipe(reference,
                                             False, False, remote_name, self._recorder)
@@ -248,7 +253,8 @@ class DepsGraphLockBuilder(object):
 
         output = ScopedOutput(str(reference), self._output)
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
-                                                    reference=reference)
+                                                    reference=reference,
+                                                    locked_python_requires=python_requires)
 
         new_node = Node(reference, dep_conanfile)
         new_node.recipe = recipe_status
