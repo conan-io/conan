@@ -359,14 +359,18 @@ class ConanAPIV1(object):
             profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
                                                 input_lock_file, self._client_cache)
 
+            reference = self._loader.export_ref(conanfile_path, name, version, user, channel)
+
             if graph_lock:
-                python_requires = graph_lock.root_node.python_requires
+                node = graph_lock.get_node_from_ref(reference)
+                if node is None:
+                    node = graph_lock.get_node_from_ref(None)
+                python_requires = graph_lock.python_requires(node)
             else:
                 python_requires = None
             print "LOCKED PYTHON REQUIRES!!! ", python_requires
             with self._loader.lock_versions(python_requires):
-                reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                                channel)
+                conanfile = self._loader.load_export(conanfile_path, reference)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build

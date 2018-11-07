@@ -59,10 +59,8 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_export(self, conanfile_path, name, version, user, channel):
+    def export_ref(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
-
-        # check name and version were specified
         if not conanfile.name:
             if name:
                 conanfile.name = name
@@ -80,9 +78,17 @@ class ConanFileLoader(object):
             raise ConanException("Package recipe exported with version %s!=%s"
                                  % (version, conanfile.version))
 
-        conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        output = ScopedOutput(str(conan_ref), self._output)
-        return conan_ref, conanfile(output, self._runner, user, channel)
+        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+        return ref
+
+    def load_export(self, conanfile_path, ref):
+        # We need to silent range_resolver output of python_requires of this load_class
+        conanfile = self.load_class(conanfile_path)
+        conanfile.name = ref.name
+        conanfile.version = ref.version
+
+        output = ScopedOutput(str(ref), self._output)
+        return conanfile(output, self._runner, ref.user, ref.channel)
 
     def load_basic(self, conanfile_path, output, reference=None):
         result = self.load_class(conanfile_path)

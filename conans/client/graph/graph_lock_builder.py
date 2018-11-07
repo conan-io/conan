@@ -252,9 +252,9 @@ class DepsGraphLockBuilder(object):
         conanfile_path, recipe_status, remote, _ = result
 
         output = ScopedOutput(str(reference), self._output)
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
-                                                    reference=reference,
-                                                    locked_python_requires=python_requires)
+        with self._loader.lock_versions(python_requires):
+            dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
+                                                        reference=reference)
 
         new_node = Node(reference, dep_conanfile)
         new_node.recipe = recipe_status

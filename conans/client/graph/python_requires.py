@@ -4,7 +4,6 @@ from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
-from contextlib import contextmanager
 
 
 PythonRequire = namedtuple("PythonRequire", "conan_ref module")
