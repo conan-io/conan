@@ -88,6 +88,14 @@ class Node(object):
 
         if self.conan_ref == other.conan_ref:
             return 0
+
+        # Cannot compare None with str
+        if self.conan_ref.revision is None and other.conan_ref.revision is not None:
+            return 1
+
+        if self.conan_ref.revision is not None and other.conan_ref.revision is None:
+            return -1
+
         if self.conan_ref < other.conan_ref:
             return -1
 
