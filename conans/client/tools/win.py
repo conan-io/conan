@@ -338,7 +338,12 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
     if arch_build == 'x86_64':
-        if settings.get_safe("arch_build") and int(compiler_version) >= 12:
+        # Only uses x64 tooling if arch_build explicitly defines it, otherwise
+        # Keep the VS default, which is x86 toolset
+        # This will probably be changed in conan 2.0
+        if ((settings.get_safe("arch_build") or
+                os.getenv("PreferredToolArchitecture") == "x64")
+                and int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
             x86_cross = "x86"
