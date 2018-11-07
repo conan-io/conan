@@ -7,7 +7,6 @@ import traceback
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.client.package_metadata_manager import save_recipe_revision, save_package_revision
 from conans.client.remote_registry import Remote
 from conans.client.source import merge_directories
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
@@ -70,7 +69,10 @@ class RemoteManager(object):
                                                    retry_wait, policy, remote_manifest)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        save_recipe_revision(new_ref, self._client_cache, new_ref.revision, rev_time)
+        with self._client_cache.update_metadata(new_ref) as metadata:
+            metadata.recipe.revision = new_ref.revision
+            metadata.recipe.time = rev_time
+
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
                                             UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
@@ -161,8 +163,11 @@ class RemoteManager(object):
                                                          the_files, retry, retry_wait, policy)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        save_package_revision(new_pref, self._client_cache, new_pref.conan.revision,
-                              new_pref.revision, rev_time)
+        with self._client_cache.update_metadata(new_pref.conan) as metadata:
+            metadata.packages[new_pref.package_id].revision = new_pref.revision
+            metadata.packages[new_pref.package_id].recipe_revision = new_pref.conan.revision
+            metadata.packages[new_pref.package_id].time = rev_time
+
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)
@@ -171,10 +176,9 @@ class RemoteManager(object):
             self._output.writeln("")
 
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan,
-                                     package_id=package_reference.package_id, remote=remote)
+                                   reference=package_reference.conan,
+                                   package_id=package_reference.package_id, remote=remote)
         return new_pref
-
 
     def get_conan_manifest(self, conan_reference, remote):
         """
@@ -222,9 +226,11 @@ class RemoteManager(object):
         touch_folder(dest_folder)
         conanfile_path = self._client_cache.conanfile(conan_reference)
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                     reference=conan_reference, remote=remote)
-        save_recipe_revision(conan_reference, self._client_cache,
-                             conan_reference.revision, rev_time)
+                                   reference=conan_reference, remote=remote)
+
+        with self._client_cache.update_metadata(conan_reference) as metadata:
+            metadata.recipe.revision = conan_reference.revision
+            metadata.recipe.time = rev_time
 
         return conan_reference
 
@@ -261,8 +267,11 @@ class RemoteManager(object):
         try:
             zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
                                                                 package_reference, dest_folder)
-            save_package_revision(new_ref, self._client_cache, new_ref.conan.revision,
-                                  new_ref.revision, rev_time)
+
+            with self._client_cache.update_metadata(new_ref.conan) as metadata:
+                metadata.packages[new_ref.package_id].revision = new_ref.revision
+                metadata.packages[new_ref.package_id].recipe_revision = new_ref.conan.revision
+                metadata.packages[new_ref.package_id].time = rev_time
 
             duration = time.time() - t1
             log_package_download(package_reference, duration, remote, zipped_files)

@@ -33,7 +33,6 @@ from conans.client.hook_manager import HookManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.package_metadata_manager import get_recipe_revision, get_package_revision
 from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
@@ -640,10 +639,11 @@ servers["r2"] = TestServer()
             mkdir(self.current_folder)
 
     def get_revision(self, conan_ref):
-        return get_recipe_revision(conan_ref, self.client_cache)
+        return self.client_cache.load_metadata(conan_ref).recipe.revision
 
     def get_package_revision(self, package_ref):
-        return get_package_revision(package_ref, self.client_cache)
+        metadata = self.client_cache.load_metadata(package_ref.conan)
+        return metadata.packages[package_ref.package_id].revision
 
 
 class StoppableThreadBottle(threading.Thread):

@@ -5,7 +5,7 @@ import shutil
 from conans.migrations import Migrator
 from conans.model.version import Version
 from conans.paths import PACKAGES_FOLDER
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.util.files import rmdir, list_folder_subdirs, mkdir
 
 

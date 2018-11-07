@@ -9,7 +9,7 @@ from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, list_folder_subdirs
 
@@ -442,9 +442,8 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def _copy_to_server(self, client_store_path, server_store):
         subdirs = list_folder_subdirs(basedir=client_store_path.store, level=4)
-        refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1) for folder in subdirs]
         for ref in refs:
-            ref.revision = DEFAULT_REVISION_V1
             origin_path = client_store_path.export(ref)
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
@@ -453,8 +452,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pid = PackageReference(ref, package)
-                pid.revision = DEFAULT_REVISION_V1
+                pid = PackageReference(ref, package, DEFAULT_REVISION_V1)
                 origin_path = client_store_path.package(pid)
                 dest_path = server_store.package(pid)
                 shutil.copytree(origin_path, dest_path)

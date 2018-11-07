@@ -10,7 +10,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_source_files, temp_folder, \
     hello_conan_files
@@ -75,8 +75,8 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        self.conan_ref.revision = DEFAULT_REVISION_V1
+        self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" %
+                                                  DEFAULT_REVISION_V1)
         reg_folder = self.client.paths.export(self.conan_ref)
 
         self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
@@ -96,8 +96,7 @@ class UploadTest(unittest.TestCase):
         manifest.save(reg_folder)
         self.test_server.paths.update_last_revision(self.conan_ref)
 
-        self.package_ref = PackageReference(self.conan_ref, "myfakeid")
-        self.package_ref.revision = DEFAULT_REVISION_V1
+        self.package_ref = PackageReference(self.conan_ref, "myfakeid", DEFAULT_REVISION_V1)
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
 
         package_folder = self.client.paths.package(self.package_ref)
@@ -265,9 +264,10 @@ class TestConan(ConanFile):
         # Upload conans
         self.client.run('upload %s' % str(self.conan_ref))
         if not self.client.block_v2:
-            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
-            self.package_ref.conan.revision = self.conan_ref.revision
-            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+            rev = self.client.get_revision(self.conan_ref)
+            self.conan_ref = self.conan_ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.package_ref)
+            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
 
@@ -340,9 +340,10 @@ class TestConan(ConanFile):
                                  "Uploading conan_package.tgz",
                                  ])
         if not self.client.block_v2:
-            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
-            self.package_ref.conan.revision = self.conan_ref.revision
-            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+            rev = self.client.get_revision(self.conan_ref)
+            self.conan_ref = self.conan_ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.package_ref)
+            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.paths.export(self.conan_ref)
         server_pack_folder = self.test_server.paths.package(self.package_ref)
@@ -356,9 +357,10 @@ class TestConan(ConanFile):
         self.client.run('upload %s --all' % str(self.conan_ref))
 
         if not self.client.block_v2:
-            self.conan_ref.revision = self.client.get_revision(self.conan_ref)
-            self.package_ref.conan.revision = self.conan_ref.revision
-            self.package_ref.revision = self.client.get_package_revision(self.package_ref)
+            rev = self.client.get_revision(self.conan_ref)
+            self.conan_ref = self.conan_ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.package_ref)
+            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)

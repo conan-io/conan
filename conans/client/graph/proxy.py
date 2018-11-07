@@ -6,7 +6,6 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
                                        RECIPE_UPDATED, RECIPE_NEWER, RECIPE_UPDATEABLE,
                                        RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE)
 from conans.client.output import ScopedOutput
-from conans.client.package_metadata_manager import get_recipe_revision
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
@@ -46,7 +45,8 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        cur_revision = get_recipe_revision(reference, self._client_cache)
+        metadata = self._client_cache.load_metadata(reference)
+        cur_revision = metadata.recipe.revision
         remote = self._registry.refs.get(reference)
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
         update_remote = named_remote or remote

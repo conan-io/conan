@@ -6,7 +6,6 @@ import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
-from conans.client.package_metadata_manager import save_recipe_revision
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
@@ -174,7 +173,9 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
     digest.save(exports_folder)
 
     revision = scm_data.revision if scm_data else digest.summary_hash
-    save_recipe_revision(conan_ref, client_cache, revision, None)
+    with client_cache.update_metadata(conan_ref) as metadata:
+        # Note that there is no time set, the time will come from the remote
+        metadata.recipe.revision = revision
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = client_cache.source(conan_ref, conanfile.short_paths)

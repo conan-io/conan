@@ -74,13 +74,12 @@ class ConanName(object):
                                        "%s" % ConanName._max_chars)
 
 
-class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
+class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/|#")
-    revision = None
 
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
@@ -91,8 +90,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param revision:    string containing the revision (optional)
         """
         version = Version(version)
-        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
-        obj.revision = revision
+        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj.validate()
         return obj
@@ -104,15 +102,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
-
-    def __eq__(self, value):
-        if not value:
-            return False
-        return super(ConanFileReference, self).__eq__(value) and self.revision == value.revision
-
-    def __ne__(self, other):
-        """Overrides the default implementation (unnecessary in Python 3)"""
-        return not self.__eq__(other)
 
     def __hash__(self):
         return hash((self.name, self.version, self.user, self.channel, self.revision))
@@ -141,29 +130,25 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s%s" % (str(self), str_rev)
 
+    def dir_repr(self):
+        return "/".join(self[:-1])
+
     def copy_with_rev(self, revision):
-        tmp = ConanFileReference.loads(str(self))
-        tmp.revision = revision
-        return tmp
+        return ConanFileReference(self.name, self.version, self.user, self.channel, revision)
 
     def copy_clear_rev(self):
-        ret = ConanFileReference.loads(str(self))
-        ret.revision = None
-        return ret
+        return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
 
-class PackageReference(namedtuple("PackageReference", "conan package_id")):
+class PackageReference(namedtuple("PackageReference", "conan package_id revision")):
     """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
-    revision = None
 
-    def __new__(cls, conan, package_id, validate=True):
-        revision = None
+    def __new__(cls, conan, package_id, revision=None, validate=True):
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-        obj = super(cls, PackageReference).__new__(cls, conan, package_id)
-        obj.revision = revision
+        obj = super(cls, PackageReference).__new__(cls, conan, package_id, revision)
         if validate:
             obj.validate()
         return obj
@@ -192,12 +177,8 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
-        ret = PackageReference(self.conan.copy_with_rev(revision), self.package_id)
-        ret.revision = p_revision
-        return ret
+        return PackageReference(self.conan.copy_with_rev(revision), self.package_id, p_revision)
 
     def copy_clear_rev(self):
-        ret = PackageReference.loads(str(self))
-        ret.revision = None
-        ret.conan.revision = None
-        return ret
+        ref = self.conan.copy_clear_rev()
+        return PackageReference(ref, self.package_id, revision=None)

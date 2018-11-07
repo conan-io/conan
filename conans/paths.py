@@ -72,7 +72,7 @@ if is_case_insensitive_os():
             return
         # If exists, lets check path
         tmp = store_folder
-        for part in conan_reference:
+        for part in conan_reference.dir_repr().split("/"):
             items = os.listdir(tmp)
             if part not in items:
                 offending = ""
@@ -105,7 +105,7 @@ class SimplePaths(object):
         """ the base folder for this package reference, for each ConanFileReference
         """
         assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self._store_folder, "/".join(conan_reference)))
+        return normpath(join(self._store_folder, conan_reference.dir_repr()))
 
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)

@@ -5,7 +5,7 @@ from time import sleep
 
 from conans import tools, REVISIONS
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
 
 
@@ -76,7 +76,7 @@ class HelloConan(ConanFile):
         rev = self.servers["remote0"].paths.get_last_revision(self.ref).revision
         self.assertEquals(rev, "202f9ce41808083a0f0c0d071fb5f398")
 
-        self.ref.revision = rev
+        self.ref = self.ref.copy_with_rev(rev)
         p_ref = PackageReference(self.ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         pkg_rev = self.servers["remote0"].paths.get_last_package_revision(p_ref).revision
         self.assertEquals(pkg_rev, "15ab113a16e2ac8c9ecffb4ba48306b2")

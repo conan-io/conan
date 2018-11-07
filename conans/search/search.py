@@ -3,7 +3,6 @@ import os
 
 from fnmatch import translate
 
-from conans.client.package_metadata_manager import get_recipe_revision_from_package
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
@@ -137,7 +136,9 @@ def _get_local_infos_min(client_cache, reference):
             if not os.path.exists(info_path):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
-            recipe_revision = get_recipe_revision_from_package(package_reference, client_cache)
+
+            metadata = client_cache.load_metadata(package_reference.conan)
+            recipe_revision = metadata.packages[package_id].recipe_revision
             info = ConanInfo.loads(conan_info_content)
             if reference.revision and recipe_revision and recipe_revision != reference.revision:
                 continue

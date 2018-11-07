@@ -872,7 +872,7 @@ class ConanAPIV1(object):
         for r, remote in tmp.items():
             pref = PackageReference.loads(r)
             if pref.conan == reference:
-                ret[PackageReference.loads(r)] = remote
+                ret[pref] = remote
         return ret
 
     @api_method

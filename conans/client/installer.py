@@ -11,8 +11,6 @@ from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
     BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
-from conans.client.package_metadata_manager import get_recipe_revision, save_package_revision, \
-    get_package_revision
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
     INSTALL_ERROR_BUILDING, \
@@ -52,8 +50,7 @@ def build_id(conan_file):
 class _ConanPackageBuilder(object):
     """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, package_reference, client_cache, output, hook_manager,
-                 registry):
+    def __init__(self, conan_file, package_reference, client_cache, output, hook_manager):
         self._client_cache = client_cache
         self._conan_file = conan_file
         self._out = output
@@ -61,8 +58,6 @@ class _ConanPackageBuilder(object):
         self._conan_ref = self._package_reference.conan
         self._skip_build = False  # If build_id()
         self._hook_manager = hook_manager
-        self._registry = registry
-
 
         new_id = build_id(self._conan_file)
         self.build_reference = PackageReference(self._conan_ref,
@@ -151,10 +146,12 @@ class _ConanPackageBuilder(object):
                            self.package_folder, install_folder, self._out, self._hook_manager,
                            conanfile_path, self._conan_ref)
 
-        recipe_revision = get_recipe_revision(self._conan_ref, self._client_cache)
-        p_revision = self._client_cache.package_summary_hash(self._package_reference)
-        save_package_revision(self._package_reference, self._client_cache, recipe_revision,
-                              p_revision, None)
+        p_hash = self._client_cache.package_summary_hash(self._package_reference)
+        p_id = self._package_reference.package_id
+
+        with self._client_cache.update_metadata(self._conan_ref) as metadata:
+            metadata.packages[p_id].revision = p_hash
+            metadata.packages[p_id].recipe_revision = metadata.recipe.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -391,7 +388,7 @@ class ConanInstaller(object):
                                     conan_file, python_require.conan_ref)
 
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
-                                       self._hook_manager, self._registry)
+                                       self._hook_manager)
 
         if is_dirty(builder.build_folder):
             output.warn("Build folder is dirty, removing it: %s" % builder.build_folder)

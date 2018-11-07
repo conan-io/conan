@@ -2,11 +2,8 @@ import os
 
 import time
 
-from conans.client.package_metadata_manager import get_recipe_revision, get_package_revision, \
-    get_recipe_revision_from_package
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference, check_valid_ref
 from conans.search.search import search_recipes, search_packages
 from conans.util.env_reader import get_env
@@ -98,7 +95,8 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(conan_ref), recipe_remote.name))
 
-        ref = conan_ref.copy_with_rev(get_recipe_revision(conan_ref, self._client_cache))
+        metadata = self._client_cache.load_metadata(conan_ref)
+        ref = conan_ref.copy_with_rev(metadata.recipe.revision)
         new_ref = self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote,
                                       remote_manifest)
 
@@ -110,7 +108,8 @@ class CmdUpload(object):
                 recipe_package_ids = []
                 for package_id in packages_ids:
                     pref = PackageReference(new_ref, package_id)
-                    rec_rev = get_recipe_revision_from_package(pref, self._client_cache)
+                    metadata = self._client_cache.load_metadata(pref.conan)
+                    rec_rev = metadata.packages[package_id].recipe_revision
                     if new_ref.revision != rec_rev:
                         self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
                                                "the current recipe revision" % package_id)
@@ -138,18 +137,19 @@ class CmdUpload(object):
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)
         current_remote = self._registry.refs.get(conan_reference)
-        conanfile = self._loader.load_class(conan_file_path)
 
         if remote != current_remote:
+            conanfile = self._loader.load_class(conan_file_path)
             complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                     conanfile, conan_reference)
         new_ref = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                                      policy=policy, remote_manifest=remote_manifest)
 
         cur_recipe_remote = self._registry.refs.get(conan_reference)
-        cur_revision = get_recipe_revision(conan_reference, self._client_cache)
+        metadata = self._client_cache.load_metadata(conan_reference)
+        cur_revision = metadata.recipe.revision
         updated_ref = (cur_recipe_remote and
-                       new_ref.copy_clear_rev() == cur_recipe_remote and
+                       new_ref.copy_clear_rev() == conan_reference.copy_clear_rev() and
                        new_ref.revision != cur_revision)
         # The recipe wasn't in the registry or it has changed the revision field only
         if (not cur_recipe_remote or updated_ref) and policy != UPLOAD_POLICY_SKIP:
@@ -168,7 +168,8 @@ class CmdUpload(object):
 
         if pref.conan.revision:
             # Read the revisions and build a correct package reference for the server
-            package_revision = get_package_revision(pref, self._client_cache)
+            metadata = self._client_cache.load_metadata(pref.conan)
+            package_revision = metadata.packages[pref.package_id].revision
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revs(pref.conan.revision, package_revision)
         else:
@@ -178,8 +179,8 @@ class CmdUpload(object):
                                                        integrity_check, policy)
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_ref = self._registry.prefs.get(pref.copy_clear_rev())
-        if (not cur_package_ref or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
+        cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
+        if (not cur_package_remote or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
             self._registry.prefs.set(pref, p_remote.name)
 
         return new_pref

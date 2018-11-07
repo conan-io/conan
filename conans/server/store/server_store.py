@@ -19,7 +19,7 @@ class ServerStore(SimplePaths):
 
     def conan(self, reference, resolve_latest=True):
         reference = self.ref_with_rev(reference) if resolve_latest else reference
-        tmp = normpath(join(self.store, "/".join(reference)))
+        tmp = normpath(join(self.store, reference.dir_repr()))
         return join(tmp, reference.revision) if reference.revision else tmp
 
     def packages(self, reference):
@@ -206,7 +206,8 @@ class ServerStore(SimplePaths):
             pref = PackageReference(package_ref.conan.copy_with_rev(rev.revision),
                                     package_ref.package_id)
             tmp = self.get_last_package_revision(pref)
-            pref.revision = tmp.revision if tmp else None
+            if tmp:
+                pref = pref.copy_with_revs(rev.revision, tmp.revision)
             try:
                 folder = self.package(pref)
                 if self._storage_adapter.path_exists(folder):
@@ -270,11 +271,11 @@ class ServerStore(SimplePaths):
         return rev_list.latest_revision()
 
     def _recipe_revisions_file(self, reference):
-        recipe_folder = normpath(join(self._store_folder, "/".join(reference)))
+        recipe_folder = normpath(join(self._store_folder, reference.dir_repr()))
         return join(recipe_folder, REVISIONS_FILE)
 
     def _package_revisions_file(self, p_reference):
-        tmp = normpath(join(self._store_folder, "/".join(p_reference.conan)))
+        tmp = normpath(join(self._store_folder, p_reference.conan.dir_repr()))
         revision = {None: ""}.get(p_reference.conan.revision, p_reference.conan.revision)
         p_folder = join(tmp, revision, PACKAGES_FOLDER, p_reference.package_id)
         return join(p_folder, REVISIONS_FILE)

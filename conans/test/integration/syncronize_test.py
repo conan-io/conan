@@ -1,6 +1,6 @@
 import unittest
 
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -22,8 +22,8 @@ class SynchronizeTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def upload_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        conan_reference.revision = DEFAULT_REVISION_V1
+        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
+                                                   DEFAULT_REVISION_V1)
         files = cpp_hello_conan_files("Hello0", "0.1")
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
@@ -38,7 +38,8 @@ class SynchronizeTest(unittest.TestCase):
 
         # Verify the files are there
         if not self.client.block_v2:
-            conan_reference.revision = self.client.get_revision(conan_reference)
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
         server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -51,7 +52,8 @@ class SynchronizeTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
         if not self.client.block_v2:
-            conan_reference.revision = self.client.get_revision(conan_reference)
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
         server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -68,7 +70,8 @@ class SynchronizeTest(unittest.TestCase):
         self.client.run("upload %s" % str(conan_reference))
 
         if not self.client.block_v2:
-            conan_reference.revision = self.client.get_revision(conan_reference)
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
         server_conan_path = remote_paths.export(conan_reference)
 
         # Verify all is correct

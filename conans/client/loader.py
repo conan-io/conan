@@ -80,7 +80,7 @@ class ConanFileLoader(object):
         result = self.load_class(conanfile_path)
         try:
             if reference:
-                result.name, result.version, user, channel = reference
+                result.name, result.version, user, channel, _ = reference
             else:
                 user, channel = None, None
                 result.in_local_cache = False

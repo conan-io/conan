@@ -217,8 +217,7 @@ class ConanService(object):
                 package_revisions = [package_reference.revision]
 
             for prev in package_revisions:
-                full_pref = PackageReference(ref, package_reference.package_id)
-                full_pref.revision = prev
+                full_pref = PackageReference(ref, package_reference.package_id, prev)
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, reference):

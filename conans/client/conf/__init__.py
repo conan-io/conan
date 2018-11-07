@@ -88,7 +88,6 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
-revisions_enabled = False             # environment CONAN_CLIENT_REVISIONS_ENABLED
 default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO

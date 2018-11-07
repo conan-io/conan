@@ -230,7 +230,7 @@ class RestV2Methods(RestCommonMethods):
         if keep_revisions and revisions_enabled:
             assert(conan_reference.revision is not None)
 
-        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+        url = "%s/conans/%s" % (self.remote_api_url, conan_reference.dir_repr())
 
         if conan_reference.revision:
             url += "/revisions/%s" % conan_reference.revision

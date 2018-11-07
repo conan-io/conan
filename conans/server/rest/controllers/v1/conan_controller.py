@@ -6,7 +6,7 @@ from bottle import request
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import ConanService
@@ -102,8 +102,7 @@ class ConanController(Controller):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            reference = ConanFileReference(name, version, username, channel)
-            reference.revision = DEFAULT_REVISION_V1
+            reference = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_conanfile_upload_urls(reference, filesizes)
@@ -117,10 +116,8 @@ class ConanController(Controller):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            reference = ConanFileReference(name, version, username, channel)
-            reference.revision = DEFAULT_REVISION_V1
-            package_reference = PackageReference(reference, package_id)
-            package_reference.revision = DEFAULT_REVISION_V1
+            reference = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
+            package_reference = PackageReference(reference, package_id, DEFAULT_REVISION_V1)
 
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))

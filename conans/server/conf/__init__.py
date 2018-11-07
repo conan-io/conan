@@ -20,7 +20,6 @@ from conans.util.files import save, mkdir
 from conans.util.log import logger
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
-DEFAULT_REVISION_V1 = "0"
 
 
 class ConanServerConfigParser(ConfigParser):

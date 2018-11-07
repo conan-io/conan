@@ -1,9 +1,11 @@
 import os
 from collections import OrderedDict
+from contextlib import contextmanager
 from os.path import join, normpath
 
 import shutil
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -294,15 +296,24 @@ class ClientCache(SimplePaths):
         self._default_profile = None
         self._no_lock = None
 
+    # Metadata
+    def load_metadata(self, conan_reference):
+        try:
+            text = load(self.package_metadata(conan_reference))
+            return PackageMetadata.loads(text)
+        except IOError:
+            return PackageMetadata()
+
+    @contextmanager
+    def update_metadata(self, conan_reference):
+        metadata = self.load_metadata(conan_reference)
+        yield metadata
+        save(self.package_metadata(conan_reference), metadata.dumps())
+
+    # Revisions
+
     def package_summary_hash(self, package_ref):
         return self.package_manifests(package_ref)[1].summary_hash
-
-    def load_package_metadata(self, conan_reference):
-        text = load(self.package_metadata(conan_reference))
-        return PackageMetadata.loads(text)
-
-    def save_package_metadata(self, conan_reference, package_metadata):
-        return save(self.package_metadata(conan_reference), package_metadata.dumps())
 
 
 def _mix_settings_with_env(settings):

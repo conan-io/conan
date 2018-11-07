@@ -1,13 +1,23 @@
 import json
 from collections import defaultdict
 
+from conans import DEFAULT_REVISION_V1
+
 
 class _RecipeMetadata(object):
 
     def __init__(self):
-        self.revision = None
+        self._revision = DEFAULT_REVISION_V1
         self.time = None
         self.properties = {}
+
+    @property
+    def revision(self):
+        return self._revision
+
+    @revision.setter
+    def revision(self, r):
+        self._revision = DEFAULT_REVISION_V1 if r is None else r
 
     def to_dict(self):
         ret = {"revision": self.revision,
@@ -27,10 +37,26 @@ class _RecipeMetadata(object):
 class _BinaryPackageMetadata(object):
 
     def __init__(self):
-        self.revision = None
+        self._revision = DEFAULT_REVISION_V1
+        self._recipe_revision = DEFAULT_REVISION_V1
         self.time = None
-        self.recipe_revision = None
         self.properties = {}
+
+    @property
+    def revision(self):
+        return self._revision
+
+    @revision.setter
+    def revision(self, r):
+        self._revision = DEFAULT_REVISION_V1 if r is None else r
+
+    @property
+    def recipe_revision(self):
+        return self._recipe_revision
+
+    @recipe_revision.setter
+    def recipe_revision(self, r):
+        self._recipe_revision = DEFAULT_REVISION_V1 if r is None else r
 
     def to_dict(self):
         ret = {"revision": self.revision,

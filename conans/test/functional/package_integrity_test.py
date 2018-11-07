@@ -1,10 +1,9 @@
 import os
 import unittest
 
-from conans.client.package_metadata_manager import save_recipe_revision, save_package_revision
-from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save, set_dirty
 
 
@@ -41,8 +40,10 @@ class PackageIngrityTest(unittest.TestCase):
         pkg_ref = PackageReference(ref, "12345")
         package_folder = client.client_cache.package(pkg_ref)
         recipe_rev = client.get_revision(ref)
-        p_ref = client.get_package_revision(pkg_ref)
-        save_package_revision(pkg_ref, client.client_cache, recipe_rev, p_ref, None)
+        p_rev = client.get_package_revision(pkg_ref)
+        with client.client_cache.update_metadata(pkg_ref.conan) as metadata:
+            metadata.packages[pkg_ref.package_id].revision = p_rev
+            metadata.packages[pkg_ref.package_id].recipe_revision = recipe_rev
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 

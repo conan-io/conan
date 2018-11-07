@@ -284,7 +284,7 @@ class RestV1Methods(RestCommonMethods):
         return snap, package_reference, rev_time
 
     def _recipe_url(self, conan_reference):
-        return "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+        return "%s/conans/%s" % (self.remote_api_url, conan_reference.dir_repr())
 
     def _package_url(self, p_reference):
         url = self._recipe_url(p_reference.conan)

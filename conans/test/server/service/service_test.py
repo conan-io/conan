@@ -1,6 +1,6 @@
 import unittest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.server.service.service import ConanService, FileUploadDownloadService,\
     SearchService
 from conans.paths import CONAN_MANIFEST, CONANINFO
@@ -79,8 +79,8 @@ class ConanServiceTest(unittest.TestCase):
         self.conan_reference = ConanFileReference.loads("openssl/2.0.3@lasote/testing#%s" %
                                                         DEFAULT_REVISION_V1)
 
-        self.package_reference = PackageReference(self.conan_reference, "123123123")
-        self.package_reference.revision = DEFAULT_REVISION_V1
+        self.package_reference = PackageReference(self.conan_reference, "123123123",
+                                                  DEFAULT_REVISION_V1)
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
@@ -125,7 +125,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url + "/"
-                    + "/".join(self.conan_reference)
+                    + self.conan_reference.dir_repr()
                     + "/" + self.conan_reference.revision
                     + "/export/" + filename)
 
@@ -144,7 +144,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + "/".join(self.package_reference.conan)
+                    + "/" + self.package_reference.conan.dir_repr()
                     + "/" + self.package_reference.conan.revision
                     + "/package/" + self.package_reference.package_id
                     + "/" + self.package_reference.revision
@@ -166,7 +166,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + "/".join(self.conan_reference)
+                    + "/" + self.conan_reference.dir_repr()
                     + "/" + self.conan_reference.revision
                     + "/export/" + filename)
 
@@ -182,7 +182,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + "/".join(self.package_reference.conan)
+                    + "/" + self.package_reference.conan.dir_repr()
                     + "/" + self.package_reference.conan.revision
                     + "/package/" + self.package_reference.package_id
                     + "/" + self.package_reference.revision
@@ -196,17 +196,12 @@ class ConanServiceTest(unittest.TestCase):
         """ check the dict is returned by get_packages_info service
         """
         # Creating and saving conans, packages, and conans.vars
-        conan_ref2 = ConanFileReference("openssl", "3.0", "lasote", "stable")
-        conan_ref2.revision = DEFAULT_REVISION_V1
-        conan_ref3 = ConanFileReference("Assimp", "1.10", "fenix", "stable")
-        conan_ref3.revision = DEFAULT_REVISION_V1
-        conan_ref4 = ConanFileReference("assimpFake", "0.1", "phil", "stable")
-        conan_ref4.revision = DEFAULT_REVISION_V1
+        conan_ref2 = ConanFileReference("openssl", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
+        conan_ref3 = ConanFileReference("Assimp", "1.10", "fenix", "stable", DEFAULT_REVISION_V1)
+        conan_ref4 = ConanFileReference("assimpFake", "0.1", "phil", "stable", DEFAULT_REVISION_V1)
 
-        package_ref2 = PackageReference(conan_ref2, "12345587754")
-        package_ref2.revision = DEFAULT_REVISION_V1
-        package_ref3 = PackageReference(conan_ref3, "77777777777")
-        package_ref3.revision = DEFAULT_REVISION_V1
+        package_ref2 = PackageReference(conan_ref2, "12345587754", DEFAULT_REVISION_V1)
+        package_ref3 = PackageReference(conan_ref3, "77777777777", DEFAULT_REVISION_V1)
 
         conan_vars = """
 [options]
@@ -248,10 +243,8 @@ class ConanServiceTest(unittest.TestCase):
         conan_ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
         conan_ref3 = ConanFileReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION_V1)
 
-        package_ref2 = PackageReference(conan_ref2, "12345587754")
-        package_ref2.revision = DEFAULT_REVISION_V1
-        package_ref3 = PackageReference(conan_ref3, "77777777777")
-        package_ref3.revision = DEFAULT_REVISION_V1
+        package_ref2 = PackageReference(conan_ref2, "12345587754", DEFAULT_REVISION_V1)
+        package_ref3 = PackageReference(conan_ref3, "77777777777", DEFAULT_REVISION_V1)
 
         save_files(self.server_store.export(conan_ref2), {"fake.txt": "//fake"})
         self.server_store.update_last_revision(conan_ref2)

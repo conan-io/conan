@@ -9,7 +9,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE, \
     CONAN_MANIFEST, CONANINFO
-from conans.server.conf import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
@@ -139,7 +139,7 @@ class RemoveTest(unittest.TestCase):
         for pack_ref in pack_refs:
             pkg_folder = client.client_cache.package(pack_ref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
-            files["%s/%s/%s/%s" % ("/".join(pack_ref.conan),
+            files["%s/%s/%s/%s" % (pack_ref.conan.dir_repr(),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
