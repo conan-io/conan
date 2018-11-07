@@ -311,9 +311,9 @@ class ClientCache(SimplePaths):
         save(self.package_metadata(conan_reference), metadata.dumps())
 
     # Revisions
-
     def package_summary_hash(self, package_ref):
-        return self.package_manifests(package_ref)[1].summary_hash
+        readed_digest, expected_digest = self.package_manifests(package_ref)
+        return expected_digest.summary_hash
 
 
 def _mix_settings_with_env(settings):

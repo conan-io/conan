@@ -151,7 +151,7 @@ class _ConanPackageBuilder(object):
 
         with self._client_cache.update_metadata(self._conan_ref) as metadata:
             metadata.packages[p_id].revision = p_hash
-            metadata.packages[p_id].recipe_revision = metadata.recipe.revision
+            metadata.packages[p_id].recipe_revision = self._conan_ref.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)

@@ -64,25 +64,24 @@ class RemoteManager(object):
         if policy == UPLOAD_POLICY_SKIP:
             return conan_reference
 
-        ret, new_ref, rev_time = self._call_remote(remote, "upload_recipe", conan_reference,
-                                                   the_files, retry,
-                                                   retry_wait, policy, remote_manifest)
+        ret, rev_time = self._call_remote(remote, "upload_recipe", conan_reference,
+                                          the_files, retry, retry_wait, policy, remote_manifest)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._client_cache.update_metadata(new_ref) as metadata:
-            metadata.recipe.revision = new_ref.revision
+        with self._client_cache.update_metadata(conan_reference) as metadata:
             metadata.recipe.time = rev_time
 
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
-                                            UPLOAD_POLICY_NO_OVERWRITE_RECIPE) and new_ref.revision:
+                                            UPLOAD_POLICY_NO_OVERWRITE_RECIPE) \
+                and conan_reference.revision:
             self._output.warn("Remote '%s' uses revisions, argument "
                               "'--no-overwrite' is useless" % remote.name)
 
         duration = time.time() - t1
-        log_recipe_upload(new_ref, duration, the_files, remote.name)
+        log_recipe_upload(conan_reference, duration, the_files, remote.name)
         if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(new_ref), remote.name)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
             url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
             msg += ": %s" % url
         else:
@@ -90,7 +89,6 @@ class RemoteManager(object):
         self._output.info(msg)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=conan_reference, remote=remote)
-        return new_ref
 
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it

@@ -154,7 +154,7 @@ class RestCommonMethods(object):
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, ref_snapshot, rev_time
+                return False, rev_time
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -169,7 +169,7 @@ class RestCommonMethods(object):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return (files_to_upload or deleted), conan_reference, rev_time
+        return (files_to_upload or deleted), rev_time
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
         """
