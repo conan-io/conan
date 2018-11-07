@@ -46,11 +46,13 @@ class ActionRecorder(object):
 
     def _add_recipe_action(self, reference, action):
         assert(isinstance(reference, ConanFileReference))
+        reference = reference.copy_clear_rev()
         if reference not in self._inst_recipes_actions:
             self._inst_recipes_actions[reference] = []
         self._inst_recipes_actions[reference].append(action)
 
     def _add_package_action(self, reference, action):
+        reference = reference.copy_clear_rev()
         assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
@@ -85,6 +87,7 @@ class ActionRecorder(object):
 
     def package_install_error(self, reference, error_type, description, remote_name=None):
         assert(isinstance(reference, PackageReference))
+        reference = reference.copy_clear_rev()
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
         doc = {"type": error_type, "description": description, "remote": remote_name}
@@ -92,6 +95,7 @@ class ActionRecorder(object):
 
     def package_cpp_info(self, reference, cpp_info):
         assert isinstance(reference, PackageReference)
+        reference = reference.copy_clear_rev()
         # assert isinstance(cpp_info, CppInfo)
         doc = {}
         for it, value in vars(cpp_info).items():
@@ -115,12 +119,12 @@ class ActionRecorder(object):
         for _package_ref, _package_actions in self._inst_packages_actions.items():
             # Could be a download and then an access to cache, we want the first one
             _package_action = _package_actions[0]
-            if _package_ref.conan.copy_clear_rev() == reference.copy_clear_rev():
+            if _package_ref.conan == reference:
                 ret.append((_package_ref, _package_action))
         return ret
 
     def in_development_recipe(self, reference):
-        return reference.copy_clear_rev() in [ref.copy_clear_rev() for ref in self._inst_recipes_develop]
+        return reference in self._inst_recipes_develop
 
     def get_info(self):
         return self.get_install_info()
