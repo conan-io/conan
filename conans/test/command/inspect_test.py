@@ -103,7 +103,10 @@ class Pkg(ConanFile):
     option2: [1, 2, 3]
     option3: ANY
     option4: [1, 2]
-default_options: ('option1=False', 'option2=2', 'option3=randomANY')
+default_options:
+    option1: False
+    option2: 2
+    option3: randomANY
 """)
 
         client.run("inspect . -a=version -a=name -a=options -a=default_options --json=file.json")
@@ -329,5 +332,33 @@ settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
     foo: [True, False]
-default_options: ('foo=True', 'bar=True')
+default_options:
+    bar: True
+    foo: True
+""", client.out)
+
+        client.save({"conanfile.py": conanfile.replace("\"foo=True\", \"bar=True\"",
+                                                       "[\"foo=True\", \"bar=True\"]")})
+        client.run("inspect .")
+        self.assertEqual("""name: MyPkg
+version: 1.2.3
+url: https://john.doe.com
+homepage: https://john.company.site
+license: MIT
+author: John Doe
+description: Yet Another Test
+topics: ('foo', 'bar', 'qux')
+generators: cmake
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options:
+    bar: [True, False]
+    foo: [True, False]
+default_options:
+    bar: True
+    foo: True
 """, client.out)
