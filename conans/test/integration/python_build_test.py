@@ -82,6 +82,20 @@ class MyConanfileBase(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("export . MyConanfileBase/1.1@lasote/testing")
 
+    def with_alias_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        self._define_base(client)
+        client.run("alias MyConanfileBase/LATEST@lasote/testing MyConanfileBase/1.1@lasote/testing")
+
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/LATEST@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    pass
+"""
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@lasote/testing")
+
     def reuse_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
