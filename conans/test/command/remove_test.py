@@ -12,6 +12,27 @@ from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDE
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
+
+
+class RemoveRegistryTest(unittest.TestCase):
+
+    def remove_registry_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Test/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("remote list_pref Test/0.1@lasote/testing")
+        self.assertNotIn("Test/0.1@lasote/testing", client.out)
+        registry_content = load(client.client_cache.registry)
+        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
 class RemoveOutdatedTest(unittest.TestCase):
