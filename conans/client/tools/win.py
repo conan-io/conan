@@ -20,7 +20,8 @@ _global_output = None
 
 
 def _visual_compiler_cygwin(output, version):
-    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/"
+                      "CurrentVersion/ProgramFilesDir (x86)"):
         is_64bits = True
     else:
         is_64bits = False
@@ -179,14 +180,16 @@ def vs_installation_path(version, preference=None):
         for product_type in preference:
             for product in seen_products:
                 product = dict(product)
-                if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
+                if (product["installationVersion"].startswith(("%d." % int(version)))
+                        and "productId" in product):
                     if product_type in product["productId"]:
                         vs_paths.append(product["installationPath"])
 
         # Append products without "productId" (Legacy installations)
         for product in seen_products:
             product = dict(product)
-            if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
+            if (product["installationVersion"].startswith(("%d." % int(version)))
+                    and "productId" not in product):
                 vs_paths.append(product["installationPath"])
 
     # If vswhere does not find anything or not available, try with vs_comntools()
@@ -298,13 +301,14 @@ def find_windows_10_sdk():
         (winreg.HKEY_CURRENT_USER, r'SOFTWARE')
     ]
     for key, subkey in hives:
-        installation_folder = _system_registry_key(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey,
-                                                   'InstallationFolder')
+        subkey = r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey
+        installation_folder = _system_registry_key(key, subkey, 'InstallationFolder')
         if installation_folder:
             if os.path.isdir(installation_folder):
                 include_dir = os.path.join(installation_folder, 'include')
                 for sdk_version in os.listdir(include_dir):
-                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                    if (os.path.isdir(os.path.join(include_dir, sdk_version))
+                            and sdk_version.startswith('10.')):
                         windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
                         if os.path.isfile(windows_h):
                             return sdk_version
@@ -320,7 +324,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         compiler_version = compiler_version or settings.get_safe("compiler.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
-        # as they might be using Microsoft STL and other tools (e.g. resource compiler, manifest tool, etc)
+        # as they might be using Microsoft STL and other tools
+        # (e.g. resource compiler, manifest tool, etc)
         # in this case, use the latest Visual Studio available on the machine
         last_version = latest_vs_version_installed()
 
@@ -333,7 +338,16 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
     if arch_build == 'x86_64':
-        vcvars_arch = {'x86': 'amd64_x86' if int(compiler_version) >= 12 else 'x86',
+        # Only uses x64 tooling if arch_build explicitly defines it, otherwise
+        # Keep the VS default, which is x86 toolset
+        # This will probably be changed in conan 2.0
+        if ((settings.get_safe("arch_build") or
+                os.getenv("PreferredToolArchitecture") == "x64")
+                and int(compiler_version) >= 12):
+            x86_cross = "amd64_x86"
+        else:
+            x86_cross = "x86"
+        vcvars_arch = {'x86': x86_cross,
                        'x86_64': 'amd64',
                        'armv7': 'amd64_arm',
                        'armv8': 'amd64_arm64'}.get(arch_setting)
@@ -342,6 +356,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                        'x86_64': 'x86_amd64',
                        'armv7': 'x86_arm',
                        'armv8': 'x86_arm64'}.get(arch_setting)
+
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
@@ -361,7 +376,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         vs_path = vs_installation_path(str(compiler_version))
 
         if not vs_path or not os.path.isdir(vs_path):
-            raise ConanException("VS non-existing installation: Visual Studio %s" % str(compiler_version))
+            raise ConanException("VS non-existing installation: Visual Studio %s"
+                                 % str(compiler_version))
         else:
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
@@ -396,7 +412,8 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version) + " && echo __BEGINS__ && set"
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+    cmd += " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}
     start_reached = False
@@ -421,7 +438,8 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                     # Clean all repeated entries, not append if the element was already there
                     new_env[name_var] = [v for v in new_value if v.lower() not in old_values_lower]
                 elif old_value and value.endswith(os.pathsep + old_value):
-                    # The new value ends with separator and the old value, is a list, get only the new elements
+                    # The new value ends with separator and the old value, is a list,
+                    # get only the new elements
                     new_env[name_var] = value[:-(len(old_value) + 1)].split(os.pathsep)
                 elif value != old_value:
                     # Only if the vcvars changed something, we return the variable,
@@ -444,6 +462,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
         new_env["PATH"] = ";".join(path)
 
     return new_env
+
 
 @contextmanager
 def vcvars(*args, **kwargs):
@@ -535,19 +554,21 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     subsystem = subsystem or os_info.detect_windows_subsystem()
 
     if not subsystem:
-        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require "
-                             "to apply it.")
+        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin "
+                             "or specify a build_require to apply it.")
 
     if subsystem == MSYS2 and msys_mingw:
         # This needs to be set so that msys2 bash profile will set up the environment correctly.
-        env_vars = {"MSYSTEM": "MINGW32" if conanfile.settings.get_safe("arch") == "x86" else "MINGW64",
+        env_vars = {"MSYSTEM": ("MINGW32" if conanfile.settings.get_safe("arch") == "x86" else
+                                "MINGW64"),
                     "MSYS2_PATH_TYPE": "inherit"}
     else:
         env_vars = {}
 
     with environment_append(env_vars):
         hack_env = ""
-        if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
+        if subsystem != WSL:
+            # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
             inherited_path = conanfile.env.get("PATH", None)
             if isinstance(inherited_path, list):
                 paths = [unix_path(path, path_flavor=subsystem) for path in inherited_path]
@@ -581,7 +602,8 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # If is there any other env var that we know it contains paths, convert it to unix_path
         used_special_vars = [var for var in ["AR", "AS", "RANLIB", "LD", "STRIP", "CC", "CXX"]
                              if var in conanfile.env.keys()]
-        normalized_env = {p: unix_path(conanfile.env[p], path_flavor=subsystem) for p in used_special_vars}
+        normalized_env = {p: unix_path(conanfile.env[p], path_flavor=subsystem)
+                          for p in used_special_vars}
 
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
         with environment_append(normalized_env):
