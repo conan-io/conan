@@ -30,9 +30,12 @@ class Printer(object):
                 self._out.writeln("%s:" % k)
                 for sk, sv in sorted(v.items()):
                     self._out.writeln("    %s: %s" % (sk, str(sv)))
-            elif '\n' in str(v):
+            elif k == "default_options" and v is not None:
                 self._out.writeln("%s:" % k)
-                option_values = OptionsValues.loads(v)
+                if isinstance(v, str):
+                    option_values = OptionsValues.loads(v)
+                else:
+                    option_values = OptionsValues(tuple(v))
                 for ok, ov in option_values.items():
                     self._out.writeln("    %s: %s" % (ok, ov))
             else:
