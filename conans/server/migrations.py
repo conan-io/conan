@@ -23,7 +23,7 @@ class ServerMigrator(Migrator):
             if self.store_path:
                 rmdir(self.store_path)
 
-        if old_version < Version("1.10.0git "):
+        if old_version < Version("1.10.0"):
             if not os.path.exists(self.store_path) or not os.listdir(self.store_path):
                 # Empty storage
                 return
