@@ -30,14 +30,13 @@ class Printer(object):
                 self._out.writeln("%s:" % k)
                 for sk, sv in sorted(v.items()):
                     self._out.writeln("    %s: %s" % (sk, str(sv)))
+            elif '\n' in str(v):
+                self._out.writeln("%s:" % k)
+                option_values = OptionsValues.loads(v)
+                for ok, ov in option_values.items():
+                    self._out.writeln("    %s: %s" % (ok, ov))
             else:
-                if isinstance(v, tuple):
-                    self._out.writeln("%s:" % k)
-                    option_values = OptionsValues.loads(v)
-                    for ok, ov in option_values.items():
-                        self._out.writeln("    %s: %s" % (ok, ov))
-                else:
-                    self._out.writeln("%s: %s" % (k, str(v)))
+                self._out.writeln("%s: %s" % (k, str(v)))
 
     def _print_paths(self, ref, conan, path_resolver, show):
         if isinstance(ref, ConanFileReference):
