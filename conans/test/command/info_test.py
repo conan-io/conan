@@ -535,6 +535,7 @@ class MyTest(ConanFile):
         self.assertIn("Homepage: https://foo.bar.site", client.out)
 
     def topics_graph_test(self):
+
         conanfile = """from conans import ConanFile
 
 class MyTest(ConanFile):
