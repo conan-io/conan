@@ -728,3 +728,65 @@ class ConanFileToolsTest(ConanFile):
         self.assertTrue(error)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
 
+
+@unittest.skipUnless(TestClient().revisions,
+                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+class CompatibilityRevisionsTest(unittest.TestCase):
+    """Testing non breaking behavior from v1 and v2 with compatibility mode"""
+
+    def setUp(self):
+        self.servers = OrderedDict()
+        self.servers["remote0"] = TestServer(server_capabilities=[REVISIONS])
+        self.users = {"remote0": [("lasote", "mypass")],
+                      "remote_norevisions": [("lasote", "mypass")]}
+        self.servers["remote_norevisions"] = TestServer(server_capabilities=[])
+        self.client = TestClient(servers=self.servers, users=self.users)
+        self.conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        self.ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+
+    def test_search_v1_iterate_remotes(self):
+        """Two recipe revisions, first with 1 binary, second with 1 binary, search v1 and v2
+        with compatibility, have to find both"""
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    settings = "os"
+"""
+        # Upload recipe + package to remote0
+        ref = "Hello/0.1@lasote/stable"
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s -s os=Windows" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
+
+        conanfile += " "
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s -s os=Linux" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
+
+        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        client_no_rev.run("search %s -r remote0" % ref)
+
+        self.assertIn("3475bd55b91ae904ac96fde0f106a136ab951a5e", client_no_rev.out)
+        self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client_no_rev.out)
+
+        client_compatibility = TestClient(block_v2=True, revisions=False,
+                                          servers=self.servers, users=self.users)
+        client_compatibility.run("search %s -r remote0" % ref)
+        self.assertIn("3475bd55b91ae904ac96fde0f106a136ab951a5e", client_compatibility.out)
+        self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client_compatibility.out)
+
+        # And not repeated even if duplicated in remote
+        self.client.run("create . %s -s os=Windows" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
+
+        client_no_rev.run("search %s -r remote0" % ref)
+
+        self.assertEquals(str(client_no_rev.out).count("3475bd55b91ae904ac96fde0f106a136ab951a5e"),
+                          1)
+        self.assertEquals(str(client_no_rev.out).count("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"),
+                          1)

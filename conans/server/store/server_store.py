@@ -195,6 +195,11 @@ class ServerStore(SimplePaths):
         rev_file_path = self._recipe_revisions_file(reference)
         return self._get_latest_revision(rev_file_path)
 
+    def get_recipe_revisions(self, reference):
+        rev_file_path = self._recipe_revisions_file(reference)
+        return [reference.copy_with_rev(rev.revision)
+                for rev in self._get_revisions(rev_file_path).items()]
+
     def get_latest_package_reference(self, package_ref):
         assert(isinstance(package_ref, PackageReference))
         rev_file_path = self._recipe_revisions_file(package_ref.conan)
@@ -243,11 +248,6 @@ class ServerStore(SimplePaths):
         rev_list.add_revision(reference.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
-
-    def get_recipe_revisions(self, reference):
-        tmp = self._recipe_revisions_file(reference)
-        ret = self._get_revisions(tmp)
-        return ret.items()
 
     def get_package_revisions(self, p_reference):
         assert p_reference.conan.revision is not None

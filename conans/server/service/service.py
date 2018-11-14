@@ -192,8 +192,7 @@ class ConanService(object):
         if reference.revision:
             references = [reference]
         else:
-            references = [reference.copy_with_rev(rev.revision)
-                          for rev in self._server_store.get_recipe_revisions(reference)]
+            references = self._server_store.get_recipe_revisions(reference)
 
         for ref in references:
             self._server_store.remove_packages(ref, package_ids_filter)
@@ -202,13 +201,11 @@ class ConanService(object):
         self._authorizer.check_delete_package(self._auth_user, package_reference)
 
         if not package_reference.conan.revision:
-            recipe_revisions = [r.revision for r in
-                                self._server_store.get_recipe_revisions(package_reference.conan)]
+            recipe_revisions = self._server_store.get_recipe_revisions(package_reference.conan)
         else:
-            recipe_revisions = [package_reference.conan.revision]
+            recipe_revisions = [package_reference.conan, ]
 
-        for recipe_rev in recipe_revisions:
-            ref = package_reference.conan.copy_with_rev(recipe_rev)
+        for ref in recipe_revisions:
             if not package_reference.revision:
                 pref = PackageReference(ref, package_reference.package_id)
                 package_revisions = [r.revision
@@ -224,8 +221,7 @@ class ConanService(object):
         if reference.revision:
             references = [reference]
         else:
-            references = [reference.copy_with_rev(rev.revision)
-                          for rev in self._server_store.get_recipe_revisions(reference)]
+            references = self._server_store.get_recipe_revisions(reference)
         for ref in references:
             self._server_store.remove_all_packages(ref)
 
@@ -304,24 +300,34 @@ def search_packages(paths, reference, query):
 
 
 def _get_local_infos_min(paths, reference):
-    result = {}
-    packages_path = paths.packages(reference)
-    subdirs = list_folder_subdirs(packages_path, level=1)
-    for package_id in subdirs:
-        # Read conaninfo
-        try:
-            package_reference = PackageReference(reference, package_id)
-            info_path = os.path.join(paths.package(package_reference,
-                                                   short_paths=None), CONANINFO)
-            if not os.path.exists(info_path):
-                raise NotFoundException("")
-            conan_info_content = load(info_path)
-            info = ConanInfo.loads(conan_info_content)
-            conan_vars_info = info.serialize_min()
-            result[package_id] = conan_vars_info
 
-        except Exception as exc:
-            logger.error("Package %s has no ConanInfo file" % str(package_reference))
-            if str(exc):
-                logger.error(str(exc))
+    result = {}
+
+    if not reference.revision:
+        recipe_revisions = paths.get_recipe_revisions(reference)
+    else:
+        recipe_revisions = [reference]
+
+    for recipe_revision in recipe_revisions:
+        packages_path = paths.packages(recipe_revision)
+        subdirs = list_folder_subdirs(packages_path, level=1)
+        for package_id in subdirs:
+            if package_id in result:
+                continue
+            # Read conaninfo
+            try:
+                package_reference = PackageReference(reference, package_id)
+                info_path = os.path.join(paths.package(package_reference,
+                                                       short_paths=None), CONANINFO)
+                if not os.path.exists(info_path):
+                    raise NotFoundException("")
+                conan_info_content = load(info_path)
+                info = ConanInfo.loads(conan_info_content)
+                conan_vars_info = info.serialize_min()
+                result[package_id] = conan_vars_info
+
+            except Exception as exc:
+                logger.error("Package %s has no ConanInfo file" % str(package_reference))
+                if str(exc):
+                    logger.error(str(exc))
     return result
