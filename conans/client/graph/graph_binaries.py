@@ -58,6 +58,7 @@ class GraphBinariesAnalyzer(object):
         assert node.binary is None
 
         conan_ref, conanfile = node.conan_ref, node.conanfile
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
         package_ref = PackageReference(conan_ref, package_id)
         # Check that this same reference hasn't already been checked
@@ -100,6 +101,8 @@ class GraphBinariesAnalyzer(object):
         if os.path.exists(package_folder):
             if update:
                 if remote:
+                    # Unlock the revision to update
+                    package_ref = package_ref.copy_clear_rev()
                     if self._check_update(package_folder, package_ref, remote, output, node):
                         node.binary = BINARY_UPDATE
                         if build_mode.outdated:
@@ -112,12 +115,14 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
-            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+
             if revisions_enabled:
                 # If revisions enabled, even if the "remote" has no the binary search it in the
                 # rest of remotes. It will look for the binary for the same recipe revision
                 iterate_remotes = [r for r in remotes if r != remote] if remotes else []
             else:
+                # Do not search for packages for the specific resolved recipe revision but all
+                package_ref = package_ref.copy_clear_rev()
                 if remote:
                     # Search only in the current remote, do not iterate
                     iterate_remotes = []

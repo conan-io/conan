@@ -156,11 +156,11 @@ class ConanFileToolsTest(ConanFile):
                           {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
                            "remote2"})
 
-        client = TestClient(servers=self.servers, users=self.users)
+        client2 = TestClient(servers=self.servers, users=self.users)
         time.sleep(1)  # Make sure timestamps increase
-        client.save({"conanfile.py": conanfile + " # Comment"})
-        client.run("create . %s" % ref)
-        client.run("upload %s -r=remote2 --all" % ref)
+        client2.save({"conanfile.py": conanfile + " # Comment"})
+        client2.run("create . %s" % ref)
+        client2.run("upload %s -r=remote2 --all" % ref)
         self.client.run("install %s --update" % ref)
         self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
                          self.client.out)

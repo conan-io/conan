@@ -790,3 +790,21 @@ class ConanFileToolsTest(ConanFile):
                           1)
         self.assertEquals(str(client_no_rev.out).count("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"),
                           1)
+
+    def test_remove_packages_from_recipe_revision(self):
+        """It shouldn't remove the packages for all recipe revisions but only for the specified
+        if a recipe revision is specified"""
+        pass
+
+    def test_install_recipe_revision(self):
+        """ Specifying the revision, it has to install that revision.
+        """
+        pass
+
+    """
+   FALTAN TEST DE CLIENT NUEVO CON SERVER VIEJUNO, HACERSE TEST SERVER
+   
+   - TEST que no va a ir: install --update de ref con revision debe mirar solo si hay nuevos binarios para esa
+   misma receta? <= AHORA NO SE PUEDE, EN EL GRAPH SE METE LA REVISION SIEMPRE, LUEGO LA TENGO QUE 
+   LIMPIAR PARA VER SI HAY NUEVAS, PORQUE NO PUEDO DISTINGUIR ENTRE "LA RESUELTA DE ARRIBA" o "LA QUE EL USER TECLEÓ"
+"""

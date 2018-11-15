@@ -76,7 +76,9 @@ class ConanProxy(object):
             return conanfile_path, status, None, ref
 
         try:  # get_conan_manifest can fail, not in server
-            upstream_manifest = self._remote_manager.get_conan_manifest(reference, update_remote)
+            # Unlock the revision to get updates
+            ref = reference.copy_clear_rev()
+            upstream_manifest = self._remote_manager.get_conan_manifest(ref, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
             ref = reference.copy_with_rev(cur_revision)
