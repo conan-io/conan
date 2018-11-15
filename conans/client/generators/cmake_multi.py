@@ -2,7 +2,7 @@ from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_common import (cmake_dependency_vars, cmake_package_info,
                                                    cmake_macros_multi, generate_targets_section,
                                                    cmake_dependencies, cmake_global_vars,
-                                                   cmake_user_info_vars)
+                                                   cmake_user_info_vars, cmake_settings_info)
 from conans.model import Generator
 from conans.model.build_info import CppInfo
 
@@ -71,16 +71,19 @@ class CMakeMultiGenerator(Generator):
     def _content_multi(self):
         sections = ["include(CMakeParseArguments)"]
 
-        # USER DECLARED VARS
-        sections.append("\n### Definition of user declared vars (user_info) ###\n")
-        sections.append(cmake_user_info_vars(self.conanfile.deps_user_info))
-
+        # GENERAL VARIABLES
+        sections.append("\n### Definition of global aggregated variables ###\n")
         sections.append(cmake_package_info(name=self.conanfile.name,
                                            version=self.conanfile.version))
+        sections.append(cmake_settings_info(self.conanfile.settings))
 
         # TARGETS
         sections.extend(generate_targets_section(self.deps_build_info.dependencies))
         # MACROS
         sections.append(cmake_macros_multi)
+
+        # USER DECLARED VARS
+        sections.append("\n### Definition of user declared vars (user_info) ###\n")
+        sections.append(cmake_user_info_vars(self.conanfile.deps_user_info))
 
         return "\n".join(sections)
