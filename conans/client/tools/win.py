@@ -8,8 +8,6 @@ import subprocess
 
 from contextlib import contextmanager
 
-from past.types import basestring
-
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import detected_architecture, os_info
 from conans.errors import ConanException
@@ -459,8 +457,9 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
             return any(word in path for word in keywords)
 
-        path = [entry for entry in new_env.get("PATH", "") if relevant_path(entry)]
-        new_env["PATH"] = ";".join(path)
+        path_key = ([name for name in new_env.keys() if "path" == name.lower()] or ["PATH"])[0]
+        path = [entry for entry in new_env.get(path_key, "") if relevant_path(entry)]
+        new_env[path_key] = ";".join(path)
 
     return new_env
 
