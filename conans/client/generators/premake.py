@@ -40,6 +40,11 @@ class PremakeGenerator(Generator):
                     'conan_exelinkflags{dep} = {{{deps.exelinkflags}}}\n')
 
         sections = ["#!lua"]
+        
+        sections.append(
+            'conan_build_type = "' + str(self.settings.get_safe("build_type")) + '"\n'
+            'conan_arch = "' + str(self.settings.get_safe("arch")) + '"\n')
+        
         all_flags = template.format(dep="", deps=deps)
         sections.append(all_flags)
         template_deps = template + 'conan_rootpath{dep} = "{deps.rootpath}"\n'
@@ -50,4 +55,15 @@ class PremakeGenerator(Generator):
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
             sections.append(dep_flags)
 
+        sections.append(
+            'function conan_basic_setup()\n'
+            '	configurations{conan_build_type}\n'
+            '	architecture(conan_arch)\n'
+            '	includedirs{conan_includedirs}\n'
+            '	libdirs{conan_libdirs}\n'
+            '	links{conan_libs}\n'
+            '	defines{conan_cppdefines}\n'
+            '	bindirs{conan_bindirs}\n'
+            'end\n')
+        
         return "\n".join(sections)
