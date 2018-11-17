@@ -1,12 +1,15 @@
 import os
 import unittest
 from collections import OrderedDict
+
+import time
 from time import sleep
 
-from conans import tools, REVISIONS
+from conans import tools, REVISIONS, load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans import DEFAULT_REVISION_V1
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo
+from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
+    NO_SETTINGS_PACKAGE_ID
 
 
 @unittest.skipUnless(TestClient().revisions,
@@ -794,17 +797,153 @@ class ConanFileToolsTest(ConanFile):
     def test_remove_packages_from_recipe_revision(self):
         """It shouldn't remove the packages for all recipe revisions but only for the specified
         if a recipe revision is specified"""
-        pass
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    pass
+"""
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+
+        # Upload recipe rev 1 + package to remote0
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev1 = self.client.get_revision(ref)
+
+        # Upload recipe rev 2 + package to remote0
+        self.client.save({"conanfile.py": conanfile + "\n"})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev2 = self.client.get_revision(ref)
+
+        # Remove the binaries from the recipe rev1
+        self.client.run("remove %s#%s -p -r=remote0 -f" % (str(ref), rev1))
+        self.client.run("remove %s -f" % str(ref))
+
+        # Try to install binaries from the rev1, it should fail
+        error = self.client.run("install %s#%s" % (str(ref), rev1), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Missing prebuilt package for 'Hello/0.1@lasote/stable", self.client.out)
+
+        # Try to install binaries from the rev2, it should succeed
+        self.client.run("install %s#%s" % (str(ref), rev2))
+
+        # Also try without specifying revision
+        self.client.run("remove %s -f" % str(ref))
+        self.client.run("install %s" % str(ref))
 
     def test_install_recipe_revision(self):
         """ Specifying the revision, it has to install that revision.
         """
-        pass
-
-    """
-   FALTAN TEST DE CLIENT NUEVO CON SERVER VIEJUNO, HACERSE TEST SERVER
-   
-   - TEST que no va a ir: install --update de ref con revision debe mirar solo si hay nuevos binarios para esa
-   misma receta? <= AHORA NO SE PUEDE, EN EL GRAPH SE METE LA REVISION SIEMPRE, LUEGO LA TENGO QUE 
-   LIMPIAR PARA VER SI HAY NUEVAS, PORQUE NO PUEDO DISTINGUIR ENTRE "LA RESUELTA DE ARRIBA" o "LA QUE EL USER TECLEÓ"
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    pass
 """
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+
+        # Upload recipe rev 1 + package to remote0
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev1 = self.client.get_revision(ref)
+
+        # Upload recipe rev 2 + package to remote0
+        self.client.save({"conanfile.py": conanfile + "\n#Comment for rev2"})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev2 = self.client.get_revision(ref)
+
+        self.assertNotEqual(rev1, rev2)
+
+        # Remove all from local
+        self.client.run("remove %s -f" % str(ref))
+
+        # Try to install rev1 and not rev2
+        self.client.run("install %s#%s" % (str(ref), rev1))
+        conanfile_path = self.client.client_cache.conanfile(ref)
+        contents = load(conanfile_path)
+        self.assertNotIn("#Comment for rev2", contents)
+
+        # Remove all from local
+        self.client.run("remove %s -f" % str(ref))
+
+        # Try to install rev2 and not rev1
+        self.client.run("install %s#%s" % (str(ref), rev2))
+        conanfile_path = self.client.client_cache.conanfile(ref)
+        contents = load(conanfile_path)
+        self.assertIn("#Comment for rev2", contents)
+
+    def test_update_from_same_revision_test(self):
+        """ If I specify conan install ref#revision --update it has to update to the latest binary
+        of the same recipe.
+        """
+        conanfile = """
+import time
+import os
+from conans import ConanFile, tools
+class ConanFileToolsTest(ConanFile):
+        
+        def package(self):
+            tools.save(os.path.join(self.package_folder, "file.txt"), str(time.time()))
+"""
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+
+        # Generate recipe rev 1 + package rev1 to remote0
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev1 = self.client.get_revision(ref)
+        package_ref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
+        prev1 = self.client.servers["remote0"].paths.get_last_package_revision(package_ref).revision
+
+        # Use another client to install the only binary revision for ref
+        client2 = TestClient(servers=self.servers, users=self.users)
+        client2.run("install %s" % str(ref))
+
+        # Generate recipe rev1 + package rev2 to remote0
+        time.sleep(1)
+        self.client.run("remove %s -f" % str(ref))
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+        rev1_ = self.client.get_revision(ref)
+        self.assertEquals(rev1, rev1_)
+        package_ref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
+        prev2 = self.client.servers["remote0"].paths.get_last_package_revision(package_ref).revision
+        self.assertNotEqual(prev1, prev2)  # Verify a new package revision is uploaded
+
+        # Generate another recipe revision (and also bin revision)
+        self.client.save({"conanfile.py": conanfile + "\n"})
+        self.client.run("create . %s" % str(ref))
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+
+        # So, from client2 I install --update pinning the first recipe revision,
+        # I don't want the recipe to be updated but the binary
+        client2.run("install %s#%s --update" % (str(ref), rev1))
+        self.assertNotIn("Hello/0.1@lasote/stable from 'remote0' - Updated", client2.out)
+        self.assertIn("Hello/0.1@lasote/stable:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client2.out)
+        prev_ = client2.get_package_revision(package_ref)
+        self.assertEquals(prev_, prev2)
+
+    def old_server_new_client_simple_test(self):
+        """Use this test as an example to try some new behavior with revisions against a server
+        without revisions"""
+        old_server = TestServer(server_capabilities=[])
+        users = {"old_server": [("lasote", "mypass")]}
+        client = TestClient(servers={"old_server": old_server}, users=users)
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    def build(self):
+        self.output.warn("Revision 1")        
+'''
+        ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        client.save({"conanfile.py": conanfile + "\n"})
+        client.run("create . %s" % str(ref))
+        client.run("upload %s -r=old_server --all" % str(ref))
+        client.run("remove %s -f" % str(ref))
+        client.run("install %s" % str(ref))
+        package_ref = PackageReference(ref.copy_with_rev(DEFAULT_REVISION_V1),
+                                       NO_SETTINGS_PACKAGE_ID)
+        prev2 = client.servers["old_server"].paths.get_last_package_revision(package_ref)
+        self.assertEquals(prev2.revision, DEFAULT_REVISION_V1)

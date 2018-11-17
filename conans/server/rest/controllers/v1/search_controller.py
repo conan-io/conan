@@ -29,5 +29,5 @@ class SearchController(Controller):
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
             conan_reference = ConanFileReference(name, version, username, channel)
-            info = search_service.search_packages(conan_reference, query)
+            info = search_service.search_packages(conan_reference, query, v2_compatibility_mode=True)
             return info

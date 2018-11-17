@@ -19,10 +19,7 @@ class ConanControllerV2(Controller):
         @app.route(r.package_recipe_revision, method=["GET"])
         @app.route(r.package_revision, method=["GET"])
         def get_package_file_list(name, version, username, channel, package_id, auth_user,
-                                  revision=None, p_revision=None, v2_compatibility_mode=False):
-            if v2_compatibility_mode:
-                # It will cause the storage to iterate revisions until the package the latest
-                revision = p_revision = None
+                                  revision=None, p_revision=None):
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision)
             ret = conan_service.get_package_file_list(package_reference, auth_user)

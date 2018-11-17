@@ -2,6 +2,7 @@ from collections import defaultdict
 from conans import CHECKSUM_DEPLOY, REVISIONS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
+from conans.util.env_reader import get_env
 
 
 class RestApiClient(object):
@@ -33,6 +34,8 @@ class RestApiClient(object):
 
         if not self.block_v2 and REVISIONS in self._cached_capabilities[self.remote_url]:
             checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
+            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.custom_headers["V2_COMPATIBILITY_MODE"] = "1" if not revisions_enabled else "0"
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
                                  checksum_deploy)

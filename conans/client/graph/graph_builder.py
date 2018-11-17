@@ -222,6 +222,7 @@ class DepsGraphBuilder(object):
         """
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
+
         if workspace_package:
             conanfile_path = workspace_package.conanfile_path
             recipe_status = RECIPE_WORKSPACE

@@ -76,9 +76,9 @@ class SearchService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def search_packages(self, reference, query):
+    def search_packages(self, reference, query, v2_compatibility_mode):
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = search_packages(self._server_store, reference, query)
+        info = search_packages(self._server_store, reference, query, v2_compatibility_mode)
         return info
 
     def search_recipes(self, pattern=None, ignorecase=True):
@@ -285,7 +285,7 @@ def _validate_conan_reg_filenames(files):
             raise RequestErrorException(message)
 
 
-def search_packages(paths, reference, query):
+def search_packages(paths, reference, query, v2_compatibility_mode):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -295,15 +295,15 @@ def search_packages(paths, reference, query):
     """
     if not os.path.exists(paths.conan(reference)):
         raise NotFoundException("Recipe not found: %s" % str(reference))
-    infos = _get_local_infos_min(paths, reference)
+    infos = _get_local_infos_min(paths, reference, v2_compatibility_mode)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(paths, reference):
+def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
 
     result = {}
 
-    if not reference.revision:
+    if not reference.revision and v2_compatibility_mode:
         recipe_revisions = paths.get_recipe_revisions(reference)
     else:
         recipe_revisions = [reference]

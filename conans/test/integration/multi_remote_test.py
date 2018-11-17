@@ -149,6 +149,7 @@ class ConanFileToolsTest(ConanFile):
 
         self.client.run("install %s -r remote2" % ref)
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
         registry = load(self.client.client_cache.registry)
         registry = json.loads(registry)
         self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
@@ -162,8 +163,24 @@ class ConanFileToolsTest(ConanFile):
         client2.run("create . %s" % ref)
         client2.run("upload %s -r=remote2 --all" % ref)
         self.client.run("install %s --update" % ref)
-        self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
-                         self.client.out)
-        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
-                      self.client.out)
-        self.assertIn("Downloading conan_package.tgz", self.client.out)
+
+        # WARN: Breaking behavior introduced but corner case!!
+        # In both cases (rev and no rev) it resolves the recipe from remote0,
+        # because it is the already used remote.
+        # The package is associated in the registry to remote2
+        # With revisions, it tries to get an update of packages for the specific recipe revision
+        # (got in remote1) but from remote2.
+        # And there is no packages for that recipe revision, so it keeps cache.
+        # Without revisions, it is not attached to a concrete revision so will find a
+        # candidate with remote2
+
+        if not self.client.block_v2:
+            self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
+            self.assertIn("Hello/0.1@lasote/stable:"
+                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", self.client.out)
+        else:
+            self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
+                             self.client.out)
+            self.assertIn("Hello/0.1@lasote/stable:"
+                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", self.client.out)
+            self.assertIn("Downloading conan_package.tgz", self.client.out)

@@ -101,8 +101,6 @@ class GraphBinariesAnalyzer(object):
         if os.path.exists(package_folder):
             if update:
                 if remote:
-                    # Unlock the revision to update
-                    package_ref = package_ref.copy_clear_rev()
                     if self._check_update(package_folder, package_ref, remote, output, node):
                         node.binary = BINARY_UPDATE
                         if build_mode.outdated:
