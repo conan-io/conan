@@ -45,7 +45,7 @@ class ConanFileLoader(object):
     def load_class(self, conanfile_path):
         loaded, filename = parse_conanfile(conanfile_path)
         try:
-            conanfile = _parse_module(loaded, filename)
+            conanfile = parse_module(loaded, filename)
             conanfile.python_requires = self._python_requires.requires
             return conanfile
         except Exception as e:  # re-raise with file name
@@ -188,7 +188,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_module(conanfile_module, module_id):
+def parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
