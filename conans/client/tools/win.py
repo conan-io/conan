@@ -457,9 +457,10 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
             return any(word in path for word in keywords)
 
-        path_key = ([name for name in new_env.keys() if "path" == name.lower()] or ["PATH"])[0]
-        path = [entry for entry in new_env.get(path_key, "") if relevant_path(entry)]
-        new_env[path_key] = ";".join(path)
+        path_key = next((name for name in new_env.keys() if "path" == name.lower()), None)
+        if path_key:
+            path = [entry for entry in new_env.get(path_key, "") if relevant_path(entry)]
+            new_env[path_key] = ";".join(path)
 
     return new_env
 
