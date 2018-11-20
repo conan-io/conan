@@ -802,6 +802,24 @@ class HelloConan(ConanFile):
                         self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_filter_known_paths_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+        with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            with tools.environment_append(tmp):
+                self.assertNotIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake",  os.environ["PATH"])
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            with tools.environment_append(tmp):
+                self.assertIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake", os.environ["PATH"])
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)
