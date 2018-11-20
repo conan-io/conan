@@ -39,6 +39,11 @@ class GraphBinariesAnalyzer(object):
 
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
+            if not revisions_enabled and not node.revision_pinned:
+                # Compatibility mode and user hasn't specified the revision, so unlock
+                # it to find any binary for any revision
+                package_ref = package_ref.copy_clear_rev()
+
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
         except NotFoundException:
             output.warn("Can't update, no package in remote")

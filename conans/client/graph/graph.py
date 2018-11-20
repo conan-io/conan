@@ -33,6 +33,7 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.revision_pinned = False  # The revision has been specified by the user
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)

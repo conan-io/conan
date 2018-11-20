@@ -254,6 +254,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_reference)
 
         new_node = Node(new_ref, dep_conanfile)
+        new_node.revision_pinned = requirement.conan_reference.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
         dep_graph.add_node(new_node)
