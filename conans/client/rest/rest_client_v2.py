@@ -112,12 +112,6 @@ class RestV2Methods(RestCommonMethods):
         return ret
 
     def get_package(self, package_reference, dest_folder):
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if not revisions_enabled:
-            # Tell server v2 to find the latest package that matched the package ID
-            # without taking into account the recipe revision
-            package_reference = package_reference.copy_clear_rev()
-
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
         files = data["files"]

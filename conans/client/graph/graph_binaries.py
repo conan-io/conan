@@ -118,27 +118,18 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
-
-            if revisions_enabled:
-                # If revisions enabled, even if the "remote" has no the binary search it in the
-                # rest of remotes. It will look for the binary for the same recipe revision
-                iterate_remotes = [r for r in remotes if r != remote] if remotes else []
-            else:
+            if not revisions_enabled and not node.revision_pinned:
                 # Do not search for packages for the specific resolved recipe revision but all
                 package_ref = package_ref.copy_clear_rev()
-                if remote:
-                    # Search only in the current remote, do not iterate
-                    iterate_remotes = []
-                else:
-                    # No revisions but no current remote, search everywhere
-                    iterate_remotes = remotes
 
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
 
-            if not remote_info:
-                for r in iterate_remotes:
+            # If the "remote" came from the registry but the user didn't specified the -r, with
+            # revisions iterate all remotes
+            if not remote or (not remote_info and revisions_enabled and not remote_name):
+                for r in remotes:
                     remote_info = self._get_package_info(package_ref, r)
                     if remote_info:
                         remote = r
