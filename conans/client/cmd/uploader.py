@@ -106,8 +106,6 @@ class CmdUpload(object):
             if revisions_enabled and ref.revision:
                 recipe_package_ids = []
                 for package_id in packages_ids:
-                    pref = PackageReference(ref, package_id)
-                    metadata = self._client_cache.load_metadata(pref.conan)
                     rec_rev = metadata.packages[package_id].recipe_revision
                     if ref.revision != rec_rev:
                         self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
@@ -124,7 +122,7 @@ class CmdUpload(object):
             for index, package_id in enumerate(packages_ids):
                 pref = PackageReference(ref, package_id)
                 p_remote = recipe_remote
-                self._upload_package(pref, index + 1, total, retry, retry_wait,
+                self._upload_package(pref, metadata, index + 1, total, retry, retry_wait,
                                      integrity_check, policy, p_remote)
                 recorder.add_package(pref, p_remote.name, p_remote.url)
 
@@ -151,7 +149,7 @@ class CmdUpload(object):
 
         return conan_reference
 
-    def _upload_package(self, pref, index=1, total=1, retry=None, retry_wait=None,
+    def _upload_package(self, pref, metadata, index=1, total=1, retry=None, retry_wait=None,
                         integrity_check=False, policy=None, p_remote=None):
         """Uploads the package identified by package_id"""
 
@@ -162,7 +160,6 @@ class CmdUpload(object):
 
         if pref.conan.revision:
             # Read the revisions and build a correct package reference for the server
-            metadata = self._client_cache.load_metadata(pref.conan)
             package_revision = metadata.packages[pref.package_id].revision
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revs(pref.conan.revision, package_revision)

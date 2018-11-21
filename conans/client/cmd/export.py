@@ -68,9 +68,10 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         os.unlink(scm_src_file)
 
     scm_data = get_scm_data(conanfile)
+    captured_revision = scm_data.capture_revision if scm_data else False
 
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
-        return
+        return None, captured_revision
 
     scm = SCM(scm_data, conanfile_dir)
 
@@ -94,7 +95,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
                                    scm_data)
 
-    return scm_data
+    return scm_data, captured_revision
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -156,8 +157,10 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
     export_source(conanfile, origin_folder, exports_source_folder, output)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    scm_data = _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                                        output, client_cache, conan_ref)
+    scm_data, captured_revision = _capture_export_scm_data(conanfile,
+                                                           os.path.dirname(conanfile_path),
+                                                           exports_folder,
+                                                           output, client_cache, conan_ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -172,7 +175,7 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
 
     digest.save(exports_folder)
 
-    revision = scm_data.revision if scm_data else digest.summary_hash
+    revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
     with client_cache.update_metadata(conan_ref) as metadata:
         # Note that there is no time set, the time will come from the remote
         metadata.recipe.revision = revision

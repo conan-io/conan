@@ -61,6 +61,25 @@ class HelloConan(ConanFile):
         self.client.run("install %s#149570a812b46d87c7dfa6408809b370 --build" % str(self.ref))
         self.assertIn("Revision 1", self.client.out)
 
+    def test_revision_with_fixed_scm(self):
+
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    scm = {"type": "git",
+           "url": "auto",
+           "revision": "fixed_revision"}       
+'''
+        path, commit = create_local_git_repo({"myfile": "contents",
+                                              "conanfile.py": conanfile}, branch="my_release")
+        self.client.current_folder = path
+        self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("export . %s " % str(self.ref))
+        rev = self.client.get_revision(self.ref)
+        self.assertNotEqual(rev, "fixed_revision")
+
     def test_revisions_packages_download(self):
         conanfile = '''
 import os
@@ -176,8 +195,6 @@ class HelloConan(ConanFile):
                                               "conanfile.py": conanfile}, branch="my_release")
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
 
-        git = tools.Git(path)
-        commit = git.get_commit()
         self.client.current_folder = path
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))

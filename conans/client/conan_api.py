@@ -846,8 +846,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list_ref(self):
-        return {ConanFileReference.loads(r): remote_name
-                for r, remote_name in self._registry.refs.list.items()}
+        return {r: remote_name for r, remote_name in self._registry.refs.list.items()}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
@@ -872,7 +871,7 @@ class ConanAPIV1(object):
         for r, remote in tmp.items():
             pref = PackageReference.loads(r)
             if pref.conan == reference:
-                ret[pref] = remote
+                ret[pref.full_repr()] = remote
         return ret
 
     @api_method

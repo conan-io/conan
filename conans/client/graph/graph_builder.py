@@ -11,6 +11,9 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.model.workspace import WORKSPACE_FILE
 
 
+REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
+
+
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
@@ -107,11 +110,11 @@ class DepsGraphBuilder(object):
                 # Necessary to make sure that it is pointing to the correct aliased
                 require.conan_reference = alias_ref
                 conflict = self._conflicting_references(previous_node.conan_ref, alias_ref)
-                if conflict == 2:  # Revisions conflict
+                if conflict == REVISION_CONFLICT:  # Revisions conflict
                     raise ConanException("Conflict in %s\n"
                                          "    Different revisions of %s has been requested"
                                          % (node.conan_ref, require.conan_reference))
-                elif conflict:
+                elif conflict == REFERENCE_CONFLICT:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
@@ -132,9 +135,9 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _conflicting_references(ref1, ref2):
         if ref1.copy_clear_rev() != ref2.copy_clear_rev():
-            return 1
+            return REFERENCE_CONFLICT
         if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
-            return 2
+            return REVISION_CONFLICT
         return False
 
     def _recurse(self, closure, new_reqs, new_options):

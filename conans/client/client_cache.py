@@ -312,8 +312,9 @@ class ClientCache(SimplePaths):
 
     # Revisions
     def package_summary_hash(self, package_ref):
-        readed_digest, expected_digest = self.package_manifests(package_ref)
-        return expected_digest.summary_hash
+        package_folder = self.package(package_ref, short_paths=None)
+        readed_digest = FileTreeManifest.load(package_folder)
+        return readed_digest.summary_hash
 
 
 def _mix_settings_with_env(settings):

@@ -1216,7 +1216,7 @@ class Command(object):
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
             refs = self._conan.remote_list_pref(reference)
-            self._outputer.remote_ref_list(refs)
+            self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)
         elif args.subcommand == "remove_pref":
