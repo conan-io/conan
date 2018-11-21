@@ -26,17 +26,15 @@ class Printer(object):
 
     def print_inspect(self, inspect):
         for k, v in inspect.items():
-            if isinstance(v, dict):
-                self._out.writeln("%s:" % k)
-                for sk, sv in sorted(v.items()):
-                    self._out.writeln("    %s: %s" % (sk, str(sv)))
-            elif k == "default_options" and v is not None:
+            if (k == "default_options" and v is not None) or isinstance(v, dict):
                 self._out.writeln("%s:" % k)
                 if isinstance(v, str):
                     option_values = OptionsValues.loads(v)
+                elif isinstance(v, dict):
+                    option_values = v
                 else:
                     option_values = OptionsValues(tuple(v))
-                for ok, ov in option_values.items():
+                for ok, ov in sorted(option_values.items()):
                     self._out.writeln("    %s: %s" % (ok, ov))
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))

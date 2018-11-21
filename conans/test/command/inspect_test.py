@@ -209,26 +209,9 @@ class OpenSSLConan(ConanFile):
     license = "The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html"
     description = "OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured " \
                   "toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols"
-    options = {"no_threads": [True, False],
-               "no_zlib": [True, False],
-               "shared": [True, False],
+    options = {"shared": [True, False],
                "no_asm": [True, False],
-               "386": [True, False],
-               "no_sse2": [True, False],
-               "no_bf": [True, False],
-               "no_cast": [True, False],
-               "no_des": [True, False],
-               "no_dh": [True, False],
-               "no_dsa": [True, False],
-               "no_hmac": [True, False],
-               "no_md2": [True, False],
-               "no_md5": [True, False],
-               "no_mdc2": [True, False],
-               "no_rc2": [True, False],
-               "no_rc4": [True, False],
-               "no_rc5": [True, False],
-               "no_rsa": [True, False],
-               "no_sha": [True, False]}
+               "386": [True, False]}
     default_options = "=False\n".join(options.keys()) + '=False'
 """
         client.save({"conanfile.py": conanfile})
@@ -251,44 +234,10 @@ settings: ('os', 'compiler', 'arch', 'build_type')
 options:
     386: [True, False]
     no_asm: [True, False]
-    no_bf: [True, False]
-    no_cast: [True, False]
-    no_des: [True, False]
-    no_dh: [True, False]
-    no_dsa: [True, False]
-    no_hmac: [True, False]
-    no_md2: [True, False]
-    no_md5: [True, False]
-    no_mdc2: [True, False]
-    no_rc2: [True, False]
-    no_rc4: [True, False]
-    no_rc5: [True, False]
-    no_rsa: [True, False]
-    no_sha: [True, False]
-    no_sse2: [True, False]
-    no_threads: [True, False]
-    no_zlib: [True, False]
     shared: [True, False]
 default_options:
     386: False
     no_asm: False
-    no_bf: False
-    no_cast: False
-    no_des: False
-    no_dh: False
-    no_dsa: False
-    no_hmac: False
-    no_md2: False
-    no_md5: False
-    no_mdc2: False
-    no_rc2: False
-    no_rc4: False
-    no_rc5: False
-    no_rsa: False
-    no_sha: False
-    no_sse2: False
-    no_threads: False
-    no_zlib: False
     shared: False
 """, client.out)
 
