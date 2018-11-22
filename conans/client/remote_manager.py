@@ -1,11 +1,12 @@
 import os
-import shutil
 import stat
 import tarfile
-import time
 import traceback
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE
+
+import shutil
+import time
+from requests.exceptions import ConnectionError
+
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.remote_registry import Remote
 from conans.client.source import merge_directories
@@ -26,7 +27,6 @@ from conans.util.tracer import (log_package_upload, log_recipe_upload,
                                 log_recipe_sources_download,
                                 log_uncompressed_file, log_compressed_files, log_recipe_download,
                                 log_package_download)
-from requests.exceptions import ConnectionError
 
 
 class RemoteManager(object):
@@ -70,13 +70,6 @@ class RemoteManager(object):
         # Update package revision with the rev_time (Created locally but with rev_time None)
         with self._client_cache.update_metadata(conan_reference) as metadata:
             metadata.recipe.time = rev_time
-
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
-                                            UPLOAD_POLICY_NO_OVERWRITE_RECIPE) \
-                and conan_reference.revision:
-            self._output.warn("Remote '%s' uses revisions, argument "
-                              "'--no-overwrite' is useless" % remote.name)
 
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote.name)
@@ -162,8 +155,6 @@ class RemoteManager(object):
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
         with self._client_cache.update_metadata(new_pref.conan) as metadata:
-            metadata.packages[new_pref.package_id].revision = new_pref.revision
-            metadata.packages[new_pref.package_id].recipe_revision = new_pref.conan.revision
             metadata.packages[new_pref.package_id].time = rev_time
 
         duration = time.time() - t1

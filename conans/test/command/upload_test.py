@@ -362,9 +362,6 @@ class MyPkg(ConanFile):
             self.assertTrue(error)
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)
-        else:
-            self.assertIn("Remote 'default' uses revisions, "
-                          "argument '--no-overwrite' is useless", client.out)
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")
@@ -446,8 +443,6 @@ class MyPkg(ConanFile):
             self.assertIn("Uploading conan_package.tgz", client.out)
             self.assertNotIn("Forbidden overwrite", client.out)
         else:
-            self.assertIn("Remote 'default' uses revisions, "
-                          "argument '--no-overwrite' is useless", client.out)
             self.assertIn("Uploading conan_package.tgz", client.out)
 
     def skip_upload_test(self):

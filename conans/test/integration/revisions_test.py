@@ -389,13 +389,9 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
-        self.assertIn("Remote 'remote0' uses revisions, argument '--no-overwrite' is useless",
-                      self.client.out)
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all --no-overwrite" % str(self.ref))
-        self.assertIn("Remote 'remote0' uses revisions, argument '--no-overwrite' is useless",
-                      self.client.out)
 
     def test_export_cleans_revision_in_registy(self):
         self.client.save({"conanfile.py": self.conanfile})

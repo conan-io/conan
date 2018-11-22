@@ -140,6 +140,8 @@ class DepsGraphBuilder(object):
             return REFERENCE_CONFLICT
         # Computed node, has to have a revision, at least 0
         assert(previous_ref.revision is not None)
+        # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
+        # a revision, so it's ok any previous_ref
         if new_ref.revision and previous_ref.revision != new_ref.revision:
             return REVISION_CONFLICT
         return False
@@ -150,7 +152,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.conan_reference.name)
-            if n and n.conan_ref.copy_clear_rev() != req.conan_reference.copy_clear_rev():
+            if n and self._conflicting_references(n.conan_ref, req.conan_reference):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
