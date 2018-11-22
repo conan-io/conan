@@ -12,6 +12,28 @@ from conans.test.build_helpers.cmake_test import ConanFileMock
 
 class CompilerArgsTest(unittest.TestCase):
 
+    def visual_studio_extensions_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        conan_file.deps_env_info = DepsEnvInfo()
+        conan_file.deps_user_info = DepsUserInfo()
+        conan_file.deps_cpp_info = DepsCppInfo()
+        cpp_info = CppInfo("/root")
+        cpp_info.libs.append("mylib")
+        cpp_info.libs.append("other.lib")
+        conan_file.deps_cpp_info.update(cpp_info, "zlib")
+        conan_file.env_info = EnvInfo()
+
+        gen = CompilerArgsGenerator(conan_file)
+        self.assertEquals('-O2 -Ob2 -DNDEBUG -link mylib.lib other.lib', gen.content)
+
     def _get_conanfile(self, settings):
         conan_file = ConanFileMock()
         conan_file.settings = settings
