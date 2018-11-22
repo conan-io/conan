@@ -82,7 +82,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipIf(not get_env("CONAN_API_V2_BLOCKED", True), "ApiV1 test")
+    @unittest.skipUnless(get_env("CONAN_API_V2_BLOCKED", True), "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()

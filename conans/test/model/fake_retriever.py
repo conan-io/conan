@@ -1,5 +1,6 @@
 import os
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import Node
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
@@ -29,4 +30,4 @@ class Retriever(object):
 
     def get_recipe(self, conan_ref, check_updates, update, remote_name, recorder):  # @UnusedVariable
         conan_path = os.path.join(self.folder, conan_ref.dir_repr(), CONANFILE)
-        return conan_path, None, None, conan_ref
+        return conan_path, None, None, conan_ref.copy_with_rev(DEFAULT_REVISION_V1)

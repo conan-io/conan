@@ -106,10 +106,12 @@ class DepsGraphBuilder(object):
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
-                alias_ref = aliased.get(require.conan_reference, require.conan_reference)
+                alias_ref = aliased.get(require.conan_reference, None)
                 # Necessary to make sure that it is pointing to the correct aliased
-                require.conan_reference = alias_ref
-                conflict = self._conflicting_references(previous_node.conan_ref, alias_ref)
+                if alias_ref:
+                    require.conan_reference = alias_ref
+                conflict = self._conflicting_references(previous_node.conan_ref,
+                                                        require.conan_reference)
                 if conflict == REVISION_CONFLICT:  # Revisions conflict
                     raise ConanException("Conflict in %s\n"
                                          "    Different revisions of %s has been requested"
@@ -133,10 +135,12 @@ class DepsGraphBuilder(object):
                                     remote_name, processed_profile)
 
     @staticmethod
-    def _conflicting_references(ref1, ref2):
-        if ref1.copy_clear_rev() != ref2.copy_clear_rev():
+    def _conflicting_references(previous_ref, new_ref):
+        if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             return REFERENCE_CONFLICT
-        if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
+        # Computed node, has to have a revision, at least 0
+        assert(previous_ref.revision is not None)
+        if new_ref.revision and previous_ref.revision != new_ref.revision:
             return REVISION_CONFLICT
         return False
 

@@ -3,6 +3,7 @@ import os
 import time
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
@@ -186,7 +187,7 @@ class RestV1Methods(RestCommonMethods):
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         rev_time = None
-        return zipped_files, conan_reference, rev_time
+        return zipped_files, conan_reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)
@@ -209,7 +210,8 @@ class RestV1Methods(RestCommonMethods):
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         rev_time = None
-        return zipped_files, package_reference, rev_time
+        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        return zipped_files, ret_ref, rev_time
 
     def _get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
@@ -275,13 +277,14 @@ class RestV1Methods(RestCommonMethods):
         url = self._recipe_url(reference)
         snap = self._get_snapshot(url)
         rev_time = None
-        return snap, reference.copy_clear_rev(), rev_time
+        return snap, reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
     def _get_package_snapshot(self, package_reference):
         url = self._package_url(package_reference)
         snap = self._get_snapshot(url)
         rev_time = None
-        return snap, package_reference, rev_time
+        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        return snap, ret_ref, rev_time
 
     def _recipe_url(self, conan_reference):
         return "%s/conans/%s" % (self.remote_api_url, conan_reference.dir_repr())

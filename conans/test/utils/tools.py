@@ -437,19 +437,14 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
 
-        if block_v2 is None:  # Until v2 is stable
-            block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
-
-        if block_v2:
+        if self.block_v2:
             self.revisions = False
-        elif revisions is None:
-            self.revisions = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        else:
+            self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.block_v2 = False
 
-        if self.revisions:
-            block_v2 = False
-
-        self.block_v2 = block_v2
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}

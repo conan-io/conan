@@ -1,6 +1,6 @@
 import json
 import time
-from conans import COMPLEX_SEARCH_CAPABILITY
+from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
@@ -154,7 +154,7 @@ class RestCommonMethods(object):
             # mode this is supposed to fail if someone tries to upload a different recipe
             latest_ref = conan_reference.copy_clear_rev()
             latest_snapshot, ref_latest_snapshot, _ = self._get_recipe_snapshot(latest_ref)
-            server_with_revisions = ref_latest_snapshot.revision is not None
+            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
                     ref_latest_snapshot.revision != conan_reference.revision:
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -198,7 +198,7 @@ class RestCommonMethods(object):
             # mode this is supposed to fail if someone tries to upload a different recipe
             latest_pref = PackageReference(package_reference.conan, package_reference.package_id)
             latest_snapshot, ref_latest_snapshot, _ = self._get_package_snapshot(latest_pref)
-            server_with_revisions = ref_latest_snapshot.revision is not None
+            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
                     ref_latest_snapshot.revision != package_reference.revision:
                 raise ConanException("Local package is different from the remote package. "
