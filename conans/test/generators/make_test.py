@@ -1,4 +1,7 @@
 import unittest
+
+from conans import load
+from conans.client.tools import chdir
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.model.env_info import EnvValues
@@ -6,6 +9,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.build_info import CppInfo
 from conans.client.generators import MakeGenerator
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
 import os
 
@@ -107,3 +111,111 @@ class MakeGeneratorTest(unittest.TestCase):
                       "$(CONAN_EXELINKFLAGS_MYPKG2)", content)
         self.assertIn("CONAN_EXELINKFLAGS_MYPKG1 +=  \\\n-framework QuartzCore", content)
         self.assertIn("CONAN_EXELINKFLAGS_MYPKG2 +=  \\\n-framework VideoToolbox", content)
+
+    def integration_test(self):
+        client = TestClient()
+        client.run("new myhello/1.0.0 --sources")
+        client.run("create . danimtb/testing")
+
+        main = """
+#include "hello.h"
+
+int main()
+{
+    hello();
+}
+"""
+        makefile = """
+include conanbuildinfo.mak
+
+#----------------------------------------
+#     Make variables for a sample App
+#----------------------------------------
+
+CXX_SRCS = \
+main.cpp
+
+CXX_OBJ_FILES = \
+main.o
+
+STATIC_LIB_FILENAME = \
+main.a
+
+SHARED_LIB_FILENAME = \
+main.so
+
+EXE_FILENAME = \
+main
+
+
+#----------------------------------------
+#     Prepare flags from variables
+#----------------------------------------
+
+INC_PATH_FLAGS  += $(addprefix -I,$(INC_PATHS))
+LD_PATH_FLAGS   += $(addprefix -L,$(LD_PATHS))
+LD_LIB_FLAGS    += $(addprefix -l,$(LD_LIBS))
+
+
+#----------------------------------------
+#     Make Commands
+#----------------------------------------
+
+COMPILE_CXX_COMMAND         ?= \
+	g++ -c $(CXXFLAGS) $(DEFINES) $(INC_PATH_FLAGS) $< -o $@
+
+CREATE_EXE_COMMAND          ?= \
+	g++ $(CXX_OBJ_FILES) \
+	$(LDFLAGS) $(LDFLAGS_EXE) $(LD_PATH_FLAGS) $(LD_LIB_FLAGS) \
+	-o $(EXE_FILENAME)
+
+CREATE_SHARED_LIB_COMMAND   ?= \
+	g++ -shared $(CXX_OBJ_FILES) \
+	$(LDFLAGS) $(LDFLAGS_SHARED) $(LD_PATH_FLAGS) $(LD_LIB_FLAGS) \
+	-o $(SHARED_LIB_FILENAME)
+
+CREATE_STATIC_LIB_COMMAND   ?= \
+	ar rcs $(STATIC_LIB_FILENAME)
+
+
+#----------------------------------------
+#     Make Rules
+#----------------------------------------
+
+.PHONY                  :   static shared exe
+static                  :   $(STATIC_LIB_FILENAME)
+shared                  :   $(SHARED_LIB_FILENAME)
+exe                     :   $(EXE_FILENAME)
+conan_libs:
+	@echo ${CONAN_LIBS}
+
+$(EXE_FILENAME)         :   $(CXX_OBJ_FILES)
+	$(CREATE_EXE_COMMAND)
+
+$(SHARED_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
+	$(CREATE_SHARED_LIB_COMMAND)
+
+$(STATIC_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
+	$(CREATE_STATIC_LIB_COMMAND)
+%.o                     :   $(CXX_SRCS)
+	$(COMPILE_CXX_COMMAND)
+
+"""
+        conanfile_txt = """
+[requires]
+myhello/1.0.0@danimtb/testing
+
+[generators]
+make
+"""
+        client.save({"main.cpp": main,
+                     "Makefile": makefile,
+                     "conanfile.txt": conanfile_txt}, clean_first=True)
+        client.run("install .")
+        print(load(os.path.join(client.current_folder, "conanbuildinfo.mak")))
+        with chdir(client.current_folder):
+            client.runner("make conan_libs")
+            self.assertIn("----Running------\n> make conan_libs\n-----------------\nhello",
+                          client.out)
+            client.runner("make exe")
+            print(client.out)
