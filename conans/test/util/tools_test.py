@@ -317,13 +317,13 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertEquals(2, runner.calls)
-            runner = RunnerMultipleMock(["sudo --askpass apt-get update",
-                                         "sudo --askpass apt-get install -y --no-install-recommends yet_another_package"])
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertEquals(7, runner.calls)
 
-            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException):
                 spt.install(packages)
@@ -365,7 +365,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
@@ -380,7 +380,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertIn('\n'.join(packages), self.out)
@@ -391,7 +391,7 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_MODE": "EnAbLeD",
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
-            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
