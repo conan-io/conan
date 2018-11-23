@@ -5,7 +5,7 @@ import re
 import subprocess
 
 from conans import tools
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.test_files import temp_folder
 from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
@@ -57,9 +57,8 @@ class InfoFoldersTest(unittest.TestCase):
         output = client.user_io.out
         self.assertIn(os.path.join(base_path, "export"), output)
         self.assertIn(os.path.join(base_path, "source"), output)
-        id_ = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        self.assertIn(os.path.join(base_path, "build", id_), output)
-        self.assertIn(os.path.join(base_path, "package", id_), output)
+        self.assertIn(os.path.join(base_path, "build", NO_SETTINGS_PACKAGE_ID), output)
+        self.assertIn(os.path.join(base_path, "package", NO_SETTINGS_PACKAGE_ID), output)
 
     def test_deps_basic(self):
         client = TestClient()

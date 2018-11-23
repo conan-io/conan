@@ -9,9 +9,31 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE, \
     CONAN_MANIFEST, CONANINFO
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer, \
+    NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
+
+
+class RemoveRegistryTest(unittest.TestCase):
+
+    def remove_registry_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Test/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("remote list_pref Test/0.1@lasote/testing")
+        self.assertNotIn("Test/0.1@lasote/testing", client.out)
+        registry_content = load(client.client_cache.registry)
+        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
 class RemoveOutdatedTest(unittest.TestCase):
@@ -38,10 +60,10 @@ class Test(ConanFile):
 
             client.run("remove Test2/0.1@lasote/testing -q=os=Windows -f %s" % remote)
             client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+            self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             client.run("remove Test2/0.1@lasote/testing -q=os=None -f %s" % remote)
             client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertNotIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.out)
+            self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             self.assertIn("There are no packages", client.out)
 
     def remove_outdated_test(self):

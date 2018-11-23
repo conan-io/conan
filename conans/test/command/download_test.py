@@ -1,5 +1,7 @@
 import unittest
 import os
+from collections import OrderedDict
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference
 from conans.util.files import load
@@ -50,8 +52,9 @@ class Pkg(ConanFile):
 
     def download_with_sources_test(self):
         server = TestServer()
-        servers = {"default": server,
-                   "other": TestServer()}
+        servers = OrderedDict()
+        servers["default"] = server
+        servers["other"] = TestServer()
 
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
                                                     "other": [("lasote", "mypass")]})
