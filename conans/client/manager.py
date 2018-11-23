@@ -5,13 +5,13 @@ from conans.client.generators import write_generators
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
-from conans.client.output import ScopedOutput, Color
+from conans.client.output import ScopedOutput, Color, ConanOutput
 from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANINFO
+from conans.paths import CONANINFO, LINKED_FOLDER_SENTINEL
 from conans.util.files import save, normalize
 from conans.client.graph.printer import print_graph
 
@@ -48,7 +48,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False):
+                keep_build=False, editable=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -64,7 +64,22 @@ class ConanManager(object):
         written
         @param no_imports: Install specified packages but avoid running imports
         @param inject_require: Reference to add as a requirement to the conanfile
+        @param editable: Path to conanfile in the working copy to be linked as editable package
         """
+
+        # Ensure some consistency for editable packages
+        if editable:
+            # TODO: Should we make all checks closer to the command line parameters?
+            if not isinstance(reference, ConanFileReference):
+                raise ConanException("In order to link one package as editable, you should "
+                                     "provide a full reference (a path is not valid).")
+            target_conanfile = self._graph_manager._loader.load_basic(editable, output=self._user_io)
+            if (target_conanfile.name and target_conanfile.name != reference.name) or \
+               (target_conanfile.version and target_conanfile.version != reference.version):
+                raise ConanException("Name and version from reference ({}) and target "
+                                     "conanfile.py ({}/{}) must match".
+                                     format(reference, target_conanfile.name,
+                                            target_conanfile.version))
 
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -135,3 +150,8 @@ class ConanManager(object):
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder, output)
+
+        if editable:
+            cache_dir = self._client_cache.conan(reference)
+            save(os.path.join(cache_dir, LINKED_FOLDER_SENTINEL), content=os.path.dirname(editable))
+

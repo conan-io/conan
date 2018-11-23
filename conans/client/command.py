@@ -22,6 +22,7 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
 import json
 from conans.tools import save
 from conans.client.printer import Printer
+from conans.client.conan_api import _get_conanfile_path
 
 
 # Exit codes for conan command:
@@ -71,6 +72,18 @@ class OnceArgument(argparse.Action):
             msg = '{o} can only be specified once'.format(o=option_string)
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
+
+
+class ConanFilePath(argparse.Action):
+    """ Expect a path to a conanfile.py file or to the directory where it is located """
+    def __call__(self, parser, namespace, values, option_string=None):
+        prospective_dir = values
+        try:
+            conanfile = _get_conanfile_path(path=prospective_dir, cwd=os.getcwd(), py=True)
+            setattr(namespace, self.dest, conanfile)
+        except ConanException:
+            raise argparse.ArgumentError(None, "Editable package at {} must contain "
+                                               "a 'conanfile.py' file".format(prospective_dir))
 
 
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -361,6 +374,9 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        parser.add_argument("--editable", default=None, action=ConanFilePath,
+                            help="Path to the working copy of the package to install "
+                                 "in editable mode")
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
@@ -381,7 +397,8 @@ class Command(object):
                                            build=args.build, profile_name=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
-                                           install_folder=args.install_folder)
+                                           install_folder=args.install_folder,
+                                           editable=args.editable)
             else:
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
@@ -392,7 +409,8 @@ class Command(object):
                                                      build=args.build, profile_name=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder)
+                                                     install_folder=args.install_folder,
+                                                     editable=args.editable)
         except ConanException as exc:
             info = exc.info
             raise
