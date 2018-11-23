@@ -9,8 +9,8 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
-              excluded_tags, num_cores=3, verbosity=None, server_api=None):
+def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_tags,
+              num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
     venv_dest = os.path.join(tmp_folder, "venv")
@@ -20,11 +20,6 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    if flavor == "revisions":
-        excluded_tags.append("only_without_revisions")
-    elif flavor == "no_revisions":
-        excluded_tags.append("only_revisions")
-
     exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
 
     pyenv = pylocations[pyver]
@@ -33,7 +28,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     debug_traces = ""  # "--debug=nose,nose.result" if platform.system() == "Darwin" and pyver != "py27" else ""
     # pyenv = "/usr/local/bin/python2"
     multiprocess = ("--processes=%s --process-timeout=1000 "
-                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" or pyver == "py27" else ""
+                    "--process-restartworker --with-coverage" % num_cores) if platform.system() != "Darwin" else ""
 
     if num_cores <= 1:
         multiprocess = ""
@@ -71,10 +66,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor,
     env["PYTHONPATH"] = source_folder
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
-    if server_api == "v2":
-        env["CONAN_TESTING_SERVER_V2_ENABLED"] = "1"
-    if flavor == "revisions":
-        env["CONAN_TESTING_SERVER_REVISIONS_ENABLED"] = "1"
+    env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
+    env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
 
     with chdir(source_folder):
         with environment_append(env):
@@ -103,12 +96,10 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
-    parser.add_argument('--server_api', help='Test all with v1 or v2', default="v1")
     parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--flavor', '-f', help='Flavor (revisions, no_revisions)')
-
+    parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              args.exclude_tag, num_cores=args.num_cores, server_api=args.server_api)
+              args.exclude_tag, num_cores=args.num_cores)

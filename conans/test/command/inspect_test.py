@@ -159,7 +159,7 @@ class Pkg(ConanFile):
     license = "MIT"
     description = "Yet Another Test"
     generators = "cmake"
-    topics = ["foo", "bar", "qux"]
+    topics = ("foo", "bar", "qux")
     _private = "Nothing"
     def build(self):
         pass
@@ -173,7 +173,7 @@ homepage: https://john.company.site
 license: MIT
 author: John Doe
 description: Yet Another Test
-topics: ['foo', 'bar', 'qux']
+topics: ('foo', 'bar', 'qux')
 generators: cmake
 exports: None
 exports_sources: None

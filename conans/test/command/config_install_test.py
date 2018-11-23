@@ -1,7 +1,7 @@
 import os
+import shutil
 import unittest
 import zipfile
-import shutil
 from mock import patch
 
 from conans.client import tools

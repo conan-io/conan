@@ -1,16 +1,17 @@
 import json
 import os
+import unittest
 from collections import OrderedDict
 
 import shutil
-import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
-from conans.model.manifest import FileTreeManifest
 from conans import COMPLEX_SEARCH_CAPABILITY
-from conans.util.files import load
-
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
+from conans import DEFAULT_REVISION_V1
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, list_folder_subdirs
 
 conan_vars1 = '''
 [settings]
@@ -89,6 +90,7 @@ class SearchTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.servers["local"] = TestServer(server_capabilities=[])
         self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+
         self.client = TestClient(servers=self.servers)
 
         # No conans created
@@ -105,7 +107,7 @@ class SearchTest(unittest.TestCase):
         root_folder11 = 'Hello/1.4.11/fenix/testing'
         root_folder12 = 'Hello/1.4.12/fenix/testing'
 
-        self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
+        self.client.save({"Empty/1.10/fake/test/export/fake.txt": "//",
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
@@ -147,9 +149,9 @@ class SearchTest(unittest.TestCase):
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["local"].paths)
         os.rmdir(self.servers["search_able"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
 
         def check():
             for remote in ("local", "search_able"):
@@ -266,9 +268,9 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["local"].paths)
         os.rmdir(self.servers["search_able"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
 
         self.client.run("search Hello/1.4.10/fenix/testing -r=all --table=table.html")
         html = load(os.path.join(self.client.current_folder, "table.html"))
@@ -332,7 +334,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
         # Now search with a remote
         os.rmdir(self.servers["local"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["local"].paths)
 
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
         self.assertIn("Outdated from recipe: False", self.client.out)
@@ -347,7 +349,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
         # Now search in all remotes
         os.rmdir(self.servers["search_able"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
 
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
         self.assertEqual(str(self.client.out).count("Outdated from recipe: False"), 2)
@@ -377,7 +379,7 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
             if remote:  # Simulate upload to remote
                 os.rmdir(self.servers[remote].paths.store)
-                shutil.copytree(self.client.paths.store, self.servers[remote].paths.store)
+                self._copy_to_server(self.client.paths, self.servers[remote].paths)
 
             q = ''
             self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
@@ -438,11 +440,29 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         # test in remote with search capabilities
         test_cases(remote="search_able")
 
+    def _copy_to_server(self, client_store_path, server_store):
+        subdirs = list_folder_subdirs(basedir=client_store_path.store, level=4)
+        refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1) for folder in subdirs]
+        for ref in refs:
+            origin_path = client_store_path.export(ref)
+            dest_path = server_store.export(ref)
+            shutil.copytree(origin_path, dest_path)
+            server_store.update_last_revision(ref)
+            packages = client_store_path.packages(ref)
+            if not os.path.exists(packages):
+                continue
+            for package in os.listdir(packages):
+                pid = PackageReference(ref, package, DEFAULT_REVISION_V1)
+                origin_path = client_store_path.package(pid)
+                dest_path = server_store.package(pid)
+                shutil.copytree(origin_path, dest_path)
+                server_store.update_last_package_revision(pid)
+
     def package_search_all_remotes_test(self):
         os.rmdir(self.servers["local"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["local"].paths)
         os.rmdir(self.servers["search_able"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
 
         self.client.run("search Hello/1.4.10/fenix/testing -r=all")
         self.assertIn("Existing recipe in remote 'local':", self.client.out)
@@ -629,9 +649,9 @@ helloTest/1.4.10@fenix/stable""".format(remote)
 
         # Test search recipes all remotes
         os.rmdir(self.servers["local"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["local"].paths)
         os.rmdir(self.servers["search_able"].paths.store)
-        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
 
         self.client.run("search Hello* -r=all --json search.json")
         self.assertTrue(os.path.exists(json_path))
@@ -989,6 +1009,8 @@ class SearchOutdatedTest(unittest.TestCase):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        if client.revisions:
+            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"

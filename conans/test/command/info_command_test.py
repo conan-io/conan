@@ -1,4 +1,5 @@
 import unittest
+
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
@@ -104,8 +105,13 @@ class InfoTest(unittest.TestCase):
         # Without build outdated the built packages are the same
         self.clients["H3"].run("remove '*' -f")
         self.clients["H3"].run("info conanfile.py --build missing")
-        self.assert_last_line(self.clients["H3"],
-                              "H2a/0.1@lu/st, H2c/0.1@lu/st")
+
+        if not self.clients["H3"].revisions:
+            self.assert_last_line(self.clients["H3"], "H2a/0.1@lu/st, H2c/0.1@lu/st")
+        else:  # When revisions are enabled we just created a new one for H1a
+            # when modifing the recipe so we need to rebuild it and its private H0
+            self.assert_last_line(self.clients["H3"], 'H0/0.1@lu/st, H1a/0.1@lu/st, '
+                                                      'H2a/0.1@lu/st, H2c/0.1@lu/st')
 
         # But with build outdated we have to build the private H0 (but only once) and H1a
         self.clients["H3"].run("remove '*' -f")

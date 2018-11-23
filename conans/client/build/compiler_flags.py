@@ -190,8 +190,15 @@ def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler
 
 
 def format_libraries(libraries, compiler=None):
-    pattern = "%s.lib" if str(compiler) == 'Visual Studio' else "-l%s"
-    return [pattern % library for library in libraries if library]
+    result = []
+    for library in libraries:
+        if str(compiler) == 'Visual Studio':
+            if not library.endswith(".lib"):
+                library += ".lib"
+            result.append(library)
+        else:
+            result.append("-l%s" % library)
+    return result
 
 
 def parallel_compiler_cl_flag(output=None):

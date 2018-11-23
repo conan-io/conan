@@ -56,7 +56,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             self.assertTrue(SystemPackageTool._is_sudo_enabled())
-            self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo --askpass ")
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo -A ")
 
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
@@ -105,7 +105,7 @@ class SystemPackageToolTest(unittest.TestCase):
         def _run_add_repository_test(repository, gpg_key, sudo, isatty, update):
             sudo_cmd = ""
             if sudo:
-                sudo_cmd = "sudo " if isatty else "sudo --askpass "
+                sudo_cmd = "sudo " if isatty else "sudo -A "
 
             runner = RunnerOrderedMock()
             runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
@@ -153,46 +153,46 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+            self.assertEquals(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+            self.assertEquals(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "knoppix"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+            self.assertEquals(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "neon"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass apt-get update")
+            self.assertEquals(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass yum update -y")
+            self.assertEquals(runner.command_called, "sudo -A yum update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass zypper --non-interactive ref")
+            self.assertEquals(runner.command_called, "sudo -A zypper --non-interactive ref")
 
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo --askpass yum install -y a_package")
+            self.assertEquals(runner.command_called, "sudo -A yum install -y a_package")
 
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
-                self.assertEquals(runner.command_called, "sudo --askpass apt-get install -y --no-install-recommends a_package")
+                self.assertEquals(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
 
             runner.return_ok = True
             spt.install("a_package", force=False)
@@ -213,9 +213,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo --askpass pkg update")
+            self.assertEquals(runner.command_called, "sudo -A pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo --askpass pkg install -y a_package")
+            self.assertEquals(runner.command_called, "sudo -A pkg install -y a_package")
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "pkg info a_package")
 
@@ -422,13 +422,13 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info = OSInfo()
             update_command = None
             if os_info.with_apt:
-                update_command = "sudo --askpass apt-get update"
+                update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo --askpass yum update -y"
+                update_command = "sudo -A yum update -y"
             elif os_info.with_zypper:
-                update_command = "sudo --askpass zypper --non-interactive ref"
+                update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:
-                update_command = "sudo --askpass pacman -Syyu --noconfirm"
+                update_command = "sudo -A pacman -Syyu --noconfirm"
 
             return "Command '{0}' failed".format(update_command) if update_command is not None else None
 
@@ -815,6 +815,24 @@ class HelloConan(ConanFile):
                     if value and counter > 1 and previous_path.count(value) != counter:
                         # If the entry was already repeated before calling "tools.vcvars" we keep it
                         self.fail("The key '%s' has been repeated" % value)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_filter_known_paths_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+        with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            with tools.environment_append(tmp):
+                self.assertNotIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake",  os.environ["PATH"])
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            with tools.environment_append(tmp):
+                self.assertIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake", os.environ["PATH"])
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
@@ -1596,6 +1614,7 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_clone(self):
@@ -1791,7 +1810,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
-
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
@@ -1807,6 +1826,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
+@attr("slow")
 @attr('svn')
 @unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
@@ -2023,6 +2043,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn.is_pristine())
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 

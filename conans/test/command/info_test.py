@@ -296,7 +296,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: No remote
+                Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
                 Required by:
@@ -305,13 +305,21 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: No remote
+                Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
+
+        if self.client.revisions:
+            expected_output = expected_output % (
+                "\n    Revision: d67a47651a0532271e0090350f024c0f",
+                "\n    Revision: 96a71455ed5d0181e6babf739e84f513")
+
+        else:
+            expected_output = expected_output % ("", "")
 
         def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()
@@ -500,10 +508,9 @@ class MyTest(ConanFile):
         self.assertNotIn("URL:", self.client.user_io.out)
 
     def test_full_attributes(self):
-        self.client = TestClient()
+        client = TestClient()
 
         conanfile = """from conans import ConanFile
-from conans.util.files import load, save
 
 class MyTest(ConanFile):
     name = "Pkg"
@@ -513,18 +520,46 @@ class MyTest(ConanFile):
     license = "MIT"
     url = "https://foo.bar.baz"
     homepage = "https://foo.bar.site"
-    topics = ["foo", "bar", "qux"]
-
+    topics = ("foo", "bar", "qux")
 """
 
-        self.client.save({"subfolder/conanfile.py": conanfile})
-        self.client.run("export ./subfolder lasote/testing")
+        client.save({"subfolder/conanfile.py": conanfile})
+        client.run("export ./subfolder lasote/testing")
+        client.run("info ./subfolder")
 
-        self.client.run("info ./subfolder")
+        self.assertIn("Pkg/0.2@PROJECT", client.out)
+        self.assertIn("License: MIT", client.out)
+        self.assertIn("Author: John Doe", client.out)
+        self.assertIn("Topics: foo, bar, qux", client.out)
+        self.assertIn("URL: https://foo.bar.baz", client.out)
+        self.assertIn("Homepage: https://foo.bar.site", client.out)
 
-        self.assertIn("Pkg/0.2@PROJECT", self.client.user_io.out)
-        self.assertIn("License: MIT", self.client.user_io.out)
-        self.assertIn("Author: John Doe", self.client.user_io.out)
-        self.assertIn("Topics: foo, bar, qux", self.client.user_io.out)
-        self.assertIn("URL: https://foo.bar.baz", self.client.user_io.out)
-        self.assertIn("Homepage: https://foo.bar.site", self.client.user_io.out)
+    def topics_graph_test(self):
+
+        conanfile = """from conans import ConanFile
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.2"
+    topics = ("foo", "bar", "qux")
+        """
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . lasote/testing")
+
+        # Topics as tuple
+        client.run("info Pkg/0.2@lasote/testing --graph file.html")
+        html_path = os.path.join(client.current_folder, "file.html")
+        html_content = load(html_path)
+        self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
+        self.assertIn("<li><b>topics</b>: (\"foo\", \"bar\", \"qux\")</li><ul>", html_content)
+
+        # Topics as a string
+        conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("export . lasote/testing")
+        client.run("info Pkg/0.2@lasote/testing --graph file.html")
+        html_content = load(html_path)
+        self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
+        self.assertIn("<li><b>topics</b>: foo", html_content)

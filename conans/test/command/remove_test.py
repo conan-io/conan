@@ -4,15 +4,38 @@ import unittest
 import six
 from mock import Mock
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
+from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE, \
     CONAN_MANIFEST, CONANINFO
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer, \
-    NO_SETTINGS_PACKAGE_ID
+from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer, \
+    NO_SETTINGS_PACKAGE_ID
+from conans.util.files import load
+
+
+class RemoveRegistryTest(unittest.TestCase):
+
+    def remove_registry_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Test/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("remote list_pref Test/0.1@lasote/testing")
+        self.assertNotIn("Test/0.1@lasote/testing", client.out)
+        registry_content = load(client.client_cache.registry)
+        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
 class RemoveOutdatedTest(unittest.TestCase):
@@ -49,6 +72,8 @@ class Test(ConanFile):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        if client.revisions:
+            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"
@@ -71,7 +96,7 @@ class Test(ConanFile):
             self.assertNotIn("os: Windows", client.user_io.out)
             self.assertIn("os: Linux", client.user_io.out)
 
-
+fake_recipe_hash = "999999999"
 conaninfo = '''
 [settings]
     arch=x64
@@ -84,6 +109,9 @@ conaninfo = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
+[recipe_hash]
+''' + fake_recipe_hash +  '''
+[recipe_revision]
 '''
 
 
@@ -111,7 +139,7 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
-            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = ""
+            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id
@@ -119,7 +147,7 @@ class RemoveTest(unittest.TestCase):
                 pack_refs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
-                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i)
+                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
             exports_sources_dir = client.client_cache.export_sources(ref)
@@ -131,10 +159,10 @@ class RemoveTest(unittest.TestCase):
         for pack_ref in pack_refs:
             pkg_folder = client.client_cache.package(pack_ref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
-            files["%s/%s/%s/%s" % ("/".join(pack_ref.conan),
+            files["%s/%s/%s/%s" % (pack_ref.conan.dir_repr(),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,
-                                   CONAN_MANIFEST)] = str(expected_manifest)
+                                   CONAN_MANIFEST)] = repr(expected_manifest)
 
         client.save(files, client.client_cache.store)
 
@@ -154,14 +182,38 @@ class RemoveTest(unittest.TestCase):
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k])
+                ref = ConanFileReference(*self.root_folder[k].split("/"))
+                if isinstance(base_path, ServerStore):
+                    if not self.client.block_v2:
+                        try:
+                            rev = self.client.get_revision(ref)
+                        except:
+                            # This whole test is a crap, we cannot guess remote revision
+                            # if the package is not in local anymore
+                            continue
+                    else:
+                        rev = DEFAULT_REVISION_V1
+                    folder += "/%s" % rev
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
                 else:
                     for value in (1, 2):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
+                        if isinstance(base_path, ServerStore):
+                            if not self.client.block_v2:
+                                pref = PackageReference(ref, sha)
+                                try:
+                                    prev = self.client.get_package_revision(pref)
+                                except:
+                                    # This whole test is a crap, we cannot guess remote revision
+                                    # if the package is not in local anymore
+                                    continue
+                            else:
+                                prev = DEFAULT_REVISION_V1
+                            package_folder += "/%s" % prev
                         if value in shas:
-                            self.assertTrue(os.path.exists(package_folder))
+                            self.assertTrue(os.path.exists(package_folder), "%s doesn't exist " % package_folder)
                         else:
                             self.assertFalse(os.path.exists(package_folder))
 
@@ -213,10 +265,10 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 
@@ -230,10 +282,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+                                    "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+                                    "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 
@@ -247,10 +301,10 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 

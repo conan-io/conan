@@ -96,7 +96,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
     pkg_id = pkg_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % pkg_id)
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=reference, package_id=pkg_id)
+                           reference=reference, package_id=pkg_id)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):

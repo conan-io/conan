@@ -108,7 +108,6 @@ def log_recipe_sources_download(conan_reference, duration, remote_name, files_do
 
 
 def log_package_download(package_ref, duration, remote, files_downloaded):
-    assert(isinstance(package_ref, PackageReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_PACKAGE", {"_id": str(package_ref),

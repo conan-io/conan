@@ -1,10 +1,11 @@
+import os
 import unittest
 
-from conans.test.utils.tools import TestServer, TestClient
+from conans.errors import NotFoundException
 from conans.paths import CONANFILE
+from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save
 from conans.model.ref import ConanFileReference
-import os
 from conans.client import tools
 
 
@@ -93,7 +94,8 @@ class AuthorizeTest(unittest.TestCase):
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
-        self.assertFalse(os.path.exists(self.test_server.paths.export(self.conan_reference)))
+        with self.assertRaises(NotFoundException):
+            self.test_server.paths.export(self.conan_reference)
 
         # Check that login failed all times
         self.assertEquals(self.conan.user_io.login_index["default"], 3)
