@@ -52,7 +52,7 @@ class ConanManager(object):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
-        @param remote: install only from that remote
+        @param remote_name: install only from that remote
         @param profile: Profile object with both the -s introduced options and profile read values
         @param build_modes: List of build_modes specified
         @param update: Check for updated in the upstream remotes (and update)
@@ -80,6 +80,8 @@ class ConanManager(object):
                                      "conanfile.py ({}/{}) must match".
                                      format(reference, target_conanfile.name,
                                             target_conanfile.version))
+        else:
+            self._client_cache.remove_editable(reference)
 
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -152,6 +154,4 @@ class ConanManager(object):
                     run_deploy(deploy_conanfile, install_folder, output)
 
         if editable:
-            cache_dir = self._client_cache.conan(reference)
-            save(os.path.join(cache_dir, LINKED_FOLDER_SENTINEL), content=os.path.dirname(editable))
-
+            self._client_cache.install_as_editable(reference, os.path.dirname(editable))

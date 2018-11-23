@@ -90,3 +90,9 @@ class SimplePaths(object):
 
     def scm_folder(self, conan_reference):
         return self.package_layout(conan_reference).scm_folder()
+
+    def install_as_editable(self, conan_reference, target_path):
+        raise NotImplementedError("SimplePaths::install_as_editable")
+
+    def remove_editable(self, conan_reference):
+        raise NotImplementedError("SimplePaths::remove_editable")
