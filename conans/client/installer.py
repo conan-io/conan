@@ -8,7 +8,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators, TXTGenerator
 from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
+    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE, BINARY_EDITABLE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
@@ -290,6 +290,12 @@ class ConanInstaller(object):
 
                 self._propagate_info(node, inverse_levels, deps_graph, output)
                 if node.binary == BINARY_SKIP:  # Privates not necessary
+                    continue
+
+                if node.binary == BINARY_EDITABLE:
+                    # TODO: I need a valid 'package_folder', but I'm not going to use it
+                    package_folder = self._client_cache.conan(node.conan_ref)
+                    self._call_package_info(node.conanfile, package_folder=package_folder)
                     continue
 
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None

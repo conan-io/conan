@@ -3,7 +3,7 @@ import platform
 from itertools import chain
 import subprocess
 
-from conans import tools
+from conans.client import tools
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
