@@ -4,7 +4,7 @@ import os
 import platform
 
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
 from conans.model.ref import PackageReference
 from conans.model.ref import ConanFileReference
 
@@ -78,3 +78,6 @@ class PackageCacheLayout(object):
 
     def scm_folder(self):
         return os.path.join(self.conan(), SCM_FOLDER)
+
+    def package_metadata(self):
+        return os.path.join(self.conan(), PACKAGE_METADATA)

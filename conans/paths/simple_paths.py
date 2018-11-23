@@ -12,7 +12,7 @@ if is_case_insensitive_os():
             return
 
         tmp = store_folder
-        for part in conan_reference:
+        for part in conan_reference.dir_repr().split("/"):
             items = os.listdir(tmp)
             try:
                 idx = [item.lower() for item in items].index(part.lower())
@@ -42,7 +42,7 @@ class SimplePaths(object):
 
     def package_layout(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
-        base_folder = os.path.normpath(os.path.join(self.store, "/".join(conan_reference)))
+        base_folder = os.path.normpath(os.path.join(self.store, conan_reference.dir_repr()))
 
         linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
         if os.path.exists(linked_package_file):
@@ -90,3 +90,6 @@ class SimplePaths(object):
 
     def scm_folder(self, conan_reference):
         return self.package_layout(conan_reference).scm_folder()
+
+    def package_metadata(self, conan_reference):
+        return self.package_layout(conan_reference).package_metadata()
