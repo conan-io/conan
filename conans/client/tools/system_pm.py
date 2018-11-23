@@ -30,7 +30,7 @@ class SystemPackageTool(object):
             return ""
 
         if hasattr(sys.stdout, "isatty") and not sys.stdout.isatty():
-            return "sudo --askpass "
+            return "sudo -A "
         else:
             return "sudo "
 

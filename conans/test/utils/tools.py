@@ -33,6 +33,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -430,7 +431,8 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+                 requester_class=None, runner=None, path_with_spaces=True,
+                 block_v2=None, revisions=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -438,6 +440,14 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
+
+        if self.block_v2:
+            self.revisions = False
+        else:
+            self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.block_v2 = False
+
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
@@ -453,6 +463,14 @@ class TestClient(object):
 
         self.requester_class = requester_class
         self.conan_runner = runner
+
+        if self.revisions:
+            # Generate base file
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "revisions_enabled = False", "revisions_enabled = True", strict=False)
+            # Invalidate the cached config
+            self.client_cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g: 
@@ -553,6 +571,7 @@ servers["r2"] = TestServer()
                                                             self.user_io, self.client_version,
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
+            self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
@@ -618,6 +637,13 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def get_revision(self, conan_ref):
+        return self.client_cache.load_metadata(conan_ref).recipe.revision
+
+    def get_package_revision(self, package_ref):
+        metadata = self.client_cache.load_metadata(package_ref.conan)
+        return metadata.packages[package_ref.package_id].revision
 
 
 class StoppableThreadBottle(threading.Thread):
