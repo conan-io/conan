@@ -2,7 +2,7 @@ import os
 import platform
 import unittest
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load
 from conans.model.ref import ConanFileReference
 import re
@@ -71,7 +71,7 @@ class TestConan(ConanFile):
 
         cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
-        self.assertIn("mysrc/0.1/user/testing/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/src",
+        self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)
 
     def test_qmake(self):

@@ -1,5 +1,5 @@
 import unittest
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.paths import CONANINFO
 from conans.util.files import load
 import os
@@ -137,7 +137,7 @@ zlib/0.1@lasote/testing
 
         # Options not cached anymore
         client.run("install . --build=missing")
-        self.assertIn("zlib/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+        self.assertIn("zlib/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                       client.user_io.out)
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertNotIn("zlib:shared=True", conaninfo)

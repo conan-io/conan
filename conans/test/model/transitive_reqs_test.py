@@ -1,7 +1,7 @@
 import unittest
 from collections import namedtuple
 
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, NO_SETTINGS_PACKAGE_ID
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
@@ -165,7 +165,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.assertEqual(conaninfo.full_options.dumps(), "")
         self.assertEqual(conaninfo.requires.dumps(), "%s/%s" % (say_ref.name, say_ref.version))
         self.assertEqual(conaninfo.full_requires.dumps(),
-                         "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % str(say_ref))
+                         "%s:%s" % (str(say_ref), NO_SETTINGS_PACKAGE_ID))
 
     def test_transitive_two_levels(self):
         self.retriever.conan(say_ref, say_content)
@@ -201,7 +201,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.assertEqual(conaninfo.requires.dumps(), "Hello/1.Y.Z")
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_diamond_no_conflict(self):
         chat_content = """
@@ -251,7 +251,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Bye/0.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_simple_override(self):
         chat_content = """
@@ -295,7 +295,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.requires.dumps(), "Hello/1.Y.Z")
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Hello/1.2@user/testing:9d98d1ba7893ef6602e1d629b190a1d2a1100a65\n"
-                         "Say/0.2@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.2@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_version_requires_change(self):
         chat_content = """
@@ -343,7 +343,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.requires.dumps(), "Hello/1.2.Z\nSay/1.Y.Z")
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_version_requires2_change(self):
         chat_content = """
@@ -390,7 +390,7 @@ class ChatConan(ConanFile):
                          "Say/0.1")
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_diamond_conflict_error(self):
         chat_content = """
@@ -478,7 +478,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Bye/0.2@user/testing:9d98d1ba7893ef6602e1d629b190a1d2a1100a65\n"
                          "Hello/1.2@user/testing:9d98d1ba7893ef6602e1d629b190a1d2a1100a65\n"
-                         "Say/0.2@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.2@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_basic_option(self):
         say_content = """
@@ -1011,7 +1011,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_options.dumps(),  "zip=True")
         self.assertEqual(conaninfo.requires.dumps(), "Zlib/2.Y.Z")
         self.assertEqual(conaninfo.full_requires.dumps(),
-                         "Zlib/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Zlib/2.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
         chat_content2 = """
 from conans import ConanFile
@@ -1065,7 +1065,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Bye/0.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_conditional_diamond(self):
         zlib_content = """
@@ -1209,8 +1209,9 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Bye/0.2@user/testing:9d98d1ba7893ef6602e1d629b190a1d2a1100a65\n"
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9\n"
-                         "Say/0.2@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s\n"
+                         "Say/0.2@user/testing:%s" % (NO_SETTINGS_PACKAGE_ID,
+                                                      NO_SETTINGS_PACKAGE_ID))
 
     def test_transitive_diamond_private(self):
         hello_content = """
@@ -1284,7 +1285,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Bye/0.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_dep_requires_clear(self):
         hello_content = """
@@ -1307,7 +1308,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.name, "Hello")
         self.assertEqual(hello.conanfile.info.requires.dumps(), "")
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_remove_build_requires(self):
         hello_content = """
@@ -1330,7 +1331,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.name, "Hello")
         self.assertEqual(hello.conanfile.info.requires.dumps(), "")
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_remove_two_build_requires(self):
         chat_content = """
@@ -1357,7 +1358,7 @@ class ChatConan(ConanFile):
         self.assertEqual(chat.conanfile.info.full_requires.dumps(),
                          "Bye/0.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_propagate_indirect_options(self):
         say_content = """
@@ -1411,7 +1412,7 @@ class ChatConan(ConanFile):
         self.assertEqual(chat.conanfile.info.requires.dumps(), "Hello/1.Y.Z")
         self.assertEqual(chat.conanfile.info.full_requires.dumps(),
                          "Hello/1.2@user/testing:93c0f28f41be7e2dfe12fd6fb93dac72c77cc0d9\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual(chat.conanfile.info.options.dumps(),
                          "shared=True\nHello:shared=True\nSay:shared=False")
 
@@ -1424,7 +1425,7 @@ class ChatConan(ConanFile):
         self.assertEqual(chat.conanfile.info.requires.dumps(), "Hello/1.Y.Z")
         self.assertEqual(chat.conanfile.info.full_requires.dumps(),
                          "Hello/1.2@user/testing:93c0f28f41be7e2dfe12fd6fb93dac72c77cc0d9\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual(chat.conanfile.info.options.dumps(), "shared=False")
 
         # Now change the hello content
@@ -1437,7 +1438,7 @@ class ChatConan(ConanFile):
         self.assertEqual(chat.conanfile.info.requires.dumps(), "Hello/1.Y.Z")
         self.assertEqual(chat.conanfile.info.full_requires.dumps(),
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
-                         "Say/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                         "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual(chat.conanfile.info.options.dumps(),
                          "shared=True\nHello:shared=False\nSay:shared=False")
 

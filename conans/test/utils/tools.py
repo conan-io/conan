@@ -6,7 +6,7 @@ import stat
 import sys
 import tempfile
 import unittest
-from collections import Counter
+from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from io import StringIO
 
@@ -49,6 +49,8 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+
+NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
 def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
@@ -448,6 +450,13 @@ class TestClient(object):
 
         self.requester_class = requester_class
         self.conan_runner = runner
+
+        if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
+            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g: 
+servers = OrderedDict()
+servers["r1"] = server
+servers["r2"] = TestServer()
+""")
 
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes

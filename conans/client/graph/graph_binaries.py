@@ -98,7 +98,10 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.prefs.get(package_ref)
+            # If the remote_name is not given, follow the binary remote, or
+            # the recipe remote
+            # If it is defined it won't iterate (might change in conan2.0)
+            remote = self._registry.prefs.get(package_ref) or self._registry.refs.get(conan_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):

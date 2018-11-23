@@ -1,8 +1,13 @@
+import json
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
+from collections import OrderedDict
+
+import time
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from collections import OrderedDict
+from conans.test.utils.tools import TestServer, TestClient
+from conans.util.files import load
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -114,3 +119,48 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote0=http://", client2.user_io.out)
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
+
+    def package_binary_remote_test(self):
+        # https://github.com/conan-io/conan/issues/3882
+        conanfile = """from conans import ConanFile
+class ConanFileToolsTest(ConanFile):
+    pass
+"""
+        # Upload recipe + package to remote1 and remote2
+        ref = "Hello/0.1@lasote/stable"
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . %s" % ref)
+        self.client.run("upload %s -r=remote0 --all" % ref)
+        self.client.run("upload %s -r=remote2 --all" % ref)
+
+        # Remove only binary from remote1 and everything in local
+        self.client.run("remove -f %s -p -r remote0" % ref)
+        self.client.run('remove "*" -f')
+
+        self.servers.pop("remote1")
+        # Now install it from a client, it won't find the binary in remote2
+        error = self.client.run("install %s" % ref, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
+        self.assertNotIn("remote2", self.client.out)
+
+        self.client.run("install %s -r remote2" % ref)
+        self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        registry = load(self.client.client_cache.registry)
+        registry = json.loads(registry)
+        self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
+        self.assertEquals(registry["package_references"],
+                          {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
+                           "remote2"})
+
+        client = TestClient(servers=self.servers, users=self.users)
+        time.sleep(1)  # Make sure timestamps increase
+        client.save({"conanfile.py": conanfile + " # Comment"})
+        client.run("create . %s" % ref)
+        client.run("upload %s -r=remote2 --all" % ref)
+        self.client.run("install %s --update" % ref)
+        self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
+                         self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
+                      self.client.out)
+        self.assertIn("Downloading conan_package.tgz", self.client.out)
