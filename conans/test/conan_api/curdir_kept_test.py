@@ -17,8 +17,10 @@ class Pkg(ConanFile):
 """
         tools.save(os.path.join(tmp_folder, "conanfile.py"), conanfile)
         with tools.chdir(tmp_folder):
-            api, _, _ = ConanAPIV1.factory()
-            api.create(".", name="lib", version="1.0", user="user", channel="channel")
-            self.assertEquals(tmp_folder, os.getcwd())
-            api.create(".", name="lib", version="1.0", user="user", channel="channel2")
-            self.assertEquals(tmp_folder, os.getcwd())
+            # Needed to not write in the real computer cache
+            with tools.environment_append({"CONAN_USER_HOME": tmp_folder}):
+                api, _, _ = ConanAPIV1.factory()
+                api.create(".", name="lib", version="1.0", user="user", channel="channel")
+                self.assertEquals(tmp_folder, os.getcwd())
+                api.create(".", name="lib", version="1.0", user="user", channel="channel2")
+                self.assertEquals(tmp_folder, os.getcwd())

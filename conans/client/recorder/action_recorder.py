@@ -41,15 +41,18 @@ class ActionRecorder(object):
 
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, reference):
+        assert(isinstance(reference, ConanFileReference))
         self._inst_recipes_develop.add(reference)
 
     def _add_recipe_action(self, reference, action):
         assert(isinstance(reference, ConanFileReference))
+        reference = reference.copy_clear_rev()
         if reference not in self._inst_recipes_actions:
             self._inst_recipes_actions[reference] = []
         self._inst_recipes_actions[reference].append(action)
 
     def _add_package_action(self, reference, action):
+        reference = reference.copy_clear_rev()
         assert(isinstance(reference, PackageReference))
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
@@ -84,6 +87,7 @@ class ActionRecorder(object):
 
     def package_install_error(self, reference, error_type, description, remote_name=None):
         assert(isinstance(reference, PackageReference))
+        reference = reference.copy_clear_rev()
         if reference not in self._inst_packages_actions:
             self._inst_packages_actions[reference] = []
         doc = {"type": error_type, "description": description, "remote": remote_name}
@@ -91,6 +95,7 @@ class ActionRecorder(object):
 
     def package_cpp_info(self, reference, cpp_info):
         assert isinstance(reference, PackageReference)
+        reference = reference.copy_clear_rev()
         # assert isinstance(cpp_info, CppInfo)
         doc = {}
         for it, value in vars(cpp_info).items():
@@ -144,7 +149,7 @@ class ActionRecorder(object):
                    "remote": remote,
                    "time": time}
             if isinstance(the_ref, ConanFileReference):
-                doc["dependency"] = not self.in_development_recipe(the_ref)
+                doc["dependency"] = not self.in_development_recipe(the_ref.copy_clear_rev())
                 doc["name"] = the_ref.name
                 doc["version"] = the_ref.version
                 doc["user"] = the_ref.user

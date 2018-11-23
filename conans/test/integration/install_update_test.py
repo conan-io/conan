@@ -1,15 +1,16 @@
-
 import os
-import time
 import unittest
 from collections import OrderedDict
+
+import time
 from time import sleep
 
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.util.files import load, save
 from conans.paths import CONAN_MANIFEST
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class InstallUpdateTest(unittest.TestCase):
@@ -75,16 +76,19 @@ class Pkg(ConanFile):
         client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                     "r2": [("lasote", "mypass")]})
         ref = "Pkg/0.1@lasote/testing"
+        pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref
         client.save({"conanfile.py": conanfile})
-        client.run("create . %s" % ref)
-        client.run("upload %s --all -r r2" % ref)
-        client.run("remote list_pref %s" % ref)
-        self.assertIn("%s:%s: r2" % (ref, NO_SETTINGS_PACKAGE_ID), client.out)
-        client.run("remote remove_ref %s" % ref)
+        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("upload Pkg/0.1@lasote/testing --all -r r2")
+        client.run("remote list_pref Pkg/0.1@lasote/testing")
+
+        self.assertIn("%s: r2" % pref, client.out)
+        client.run("remote remove_ref Pkg/0.1@lasote/testing")
 
         # It should upload both to r1 (default), not taking into account the pref to r2
-        client.run("upload %s --all" % ref)
-        self.assertIn("Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("upload Pkg/0.1@lasote/testing --all")
+        self.assertIn("Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
 
     def install_update_following_pref_test(self):
         conanfile = """
@@ -165,8 +169,9 @@ class Pkg(ConanFile):
         self.client.run("remote list_ref")
         self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
-        self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
-                      self.client.out)
+        ref = "Hello0/1.0@lasote/stable"
+        pref = "%s:55a3af76272ead64e6f543c12ecece30f94d3eda" % ref
+        self.assertIn(pref, self.client.out)
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
@@ -206,6 +211,8 @@ class Pkg(ConanFile):
         self.client.save(files1, clean_first=True)
         # First assign the preference to a remote, it has been cleared when exported locally
         self.client.run("install . --update")
+        # *1 With revisions here is removing the package because it doesn't belong to the recipe
+
         self.assertIn("Hello0/1.0@lasote/stable from 'myremote' - Newer", self.client.out)
         failed_update_timestamps = timestamps()
         self.assertEqual(rebuild_timestamps, failed_update_timestamps)
