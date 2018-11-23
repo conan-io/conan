@@ -11,7 +11,7 @@ class Router(object):
 
     @property
     def recipe_revision(self):
-        return '%s#<revision>' % self.recipe
+        return '%s/revisions/<revision>' % self.recipe
 
     @property
     def recipe_file(self):
@@ -40,7 +40,7 @@ class Router(object):
 
     @property
     def package_revision(self):
-        return '%s/<package_id>#<p_revision>' % self.packages_revision
+        return '%s/<package_id>/revisions/<p_revision>' % self.packages_revision
 
     @property
     def package_file(self):

@@ -125,4 +125,6 @@ class TestConan(ConanFile):
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
+        export_sources_path = os.path.join(servers["upload_repo"].paths.export(conan_ref),
+                                           "conan_sources.tgz")
         self.assertFalse(os.path.exists(export_sources_path))
