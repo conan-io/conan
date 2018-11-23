@@ -10,7 +10,6 @@ import six
 from datetime import timedelta
 from six.moves.configparser import ConfigParser, NoSectionError
 
-from conans import tools
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf.default_server_conf import default_server_conf

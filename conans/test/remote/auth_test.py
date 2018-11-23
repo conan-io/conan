@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from conans import tools
 from conans.errors import NotFoundException
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestServer, TestClient
