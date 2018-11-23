@@ -15,6 +15,12 @@ from conans.test.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput
 
 
+def _clear_revs(reqs):
+    for req in reqs.values():
+        req.conan_reference = req.conan_reference.copy_clear_rev()
+    return reqs
+
+
 class BasicMaxVersionTest(unittest.TestCase):
     def prereleases_versions_test(self):
         output = TestBufferConanOutput()
@@ -176,7 +182,7 @@ class SayConan(ConanFile):
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_basic(self):
         self.resolver._local_search = None
@@ -207,7 +213,7 @@ class SayConan(ConanFile):
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_optimized(self):
         self.resolver._local_search = None
@@ -292,12 +298,12 @@ class ChatConan(ConanFile):
 
         self.assertEqual(_get_edges(deps_graph), edges)
 
-        self.assertEqual(hello.conan_ref, hello_ref)
+        self.assertEqual(hello.conan_ref.copy_clear_rev(), hello_ref)
         conanfile = hello.conanfile
         self.assertEqual(conanfile.version, "1.2")
         self.assertEqual(conanfile.name, "Hello")
         say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-        self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+        self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def duplicated_error_test(self):
         content = """
@@ -348,17 +354,17 @@ class Project(ConanFile):
 
         self.assertEqual(4, len(deps_graph.nodes))
 
-        self.assertEqual(log4cpp.conan_ref, log4cpp_ref)
+        self.assertEqual(log4cpp.conan_ref.copy_clear_rev(), log4cpp_ref)
         conanfile = log4cpp.conanfile
         self.assertEqual(conanfile.version, "1.1.1")
         self.assertEqual(conanfile.name, "log4cpp")
 
-        self.assertEqual(logger_interface.conan_ref, logiface_ref)
+        self.assertEqual(logger_interface.conan_ref.copy_clear_rev(), logiface_ref)
         conanfile = logger_interface.conanfile
         self.assertEqual(conanfile.version, "0.1.1")
         self.assertEqual(conanfile.name, "LoggerInterface")
 
-        self.assertEqual(other.conan_ref, other_ref)
+        self.assertEqual(other.conan_ref.copy_clear_rev(), other_ref)
         conanfile = other.conanfile
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")
