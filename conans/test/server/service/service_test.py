@@ -1,5 +1,6 @@
 import unittest
 from conans.model.ref import ConanFileReference, PackageReference
+from conans import DEFAULT_REVISION_V1
 from conans.server.service.service import ConanService, FileUploadDownloadService,\
     SearchService
 from conans.paths import CONAN_MANIFEST, CONANINFO
@@ -75,8 +76,11 @@ class FileUploadDownloadServiceTest(unittest.TestCase):
 class ConanServiceTest(unittest.TestCase):
 
     def setUp(self):
-        self.conan_reference = ConanFileReference.loads("openssl/2.0.3@lasote/testing")
-        self.package_reference = PackageReference(self.conan_reference, "123123123")
+        self.conan_reference = ConanFileReference.loads("openssl/2.0.3@lasote/testing#%s" %
+                                                        DEFAULT_REVISION_V1)
+
+        self.package_reference = PackageReference(self.conan_reference, "123123123",
+                                                  DEFAULT_REVISION_V1)
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
@@ -93,6 +97,7 @@ class ConanServiceTest(unittest.TestCase):
 
         files = hello_source_files("test")
         save_files(self.server_store.export(self.conan_reference), files)
+        self.server_store.update_last_revision(self.conan_reference)
         self.conan_digest = FileTreeManifest.create(self.server_store.export(self.conan_reference))
         conan_digest_path = os.path.join(self.server_store.export(self.conan_reference), CONAN_MANIFEST)
         save(conan_digest_path, str(self.conan_digest))
@@ -119,7 +124,10 @@ class ConanServiceTest(unittest.TestCase):
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
-            return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
+            return (self.fake_url + "/"
+                    + self.conan_reference.dir_repr()
+                    + "/" + self.conan_reference.revision
+                    + "/export/" + filename)
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt'),
@@ -135,8 +143,12 @@ class ConanServiceTest(unittest.TestCase):
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
-            return self.fake_url + "/" + "/".join(self.package_reference.conan) \
-                + "/package/" + self.package_reference.package_id + "/" + filename
+            return (self.fake_url
+                    + "/" + self.package_reference.conan.dir_repr()
+                    + "/" + self.package_reference.conan.revision
+                    + "/package/" + self.package_reference.package_id
+                    + "/" + self.package_reference.revision
+                    + "/" + filename)
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
                          'executable': fake_url_build('executable'),
@@ -153,7 +165,10 @@ class ConanServiceTest(unittest.TestCase):
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
-            return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
+            return (self.fake_url
+                    + "/" + self.conan_reference.dir_repr()
+                    + "/" + self.conan_reference.revision
+                    + "/export/" + filename)
 
         expected_urls = {'conanfile.py': fake_url_build('conanfile.py'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt')}
@@ -166,8 +181,12 @@ class ConanServiceTest(unittest.TestCase):
         urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
-            return self.fake_url + "/" + "/".join(self.package_reference.conan) \
-                + "/package/" + self.package_reference.package_id + "/" + filename
+            return (self.fake_url
+                    + "/" + self.package_reference.conan.dir_repr()
+                    + "/" + self.package_reference.conan.revision
+                    + "/package/" + self.package_reference.package_id
+                    + "/" + self.package_reference.revision
+                    + "/" + filename)
 
         expected_urls = {'uno.lib': fake_url_build('uno.lib'),
                          'dos.dll': fake_url_build('dos.dll')}
@@ -177,12 +196,12 @@ class ConanServiceTest(unittest.TestCase):
         """ check the dict is returned by get_packages_info service
         """
         # Creating and saving conans, packages, and conans.vars
-        conan_ref2 = ConanFileReference("openssl", "3.0", "lasote", "stable")
-        conan_ref3 = ConanFileReference("Assimp", "1.10", "fenix", "stable")
-        conan_ref4 = ConanFileReference("assimpFake", "0.1", "phil", "stable")
+        conan_ref2 = ConanFileReference("openssl", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
+        conan_ref3 = ConanFileReference("Assimp", "1.10", "fenix", "stable", DEFAULT_REVISION_V1)
+        conan_ref4 = ConanFileReference("assimpFake", "0.1", "phil", "stable", DEFAULT_REVISION_V1)
 
-        package_ref2 = PackageReference(conan_ref2, "12345587754")
-        package_ref3 = PackageReference(conan_ref3, "77777777777")
+        package_ref2 = PackageReference(conan_ref2, "12345587754", DEFAULT_REVISION_V1)
+        package_ref3 = PackageReference(conan_ref3, "77777777777", DEFAULT_REVISION_V1)
 
         conan_vars = """
 [options]
@@ -193,8 +212,12 @@ class ConanServiceTest(unittest.TestCase):
         conan_vars3 = conan_vars % "True"
 
         save_files(self.server_store.package(self.package_reference), {CONANINFO: conan_vars1})
+        self.server_store.update_last_package_revision(self.package_reference)
         save_files(self.server_store.package(package_ref2), {CONANINFO: conan_vars2})
+        self.server_store.update_last_package_revision(package_ref2)
         save_files(self.server_store.package(package_ref3), {CONANINFO: conan_vars3})
+        self.server_store.update_last_package_revision(package_ref3)
+
         save_files(self.server_store.export(conan_ref4), {"dummy.txt": "//"})
 
         info = self.search_service.search()
@@ -204,28 +227,31 @@ class ConanServiceTest(unittest.TestCase):
         info = self.search_service.search(pattern="Assimp*", ignorecase=False)
         self.assertEqual(info, [conan_ref3])
 
-        info = self.search_service.search_packages(conan_ref2, None)
+        info = self.search_service.search_packages(conan_ref2, None, v2_compatibility_mode=False)
         self.assertEqual(info, {'12345587754': {'full_requires': [],
                                                 'options': {'use_Qt': 'False'},
                                                 'settings': {},
                                                 'recipe_hash': None}})
 
-        info = self.search_service.search_packages(conan_ref3, None)
+        info = self.search_service.search_packages(conan_ref3, None, v2_compatibility_mode=False)
         self.assertEqual(info, {'77777777777': {'full_requires': [],
                                                 'options': {'use_Qt': 'True'},
                                                 'settings': {},
                                                 'recipe_hash': None}})
 
     def remove_test(self):
-        conan_ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable")
-        conan_ref3 = ConanFileReference("Assimp", "1.10", "lasote", "stable")
+        conan_ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
+        conan_ref3 = ConanFileReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION_V1)
 
-        package_ref2 = PackageReference(conan_ref2, "12345587754")
-        package_ref3 = PackageReference(conan_ref3, "77777777777")
+        package_ref2 = PackageReference(conan_ref2, "12345587754", DEFAULT_REVISION_V1)
+        package_ref3 = PackageReference(conan_ref3, "77777777777", DEFAULT_REVISION_V1)
 
         save_files(self.server_store.export(conan_ref2), {"fake.txt": "//fake"})
+        self.server_store.update_last_revision(conan_ref2)
         save_files(self.server_store.package(package_ref2), {"fake.txt": "//fake"})
+        self.server_store.update_last_package_revision(package_ref2)
         save_files(self.server_store.package(package_ref3), {"fake.txt": "//fake"})
+        self.server_store.update_last_package_revision(package_ref3)
 
         # Delete all the conans folder
         self.service.remove_conanfile(self.conan_reference)
@@ -234,7 +260,7 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete one package
         self.service.remove_packages(conan_ref3, ["77777777777"])
-        package_folder_3 = self.server_store.package(PackageReference(conan_ref3, '077777777777'))
+        package_folder_3 = self.server_store.package(PackageReference(conan_ref3, '77777777777'))
         self.assertFalse(os.path.exists(package_folder_3))
 
         # Raise an exception

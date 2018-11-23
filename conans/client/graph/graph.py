@@ -33,6 +33,7 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.revision_pinned = False  # The revision has been specified by the user
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)
@@ -88,6 +89,14 @@ class Node(object):
 
         if self.conan_ref == other.conan_ref:
             return 0
+
+        # Cannot compare None with str
+        if self.conan_ref.revision is None and other.conan_ref.revision is not None:
+            return 1
+
+        if self.conan_ref.revision is not None and other.conan_ref.revision is None:
+            return -1
+
         if self.conan_ref < other.conan_ref:
             return -1
 
@@ -283,8 +292,8 @@ class DepsGraph(object):
         for level in self.by_levels():
             for node in level:
                 if node.binary == BINARY_BUILD:
-                    if node.conan_ref not in ret:
-                        ret.append(node.conan_ref)
+                    if node.conan_ref.copy_clear_rev() not in ret:
+                        ret.append(node.conan_ref.copy_clear_rev())
         return ret
 
     def by_levels(self):
