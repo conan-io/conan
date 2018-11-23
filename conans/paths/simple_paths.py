@@ -4,6 +4,7 @@ from conans.paths.package_layouts import PackageEditableLayout, PackageCacheLayo
 from conans.model.ref import ConanFileReference
 from conans.paths import LINKED_FOLDER_SENTINEL, is_case_insensitive_os
 from conans.errors import ConanException
+from conans.util.files import save
 
 
 if is_case_insensitive_os():
@@ -40,16 +41,23 @@ class SimplePaths(object):
     def store(self):
         return self._store_folder
 
+    def _build_path_to_base_folder(self, conan_reference):
+        return os.path.normpath(os.path.join(self.store, "/".join(conan_reference)))
+
+    def _build_path_to_linked_folder_sentinel(self, conan_reference):
+        base_folder = self._build_path_to_base_folder(conan_reference)
+        linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
+        return linked_package_file
+
     def package_layout(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
-        base_folder = os.path.normpath(os.path.join(self.store, "/".join(conan_reference)))
-
-        linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
+        linked_package_file = self._build_path_to_linked_folder_sentinel(conan_reference)
         if os.path.exists(linked_package_file):
             return PackageEditableLayout(linked_package_file=linked_package_file,
                                          conan_ref=conan_reference)
         else:
             check_ref_case(conan_reference, self.store)
+            base_folder = self._build_path_to_base_folder(conan_reference)
             return PackageCacheLayout(base_folder=base_folder,
                                       conan_ref=conan_reference, short_paths=short_paths)
 
@@ -92,10 +100,13 @@ class SimplePaths(object):
         return self.package_layout(conan_reference).scm_folder()
 
     def install_as_editable(self, conan_reference, target_path):
-        raise NotImplementedError("SimplePaths::install_as_editable")
+        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+        save(linked_folder_sentinel, content=target_path)
 
     def remove_editable(self, conan_reference):
-        raise NotImplementedError("SimplePaths::remove_editable")
+        if self.installed_as_editable(conan_reference):
+            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+            os.remove(linked_folder_sentinel)
 
     def installed_as_editable(self, conan_reference):
         return self.package_layout(conan_reference).installed_as_editable()
