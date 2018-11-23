@@ -13,7 +13,7 @@ if is_case_insensitive_os():
             return
 
         tmp = store_folder
-        for part in conan_reference:
+        for part in conan_reference.dir_repr().split("/"):
             items = os.listdir(tmp)
             try:
                 idx = [item.lower() for item in items].index(part.lower())
@@ -42,7 +42,7 @@ class SimplePaths(object):
         return self._store_folder
 
     def _build_path_to_base_folder(self, conan_reference):
-        return os.path.normpath(os.path.join(self.store, "/".join(conan_reference)))
+        return os.path.normpath(os.path.join(self.store, conan_reference.dir_repr()))
 
     def _build_path_to_linked_folder_sentinel(self, conan_reference):
         base_folder = self._build_path_to_base_folder(conan_reference)
@@ -99,6 +99,9 @@ class SimplePaths(object):
     def scm_folder(self, conan_reference):
         return self.package_layout(conan_reference).scm_folder()
 
+    def package_metadata(self, conan_reference):
+        return self.package_layout(conan_reference).package_metadata()
+
     def install_as_editable(self, conan_reference, target_path):
         linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
         save(linked_folder_sentinel, content=target_path)
@@ -110,3 +113,4 @@ class SimplePaths(object):
 
     def installed_as_editable(self, conan_reference):
         return self.package_layout(conan_reference).installed_as_editable()
+

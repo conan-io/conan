@@ -1,14 +1,18 @@
-import re
+import os
 from fnmatch import translate
 
+import jwt
+import re
+
+from conans import load
 from conans.errors import RequestErrorException, NotFoundException, ForbiddenException, \
     ConanException
-import os
-import jwt
-from conans.util.files import mkdir, list_folder_subdirs
+from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
+from conans.paths import CONANINFO
+from conans.search.search import _partial_match, filter_packages
+from conans.util.files import mkdir, list_folder_subdirs
 from conans.util.log import logger
-from conans.search.search import search_packages, _partial_match
 
 
 class FileUploadDownloadService(object):
@@ -72,9 +76,9 @@ class SearchService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def search_packages(self, reference, query):
+    def search_packages(self, reference, query, v2_compatibility_mode):
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = search_packages(self._server_store, reference, query)
+        info = search_packages(self._server_store, reference, query, v2_compatibility_mode)
         return info
 
     def search_recipes(self, pattern=None, ignorecase=True):
@@ -88,11 +92,6 @@ class SearchService(object):
             else:
                 r = _pattern
             return r
-
-        def get_folders_levels(_pattern):
-            """If a reference with revisions is detected compare with 5 levels of subdirs"""
-            r = get_ref(_pattern)
-            return 5 if r and r.revision else 4
 
         # Check directly if it is a reference
         ref = get_ref(pattern)
@@ -109,7 +108,7 @@ class SearchService(object):
             b_pattern = translate(pattern)
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
 
-        subdirs = list_folder_subdirs(basedir=self._server_store.store, level=get_folders_levels(pattern))
+        subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:
@@ -182,17 +181,56 @@ class ConanService(object):
         self._server_store.remove_conanfile(reference)
 
     def remove_packages(self, reference, package_ids_filter):
+        """If the revision is not specified it will remove the packages from all the recipes
+        (v1 compatibility)"""
         for package_id in package_ids_filter:
-            ref = PackageReference(reference, package_id)
-            self._authorizer.check_delete_package(self._auth_user, ref)
+            pref = PackageReference(reference, package_id)
+            self._authorizer.check_delete_package(self._auth_user, pref)
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, reference)
 
-        self._server_store.remove_packages(reference, package_ids_filter)
+        if reference.revision:
+            references = [reference]
+        else:
+            references = self._server_store.get_recipe_revisions(reference)
+
+        for ref in references:
+            self._server_store.remove_packages(ref, package_ids_filter)
+
+    def remove_package(self, package_reference):
+        self._authorizer.check_delete_package(self._auth_user, package_reference)
+
+        if not package_reference.conan.revision:
+            recipe_revisions = self._server_store.get_recipe_revisions(package_reference.conan)
+        else:
+            recipe_revisions = [package_reference.conan, ]
+
+        for ref in recipe_revisions:
+            if not package_reference.revision:
+                pref = PackageReference(ref, package_reference.package_id)
+                package_revisions = [r.revision
+                                     for r in self._server_store.get_package_revisions(pref)]
+            else:
+                package_revisions = [package_reference.revision]
+
+            for prev in package_revisions:
+                full_pref = PackageReference(ref, package_reference.package_id, prev)
+                self._server_store.remove_package(full_pref)
+
+    def remove_all_packages(self, reference):
+        if reference.revision:
+            references = [reference]
+        else:
+            references = self._server_store.get_recipe_revisions(reference)
+        for ref in references:
+            self._server_store.remove_all_packages(ref)
 
     def remove_conanfile_files(self, reference, files):
         self._authorizer.check_delete_conan(self._auth_user, reference)
         self._server_store.remove_conanfile_files(reference, files)
+
+    def remove_conanfile_file(self, reference, path):
+        self.remove_conanfile_files(reference, [path])
 
     # Package methods
     def get_package_snapshot(self, package_reference):
@@ -245,3 +283,51 @@ def _validate_conan_reg_filenames(files):
         if ".." in filename:
             # Log something
             raise RequestErrorException(message)
+
+
+def search_packages(paths, reference, query, v2_compatibility_mode):
+    """ Return a dict like this:
+
+            {package_ID: {name: "OpenCV",
+                           version: "2.14",
+                           settings: {os: Windows}}}
+    param conan_ref: ConanFileReference object
+    """
+    if not os.path.exists(paths.conan(reference)):
+        raise NotFoundException("Recipe not found: %s" % str(reference))
+    infos = _get_local_infos_min(paths, reference, v2_compatibility_mode)
+    return filter_packages(query, infos)
+
+
+def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
+
+    result = {}
+
+    if not reference.revision and v2_compatibility_mode:
+        recipe_revisions = paths.get_recipe_revisions(reference)
+    else:
+        recipe_revisions = [reference]
+
+    for recipe_revision in recipe_revisions:
+        packages_path = paths.packages(recipe_revision)
+        subdirs = list_folder_subdirs(packages_path, level=1)
+        for package_id in subdirs:
+            if package_id in result:
+                continue
+            # Read conaninfo
+            try:
+                package_reference = PackageReference(reference, package_id)
+                info_path = os.path.join(paths.package(package_reference,
+                                                       short_paths=None), CONANINFO)
+                if not os.path.exists(info_path):
+                    raise NotFoundException("")
+                conan_info_content = load(info_path)
+                info = ConanInfo.loads(conan_info_content)
+                conan_vars_info = info.serialize_min()
+                result[package_id] = conan_vars_info
+
+            except Exception as exc:
+                logger.error("Package %s has no ConanInfo file" % str(package_reference))
+                if str(exc):
+                    logger.error(str(exc))
+    return result

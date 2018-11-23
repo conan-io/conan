@@ -1,8 +1,14 @@
 import json
-import sys
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+
+
+def get_scm_data(conanfile):
+    try:
+        return SCMData(conanfile)
+    except ConanException:
+        return None
 
 
 class SCMData(object):
@@ -28,6 +34,12 @@ class SCMData(object):
     @property
     def capture_revision(self):
         return self.revision == "auto"
+
+    @property
+    def recipe_revision(self):
+        if self.type in ["git", "svn"]:
+            return self.revision
+        raise ConanException("Not implemented recipe revision for %s" % self.type)
 
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,

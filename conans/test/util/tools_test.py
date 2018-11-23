@@ -1591,6 +1591,7 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_clone(self):
@@ -1786,7 +1787,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
-
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
@@ -1802,6 +1803,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
+@attr("slow")
 @attr('svn')
 @unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
@@ -2018,6 +2020,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn.is_pristine())
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
