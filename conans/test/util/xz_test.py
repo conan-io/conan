@@ -6,7 +6,7 @@ import tarfile
 
 from conans import DEFAULT_REVISION_V1
 from conans.test.utils.test_files import temp_folder
-from conans.tools import unzip, save
+from conans.client.tools.files import unzip, save
 from conans.util.files import load, save_files
 from conans.errors import ConanException
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID

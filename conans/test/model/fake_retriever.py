@@ -3,9 +3,9 @@ import os
 from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import Node
 from conans.model.ref import ConanFileReference
+from conans.client.tools.files import save
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.tools import save
 
 
 class Retriever(object):

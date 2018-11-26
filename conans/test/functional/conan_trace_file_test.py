@@ -1,5 +1,4 @@
 import unittest
-from conans import tools
 from conans.test.utils.test_files import temp_folder
 import os
 from conans.model.ref import ConanFileReference
@@ -9,6 +8,7 @@ from conans.util.files import load
 import json
 from conans.paths import CONANFILE, RUN_LOG_NAME
 from conans.client.runner import ConanRunner
+from conans.client import tools
 
 
 class ConanTraceTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class ConanTraceTest(unittest.TestCase):
         self.servers = {"default": test_server}
 
     def test_run_log_file_package_test(self):
-        '''Check if the log file is generated and packaged'''
+        """Check if the log file is generated and packaged"""
 
         base = '''
 from conans import ConanFile

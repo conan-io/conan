@@ -9,8 +9,8 @@
     #   -LIBPATH, -D, -I, -ZI and so on.
 
 """
-from conans import tools
-from conans.tools import unix_path
+from conans.client.tools.oss import cpu_count
+from conans.client.tools.win import unix_path
 
 
 def rpath_flags(os_build, compiler, lib_paths):
@@ -202,5 +202,4 @@ def format_libraries(libraries, compiler=None):
 
 
 def parallel_compiler_cl_flag():
-    cpu_count = tools.cpu_count()
-    return "/MP%s" % cpu_count
+    return "/MP%s" % cpu_count()

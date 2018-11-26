@@ -3,15 +3,14 @@ import os
 import unittest
 import sys
 from collections import OrderedDict
-
 from nose.plugins.attrib import attr
 
-from conans import tools
 from conans.build_info.conan_build_info import get_build_info
 from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
+from conans.client import tools
 
 
 class MyBuildInfo(unittest.TestCase):
