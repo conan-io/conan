@@ -9,14 +9,19 @@ def _parse_versionexpr(versionexpr):
     include_prerelease = False
     loose = True
 
+    import re
+    pattern = re.compile(r"^\s?(include_prerelease|loose)\s?=\s?(True|False)\s?$")
+
     for keyword in version_range:
-        keyword_stripped = keyword.strip()
-        if "prerelease" == keyword_stripped:
+        match = pattern.search(keyword)
+        if match:
             version_range.remove(keyword)
-            include_prerelease = True
-        if "strict" == keyword_stripped:
-            version_range.remove(keyword)
-            loose = False
+            if match[1] == "include_prerelease":
+                if match[2] == "True":
+                    include_prerelease = True
+            if match[1] == "loose":
+                if match[2] == "False":
+                    loose = False
 
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease
