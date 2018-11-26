@@ -72,10 +72,8 @@ class ConanProxy(object):
                 # TODO: recorder.recipe_fetched_as_editable(reference)
             else:
                 status = RECIPE_INCACHE
-                log_recipe_got_from_local_cache(reference)
-                recorder.recipe_fetched_from_cache(reference)
             ref = reference.copy_with_rev(cur_revision)
-            return conanfile_path, status, remote, reference
+            return conanfile_path, status, remote, ref
 
         if not update_remote:
             status = RECIPE_NO_REMOTE
