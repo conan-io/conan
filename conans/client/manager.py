@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO, LINKED_FOLDER_SENTINEL
 from conans.util.files import save, normalize
 from conans.client.graph.printer import print_graph
+from conans.errors import InvalidNameException
 
 
 class ConanManager(object):
@@ -81,7 +82,13 @@ class ConanManager(object):
                                      format(reference, target_conanfile.name,
                                             target_conanfile.version))
         else:
-            self._client_cache.remove_editable(reference)
+            try:
+                ref = ConanFileReference.loads(reference, validate=True) \
+                    if not isinstance(reference, ConanFileReference) else reference
+            except (ValueError, ConanException):
+                pass  # Keep previous behavior (do nothing)
+            else:
+                self._client_cache.remove_editable(ref)
 
         if generators is not False:
             generators = set(generators) if generators else set()

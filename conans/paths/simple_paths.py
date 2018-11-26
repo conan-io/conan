@@ -50,7 +50,8 @@ class SimplePaths(object):
         return linked_package_file
 
     def package_layout(self, conan_reference, short_paths=False):
-        assert isinstance(conan_reference, ConanFileReference)
+        assert isinstance(conan_reference, ConanFileReference), \
+            "It is a {}".format(type(conan_reference))
         linked_package_file = self._build_path_to_linked_folder_sentinel(conan_reference)
         if os.path.exists(linked_package_file):
             return PackageEditableLayout(linked_package_file=linked_package_file,
