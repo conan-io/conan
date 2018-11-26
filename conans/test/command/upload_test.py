@@ -355,11 +355,13 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
         # upload recipe and packages
+        # *1
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("Forbidden overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
+        if not client.revisions:  # The --no-overwrite makes no sense with revisions
+            self.assertTrue(error)
+            self.assertIn("Forbidden overwrite", client.out)
+            self.assertNotIn("Uploading conan_package.tgz", client.out)
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")
@@ -368,11 +370,14 @@ class MyPkg(ConanFile):
         # upload recipe and packages
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("Recipe is up to date, upload skipped", client.out)
-        self.assertIn("ERROR: Local package is different from the remote package", client.out)
-        self.assertIn("Forbidden overwrite", client.out)
-        self.assertNotIn("Uploading conan_package.tgz", client.out)
+        if not client.revisions:
+            self.assertTrue(error)
+            self.assertIn("Recipe is up to date, upload skipped", client.out)
+            self.assertIn("ERROR: Local package is different from the remote package", client.out)
+            self.assertIn("Forbidden overwrite", client.out)
+            self.assertNotIn("Uploading conan_package.tgz", client.out)
+        else:
+            self.assertIn("Uploading conan_package.tgz", client.out)
 
     def upload_no_overwrite_recipe_test(self):
         conanfile_new = """from conans import ConanFile, tools
@@ -408,6 +413,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("Forbidden overwrite", client.out)
 
         # Create without changes
+        # *1
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
@@ -422,19 +428,22 @@ class MyPkg(ConanFile):
         # upload recipe and packages
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
                            ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("Forbidden overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
+        if not client.revisions:
+            self.assertTrue(error)
+            self.assertIn("Forbidden overwrite", client.out)
+            self.assertNotIn("Uploading package", client.out)
 
-        # Create with package changes
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-        with environment_append({"MY_VAR": "True"}):
-            client.run("create . frodo/stable")
-        # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertIn("Recipe is up to date, upload skipped", client.out)
-        self.assertIn("Uploading conan_package.tgz", client.out)
-        self.assertNotIn("Forbidden overwrite", client.out)
+            # Create with package changes
+            client.run("upload Hello0/1.2.1@frodo/stable --all")
+            with environment_append({"MY_VAR": "True"}):
+                client.run("create . frodo/stable")
+            # upload recipe and packages
+            client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+            self.assertIn("Recipe is up to date, upload skipped", client.out)
+            self.assertIn("Uploading conan_package.tgz", client.out)
+            self.assertNotIn("Forbidden overwrite", client.out)
+        else:
+            self.assertIn("Uploading conan_package.tgz", client.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything

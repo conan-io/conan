@@ -78,8 +78,11 @@ class RangeResolver(object):
         remote_found = remote_cache.get(search_ref)
         if remote_found is None:
             remote_found = self._remote_search.search_remotes(search_ref, remote_name)
+            # We don't want here to resolve the revision that should be done in the proxy
+            # as any other regular flow
+            remote_found = [ref.copy_clear_rev() for ref in remote_found or []]
             # Empty list, just in case it returns None
-            remote_cache[search_ref] = remote_found or []
+            remote_cache[search_ref] = remote_found
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 

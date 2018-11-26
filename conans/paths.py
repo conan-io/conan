@@ -40,6 +40,7 @@ CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
 SCM_FOLDER = "scm_folder.txt"
+PACKAGE_METADATA = "metadata.json"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -47,7 +48,6 @@ EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 EXPORT_SOURCES_DIR_OLD = ".c_src"
 
 RUN_LOG_NAME = "conan_run.log"
-
 DEFAULT_PROFILE_NAME = "default"
 
 
@@ -72,7 +72,7 @@ if is_case_insensitive_os():
             return
         # If exists, lets check path
         tmp = store_folder
-        for part in conan_reference:
+        for part in conan_reference.dir_repr().split("/"):
             items = os.listdir(tmp)
             if part not in items:
                 offending = ""
@@ -105,7 +105,7 @@ class SimplePaths(object):
         """ the base folder for this package reference, for each ConanFileReference
         """
         assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self._store_folder, "/".join(conan_reference)))
+        return normpath(join(self._store_folder, conan_reference.dir_repr()))
 
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -157,3 +157,6 @@ class SimplePaths(object):
 
     def scm_folder(self, conan_reference):
         return normpath(join(self.conan(conan_reference), SCM_FOLDER))
+
+    def package_metadata(self, conan_reference):
+        return normpath(join(self.conan(conan_reference), PACKAGE_METADATA))

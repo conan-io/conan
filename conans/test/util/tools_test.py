@@ -802,6 +802,24 @@ class HelloConan(ConanFile):
                         self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_filter_known_paths_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+        with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            with tools.environment_append(tmp):
+                self.assertNotIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake",  os.environ["PATH"])
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            with tools.environment_append(tmp):
+                self.assertIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake", os.environ["PATH"])
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)
@@ -1573,6 +1591,7 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_clone(self):
@@ -1768,7 +1787,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
-
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
@@ -1784,6 +1803,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
+@attr("slow")
 @attr('svn')
 @unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
@@ -2000,6 +2020,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn.is_pristine())
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
