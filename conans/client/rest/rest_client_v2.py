@@ -2,7 +2,7 @@ import os
 import time
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
@@ -10,6 +10,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -43,21 +44,26 @@ class RestV2Methods(RestCommonMethods):
             data = self._get_file_list_json(url)
             files_list = [os.path.normpath(filename) for filename in data["files"]]
             reference = data["reference"]
+            rev_time = data["time"]
         except NotFoundException:
             files_list = []
-        return files_list, reference
+            rev_time = None
+        return files_list, reference, rev_time
 
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
-        snap, reference = self._get_snapshot(url, reference.full_repr())
+        repr_ref = reference.full_repr()
+        snap, reference, rev_time = self._get_snapshot(url, repr_ref)
         reference = ConanFileReference.loads(reference)
-        return snap, reference
+        return snap, reference, rev_time
 
-    def _get_package_snapshot(self, package_reference):
-        url = self._package_url(package_reference)
-        snap, p_reference = self._get_snapshot(url, package_reference.full_repr())
+    def _get_package_snapshot(self, p_ref):
+        url = self._package_url(p_ref)
+        repr_ref = p_ref.full_repr()
+        snap, p_reference, rev_time = self._get_snapshot(url, repr_ref)
+
         reference = PackageReference.loads(p_reference)
-        return snap, reference
+        return snap, reference, rev_time
 
     def get_conan_manifest(self, conan_reference):
         url = "%s/%s" % (self._recipe_url(conan_reference), CONAN_MANIFEST)
@@ -78,6 +84,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(conan_reference)
         data = self._get_file_list_json(url)
         files = data["files"]
+        rev_time = data["time"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
         reference = ConanFileReference.loads(data["reference"])
         if EXPORT_SOURCES_TGZ_NAME in files:
@@ -87,7 +94,7 @@ class RestV2Methods(RestCommonMethods):
         url = self._recipe_url(reference)
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, reference
+        return ret, reference, rev_time
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         url = self._recipe_url(conan_reference)
@@ -108,12 +115,14 @@ class RestV2Methods(RestCommonMethods):
         url = self._package_url(package_reference)
         data = self._get_file_list_json(url)
         files = data["files"]
+        rev_time = data["time"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
+        new_reference = PackageReference.loads(data["reference"])
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         url = self._package_url(PackageReference.loads(data["reference"]))
         self._download_and_save_files(url, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        return ret, new_reference, rev_time
 
     def get_path(self, conan_reference, package_id, path):
 
@@ -206,15 +215,39 @@ class RestV2Methods(RestCommonMethods):
             downloader.download(resource_url, abs_path, auth=self.auth)
 
     def _recipe_url(self, conan_reference):
-        url = "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+
+        url = "%s/conans/%s" % (self.remote_api_url, conan_reference.dir_repr())
 
         if conan_reference.revision:
-            url += "#%s" % conan_reference.revision
-        return url.replace("#", "%23")
+            url += "/revisions/%s" % conan_reference.revision
+        return url
 
     def _package_url(self, p_reference):
+        if not p_reference.conan.revision and p_reference.revision:
+            raise ConanException("It is needed to specify the recipe revision if you "
+                                 "specify a package revision")
+
         url = self._recipe_url(p_reference.conan)
         url += "/packages/%s" % p_reference.package_id
         if p_reference.revision:
-            url += "#%s" % p_reference.revision
-        return url.replace("#", "%23")
+            assert(p_reference.revision is not None)
+            url += "/revisions/%s" % p_reference.revision
+        return url
+
+    def _remove_conanfile_files(self, conan_reference, files):
+        # V2 === revisions, do not remove files, it will create a new revision if the files changed
+        return
+
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        if not package_ids:
+            url = self._recipe_url(conan_reference) + "/packages"
+            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                  verify=self.verify_ssl)
+            return
+        for pid in package_ids:
+            pref = PackageReference(conan_reference, pid)
+            url = self._package_url(pref)
+            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                  verify=self.verify_ssl)

@@ -5,9 +5,9 @@ from conans.server.rest.bottle_plugins.http_basic_authentication import HttpBasi
 from conans.server.rest.bottle_plugins.jwt_authentication import JWTAuthentication
 from conans.server.rest.bottle_plugins.return_handler import ReturnHandlerPlugin
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
-from conans.server.rest.controllers.delete_controller import DeleteController
+from conans.server.rest.controllers.v1.delete_controller import DeleteController
 from conans.server.rest.controllers.ping_controller import PingController
-from conans.server.rest.controllers.search_controller import SearchController
+from conans.server.rest.controllers.v1.search_controller import SearchController
 from conans.server.rest.controllers.users_controller import UsersController
 from conans.server.rest.controllers.v1.conan_controller import ConanController
 from conans.server.rest.controllers.v1.file_upload_download_controller import FileUploadDownloadController

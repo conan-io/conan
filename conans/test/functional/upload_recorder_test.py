@@ -19,8 +19,7 @@ class UploadRecorderTest(unittest.TestCase):
         ref = ConanFileReference.loads("fake/0.1@user/channel#rev")
         ref2 = ConanFileReference.loads("fakefake/0.1@user/channel")
         self.recorder.add_recipe(ref, "my_remote", "https://fake_url.com")
-        pref1 = PackageReference(ref, "fake_package_id")
-        pref1.revision = "prev"
+        pref1 = PackageReference(ref, "fake_package_id", "prev")
         self.recorder.add_package(pref1, "my_remote", "https://fake_url.com")
         self.recorder.add_recipe(ref2, "my_remote2", "https://fake_url2.com")
         self.recorder.add_package(PackageReference(ref2, "fakefake_package_id1"), "my_remote", "https://fake_url.com")

@@ -35,7 +35,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
                       self.client.user_io.out)
         self.client.run("remote list_ref")
-        self.assertIn("Hello0/0.1@lasote/stable: remote1", self.client.user_io.out)
+        self.assertIn(": remote1", self.client.user_io.out)
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -120,6 +120,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
+    @unittest.skipIf(TestClient().revisions,
+                     "This test is not valid for revisions, where we keep iterating the remotes "
+                     "for searching a package for the same recipe revision")
     def package_binary_remote_test(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
@@ -132,6 +135,8 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("create . %s" % ref)
         self.client.run("upload %s -r=remote0 --all" % ref)
         self.client.run("upload %s -r=remote2 --all" % ref)
+
+        rev1 = self.client.get_revision(ConanFileReference.loads(ref))
 
         # Remove only binary from remote1 and everything in local
         self.client.run("remove -f %s -p -r remote0" % ref)
@@ -146,6 +151,7 @@ class ConanFileToolsTest(ConanFile):
 
         self.client.run("install %s -r remote2" % ref)
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
         registry = load(self.client.client_cache.registry)
         registry = json.loads(registry)
         self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
@@ -153,14 +159,23 @@ class ConanFileToolsTest(ConanFile):
                           {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
                            "remote2"})
 
-        client = TestClient(servers=self.servers, users=self.users)
+        client2 = TestClient(servers=self.servers, users=self.users)
         time.sleep(1)  # Make sure timestamps increase
-        client.save({"conanfile.py": conanfile + " # Comment"})
-        client.run("create . %s" % ref)
-        client.run("upload %s -r=remote2 --all" % ref)
+        client2.save({"conanfile.py": conanfile + " # Comment"})
+        client2.run("create . %s" % ref)
+        client2.run("upload %s -r=remote2 --all" % ref)
+
+        # Install from client, it should update the package from remote2
         self.client.run("install %s --update" % ref)
+
         self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
                          self.client.out)
-        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update",
-                      self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", self.client.out)
         self.assertIn("Downloading conan_package.tgz", self.client.out)
+
+        if not self.client.revisions and not self.client.block_v2:
+            self.client.run("install %s#%s --update" % (ref, rev1))
+
+            self.assertIn("Hello/0.1@lasote/stable:"
+                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", self.client.out)

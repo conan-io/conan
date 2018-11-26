@@ -77,7 +77,8 @@ class HelloReuseConan(ConanFile):
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
 
-        # Make sure timestamp increases, in some machines in testing, it can fail due to same timestamp
+        # Make sure timestamp increases, in some machines in testing,
+        # it can fail due to same timestamp
         inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
         inc_package_manifest_timestamp(client2.client_cache,
                                        "Pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
@@ -91,7 +92,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
 
         client.run("install . --update")
-        # Resolves to local package
+        # Resolves to remote new recipe and package
         self.assertIn("Pkg/1.2@lasote/testing: Package installed", client.out)
         self.assertNotIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO *1.2*", client.out)
@@ -239,3 +240,31 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Hello0/0.2.1@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
+
+    def no_joint_compatibility_resolved_test(self):
+        """Test to verify that conan is not resolving using joint-compatibility of the full graph
+        and you need to specify the right order or override downstream the conflict"""
+        self._export("ProblemRequirement", "1.0.0", upload=True)
+        self._export("ProblemRequirement", "1.1.0", upload=True)
+        self._export("RequirementOne", "1.2.3",
+                     ["ProblemRequirement/[=1.0.0]@lasote/stable"], upload=True)
+        self._export("RequirementTwo", "4.5.6",
+                     ["ProblemRequirement/[~1]@lasote/stable"], upload=True)
+        self._export("Project", "1.0.0",
+                     ["RequirementTwo/[=4.5.6]@lasote/stable",
+                      "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
+
+        self.client.run("remove '*' -f")
+        error = self.client.run("install Project/1.0.0@lasote/stable --build missing",
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
+                      "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
+
+        # Change the order, now it resolves correctly
+        self._export("Project", "1.0.0",
+                     ["RequirementOne/[=1.2.3]@lasote/stable",
+                      "RequirementTwo/[=4.5.6]@lasote/stable",
+                      ], upload=True)
+        self.client.run("remove '*' -f")
+        self.client.run("install Project/1.0.0@lasote/stable --build missing")

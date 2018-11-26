@@ -1,6 +1,8 @@
 from collections import namedtuple
+
 import re
 from six import string_types
+
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
@@ -20,6 +22,8 @@ class ConanName(object):
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars - 1))
+
+    _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)
 
     @staticmethod
     def invalid_name_message(value, reference_token=None):
@@ -62,14 +66,20 @@ class ConanName(object):
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 
+    @staticmethod
+    def validate_revision(revision):
+        if ConanName._validation_revision_pattern.match(revision) is None:
+            raise InvalidNameException("The revision field, must contain only letters "
+                                       "and numbers with a length between 1 and "
+                                       "%s" % ConanName._max_chars)
 
-class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
+
+class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/|#")
-    revision = None
 
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
@@ -80,8 +90,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param revision:    string containing the revision (optional)
         """
         version = Version(version)
-        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
-        obj.revision = revision
+        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj.validate()
         return obj
@@ -92,16 +101,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(self.user, reference_token="user name")
         ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
-            ConanName.validate_name(self.revision, reference_token="revision")
-
-    def __eq__(self, value):
-        if not value:
-            return False
-        return super(ConanFileReference, self).__eq__(value) and self.revision == value.revision
-
-    def __ne__(self, other):
-        """Overrides the default implementation (unnecessary in Python 3)"""
-        return not self.__eq__(other)
+            ConanName.validate_revision(self.revision)
 
     def __hash__(self):
         return hash((self.name, self.version, self.user, self.channel, self.revision))
@@ -130,44 +130,32 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s%s" % (str(self), str_rev)
 
-    def copy_with_revision(self, revision):
-        tmp = ConanFileReference.loads(str(self))
-        tmp.revision = revision
-        return tmp
+    def dir_repr(self):
+        return "/".join(self[:-1])
 
-    def copy_without_revision(self):
-        ret = ConanFileReference.loads(str(self))
-        ret.revision = None
-        return ret
+    def copy_with_rev(self, revision):
+        return ConanFileReference(self.name, self.version, self.user, self.channel, revision)
 
-    def matches_with_ref(self, other):
-        # if other hasn't revision and the current obj has it, it matches
-        # otherwise the revision and the reference should be equal
-        if not other.revision:
-            return super(ConanFileReference, self).__eq__(other)
-        else:
-            return self == other
+    def copy_clear_rev(self):
+        return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
 
-class PackageReference(namedtuple("PackageReference", "conan package_id")):
+class PackageReference(namedtuple("PackageReference", "conan package_id revision")):
     """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
-    revision = None
 
-    def __new__(cls, conan, package_id, validate=True):
-        revision = None
+    def __new__(cls, conan, package_id, revision=None, validate=True):
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-        obj = super(cls, PackageReference).__new__(cls, conan, package_id)
-        obj.revision = revision
+        obj = super(cls, PackageReference).__new__(cls, conan, package_id, revision)
         if validate:
             obj.validate()
         return obj
 
     def validate(self):
         if self.revision:
-            ConanName.validate_name(self.revision, reference_token="revision")
+            ConanName.validate_revision(self.revision)
 
     @staticmethod
     def loads(text, validate=True):
@@ -185,15 +173,12 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
 
     def full_repr(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s%s" % (str(self), str_rev)
+        tmp = "%s:%s%s" % (self.conan.full_repr(), self.package_id, str_rev)
+        return tmp
 
-    def copy_with_revisions(self, revision, p_revision):
-        ret = PackageReference(self.conan.copy_with_revision(revision), self.package_id)
-        ret.revision = p_revision
-        return ret
+    def copy_with_revs(self, revision, p_revision):
+        return PackageReference(self.conan.copy_with_rev(revision), self.package_id, p_revision)
 
-    def copy_without_revision(self):
-        ret = PackageReference.loads(str(self))
-        ret.revision = None
-        ret.conan.revision = None
-        return ret
+    def copy_clear_rev(self):
+        ref = self.conan.copy_clear_rev()
+        return PackageReference(ref, self.package_id, revision=None)
