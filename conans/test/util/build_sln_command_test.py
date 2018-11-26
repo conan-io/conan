@@ -4,9 +4,9 @@
 import unittest
 
 
-from conans import tools
 from conans.test.utils.conanfile import MockSettings
-from conans.tools import build_sln_command, cpu_count
+from conans.client.tools.win import build_sln_command
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from nose.plugins.attrib import attr
@@ -15,6 +15,7 @@ from six import StringIO
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
 import os
+from conans.client import tools
 
 
 @attr('visual_studio')
@@ -34,15 +35,15 @@ class BuildSLNCommandTest(unittest.TestCase):
         path = os.path.join(folder, "dummy.sln")
         save(path, dummy)
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
-                                    build_type='Debug', arch="x86", parallel=False)
+                                    build_type='Debug', arch="x86", parallel=False,
+                                    output=ConanOutput(new_out))
         self.assertIn('/p:Configuration="Debug" /p:Platform="x86"', command)
         self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
                       new_out.getvalue())
+
         # use platforms
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
                                     build_type='Debug', arch="x86", parallel=False, platforms={"x86": "Win32"})
         self.assertIn('/p:Configuration="Debug" /p:Platform="Win32"', command)
@@ -120,7 +121,6 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     sln_path='dummy.sln', targets=None,
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False, toolset="v110")
-        print(command)
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
                                            '/p:PlatformToolset="v110" '

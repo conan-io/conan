@@ -16,11 +16,12 @@ from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
-from conans.tools import save
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
+from conans.client.tools.files import save
 from conans.util.log import logger
+
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)

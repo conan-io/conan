@@ -5,7 +5,7 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.model.ref import ConanFileReference
 from conans.util.files import load
 import os
-from conans import tools
+from conans.client import tools
 
 
 class SettingsOverrideTest(unittest.TestCase):

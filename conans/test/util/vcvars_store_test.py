@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
-from conans import tools
+from conans.client import tools
 
 
 @attr('visual_studio')

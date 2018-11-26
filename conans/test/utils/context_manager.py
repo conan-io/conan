@@ -2,7 +2,7 @@ import os
 import glob
 import copy
 
-from conans.tools import which
+from conans.client.tools.files import which
 
 
 class CustomEnvPath():

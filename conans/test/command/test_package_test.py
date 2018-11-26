@@ -1,8 +1,9 @@
 import unittest
 import os
-from conans import tools
 from conans.paths import CONANFILE
+from conans.client import tools
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+
 
 conanfile = '''
 from conans import ConanFile

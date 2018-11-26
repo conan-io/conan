@@ -1,12 +1,13 @@
 import os
 import unittest
 
-from conans import tools
 from conans.errors import NotFoundException
-from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save
+from conans.model.ref import ConanFileReference
+from conans.client import tools
+
 
 conan_content = """
 from conans import ConanFile
