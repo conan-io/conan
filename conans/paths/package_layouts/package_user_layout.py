@@ -42,6 +42,10 @@ class PackageEditableLayout(object):
         return self.conan()
         return os.path.join(self.conan(), "package_reference")
 
+    def package_metadata(self):
+        # FIXME: I know that downstream there is an except for this
+        raise IOError("Package metadata is not available for editable packages")
+
 
 def parse_package_layout_content(content, base_path=None):
     """ Returns a dictionary containing information about paths for a CppInfo object: includes,
