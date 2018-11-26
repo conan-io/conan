@@ -92,7 +92,7 @@ class MakeGenerator(Generator):
         return "CONAN_{var}_{lib}".format(var=var_name, lib=pkg_name).upper()
 
     def create_makefile_var_value(self, values):
-        formatted_values = [value.replace("\\","/") for value in values]
+        formatted_values = [value.replace("\\", "/") for value in values]
         return self.makefile_line_continuation.join(formatted_values)
 
     @staticmethod
