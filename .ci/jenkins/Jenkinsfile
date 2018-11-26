@@ -161,6 +161,20 @@ try{
         }*/ // EXTREMELY SLOW, INVESTIGATE
         parallel builders
     }
+    if (env.BRANCH_NAME == "develop") {
+        // Deploy snapshot to test pypi if branch develop
+        node("Linux") {
+           stage("Deploy snapshot to pypitesting"){
+              checkout scm
+              withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
+                               string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
+                sh(script: "python bump_dev_version.py")
+                sh(script: "rm -rf dist/ && python setup.py sdist")
+                sh(script: "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*")
+              }
+           }
+        }
+    }
 }
 catch(e){
     if(env.JOB_NAME == "ConanNightly"){
