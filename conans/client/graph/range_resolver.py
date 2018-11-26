@@ -16,11 +16,11 @@ def _parse_versionexpr(versionexpr):
         match = pattern.search(keyword)
         if match:
             version_range.remove(keyword)
-            if match[1] == "include_prerelease":
-                if match[2] == "True":
+            if match.group(1) == "include_prerelease":
+                if match.group(2) == "True":
                     include_prerelease = True
-            if match[1] == "loose":
-                if match[2] == "False":
+            if match.group(1) == "loose":
+                if match.group(2) == "False":
                     loose = False
 
     version_range = " ".join(map(str, version_range))
