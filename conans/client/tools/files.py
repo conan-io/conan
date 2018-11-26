@@ -2,6 +2,7 @@ import platform
 import logging
 import os
 import sys
+import six
 
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -11,8 +12,7 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import (load, save, _generic_algorithm_sum)
 from conans.unicode import get_cwd
-import six
-
+from conans.util.fallbacks import default_output
 
 UNIT_SIZE = 1000.0
 
@@ -64,11 +64,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     :param output: output
     :return:
     """
-    if output is None:
-        import warnings
-        warnings.warn("Provide the output argument explicitly")
-        from conans.tools import _global_output
-        output = _global_output
+    output = default_output(output, 'conans.client.tools.files.unzip')
 
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
@@ -235,11 +231,7 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
 
 
 def replace_in_file(file_path, search, replace, strict=True, output=None):
-    if output is None:
-        import warnings
-        warnings.warn("Provide the output argument explicitly")
-        from conans.tools import _global_output
-        output = _global_output
+    output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
     content = load(file_path)
     if -1 == content.find(search):
@@ -251,11 +243,7 @@ def replace_in_file(file_path, search, replace, strict=True, output=None):
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None):
-    if output is None:
-        import warnings
-        warnings.warn("Provide the output argument explicitly")
-        from conans.tools import _global_output
-        output = _global_output
+    output = default_output(output, 'conans.client.tools.files.replace_path_in_file')
 
     if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
         return replace_in_file(file_path, search, replace, strict=strict, output=output)

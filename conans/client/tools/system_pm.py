@@ -5,18 +5,14 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
+from conans.util.fallbacks import default_output
 
 
 class SystemPackageTool(object):
 
     def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
 
-        self._output = output
+        self._output = default_output(output, 'conans.client.tools.system_pm.SystemPackageTool')
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info, output=self._output)
@@ -138,12 +134,7 @@ class SystemPackageTool(object):
 
 class BaseTool(object):
     def __init__(self, output=None):
-        if output is None:
-            import warnings
-            warnings.warn("Provide the output argument explicitly")
-            from conans.tools import _global_output
-            output = _global_output
-        self._output = output
+        self._output = default_output(output, 'conans.client.tools.system_pm.BaseTool')
 
 
 class NullTool(BaseTool):

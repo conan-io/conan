@@ -15,6 +15,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save, mkdir_tmp
 from conans.unicode import get_cwd
 from conans.model.version import Version
+from conans.util.fallbacks import default_output
 
 
 def _visual_compiler_cygwin(output, version):
@@ -129,13 +130,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     """
     from conans.client.build.msbuild import MSBuild
     tmp = MSBuild(settings)
-
-    if output is None:
-        import warnings
-        warnings.warn("Provide the output argument explicitly")
-        from conans.tools import _global_output
-        output = _global_output
-
+    output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
     tmp._output = output
 
     # Generate the properties file
@@ -322,11 +317,7 @@ def find_windows_10_sdk():
 
 def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
                    winsdk_version=None, output=None):
-    if output is None:
-        import warnings
-        warnings.warn("Provide the output argument explicitly")
-        from conans.tools import _global_output
-        output = _global_output
+    output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
     arch_setting = arch or settings.get_safe("arch")
 

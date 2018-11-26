@@ -3,6 +3,7 @@ import os
 from conans.client.rest.uploader_downloader import Downloader
 from conans.client.tools.files import unzip, check_md5, check_sha1, check_sha256
 from conans.errors import ConanException
+from conans.util.fallbacks import default_output, default_requester
 
 
 def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
@@ -48,19 +49,8 @@ def ftp_download(ip, filename, login='', password=''):
 
 def download(url, filename, verify=True, out=None, retry=2, retry_wait=5, overwrite=False,
              auth=None, headers=None, requester=None):
-    if out is None:
-        import warnings
-        warnings.warn("Call 'conans.client.tools[.net].download' with 'out' parameter specified",
-                      PendingDeprecationWarning)
-        from conans.tools import _global_output
-        out = _global_output
-
-    if requester is None:
-        import warnings
-        warnings.warn("Call 'conans.client.tools[.net].download' with 'requester'"
-                      " parameter specified", PendingDeprecationWarning)
-        from conans.tools import _global_requester
-        requester = _global_requester
+    out = default_output(out, 'conans.client.tools.net.download')
+    requester = default_requester(requester, 'conans.client.tools.net.download')
 
     downloader = Downloader(requester=requester, output=out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
