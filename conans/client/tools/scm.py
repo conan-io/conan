@@ -1,12 +1,12 @@
 
 import os
-import re
+import platform
+import xml.etree.ElementTree as ET
 
+import re
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
-import platform
-import xml.etree.ElementTree as ET
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -169,7 +169,7 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-    API_CHANGE_VERSION = Version("1.8")  # CLI changes in 1.8
+    API_CHANGE_VERSION = Version("1.9")  # CLI changes in 1.9
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):

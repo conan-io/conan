@@ -1,6 +1,11 @@
 import json
 import unittest
+
+
+from conans.test.utils.tools import TestClient, TestServer
+
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+
 from collections import OrderedDict
 from conans.util.files import load
 import re
@@ -30,52 +35,53 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote2')
 
         self.client.run('remote list_ref')
-        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        ref = "lib/1.0@lasote/channel"
+        pref = "%s:%s" % (ref, NO_SETTINGS_PACKAGE_ID)
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" -f -r remote2')
         self.client.run('remote list_ref')
-        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
-        # Upload again to remote2 and remove from remote1, the ref shouldm't be removed
+        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2')
         self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
         self.client.run('remote list_ref')
-        self.assertIn("lib/1.0@lasote/channel: remote1", self.client.out)
+        self.assertIn("%s: remote1" % ref, self.client.out)
 
         # Test the packages references now
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
+
 
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p %s -f -r remote2' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
+
 
         # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2 --all')
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p %s -f -r remote1' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_ref')
+        self.assertIn("%s: remote1" % ref, self.client.out)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
-                         self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
+
 
         # Remove package locally
         self.client.run('upload "*" -c -r remote1 --all')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
-                      self.client.out)
+        self.assertIn("%s: remote1" % pref, self.client.out)
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p %s -f' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("lib/1.0@lasote/channel:%s: remote1" % NO_SETTINGS_PACKAGE_ID,
-                         self.client.out)
+        self.assertNotIn("%s: remote1" % pref, self.client.out)
 
         # If I remove all in local, I also remove packages
         self.client.run("create . lib/1.0@lasote/channel")

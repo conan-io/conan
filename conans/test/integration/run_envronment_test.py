@@ -6,7 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 import platform
 from conans.build_info import command
 import subprocess
-from conans import tools
+from conans.client import tools
 
 
 class RunEnvironmentTest(unittest.TestCase):

@@ -18,11 +18,10 @@ from six.moves.urllib.parse import quote
 from conans.client.client_cache import CONAN_CONF
 from conans.model.version import Version
 
-from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict, vswhere, get_cased_path
+from conans.client.tools.win import vcvars_dict, vswhere
 from conans.client.tools.scm import Git, SVN
 
 from conans.errors import ConanException, NotFoundException
@@ -35,19 +34,19 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
     SVNLocalRepoTestCase, StoppableThreadBottle, try_remove_readonly
 
-from conans.tools import which
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
-    set_global_instances
+from conans.client.tools.files import which, replace_in_file
+from conans.client.tools.system_pm import OSInfo, AptTool, ChocolateyTool, SystemPackageTool
+from conans.client import tools
 from conans.util.files import save, load, md5, mkdir
 import requests
 
 from nose.plugins.attrib import attr
+from conans.tools import get_global_instances
 
 
 class SystemPackageToolTest(unittest.TestCase):
     def setUp(self):
-        out = TestBufferConanOutput()
-        set_global_instances(out, requests)
+        self.out = TestBufferConanOutput()
 
     def test_sudo_tty(self):
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",}):
@@ -72,11 +71,11 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_linux = True
             os_info.is_windows = False
             os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEquals(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
-                          tools.system_pm._global_output)
+                          self.out)
 
     def add_repositories_exception_cases_test(self):
         os_info = OSInfo()
@@ -360,12 +359,12 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=self.out)
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
-            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertIn('\n'.join(packages), self.out)
             self.assertEquals(3, runner.calls)
 
         # Check disabled mode, a package report should be displayed in output.
@@ -375,10 +374,10 @@ class SystemPackageToolTest(unittest.TestCase):
             "CONAN_SYSREQUIRES_SUDO": "True"
         }):
             packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            runner = RunnerMultipleMock(["sudo --askpass apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(), output=self.out)
             spt.install(packages)
-            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertIn('\n'.join(packages), self.out)
             self.assertEquals(0, runner.calls)
 
         # Check enabled, default mode, system packages must be installed.
@@ -630,8 +629,8 @@ class HelloConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        assert(tools.net._global_requester != None)
-        assert(tools.files._global_output != None)
+        assert(tools._global_requester != None)
+        assert(tools._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
 
@@ -646,8 +645,9 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(tools.files._global_output.warn)
+        global_output, global_requester = get_global_instances()
+        self.assertEquals(global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
@@ -802,6 +802,24 @@ class HelloConan(ConanFile):
                         self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_filter_known_paths_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.arch_build = "x86_64"
+        with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            with tools.environment_append(tmp):
+                self.assertNotIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake",  os.environ["PATH"])
+            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            with tools.environment_append(tmp):
+                self.assertIn("custom_path", os.environ["PATH"])
+                self.assertIn("WindowsFake", os.environ["PATH"])
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(default_settings_yml)
@@ -847,18 +865,18 @@ compiler:
             tools.vcvars_command(settings)
 
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), None)
+        output = ConanOutput(new_out)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            tools.vcvars_command(settings)
+            tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
-                    tools.vcvars_command(settings)
+                    tools.vcvars_command(settings, output=output)
 
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 # Not raising
-                tools.vcvars_command(settings, force=True)
+                tools.vcvars_command(settings, force=True, output=output)
 
     def vcvars_context_manager_test(self):
         conanfile = """
@@ -1020,11 +1038,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
         http_server.run_server()
 
         out = TestBufferConanOutput()
-        set_global_instances(out, requests)
+
         # Connection error
         with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests,
                            retry=3, retry_wait=0)
 
         # Not found error
@@ -1032,23 +1051,24 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
+                           requester=requests,
                            retry=3, retry_wait=0)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
-                       retry_wait=0)
+                       retry_wait=0, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
-                           retry=3, retry_wait=0, overwrite=False)
+                           retry=3, retry_wait=0, overwrite=False, requester=requests)
 
         # overwrite = True
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
-                       retry_wait=0, overwrite=True)
+                       retry_wait=0, overwrite=True, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
@@ -1056,15 +1076,16 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True)
+                           overwrite=True, requester=requests)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True)
+                       auth=("user", "passwd"), overwrite=True, requester=requests)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+                       headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
+                       requester=requests)
         http_server.stop()
 
     def get_gnu_triplet_test(self):
@@ -1209,8 +1230,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
     def detect_windows_subsystem_test(self):
         # Dont raise test
-        result = tools.os_info.detect_windows_subsystem()
-        if not tools.os_info.bash_path() or platform.system() != "Windows":
+        result = OSInfo.detect_windows_subsystem()
+        if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
@@ -1221,7 +1242,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with tools.chdir(tools.mkdir_tmp()):
             import tarfile
             tar_file = tarfile.open("sample.tar.gz", "w:gz")
-            tools.mkdir("test_folder")
+            mkdir("test_folder")
             tar_file.add(os.path.abspath("test_folder"), "test_folder")
             tar_file.close()
             file_path = os.path.abspath("sample.tar.gz")
@@ -1248,16 +1269,18 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
-            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz")
+            tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
+                      requester=requests)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
         with tools.chdir(tools.mkdir_tmp()):
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
-                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port)
+                tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
+                          requester=requests)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz")
+                      filename="sample.tar.gz", requester=requests)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
@@ -1270,7 +1293,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return filepath
 
         fp = save_file(b"a line\notherline\n")
-        if not tools.os_info.is_windows:
+        if platform.system() != "Windows":
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
@@ -1290,7 +1313,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
-        if not tools.os_info.is_windows:
+        if platform.system() != "Windows":
             import subprocess
             output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
@@ -1573,6 +1596,7 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_clone(self):
@@ -1768,7 +1792,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
 
-
+@attr("slow")
 @attr('svn')
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
@@ -1784,6 +1808,7 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
+@attr("slow")
 @attr('svn')
 @unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
@@ -2000,6 +2025,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn.is_pristine())
 
 
+@attr("slow")
 @attr('svn')
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 

@@ -1,7 +1,6 @@
 import os
 from collections import OrderedDict
 
-from conans import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
@@ -10,6 +9,7 @@ from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, D
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.log import logger
+from conans.client import tools
 
 
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"

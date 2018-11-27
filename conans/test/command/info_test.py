@@ -296,7 +296,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: No remote
+                Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
                 Required by:
@@ -305,13 +305,21 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
-                Recipe: No remote
+                Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
                 Required by:
                     Hello2/0.1@PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
+
+        if self.client.revisions:
+            expected_output = expected_output % (
+                "\n    Revision: d67a47651a0532271e0090350f024c0f",
+                "\n    Revision: 96a71455ed5d0181e6babf739e84f513")
+
+        else:
+            expected_output = expected_output % ("", "")
 
         def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()
@@ -527,6 +535,7 @@ class MyTest(ConanFile):
         self.assertIn("Homepage: https://foo.bar.site", client.out)
 
     def topics_graph_test(self):
+
         conanfile = """from conans import ConanFile
 
 class MyTest(ConanFile):
