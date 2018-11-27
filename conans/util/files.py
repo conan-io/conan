@@ -233,8 +233,9 @@ def mkdir(path):
         os.makedirs(path)
     except OSError as err:
         if err.errno != EEXIST:
-            raise
-
+            # e.g: mkdir("C:") => OSError:Access is denied, but you can even write on it, so if the dir exists, it's ok.
+            if not os.path.exists(path):
+                raise
 
 def path_exists(path, basedir):
     """Case sensitive, for windows, optional
