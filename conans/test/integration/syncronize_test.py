@@ -1,4 +1,6 @@
 import unittest
+
+from conans import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -7,7 +9,7 @@ from nose.plugins.attrib import attr
 from conans.util.files import load, save
 from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
 from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.tools import untargz
+from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 
 
@@ -20,13 +22,13 @@ class SynchronizeTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def upload_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
+                                                   DEFAULT_REVISION_V1)
         files = cpp_hello_conan_files("Hello0", "0.1")
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
 
         remote_paths = self.client.servers["default"].paths
-        server_conan_path = remote_paths.export(conan_reference)
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -35,6 +37,10 @@ class SynchronizeTest(unittest.TestCase):
         self.client.run("upload %s" % str(conan_reference))
 
         # Verify the files are there
+        if not self.client.block_v2:
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -45,6 +51,10 @@ class SynchronizeTest(unittest.TestCase):
         os.remove(os.path.join(self.client.current_folder, "to_be_deleted.txt"))
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
+        if not self.client.block_v2:
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(conan_reference)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -58,6 +68,11 @@ class SynchronizeTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
+
+        if not self.client.block_v2:
+            rev = self.client.get_revision(conan_reference)
+            conan_reference = conan_reference.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(conan_reference)
 
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -111,8 +126,10 @@ class SynchronizeTest(unittest.TestCase):
         folder = uncompress_packaged_files(remote_paths, package_reference)
         remote_file_path = os.path.join(folder, "newlib.lib")
 
-        self.assertFalse(os.path.exists(remote_file_path))
-        self.assertNotEquals(remote_file_path, new_file_source_path)
+        # With revisions makes no sense because there is a new revision always that sources change
+        if not self.client.revisions:
+            self.assertFalse(os.path.exists(remote_file_path))
+            self.assertNotEquals(remote_file_path, new_file_source_path)
 
     def _create_manifest(self, package_reference):
         # Create the manifest to be able to upload the package

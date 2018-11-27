@@ -4,6 +4,7 @@ import os
 
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import save
 from conans.unicode import get_cwd
 
@@ -33,7 +34,13 @@ class CommandOutputer(object):
 
     def remote_ref_list(self, refs):
         for ref, remote_name in refs.items():
-            self.user_io.out.info("%s: %s" % (ref, remote_name))
+            ref = ConanFileReference.loads(ref)
+            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
+
+    def remote_pref_list(self, refs):
+        for ref, remote_name in refs.items():
+            ref = PackageReference.loads(ref)
+            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)

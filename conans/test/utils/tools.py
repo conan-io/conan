@@ -33,6 +33,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -45,10 +46,13 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.client.tools.win import get_cased_path
+from conans.tools import set_global_instances
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -427,7 +431,8 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+                 requester_class=None, runner=None, path_with_spaces=True,
+                 block_v2=None, revisions=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -435,6 +440,14 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
+
+        if self.block_v2:
+            self.revisions = False
+        else:
+            self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.block_v2 = False
+
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
@@ -450,6 +463,14 @@ class TestClient(object):
 
         self.requester_class = requester_class
         self.conan_runner = runner
+
+        if self.revisions:
+            # Generate base file
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "revisions_enabled = False", "revisions_enabled = True", strict=False)
+            # Invalidate the cached config
+            self.client_cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g: 
@@ -550,7 +571,8 @@ servers["r2"] = TestServer()
                                                             self.user_io, self.client_version,
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
-            set_global_instances(output, self.requester)
+            self.rest_api_client.block_v2 = self.block_v2
+            return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -558,14 +580,14 @@ servers["r2"] = TestServer()
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
-        self._init_collaborators(user_io)
+        return self._init_collaborators(user_io)
 
     def run(self, command_line, user_io=None, ignore_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        self.init_dynamic_vars(user_io)
+        output, requester = self.init_dynamic_vars(user_io)
         with tools.environment_append(self.client_cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
@@ -579,9 +601,12 @@ servers["r2"] = TestServer()
         old_path = sys.path[:]
         sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
+
+        old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
         finally:
+            set_global_instances(old_output, old_requester)
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -612,6 +637,13 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def get_revision(self, conan_ref):
+        return self.client_cache.load_metadata(conan_ref).recipe.revision
+
+    def get_package_revision(self, package_ref):
+        metadata = self.client_cache.load_metadata(package_ref.conan)
+        return metadata.packages[package_ref.package_id].revision
 
 
 class StoppableThreadBottle(threading.Thread):

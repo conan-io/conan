@@ -229,11 +229,9 @@ def rmdir(path):
 
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
-    try:
-        os.makedirs(path)
-    except OSError as err:
-        if err.errno != EEXIST:
-            raise
+    if os.path.exists(path):
+        return
+    os.makedirs(path)
 
 
 def path_exists(path, basedir):

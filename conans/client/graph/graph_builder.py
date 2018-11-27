@@ -11,6 +11,9 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.model.workspace import WORKSPACE_FILE
 
 
+REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
+
+
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
@@ -103,16 +106,24 @@ class DepsGraphBuilder(object):
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
-                alias_ref = aliased.get(require.conan_reference, require.conan_reference)
+                alias_ref = aliased.get(require.conan_reference, None)
                 # Necessary to make sure that it is pointing to the correct aliased
-                require.conan_reference = alias_ref
-                if previous_node.conan_ref != alias_ref:
+                if alias_ref:
+                    require.conan_reference = alias_ref
+                conflict = self._conflicting_references(previous_node.conan_ref,
+                                                        require.conan_reference)
+                if conflict == REVISION_CONFLICT:  # Revisions conflict
+                    raise ConanException("Conflict in %s\n"
+                                         "    Different revisions of %s has been requested"
+                                         % (node.conan_ref, require.conan_reference))
+                elif conflict == REFERENCE_CONFLICT:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
                                          "    To change it, override it in your base requirements"
                                          % (node.conan_ref, require.conan_reference,
                                             previous_node.conan_ref, previous_node.conan_ref))
+
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
@@ -123,13 +134,25 @@ class DepsGraphBuilder(object):
                                     new_options, new_loop_ancestors, aliased, check_updates, update,
                                     remote_name, processed_profile)
 
+    @staticmethod
+    def _conflicting_references(previous_ref, new_ref):
+        if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
+            return REFERENCE_CONFLICT
+        # Computed node, has to have a revision, at least 0
+        assert(previous_ref.revision is not None)
+        # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
+        # a revision, so it's ok any previous_ref
+        if new_ref.revision and previous_ref.revision != new_ref.revision:
+            return REVISION_CONFLICT
+        return False
+
     def _recurse(self, closure, new_reqs, new_options):
         """ For a given closure, if some requirements or options coming from downstream
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.conan_reference.name)
-            if n and n.conan_ref != req.conan_reference:
+            if n and self._conflicting_references(n.conan_ref, req.conan_reference):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
@@ -206,11 +229,14 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
+        output = ScopedOutput(str(requirement.conan_reference), self._output)
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
+
         if workspace_package:
             conanfile_path = workspace_package.conanfile_path
             recipe_status = RECIPE_WORKSPACE
             remote = WORKSPACE_FILE
+            new_ref = requirement.conan_reference
         else:
             try:
                 result = self._proxy.get_recipe(requirement.conan_reference,
@@ -220,23 +246,24 @@ class DepsGraphBuilder(object):
                 self._output.error("Failed requirement '%s' from '%s'"
                                    % (requirement.conan_reference, base_ref))
                 raise e
-            conanfile_path, recipe_status, remote, _ = result
-
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
+            conanfile_path, recipe_status, remote, new_ref = result
+            
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or requirement.conan_reference
+            alias_reference = alias_ref or new_ref.copy_clear_rev()
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
-                                         remote_name, processed_profile, alias_ref=alias_reference)
+                                         remote_name, processed_profile,
+                                         alias_ref=alias_reference)
 
-        new_node = Node(requirement.conan_reference, dep_conanfile)
+        new_node = Node(new_ref, dep_conanfile)
+        new_node.revision_pinned = requirement.conan_reference.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
         dep_graph.add_node(new_node)

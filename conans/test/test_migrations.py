@@ -4,8 +4,7 @@ import os
 from conans.client.migrations import migrate_to_default_profile, migrate_plugins_to_hooks
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.tools import save
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class TestMigrations(unittest.TestCase):

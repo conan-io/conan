@@ -1,16 +1,15 @@
 import os
-
 import shutil
 import subprocess
 from six.moves.urllib.parse import urlparse
 
+from conans.client.tools.files import unzip
+from conans.client import tools
 from conans import load
-from conans import tools
-from conans.client.remote_registry import RemoteRegistry
-from conans.client.remote_registry import load_registry_txt
+from conans.client.remote_registry import RemoteRegistry, load_registry_txt
 from conans.errors import ConanException
-from conans.tools import unzip
 from conans.util.files import rmdir, mkdir, walk
+from conans.client.tools.files import unzip
 
 
 def _hide_password(resource):

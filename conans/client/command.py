@@ -1,27 +1,26 @@
-import argparse
 import inspect
+import json
 import os
 import sys
+
+import argparse
+import six
 from argparse import ArgumentError
 
-import six
-
 from conans import __version__ as client_version
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
+    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-
+from conans.client.printer import Printer
 from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
-from conans.util.config_parser import get_bool_from_text
-from conans.util.log import logger
-from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
-from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
-    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-import json
-from conans.tools import save
-from conans.client.printer import Printer
+from conans.util.config_parser import get_bool_from_text
+from conans.util.files import exception_message_safe
+from conans.client.tools.files import save
+from conans.util.log import logger
 
 
 # Exit codes for conan command:
@@ -142,7 +141,7 @@ class Command(object):
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
         parser.add_argument("-b", "--bare", action='store_true', default=False,
-                            help='Create the minimum package recipe, without build() method'
+                            help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -1003,7 +1002,8 @@ class Command(object):
 
         try:
             if reference:
-                info = self._conan.search_packages(reference, query=args.query,
+
+                info = self._conan.search_packages(reference.full_repr(), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
@@ -1217,7 +1217,7 @@ class Command(object):
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
             refs = self._conan.remote_list_pref(reference)
-            self._outputer.remote_ref_list(refs)
+            self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)
         elif args.subcommand == "remove_pref":

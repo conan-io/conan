@@ -1,7 +1,6 @@
 import copy
 import re
 
-from conans import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
 from conans.client.tools.oss import cpu_count
@@ -10,6 +9,7 @@ from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import tmp_file
 from conans.model.conan_file import ConanFile
+from conans.client import tools
 
 
 class MSBuild(object):
@@ -81,7 +81,7 @@ class MSBuild(object):
             lines = solution_global.splitlines()
             lines = [s.split("=")[0].strip() for s in lines]
         except Exception:
-            pass
+            pass  # TODO: !!! what are we catching here? tools.load? .group(1)? .splitlines?
         else:
             config = "%s|%s" % (build_type, msvc_arch)
             if config not in "".join(lines):

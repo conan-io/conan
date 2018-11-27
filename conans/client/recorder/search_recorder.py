@@ -29,12 +29,12 @@ class SearchRecorder(object):
         recipe.with_packages = with_packages
         if remote_name not in self._info:
             self._info[remote_name] = OrderedDict()
-        self._info[remote_name][reference] = {"recipe": recipe, "packages": []}
+        self._info[remote_name][reference.full_repr()] = {"recipe": recipe, "packages": []}
 
     def add_package(self, remote_name, reference, package_id, options, settings, requires,
                     outdated):
         sp = _SearchPackage(package_id, options, settings, requires, outdated)
-        self._info[remote_name][reference]["packages"].append(sp)
+        self._info[remote_name][reference.full_repr()]["packages"].append(sp)
 
     def get_info(self):
         info = {"error": self.error, self.keyword: []}

@@ -1,9 +1,9 @@
 import os
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save, set_dirty
 
 
@@ -39,8 +39,12 @@ class PackageIngrityTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pkg_ref = PackageReference(ref, "12345")
         package_folder = client.client_cache.package(pkg_ref)
-        save(os.path.join(package_folder, "conaninfo.txt"), "")
-        save(os.path.join(package_folder, "conanmanifest.txt"), "")
+        recipe_rev = client.get_revision(ref)
+        p_rev = client.get_package_revision(pkg_ref)
+        with client.client_cache.update_metadata(pkg_ref.conan) as metadata:
+            metadata.packages[pkg_ref.package_id].revision = p_rev
+            metadata.packages[pkg_ref.package_id].recipe_revision = recipe_rev
+        save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 
         error = client.run("upload * --all --confirm", ignore_error=True)
