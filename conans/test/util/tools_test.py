@@ -883,6 +883,8 @@ compiler:
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
+        new_out = StringIO()
+        output = ConanOutput(new_out)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings, output=output)
