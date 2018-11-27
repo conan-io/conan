@@ -124,13 +124,7 @@ class MakeGeneratorTest(unittest.TestCase):
         hellowrapper_include = """
 #pragma once
 
-#ifdef WIN32
-  #define HELLO_WRAPPER_EXPORT __declspec(dllexport)
-#else
-  #define HELLO_WRAPPER_EXPORT
-#endif
-
-HELLO_WRAPPER_EXPORT void hellowrapper();
+void hellowrapper();
 """
         hellowrapper_impl = """
 #include "hello.h"

@@ -110,10 +110,6 @@ class MakeGenerator(Generator):
         return " \\\n"
 
     @property
-    def assignment_immediate(self):
-        return " := "
-
-    @property
     def assignment_if_absent(self):
         return " ?= "
 
