@@ -22,7 +22,7 @@ class ConanPythonRequire(object):
         self._requires = []
         return result
 
-    def __call__(self, require):
+    def _look_for_require(self, require):
         try:
             python_require = self._cached_requires[require]
         except KeyError:
@@ -39,9 +39,14 @@ class ConanPythonRequire(object):
             # Check for alias
             conanfile = parse_module(module, filename)
             if getattr(conanfile, "alias", None):
-                module = self.__call__(require=conanfile.alias)  # Will register also the aliased
+                module, reference = self._look_for_require(require=conanfile.alias)  # Will register also the aliased
 
             python_require = PythonRequire(reference, module)
             self._cached_requires[require] = python_require
+
         self._requires.append(python_require)
-        return python_require.module
+        return python_require.module, python_require.conan_ref
+
+    def __call__(self, require):
+        module, _ = self._look_for_require(require=require)
+        return module
