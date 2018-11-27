@@ -229,13 +229,10 @@ def rmdir(path):
 
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
-    try:
-        os.makedirs(path)
-    except OSError as err:
-        if err.errno != EEXIST:
-            # e.g: mkdir("C:") => OSError:Access is denied, but you can even write on it, so if the dir exists, it's ok.
-            if not os.path.exists(path):
-                raise
+    if os.path.exists(path):
+        return
+    os.makedirs(path)
+
 
 def path_exists(path, basedir):
     """Case sensitive, for windows, optional
