@@ -3,7 +3,7 @@ from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_
 from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.tools import environment_append
+from conans.client.tools.env import environment_append
 from conans.test import CONAN_TEST_FOLDER
 import tempfile
 import platform

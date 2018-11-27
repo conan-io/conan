@@ -1,6 +1,6 @@
 import unittest
 
-from conans.tools import check_md5, check_sha256, check_sha1
+from conans.client.tools.files import check_md5, check_sha256, check_sha1
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 import os

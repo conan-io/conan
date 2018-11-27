@@ -7,7 +7,7 @@ from unittest import TestCase
 from os.path import basename
 
 from conans.test.utils.test_files import temp_folder
-from conans.tools import unzip
+from conans.client.tools.files import unzip
 from conans.util.files import save
 
 

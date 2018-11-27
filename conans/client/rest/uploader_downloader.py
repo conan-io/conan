@@ -2,12 +2,12 @@ import os
 import time
 import traceback
 
-import conans.tools
 from conans.errors import ConanException, ConanConnectionError, NotFoundException, \
     AuthenticationException
 from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
+from conans.client.tools.files import human_size
 
 
 class Uploader(object):
@@ -226,8 +226,7 @@ def progress_units(progress, total):
 
 
 def human_readable_progress(bytes_transferred, total_bytes):
-    return "%s/%s" % (conans.tools.human_size(bytes_transferred),
-                      conans.tools.human_size(total_bytes))
+    return "%s/%s" % (human_size(bytes_transferred), human_size(total_bytes))
 
 
 def print_progress(output, units, progress=""):

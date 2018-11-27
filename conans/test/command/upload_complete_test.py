@@ -15,10 +15,11 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_source_files, temp_folder, \
     hello_conan_files
 from conans.test.utils.test_files import uncompress_packaged_files
+from conans.client.tools.files import untargz
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
-from conans.tools import untargz
 from conans.util.files import load, mkdir, save
+
 
 myconan1 = """
 from conans import ConanFile

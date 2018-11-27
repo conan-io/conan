@@ -7,10 +7,10 @@ from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.model.workspace import WORKSPACE_FILE
-from conans import tools
 import time
 from conans.util.files import load
 import re
+from conans.client import tools
 
 
 conanfile = """from conans import ConanFile
