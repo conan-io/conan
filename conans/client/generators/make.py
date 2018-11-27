@@ -40,7 +40,7 @@ class MakeGenerator(Generator):
 
         vars_info = [("ROOT", self.assignment_if_absent, [cpp_info.rootpath]),
                      ("SYSROOT", self.assignment_if_absent, [cpp_info.sysroot]),
-                     ("INC_PATHS", self.assignment_append, cpp_info.include_paths),
+                     ("INCLUDE_PATHS", self.assignment_append, cpp_info.include_paths),
                      ("LIB_PATHS", self.assignment_append, cpp_info.lib_paths),
                      ("BIN_PATHS", self.assignment_append, cpp_info.bin_paths),
                      ("BUILD_PATHS", self.assignment_append, cpp_info.build_paths),
@@ -97,7 +97,7 @@ class MakeGenerator(Generator):
 
     @staticmethod
     def all_dep_vars():
-        return ["rootpath", "sysroot", "inc_paths", "lib_paths", "bin_paths", "build_paths",
+        return ["rootpath", "sysroot", "include_paths", "lib_paths", "bin_paths", "build_paths",
                 "res_paths", "libs", "defines", "cflags", "cppflags", "sharedlinkflags",
                 "exelinkflags"]
 

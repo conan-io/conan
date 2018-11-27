@@ -64,11 +64,11 @@ class MakeGeneratorTest(unittest.TestCase):
 
         inc1 = os.path.join(tmp_folder1, 'include1').replace('\\', '/')
         inc2 = os.path.join(tmp_folder2, 'include2').replace('\\', '/')
-        self.assertIn("CONAN_INC_PATHS +=  \\\n"
-                      "$(CONAN_INC_PATHS_MYPKG1) \\\n"
-                      "$(CONAN_INC_PATHS_MYPKG2)", content)
-        self.assertIn("CONAN_INC_PATHS_MYPKG1 +=  \\\n%s" % inc1, content)
-        self.assertIn("CONAN_INC_PATHS_MYPKG2 +=  \\\n%s" % inc2, content)
+        self.assertIn("CONAN_INCLUDE_PATHS +=  \\\n"
+                      "$(CONAN_INCLUDE_PATHS_MYPKG1) \\\n"
+                      "$(CONAN_INCLUDE_PATHS_MYPKG2)", content)
+        self.assertIn("CONAN_INCLUDE_PATHS_MYPKG1 +=  \\\n%s" % inc1, content)
+        self.assertIn("CONAN_INCLUDE_PATHS_MYPKG2 +=  \\\n%s" % inc2, content)
 
         lib1 = os.path.join(tmp_folder1, 'lib1').replace('\\', '/')
         lib2 = os.path.join(tmp_folder2, 'lib2').replace('\\', '/')
@@ -162,10 +162,10 @@ libhellowrapper.so
 #     Prepare flags from variables
 #----------------------------------------
 
-INC_PATH_FLAGS  += $(addprefix -I, $(CXX_INCLUDES) $(CONAN_INC_PATHS))
-LD_PATH_FLAGS   += $(addprefix -L, $(CONAN_LIB_PATHS))
-LD_LIB_FLAGS    += $(addprefix -l, $(CONAN_LIBS))
-DEFINES         += $(addprefix -D, $(CONAN_DEFINES))
+CPPFLAGS        += $(addprefix -I, $(CXX_INCLUDES) $(CONAN_INCLUDE_PATHS))
+CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
+LIBS            += $(addprefix -l, $(CONAN_LIBS))
 CXXFLAGS        += $(addprefix -f, PIC)
 
 
@@ -174,11 +174,11 @@ CXXFLAGS        += $(addprefix -f, PIC)
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CXXFLAGS) $(DEFINES) $(INC_PATH_FLAGS) $< -o $@
+	g++ -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
 CREATE_SHARED_LIB_COMMAND   ?= \
 	g++ -shared $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LDFLAGS_SHARED) $(LD_PATH_FLAGS) $(LD_LIB_FLAGS) \
+	$(LDFLAGS) $(LDFLAGS_SHARED) $(CPPFLAGS) $(LIBS) \
 	-o $(SHARED_LIB_FILENAME)
 
 CREATE_STATIC_LIB_COMMAND   ?= \
@@ -265,10 +265,10 @@ main
 #     Prepare flags from variables
 #----------------------------------------
 
-INC_PATH_FLAGS  += $(addprefix -I, $(CONAN_INC_PATHS))
-LD_PATH_FLAGS   += $(addprefix -L, $(CONAN_LIB_PATHS))
-LD_LIB_FLAGS    += $(addprefix -l, $(CONAN_LIBS))
-DEFINES         += $(addprefix -D, $(CONAN_DEFINES))
+CPPFLAGS        += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
+CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
+LIBS            += $(addprefix -l, $(CONAN_LIBS))
 
 
 #----------------------------------------
@@ -276,11 +276,11 @@ DEFINES         += $(addprefix -D, $(CONAN_DEFINES))
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CXXFLAGS) $(DEFINES) $(INC_PATH_FLAGS) $< -o $@
+	g++ -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
 
 CREATE_EXE_COMMAND          ?= \
 	g++ $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LDFLAGS_EXE) $(LD_PATH_FLAGS) $(LD_LIB_FLAGS) \
+	$(LDFLAGS) $(LIBS) \
 	-o $(EXE_FILENAME)
 
 
