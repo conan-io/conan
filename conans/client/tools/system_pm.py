@@ -120,16 +120,20 @@ class SystemPackageTool(object):
                 self._output.info("Package already installed: %s" % pkg)
                 return True
         return False
-
+    
     def _install_any(self, packages):
+        failed_install = 0
         if len(packages) == 1:
             return self._tool.install(packages[0])
         for pkg in packages:
             try:
-                return self._tool.install(pkg)
+                self._tool.install(pkg)
             except ConanException:
+                print("failed to install system package: %s" % pkg)
+                failed_install += 1
                 pass
-        raise ConanException("Could not install any of %s" % packages)
+        if failed_install == len(packages):
+            raise ConanException("Could not install any of %s" % packages)
 
 
 class BaseTool(object):
