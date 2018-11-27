@@ -5,7 +5,7 @@ import requests
 from collections import OrderedDict
 
 import conans
-from conans import __version__ as client_version, tools
+from conans import __version__ as client_version
 from conans.client.cmd.create import create
 from conans.client.hook_manager import HookManager
 from conans.client.recorder.action_recorder import ActionRecorder
@@ -57,6 +57,7 @@ from conans.client import packager
 from conans.client.source import config_source_local
 from conans.client.cmd.build import build
 from conans.client.cmd.export_pkg import export_pkg
+from conans.client import tools
 
 
 default_manifest_folder = '.conan_manifests'

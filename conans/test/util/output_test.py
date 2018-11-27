@@ -3,15 +3,14 @@ import unittest
 import platform
 import zipfile
 import os
-import sys
+from six import StringIO
 
 from conans.client.output import ConanOutput
-from six import StringIO
 from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
-from conans import tools
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
+from conans.client import tools
 
 
 class OutputTest(unittest.TestCase):
@@ -66,15 +65,7 @@ class PkgConan(ConanFile):
 
         output_dir = os.path.join(tmp_dir, "output_dir")
         new_out = StringIO()
-        old_out = sys.stdout
-        try:
-            import requests
-            import conans
-
-            conans.tools.set_global_instances(ConanOutput(new_out), requests)
-            tools.unzip(zip_path, output_dir)
-        finally:
-            conans.tools.set_global_instances(ConanOutput(old_out), requests)
+        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
         self.assertRegexpMatches(output, "Unzipping [\d]+B")
@@ -97,13 +88,7 @@ class PkgConan(ConanFile):
 
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
         new_out = StringIO()
-        old_out = sys.stdout
-        try:
-            import conans
-            conans.tools.set_global_instances(ConanOutput(new_out), None)
-            tools.unzip(zip_path, output_dir)
-        finally:
-            conans.tools.set_global_instances(ConanOutput(old_out), None)
+        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)

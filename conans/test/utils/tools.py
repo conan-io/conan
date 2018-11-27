@@ -46,10 +46,13 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.client.tools.win import get_cased_path
+from conans.tools import set_global_instances
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -569,8 +572,7 @@ servers["r2"] = TestServer()
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
             self.rest_api_client.block_v2 = self.block_v2
-
-            set_global_instances(output, self.requester)
+            return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -578,14 +580,14 @@ servers["r2"] = TestServer()
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
-        self._init_collaborators(user_io)
+        return self._init_collaborators(user_io)
 
     def run(self, command_line, user_io=None, ignore_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        self.init_dynamic_vars(user_io)
+        output, requester = self.init_dynamic_vars(user_io)
         with tools.environment_append(self.client_cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
@@ -599,9 +601,12 @@ servers["r2"] = TestServer()
         old_path = sys.path[:]
         sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
+
+        old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
         finally:
+            set_global_instances(old_output, old_requester)
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK

@@ -1,6 +1,7 @@
 """
 Server's configuration variables
 """
+
 import os
 import random
 import string
@@ -9,7 +10,6 @@ import six
 from datetime import timedelta
 from six.moves.configparser import ConfigParser, NoSectionError
 
-from conans import tools
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf.default_server_conf import default_server_conf
@@ -18,6 +18,10 @@ from conans.server.store.server_store import ServerStore
 from conans.util.env_reader import get_env
 from conans.util.files import save, mkdir
 from conans.util.log import logger
+
+from conans.server.conf.default_server_conf import default_server_conf
+from conans.client import tools
+
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
