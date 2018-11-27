@@ -1,11 +1,12 @@
 from conans.model import Generator
+from conans.paths import BUILD_INFO_MAKE
 
 
 class MakeGenerator(Generator):
 
     @property
     def filename(self):
-        return "conanbuildinfo.mak"
+        return BUILD_INFO_MAKE
 
     @property
     def content(self):
@@ -25,8 +26,7 @@ class MakeGenerator(Generator):
         return self.makefile_newline.join(content)
 
     def create_deps_content(self):
-        deps_content = []
-        deps_content.extend(self.create_content_from_deps())
+        deps_content = self.create_content_from_deps()
         deps_content.extend(self.create_combined_content())
         return deps_content
 
