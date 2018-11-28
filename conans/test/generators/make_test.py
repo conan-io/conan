@@ -57,60 +57,160 @@ class MakeGeneratorTest(unittest.TestCase):
         generator = MakeGenerator(conanfile)
         content = generator.content
 
-        self.assertIn("CONAN_DEFINES +=  \\\n$(CONAN_DEFINES_MYPKG1) \\\n$(CONAN_DEFINES_MYPKG2)",
-                      content)
-        self.assertIn("CONAN_DEFINES_MYPKG1 +=  \\\nMYDEFINE1", content)
-        self.assertIn("CONAN_DEFINES_MYPKG2 +=  \\\nMYDEFINE2", content)
+        content_template = """
+CONAN_ROOT_MYPKG1 ?=  \\
+{conan_root_mypkg1}
+
+CONAN_SYSROOT_MYPKG1 ?=  \\
+
+
+CONAN_INCLUDE_PATHS_MYPKG1 +=  \\
+{conan_include_paths_mypkg1}
+
+CONAN_LIB_PATHS_MYPKG1 +=  \\
+{conan_lib_paths_mypkg1}
+
+CONAN_BIN_PATHS_MYPKG1 +=  \\
+{conan_bin_paths_mypkg1}
+
+CONAN_BUILD_PATHS_MYPKG1 +=  \\
+{conan_build_paths_mypkg1}
+
+CONAN_RES_PATHS_MYPKG1 +=  \\
+
+
+CONAN_LIBS_MYPKG1 +=  \\
+libfoo
+
+CONAN_DEFINES_MYPKG1 +=  \\
+MYDEFINE1
+
+CONAN_CFLAGS_MYPKG1 +=  \\
+-fPIC
+
+CONAN_CPPFLAGS_MYPKG1 +=  \\
+-fPIE
+
+CONAN_SHAREDLINKFLAGS_MYPKG1 +=  \\
+-framework Cocoa
+
+CONAN_EXELINKFLAGS_MYPKG1 +=  \\
+-framework QuartzCore
+
+CONAN_ROOT_MYPKG2 ?=  \\
+{conan_root_mypkg2}
+
+CONAN_SYSROOT_MYPKG2 ?=  \\
+
+
+CONAN_INCLUDE_PATHS_MYPKG2 +=  \\
+{conan_include_paths_mypkg2}
+
+CONAN_LIB_PATHS_MYPKG2 +=  \\
+{conan_lib_paths_mypkg2}
+
+CONAN_BIN_PATHS_MYPKG2 +=  \\
+{conan_bin_paths_mypkg2}
+
+CONAN_BUILD_PATHS_MYPKG2 +=  \\
+{conan_build_paths_mypkg2}
+
+CONAN_RES_PATHS_MYPKG2 +=  \\
+
+
+CONAN_LIBS_MYPKG2 +=  \\
+libbar
+
+CONAN_DEFINES_MYPKG2 +=  \\
+MYDEFINE2
+
+CONAN_CFLAGS_MYPKG2 +=  \\
+-mtune=native
+
+CONAN_CPPFLAGS_MYPKG2 +=  \\
+-march=native
+
+CONAN_SHAREDLINKFLAGS_MYPKG2 +=  \\
+-framework AudioFoundation
+
+CONAN_EXELINKFLAGS_MYPKG2 +=  \\
+-framework VideoToolbox
+
+CONAN_ROOTPATH +=  \\
+$(CONAN_ROOTPATH_MYPKG1) \\
+$(CONAN_ROOTPATH_MYPKG2)
+
+CONAN_SYSROOT +=  \\
+$(CONAN_SYSROOT_MYPKG1) \\
+$(CONAN_SYSROOT_MYPKG2)
+
+CONAN_INCLUDE_PATHS +=  \\
+$(CONAN_INCLUDE_PATHS_MYPKG1) \\
+$(CONAN_INCLUDE_PATHS_MYPKG2)
+
+CONAN_LIB_PATHS +=  \\
+$(CONAN_LIB_PATHS_MYPKG1) \\
+$(CONAN_LIB_PATHS_MYPKG2)
+
+CONAN_BIN_PATHS +=  \\
+$(CONAN_BIN_PATHS_MYPKG1) \\
+$(CONAN_BIN_PATHS_MYPKG2)
+
+CONAN_BUILD_PATHS +=  \\
+$(CONAN_BUILD_PATHS_MYPKG1) \\
+$(CONAN_BUILD_PATHS_MYPKG2)
+
+CONAN_RES_PATHS +=  \\
+$(CONAN_RES_PATHS_MYPKG1) \\
+$(CONAN_RES_PATHS_MYPKG2)
+
+CONAN_LIBS +=  \\
+$(CONAN_LIBS_MYPKG1) \\
+$(CONAN_LIBS_MYPKG2)
+
+CONAN_DEFINES +=  \\
+$(CONAN_DEFINES_MYPKG1) \\
+$(CONAN_DEFINES_MYPKG2)
+
+CONAN_CFLAGS +=  \\
+$(CONAN_CFLAGS_MYPKG1) \\
+$(CONAN_CFLAGS_MYPKG2)
+
+CONAN_CPPFLAGS +=  \\
+$(CONAN_CPPFLAGS_MYPKG1) \\
+$(CONAN_CPPFLAGS_MYPKG2)
+
+CONAN_SHAREDLINKFLAGS +=  \\
+$(CONAN_SHAREDLINKFLAGS_MYPKG1) \\
+$(CONAN_SHAREDLINKFLAGS_MYPKG2)
+
+CONAN_EXELINKFLAGS +=  \\
+$(CONAN_EXELINKFLAGS_MYPKG1) \\
+$(CONAN_EXELINKFLAGS_MYPKG2)
+"""
+        root1 = tmp_folder1.replace('\\', '/')
+        root2 = tmp_folder2.replace('\\', '/')
 
         inc1 = os.path.join(tmp_folder1, 'include1').replace('\\', '/')
         inc2 = os.path.join(tmp_folder2, 'include2').replace('\\', '/')
-        self.assertIn("CONAN_INCLUDE_PATHS +=  \\\n"
-                      "$(CONAN_INCLUDE_PATHS_MYPKG1) \\\n"
-                      "$(CONAN_INCLUDE_PATHS_MYPKG2)", content)
-        self.assertIn("CONAN_INCLUDE_PATHS_MYPKG1 +=  \\\n%s" % inc1, content)
-        self.assertIn("CONAN_INCLUDE_PATHS_MYPKG2 +=  \\\n%s" % inc2, content)
 
         lib1 = os.path.join(tmp_folder1, 'lib1').replace('\\', '/')
         lib2 = os.path.join(tmp_folder2, 'lib2').replace('\\', '/')
-        self.assertIn("CONAN_LIB_PATHS +=  \\\n"
-                      "$(CONAN_LIB_PATHS_MYPKG1) \\\n"
-                      "$(CONAN_LIB_PATHS_MYPKG2)", content)
-        self.assertIn("CONAN_LIB_PATHS_MYPKG1 +=  \\\n%s" % lib1, content)
-        self.assertIn("CONAN_LIB_PATHS_MYPKG2 +=  \\\n%s" % lib2, content)
 
         bin1 = os.path.join(tmp_folder1, 'bin1').replace('\\', '/')
         bin2 = os.path.join(tmp_folder2, 'bin2').replace('\\', '/')
-        self.assertIn("CONAN_BIN_PATHS +=  \\\n"
-                      "$(CONAN_BIN_PATHS_MYPKG1) \\\n"
-                      "$(CONAN_BIN_PATHS_MYPKG2)", content)
-        self.assertIn("CONAN_BIN_PATHS_MYPKG1 +=  \\\n%s" % bin1, content)
-        self.assertIn("CONAN_BIN_PATHS_MYPKG2 +=  \\\n%s" % bin2, content)
 
-        self.assertIn("CONAN_LIBS +=  \\\n$(CONAN_LIBS_MYPKG1) \\\n$(CONAN_LIBS_MYPKG2)", content)
-        self.assertIn("CONAN_LIBS_MYPKG1 +=  \\\nlibfoo", content)
-        self.assertIn("CONAN_LIBS_MYPKG2 +=  \\\nlibbar", content)
-
-        self.assertIn("CONAN_CFLAGS +=  \\\n$(CONAN_CFLAGS_MYPKG1) \\\n$(CONAN_CFLAGS_MYPKG2)",
-                      content)
-        self.assertIn("CONAN_CFLAGS_MYPKG1 +=  \\\n-fPIC", content)
-        self.assertIn("CONAN_CFLAGS_MYPKG2 +=  \\\n-mtune=native", content)
-
-        self.assertIn("CONAN_CPPFLAGS +=  \\\n$(CONAN_CPPFLAGS_MYPKG1) \\\n$(CONAN_CPPFLAGS_MYPKG2)",
-                      content)
-        self.assertIn("CONAN_CPPFLAGS_MYPKG1 +=  \\\n-fPIE", content)
-        self.assertIn("CONAN_CPPFLAGS_MYPKG2 +=  \\\n-march=native", content)
-
-        self.assertIn("CONAN_SHAREDLINKFLAGS +=  \\\n"
-                      "$(CONAN_SHAREDLINKFLAGS_MYPKG1) \\\n"
-                      "$(CONAN_SHAREDLINKFLAGS_MYPKG2)", content)
-        self.assertIn("CONAN_SHAREDLINKFLAGS_MYPKG1 +=  \\\n-framework Cocoa", content)
-        self.assertIn("CONAN_SHAREDLINKFLAGS_MYPKG2 +=  \\\n-framework AudioFoundation", content)
-
-        self.assertIn("CONAN_EXELINKFLAGS +=  \\\n"
-                      "$(CONAN_EXELINKFLAGS_MYPKG1) \\\n"
-                      "$(CONAN_EXELINKFLAGS_MYPKG2)", content)
-        self.assertIn("CONAN_EXELINKFLAGS_MYPKG1 +=  \\\n-framework QuartzCore", content)
-        self.assertIn("CONAN_EXELINKFLAGS_MYPKG2 +=  \\\n-framework VideoToolbox", content)
+        expected_content = content_template.format(conan_root_mypkg1=root1,
+                                                   conan_include_paths_mypkg1=inc1,
+                                                   conan_lib_paths_mypkg1=lib1,
+                                                   conan_bin_paths_mypkg1=bin1,
+                                                   conan_build_paths_mypkg1=root1 + "/",
+                                                   conan_root_mypkg2=root2,
+                                                   conan_include_paths_mypkg2=inc2,
+                                                   conan_lib_paths_mypkg2=lib2,
+                                                   conan_bin_paths_mypkg2=bin2,
+                                                   conan_build_paths_mypkg2=root2 + "/")
+        self.assertIn(expected_content, content)
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     def integration_test(self):

@@ -4,6 +4,13 @@ from conans.paths import BUILD_INFO_MAKE
 
 class MakeGenerator(Generator):
 
+    def __init__(self, conanfile):
+        Generator.__init__(self, conanfile)
+        self.makefile_newline = "\n"
+        self.makefile_line_continuation = " \\\n"
+        self.assignment_if_absent = " ?= "
+        self.assignment_append = " += "
+
     @property
     def filename(self):
         return BUILD_INFO_MAKE
@@ -100,19 +107,3 @@ class MakeGenerator(Generator):
         return ["rootpath", "sysroot", "include_paths", "lib_paths", "bin_paths", "build_paths",
                 "res_paths", "libs", "defines", "cflags", "cppflags", "sharedlinkflags",
                 "exelinkflags"]
-
-    @property
-    def makefile_newline(self):
-        return "\n"
-
-    @property
-    def makefile_line_continuation(self):
-        return " \\\n"
-
-    @property
-    def assignment_if_absent(self):
-        return " ?= "
-
-    @property
-    def assignment_append(self):
-        return " += "
