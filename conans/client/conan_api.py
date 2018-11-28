@@ -568,7 +568,8 @@ class ConanAPIV1(object):
 
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
-                                     config_type, args)
+                                     requester=self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
+                                     config_type=config_type, args=args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
