@@ -1,5 +1,6 @@
 import copy
 import re
+import subprocess
 
 from conans import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
@@ -7,8 +8,9 @@ from conans.client.build.visual_environment import (VisualStudioBuildEnvironment
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
+from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import tmp_file
+from conans.util.files import tmp_file, decode_text
 from conans.model.conan_file import ConanFile
 
 
@@ -87,11 +89,14 @@ class MSBuild(object):
                 self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
-        if output_binary_log is not None:
-            if isinstance(output_binary_log, bool) and output_binary_log:
-                command.append('/bl')
+        if output_binary_log is not None and output_binary_log:
+            msbuild_version = MSBuild.get_version(self._settings)
+            if msbuild_version > "15.3":  # http://msbuildlog.com/
+                command.append('/bl' if isinstance(output_binary_log, bool)
+                               else '/bl:"%s"' % output_binary_log)
             else:
-                command.append('/bl:"%s"' % output_binary_log)
+                raise ConanException("MSBuild version detected (%s) does not support "
+                                     "'output_binary_log' ('/bl')" % msbuild_version)
 
         if use_env:
             command.append('/p:UseEnv=true')
@@ -150,3 +155,17 @@ class MSBuild(object):
 </Project>""".format(**{"runtime_node": runtime_node,
                         "additional_node": additional_node})
         return template
+
+    @staticmethod
+    def get_version(settings):
+        msbuild_cmd = "msbuild -ver"
+        vcvars = vcvars_command(settings)
+        command = "%s && %s" % (vcvars, msbuild_cmd)
+        try:
+            out, err = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            version_line = decode_text(out).split("\n")[-1]
+            prog = re.compile("(\d+\.){2,3}\d+")
+            result = prog.match(version_line).group()
+            return Version(result)
+        except Exception as e:
+            raise ConanException("Error retrieving MSBuild version: '{}'".format(e))
