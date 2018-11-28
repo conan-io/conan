@@ -87,12 +87,11 @@ class MSBuild(object):
                 self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
-        if output_binary_log not None:
-            if isinstance(output_binary_log, bool):
-                if output_binary_log:
-                    command.append(' /bl ')
+        if output_binary_log is not None:
+            if isinstance(output_binary_log, bool) and output_binary_log:
+                command.append('/bl')
             else:
-                command.append(' /bl:"%s" '.format(output_binary_log))
+                command.append('/bl:"%s"' % output_binary_log)
 
         if use_env:
             command.append('/p:UseEnv=true')

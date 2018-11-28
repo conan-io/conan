@@ -167,8 +167,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     upgrade_project=False, build_type='Debug', arch='armv7',
                                     parallel=False, output_binary_log=bl_filename)
         
-        expected_command = '/bl:"%s"'.format(bl_filename)
-
+        expected_command = '/bl:"%s"' % bl_filename
         self.assertIn(expected_command, command)
 
     def binary_logging_off_explicit_test(self):
