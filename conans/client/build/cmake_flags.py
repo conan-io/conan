@@ -102,13 +102,14 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False):
+                 parallel=True, generator=None, set_cmake_flags=False, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._forced_generator = generator
         self._set_cmake_flags = set_cmake_flags
+        self._output = output
 
     @property
     def generator(self):
@@ -291,7 +292,7 @@ class CMakeDefinitionsBuilder(object):
 
         if str(os_) in ["Windows", "WindowsStore"] and compiler == "Visual Studio":
             if self._parallel:
-                flag = parallel_compiler_cl_flag()
+                flag = parallel_compiler_cl_flag(output=self._output)
                 ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', flag)
                 ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', flag)
 

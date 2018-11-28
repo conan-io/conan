@@ -95,7 +95,7 @@ class MSBuild(object):
             command.append('/p:Platform="%s"' % msvc_arch)
 
         if parallel:
-            command.append('/m:%s' % cpu_count())
+            command.append('/m:%s' % cpu_count(output=self._output))
 
         if targets:
             command.append("/target:%s" % ";".join(targets))

@@ -22,7 +22,8 @@ class PackageLocalCommandTest(unittest.TestCase):
             # don't need build method
             tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                                   "def build",
-                                  "def skip_build")
+                                  "def skip_build",
+                                  output=the_client.out)
             the_client.run("install . --install-folder build")
             mkdir(os.path.join(client.current_folder, "build2"))
 
