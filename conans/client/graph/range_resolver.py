@@ -3,26 +3,31 @@ from conans.errors import ConanException
 from conans.search.search import search_recipes
 
 
-def _parse_versionexpr(versionexpr):
-    version_range = versionexpr.split(",")
+def _parse_versionexpr(versionexpr, output):
+    expression = versionexpr.split(",")
 
     include_prerelease = False
     loose = True
+    version_range = []
 
     import re
-    pattern = re.compile(r"^\s?(include_prerelease|loose)\s?=\s?(True|False)\s?$")
+    pattern = re.compile(r"^\s*(include_prerelease|loose)\s*=\s*(True|False)\s*$")
 
-    for keyword in version_range:
+    for keyword in expression:
         match = pattern.search(keyword)
         if match:
-            version_range.remove(keyword)
             if match.group(1) == "include_prerelease":
                 if match.group(2) == "True":
                     include_prerelease = True
             if match.group(1) == "loose":
                 if match.group(2) == "False":
                     loose = False
+        else:
+            version_range.append(keyword.strip())
 
+    if version_range and len(version_range) > 1:
+        output.warn("Commas as separator in version '%s' range will are deprecated and will be removed in Conan 2.0" %
+                    str(versionexpr))
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease
 
@@ -34,7 +39,7 @@ def satisfying(list_versions, versionexpr, output):
     """
     from semver import SemVer, max_satisfying
 
-    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr)
+    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, output)
 
     candidates = {}
     for v in list_versions:
