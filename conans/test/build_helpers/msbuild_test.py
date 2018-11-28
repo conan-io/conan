@@ -234,7 +234,7 @@ class HelloConan(ConanFile):
         self.assertGreater(version, "15.1")
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    @parameterized.expand([("True",), ("'my_log.binlog'",)])
+    @parameterized.expand([("True",), ("my_log.binlog",)])
     def binary_log_build_test(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
@@ -247,7 +247,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         msbuild = MSBuild(self)
-        msbuild.build("MyProject.sln", output_binary_log=%s)
+        msbuild.build("MyProject.sln", output_binary_log="%s")
 """
         client = TestClient()
         files = get_vs_project_files()
@@ -256,8 +256,8 @@ class HelloConan(ConanFile):
         client.run("install .")
         client.run("build .")
 
-        if value == "'my_log.binlog'":
-            log_name = value[1:1]
+        if value == "my_log.binlog":
+            log_name = value
             flag = "/bl:%s" % log_name
         else:
             log_name = "msbuild.binlog"
