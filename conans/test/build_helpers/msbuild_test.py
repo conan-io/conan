@@ -1,3 +1,4 @@
+import os
 import platform
 import unittest
 
@@ -230,3 +231,37 @@ class HelloConan(ConanFile):
         version = MSBuild.get_version(settings)
         self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def binary_log_build_test(self):
+        conan_build_vs = """
+from conans import ConanFile, MSBuild
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2.1"
+    exports = "*"
+    settings = "os", "build_type", "arch", "compiler", "cppstd"
+
+    def build(self):
+        msbuild = MSBuild(self)
+        msbuild.build("MyProject.sln", output_binary_log=%s)
+"""
+        client = TestClient()
+        files = get_vs_project_files()
+        for value in ("True", "'my_log.binlog'"):
+            files[CONANFILE] = conan_build_vs % value
+            client.save(files)
+            client.run("install .")
+            client.run("build .")
+
+            if value == "'my_log.binlog'":
+                log_name = "my_log.binlog"
+                flag = "/bl:my_log.binlog"
+            else:
+                log_name = "msbuild.binlog"
+                flag = "/bl"
+
+            self.assertIn(flag, client.out)
+            log_path = os.path.join(client.current_folder, log_name)
+            self.assertTrue(os.path.exists(log_path))
