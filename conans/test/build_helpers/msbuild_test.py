@@ -180,7 +180,6 @@ class HelloConan(ConanFile):
         expected_command = '/bl:"%s"' % bl_filename
         self.assertIn(expected_command, command)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def binary_logging_off_explicit_test(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -192,7 +191,6 @@ class HelloConan(ConanFile):
         command = msbuild.get_command("dummy.sln", output_binary_log=False)
         self.assertNotIn("/bl", command)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def binary_logging_off_implicit_test(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -205,25 +203,22 @@ class HelloConan(ConanFile):
         self.assertNotIn("/bl", command)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def binary_logging_not_supported_test(self):
+    @mock.patch("conans.client.build.msbuild.MSBuild.get_version")
+    def binary_logging_not_supported_test(self, mock_get_version):
+        mock_get_version.return_value = Version("14")
+
         mocked_settings = MockSettings({"build_type": "Debug",
                                         "compiler": "Visual Studio",
                                         "compiler.version": "15",
                                         "arch": "x86_64",
                                         "compiler.runtime": "MDd"})
         conanfile = MockConanfile(mocked_settings)
-
-        def get_version_mock(settings):
-            self.assertEqual(settings, mocked_settings)
-            return Version("14")
-
         except_text = "MSBuild version detected (14) does not support 'output_binary_log' ('/bl')"
+        msbuild = MSBuild(conanfile)
 
-        with mock.patch("conans.client.build.msbuild.MSBuild.get_version", new=get_version_mock):
-            with self.assertRaises(ConanException) as exc:
-                msbuild = MSBuild(conanfile)
-                msbuild.get_command("dummy.sln", output_binary_log=True)
-            self.assertIn(except_text, str(exc.exception))
+        with self.assertRaises(ConanException) as exc:
+            msbuild.get_command("dummy.sln", output_binary_log=True)
+        self.assertIn(except_text, str(exc.exception))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def get_version_test(self):

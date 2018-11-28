@@ -158,7 +158,7 @@ class MSBuild(object):
 
     @staticmethod
     def get_version(settings):
-        msbuild_cmd = "msbuild -ver"
+        msbuild_cmd = "msbuild -version"
         vcvars = vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
