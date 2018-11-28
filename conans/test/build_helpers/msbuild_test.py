@@ -4,6 +4,7 @@ import unittest
 
 import mock
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 
 from conans import tools
 from conans.client.build.msbuild import MSBuild
@@ -233,7 +234,8 @@ class HelloConan(ConanFile):
         self.assertGreater(version, "15.1")
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def binary_log_build_test(self):
+    @parameterized.expand([("True",), ("'my_log.binlog'",)])
+    def binary_log_build_test(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
 
@@ -249,19 +251,18 @@ class HelloConan(ConanFile):
 """
         client = TestClient()
         files = get_vs_project_files()
-        for value in ("True", "'my_log.binlog'"):
-            files[CONANFILE] = conan_build_vs % value
-            client.save(files)
-            client.run("install .")
-            client.run("build .")
+        files[CONANFILE] = conan_build_vs % value
+        client.save(files)
+        client.run("install .")
+        client.run("build .")
 
-            if value == "'my_log.binlog'":
-                log_name = "my_log.binlog"
-                flag = "/bl:my_log.binlog"
-            else:
-                log_name = "msbuild.binlog"
-                flag = "/bl"
+        if value == "'my_log.binlog'":
+            log_name = value[1:1]
+            flag = "/bl:%s" % log_name
+        else:
+            log_name = "msbuild.binlog"
+            flag = "/bl"
 
-            self.assertIn(flag, client.out)
-            log_path = os.path.join(client.current_folder, log_name)
-            self.assertTrue(os.path.exists(log_path))
+        self.assertIn(flag, client.out)
+        log_path = os.path.join(client.current_folder, log_name)
+        self.assertTrue(os.path.exists(log_path))
