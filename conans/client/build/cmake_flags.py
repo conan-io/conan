@@ -93,26 +93,26 @@ def runtime_definition(runtime):
     return {runtime_definition_var_name: "/%s" % runtime} if runtime else {}
 
 
-def build_type_definition(build_type, generator):
-    if build_type and not is_multi_configuration(generator):
-        return {"CMAKE_BUILD_TYPE": build_type}
-    return {}
+def build_type_definition(build_type, generator, check_multi_configuration=True):
+    result = {}
+
+    if build_type:
+        multi = {"CMAKE_BUILD_TYPE": build_type} if not is_multi_configuration(generator) else {}
+        result = multi if check_multi_configuration else {"CMAKE_BUILD_TYPE": build_type}
+    return result
 
 
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False):
+                 parallel=True, generator=None, set_cmake_flags=False, build_type=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
-        self._forced_generator = generator
+        self._generator = generator or get_generator(self._conanfile.settings)
         self._set_cmake_flags = set_cmake_flags
-
-    @property
-    def generator(self):
-        return self._forced_generator or get_generator(self._conanfile.settings)
+        self._forced_build_type = build_type
 
     def _ss(self, setname):
         """safe setting"""
@@ -241,8 +241,17 @@ class CMakeDefinitionsBuilder(object):
         build_type = self._ss("build_type")
 
         ret = OrderedDict()
-        ret.update(build_type_definition(build_type, self.generator))
         ret.update(runtime_definition(runtime))
+
+        if self._forced_build_type:
+            if build_type != self._forced_build_type:
+                self._conanfile.output.warn("Forced CMake build type ('%s') different from the "
+                                            "settings build_type ('%s')" % (self._forced_build_type,
+                                                                            build_type))
+            ret.update(build_type_definition(self._forced_build_type, self._generator,
+                                             check_multi_configuration=False))
+        else:
+            ret.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":

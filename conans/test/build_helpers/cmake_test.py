@@ -814,13 +814,13 @@ build_type: [ Release]
                       '%s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' % cpu_count()),
                       conan_file.command)
 
-        cmake.generator = "Ninja Makefiles"
+        cmake = CMake(conan_file, generator="Ninja Makefiles")
         cmake.test()
         self.assertEqual('cmake --build '
                          '%s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
                          conan_file.command)
 
-        cmake.generator = "NMake Makefiles"
+        cmake = CMake(conan_file, generator="NMake Makefiles")
         cmake.test()
         self.assertEqual('cmake --build '
                          '%s' % CMakeTest.scape('. --target test'),
@@ -845,7 +845,7 @@ build_type: [ Release]
         cmake.configure()
         self.assertIn(self.tempdir, conanfile.path)
 
-        cmake.generator = "MinGW Makefiles"
+        cmake = CMake(conanfile, generator="MinGW Makefiles")
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
