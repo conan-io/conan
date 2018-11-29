@@ -253,8 +253,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
-        ret[cmake_in_local_cache_var_name] =\
-            in_local_cache_definition(self._conanfile.in_local_cache)[cmake_in_local_cache_var_name]
+        ret.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:
             ret["CONAN_COMPILER"] = compiler
