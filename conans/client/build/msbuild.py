@@ -1,13 +1,15 @@
 import copy
 import re
+import subprocess
 
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
+from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import tmp_file
+from conans.util.files import tmp_file, decode_text
 from conans.model.conan_file import ConanFile
 from conans.client import tools
 
@@ -27,7 +29,7 @@ class MSBuild(object):
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
-              vcvars_ver=None, winsdk_version=None, properties=None):
+              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None):
 
         self.build_env.parallel = parallel
 
@@ -41,13 +43,13 @@ class MSBuild(object):
                                            targets=targets, upgrade_project=upgrade_project,
                                            build_type=build_type, arch=arch, parallel=parallel,
                                            toolset=toolset, platforms=platforms,
-                                           use_env=use_env, properties=properties)
+                                           use_env=use_env, properties=properties, output_binary_log=output_binary_log)
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None):
+                    use_env=False, properties=None, output_binary_log=None):
 
         targets = targets or []
         properties = properties or {}
@@ -87,6 +89,15 @@ class MSBuild(object):
             if config not in "".join(lines):
                 self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
+
+        if output_binary_log:
+            msbuild_version = MSBuild.get_version(self._settings)
+            if msbuild_version >= "15.3":  # http://msbuildlog.com/
+                command.append('/bl' if isinstance(output_binary_log, bool)
+                               else '/bl:"%s"' % output_binary_log)
+            else:
+                raise ConanException("MSBuild version detected (%s) does not support "
+                                     "'output_binary_log' ('/bl')" % msbuild_version)
 
         if use_env:
             command.append('/p:UseEnv=true')
@@ -145,3 +156,17 @@ class MSBuild(object):
 </Project>""".format(**{"runtime_node": runtime_node,
                         "additional_node": additional_node})
         return template
+
+    @staticmethod
+    def get_version(settings):
+        msbuild_cmd = "msbuild -version"
+        vcvars = vcvars_command(settings)
+        command = "%s && %s" % (vcvars, msbuild_cmd)
+        try:
+            out, err = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            version_line = decode_text(out).split("\n")[-1]
+            prog = re.compile("(\d+\.){2,3}\d+")
+            result = prog.match(version_line).group()
+            return Version(result)
+        except Exception as e:
+            raise ConanException("Error retrieving MSBuild version: '{}'".format(e))
