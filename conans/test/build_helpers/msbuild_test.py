@@ -233,8 +233,8 @@ class HelloConan(ConanFile):
         self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     @parameterized.expand([("True",), ("'my_log.binlog'",)])
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def binary_log_build_test(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
