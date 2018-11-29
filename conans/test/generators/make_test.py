@@ -242,7 +242,7 @@ include conanbuildinfo.mak
 #     Make variables for a sample App
 #----------------------------------------
 
-CXX_INCLUDE_PATHS = \
+INCLUDE_PATHS = \
 ./include
 
 CXX_SRCS = \
@@ -262,12 +262,12 @@ libhellowrapper.so
 #     Prepare flags from variables
 #----------------------------------------
 
-CFLAGS          += $(CONAN_CFLAGS)
-CPPFLAGS        += $(addprefix -I, $(CXX_INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
-CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
-LIBS            += $(addprefix -l, $(CONAN_LIBS))
-
+CFLAGS              += $(CONAN_CFLAGS)
+CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDFLAGS             += $(addprefix -l, $(CONAN_LIBS))
+SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 
 #----------------------------------------
 #     Make Commands
@@ -278,7 +278,7 @@ COMPILE_CXX_COMMAND         ?= \
 
 CREATE_SHARED_LIB_COMMAND   ?= \
 	g++ -shared $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LDFLAGS_SHARED) $(CPPFLAGS) $(LIBS) \
+	$(CFLAGS) $(LDFLAGS) $(SHAREDLINKFLAGS) \
 	-o $(SHARED_LIB_FILENAME)
 
 CREATE_STATIC_LIB_COMMAND   ?= \
@@ -337,7 +337,7 @@ class HelloWrapper(ConanFile):
 
         main = """
 #include "hellowrapper.h"
-
+CONAN_EXELINKFLAGS
 int main()
 {
      hellowrapper();
@@ -365,12 +365,12 @@ main
 #     Prepare flags from variables
 #----------------------------------------
 
-CFLAGS          += $(CONAN_CFLAGS)
-CPPFLAGS        += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
-CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
-LIBS            += $(addprefix -l, $(CONAN_LIBS))
-
+CFLAGS              += $(CONAN_CFLAGS)
+CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDFLAGS             += $(addprefix -l, $(CONAN_LIBS))
+CONAN_EXELINKFLAGS  += $(CONAN_EXELINKFLAGS)
 
 #----------------------------------------
 #     Make Commands
@@ -381,7 +381,7 @@ COMPILE_CXX_COMMAND         ?= \
 
 CREATE_EXE_COMMAND          ?= \
 	g++ $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LIBS) \
+	$(CFLAGS) $(LDFLAGS) $(CONAN_EXELINKFLAGS) \
 	-o $(EXE_FILENAME)
 
 
