@@ -43,10 +43,13 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
+        self._python_requires._requires = []
         loaded, filename = parse_conanfile(conanfile_path)
+        python_requires = self._python_requires._requires
+        self._python_requires._requires = None
         try:
             conanfile = parse_module(loaded, filename)
-            conanfile.python_requires = self._python_requires.requires
+            conanfile.python_requires = python_requires
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
