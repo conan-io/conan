@@ -104,6 +104,14 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["2.1.1"], ">2.1.0", output)
         self.assertEqual(result, "2.1.1")
 
+        # Invalid ranges
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2; include_prerelease=True, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2, include_prerelease=Ture, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "~2.3, abc, loose=False", output)
+
 
 hello_content = """
 from conans import ConanFile

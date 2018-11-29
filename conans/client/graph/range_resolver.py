@@ -26,7 +26,7 @@ def _parse_versionexpr(versionexpr, output):
             version_range.append(keyword.strip())
 
     if version_range and len(version_range) > 1:
-        output.warn("Commas as separator in version '%s' range will are deprecated and will be removed in Conan 2.0" %
+        output.warn("Commas as separator in version '%s' range are deprecated and will be removed in Conan 2.0" %
                     str(versionexpr))
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease
@@ -37,10 +37,17 @@ def satisfying(list_versions, versionexpr, output):
     if some version cannot be converted to loose SemVer, it is discarded with a msg
     This provides some workaround for failing comparisons like "2.1" not matching "<=2.1"
     """
-    from semver import SemVer, max_satisfying
+    from semver import SemVer, Range, max_satisfying
 
     version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, output)
 
+    # Check version range expression
+    try:
+        act_range = Range(version_range, loose)
+    except ValueError:
+        raise ConanException("version range expression '%s' is not valid" % version_range)
+
+    # Validate all versions
     candidates = {}
     for v in list_versions:
         try:
@@ -48,7 +55,9 @@ def satisfying(list_versions, versionexpr, output):
             candidates[ver] = v
         except (ValueError, AttributeError):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
-    result = max_satisfying(candidates, version_range, loose=loose, include_prerelease=include_prerelease)
+
+    # Search best matching version in range
+    result = max_satisfying(candidates, act_range, loose=loose, include_prerelease=include_prerelease)
     return candidates.get(result)
 
 
