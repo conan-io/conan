@@ -126,7 +126,8 @@ class CMake(object):
         is_msvc = compiler == "Visual Studio"
         if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
                                                           "NMake Makefiles JOM"]:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
+                              output=self._conanfile.output):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
