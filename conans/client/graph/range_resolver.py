@@ -1,33 +1,48 @@
-from conans.model.ref import ConanFileReference
+
+import re
+from conans.model.ref import ConanFileReference, ConanName
 from conans.errors import ConanException
 from conans.search.search import search_recipes
 
 
+re_param = re.compile(r"^(include_prerelease|loose)\s*=\s*(True|False)$")
+re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.-~<>=\s])+$")
+
+
 def _parse_versionexpr(versionexpr, output):
-    expression = versionexpr.split(",")
+    expression = [it.strip() for it in versionexpr.split(",")]
+    assert 1 <= len(expression) <= 4, "Invalid expression for version_range '{}'".format(versionexpr)
 
     include_prerelease = False
     loose = True
     version_range = []
 
-    import re
-    pattern = re.compile(r"^\s*(include_prerelease|loose)\s*=\s*(True|False)\s*$")
+    for i, expr in enumerate(expression):
+        match_param = re_param.match(expr)
+        match_version = re_version.match(expr)
+        
+        if match_param == match_version:
+            raise ConanException("Invalid version range '{}', failed in "
+                                 "chunk '{}'".format(versionexpr, expr))
 
-    for keyword in expression:
-        match = pattern.search(keyword)
-        if match:
-            if match.group(1) == "include_prerelease":
-                if match.group(2) == "True":
-                    include_prerelease = True
-            if match.group(1) == "loose":
-                if match.group(2) == "False":
-                    loose = False
-        else:
-            version_range.append(keyword.strip())
+        if match_version and i not in [0, 1]:
+            raise ConanException("Invalid version range '{}'".format(versionexpr))
 
-    if version_range and len(version_range) > 1:
-        output.warn("Commas as separator in version '%s' range are deprecated and will be removed in Conan 2.0" %
-                    str(versionexpr))
+        if match_param and i not in [1, 2, 3]:
+            raise ConanException("Invalid version range '{}'".format(versionexpr))
+
+        if match_version:
+            version_range.append(expr)
+
+        if match_param:
+            if match_param.group(1) == 'loose':
+                loose = match_param.group(2) == "True"
+            elif match_param.group(1) == 'include_prerelease':
+                include_prerelease = match_param.group(2) == "True"
+            else:
+                raise ConanException("Unexpected version range "
+                                     "parameter '{}'".format(match_param.group(1)))
+
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease
 

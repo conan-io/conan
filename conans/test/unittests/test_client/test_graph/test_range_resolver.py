@@ -1,6 +1,7 @@
 import unittest
 from conans.client.graph.range_resolver import _parse_versionexpr
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.errors import ConanException
 
 
 class ParseVersionExpr(unittest.TestCase):
@@ -30,10 +31,10 @@ class ParseVersionExpr(unittest.TestCase):
 
     def test_invalid(self):
         output = TestBufferConanOutput()
-        self.assertEqual(_parse_versionexpr("loose=False, include_prerelease=True", output), ("", False, True))
-        self.assertEqual(_parse_versionexpr("2.3, 3.2, unexpected=True", output),
-                         ("2.3 3.2 unexpected=True", True, False))
-        self.assertEqual(_parse_versionexpr("2.3, 3.2, loose=Other", output),
-                         ("2.3 3.2 loose=Other", True, False))
-        self.assertEqual(_parse_versionexpr("2.3, 3.2, ", output),
-                         ("2.3 3.2 ", True, False))
+        self.assertRaises(ConanException, _parse_versionexpr, "loose=False, include_prerelease=True", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "2.3, 3.2, unexpected=True", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "2.3, 3.2, loose=Other", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "2.3, 3.2, ", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "2.3, 3.2, 1.2.3", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "2.3 3.2; loose=True, include_prerelease=True", output)
+        self.assertRaises(ConanException, _parse_versionexpr, "loose=True, 2.3 3.3", output)
