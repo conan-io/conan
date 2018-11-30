@@ -43,10 +43,9 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
-        self._python_requires._requires = []
-        loaded, filename = parse_conanfile(conanfile_path)
-        python_requires = self._python_requires._requires
-        self._python_requires._requires = None
+        with self._python_requires.capture_requires() as python_requires:
+            loaded, filename = parse_conanfile(conanfile_path)
+
         try:
             conanfile = parse_module(loaded, filename)
             conanfile.python_requires = python_requires

@@ -15,12 +15,14 @@ class ConanPythonRequire(object):
         self._cached_requires = {}  # {conan_ref: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
-        
+        self._requires = None
+
     @contextmanager
     def capture_requires(self):
-        old_requires = 
-        
-        yield
+        old_requires = self._requires
+        self._requires = []
+        yield self._requires
+        self._requires = old_requires
 
     def _look_for_require(self, require):
         try:
@@ -34,11 +36,9 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            old_requires = self._requires
-            self._requires = []
-            module, filename = parse_conanfile(path)
-            module.python_requires = self._requires
-            self._requires = old_requires
+            with self.capture() as py_requires:
+                module, filename = parse_conanfile(path)
+                module.python_requires = py_requires
 
             # Check for alias
             conanfile = parse_module(module, filename)
