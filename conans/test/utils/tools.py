@@ -582,7 +582,7 @@ servers["r2"] = TestServer()
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, ignore_error=False):
+    def run(self, command_line, user_io=None, ignore_error=False, should_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
@@ -614,7 +614,7 @@ servers["r2"] = TestServer()
             for added in added_modules:
                 sys.modules.pop(added, None)
 
-        if not ignore_error and error:
+        if not ignore_error and error and not should_error:
             exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
                 command_header='{:-^80}'.format(" Command failed: "),
                 output_header='{:-^80}'.format(" Output: "),
@@ -623,6 +623,9 @@ servers["r2"] = TestServer()
                 output=self.user_io.out
             )
             raise Exception(exc_message)
+
+        if should_error and not error:
+            raise Exception("This command should have failed: %s" % command_line)
 
         self.all_output += str(self.user_io.out)
         return error
