@@ -1,10 +1,11 @@
-import unittest
 import os
-from conans.test.utils.test_files import temp_folder
+import unittest
 from conans.client.remote_registry import RemoteRegistry, migrate_registry_file, dump_registry, \
     default_remotes
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.client.remote_registry import (load_registry_txt)
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
 
@@ -33,8 +34,9 @@ other/1.0@lasote/testing conan.io
         new_path = client.client_cache.registry
         registry = RemoteRegistry(new_path, TestBufferConanOutput())
         self.assertEqual(registry.remotes.list, [("conan.io", "https://server.conan.io", True)])
-        self.assertEqual(registry.refs.list, {'lib/1.0@conan/stable': 'conan.io',
-                                              'other/1.0@lasote/testing': 'conan.io'})
+        expected = {'lib/1.0@conan/stable': 'conan.io',
+                    'other/1.0@lasote/testing': 'conan.io'}
+        self.assertEqual(registry.refs.list, expected)
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
@@ -43,32 +45,37 @@ other/1.0@lasote/testing conan.io
 
         # Add
         registry.remotes.add("local", "http://localhost:9300")
-        self.assertEqual(registry.remotes.list, [("conan-center", "https://conan.bintray.com", True),
-                                            ("local", "http://localhost:9300", True)])
+        self.assertEqual(registry.remotes.list,
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("local", "http://localhost:9300", True)])
         # Add
         registry.remotes.add("new", "new_url", False)
-        self.assertEqual(registry.remotes.list, [("conan-center", "https://conan.bintray.com", True),
-                                            ("local", "http://localhost:9300", True),
-                                            ("new", "new_url", False)])
+        self.assertEqual(registry.remotes.list,
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("local", "http://localhost:9300", True),
+                          ("new", "new_url", False)])
         with self.assertRaises(ConanException):
             registry.remotes.add("new", "new_url")
         # Update
         registry.remotes.update("new", "other_url")
-        self.assertEqual(registry.remotes.list, [("conan-center", "https://conan.bintray.com", True),
-                                            ("local", "http://localhost:9300", True),
-                                            ("new", "other_url", True)])
+        self.assertEqual(registry.remotes.list,
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("local", "http://localhost:9300", True),
+                          ("new", "other_url", True)])
         with self.assertRaises(ConanException):
             registry.remotes.update("new2", "new_url")
 
         registry.remotes.update("new", "other_url", False)
-        self.assertEqual(registry.remotes.list, [("conan-center", "https://conan.bintray.com", True),
-                                            ("local", "http://localhost:9300", True),
-                                            ("new", "other_url", False)])
+        self.assertEqual(registry.remotes.list,
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("local", "http://localhost:9300", True),
+                          ("new", "other_url", False)])
 
         # Remove
         registry.remotes.remove("local")
-        self.assertEqual(registry.remotes.list, [("conan-center", "https://conan.bintray.com", True),
-                                            ("new", "other_url", False)])
+        self.assertEqual(registry.remotes.list,
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("new", "other_url", False)])
         with self.assertRaises(ConanException):
             registry.remotes.remove("new2")
 
@@ -104,52 +111,31 @@ other/1.0@lasote/testing conan.io
         registry = RemoteRegistry(f, TestBufferConanOutput())
         registry.remotes.add("repo1", "url1", True, insert=0)
         self.assertEqual(registry.remotes.list, [("repo1", "url1", True),
-                                            ("conan.io", "https://server.conan.io", True)])
+                         ("conan.io", "https://server.conan.io", True)])
         registry.remotes.add("repo2", "url2", True, insert=1)
         self.assertEqual(registry.remotes.list, [("repo1", "url1", True),
-                                            ("repo2", "url2", True),
-                                            ("conan.io", "https://server.conan.io", True)])
+                         ("repo2", "url2", True),
+                         ("conan.io", "https://server.conan.io", True)])
         registry.remotes.add("repo3", "url3", True, insert=5)
         self.assertEqual(registry.remotes.list, [("repo1", "url1", True),
-                                            ("repo2", "url2", True),
-                                            ("conan.io", "https://server.conan.io", True),
-                                            ("repo3", "url3", True)])
+                         ("repo2", "url2", True),
+                         ("conan.io", "https://server.conan.io", True),
+                         ("repo3", "url3", True)])
 
-    def remove_all_package_test(self):
+    @staticmethod
+    def _get_registry():
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
-        registry = RemoteRegistry(f, TestBufferConanOutput())
+        remotes, refs = load_registry_txt("conan.io https://server.conan.io True\n"
+                                          "conan.io2 https://server2.conan.io True\n")
+        reg = dump_registry(remotes, refs, {})
+        save(f, reg)
+        return RemoteRegistry(f, TestBufferConanOutput())
 
-        registry.remotes.add("r1", "url1", True, insert=0)
-        registry.remotes.add("r2", "url2", True, insert=0)
+    def revisions_reference_already_exist_test(self):
 
-        ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
-        ref2 = ConanFileReference.loads("MyLib2/0.1@lasote/stable")
-
-        registry.prefs.set(PackageReference(ref, "1"), "r1")
-        registry.prefs.set(PackageReference(ref, "2"), "r1")
-        registry.prefs.set(PackageReference(ref, "3"), "r1")
-        registry.prefs.set(PackageReference(ref, "4"), "r2")
-        registry.prefs.set(PackageReference(ref2, "1"), "r1")
-
-        registry.prefs.remove_all(ref)
-
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "4")))
-        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")
-
-        registry.prefs.set(PackageReference(ref, "1"), "r1")
-        registry.prefs.set(PackageReference(ref, "2"), "r1")
-        registry.prefs.set(PackageReference(ref, "3"), "r1")
-        registry.prefs.set(PackageReference(ref, "4"), "r2")
-        registry.prefs.set(PackageReference(ref2, "1"), "r1")
-
-        registry.prefs.remove_all(ref, "r1")
-
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "1")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "2")))
-        self.assertIsNone(registry.prefs.get(PackageReference(ref, "3")))
-        self.assertEquals(registry.prefs.get(PackageReference(ref, "4")).name, "r2")
-        self.assertEquals(registry.prefs.get(PackageReference(ref2, "1")).name, "r1")
+        registry = self._get_registry()
+        ref = ConanFileReference.loads("lib/1.0@user/channel")
+        # Test already exists
+        registry.refs.set(ref, "conan.io", check_exists=True)
+        with self.assertRaisesRegexp(ConanException, "already exists"):
+            registry.refs.set(ref.copy_with_rev("revision"), "conan.io", check_exists=True)

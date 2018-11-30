@@ -4,7 +4,8 @@
 import unittest
 import platform
 import os
-from conans import tools
+
+from conans.client import tools
 
 
 class FakeSettings(object):

@@ -1,7 +1,6 @@
 import os
 from collections import OrderedDict
 
-from conans import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
@@ -10,6 +9,7 @@ from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, D
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.log import logger
+from conans.client import tools
 
 
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
@@ -105,7 +105,8 @@ def build_type_definition(build_type, generator, check_multi_configuration=True)
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False, forced_build_type=None):
+                 parallel=True, generator=None, set_cmake_flags=False,
+                 forced_build_type=None, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
@@ -113,6 +114,7 @@ class CMakeDefinitionsBuilder(object):
         self._generator = generator or get_generator(self._conanfile.settings)
         self._set_cmake_flags = set_cmake_flags
         self._forced_build_type = forced_build_type
+        self._output = output
 
     def _ss(self, setname):
         """safe setting"""
@@ -222,10 +224,10 @@ class CMakeDefinitionsBuilder(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
-                self._conanfile.output.warn("The specified make program '%s' cannot be found"
-                                            "and will be ignored" % make_program)
+                self._output.warn("The specified make program '%s' cannot be found and will be "
+                                  "ignored" % make_program)
             else:
-                self._conanfile.output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
+                self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
                 return {"CMAKE_MAKE_PROGRAM": make_program}
 
         return {}
@@ -245,9 +247,8 @@ class CMakeDefinitionsBuilder(object):
 
         if self._forced_build_type:
             if build_type != self._forced_build_type:
-                self._conanfile.output.warn("Forced CMake build type ('%s') different from the "
-                                            "settings build type ('%s')" % (self._forced_build_type,
-                                                                            build_type))
+                self._output.warn("Forced CMake build type ('%s') different from the settings "
+                                  "build type ('%s')" % (self._forced_build_type, build_type))
             ret.update(build_type_definition(self._forced_build_type, self._generator,
                                              check_multi_configuration=False))
         else:
@@ -261,8 +262,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
-        ret[cmake_in_local_cache_var_name] =\
-            in_local_cache_definition(self._conanfile.in_local_cache)[cmake_in_local_cache_var_name]
+        ret.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:
             ret["CONAN_COMPILER"] = compiler
@@ -300,7 +300,7 @@ class CMakeDefinitionsBuilder(object):
 
         if str(os_) in ["Windows", "WindowsStore"] and compiler == "Visual Studio":
             if self._parallel:
-                flag = parallel_compiler_cl_flag()
+                flag = parallel_compiler_cl_flag(output=self._output)
                 ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', flag)
                 ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', flag)
 

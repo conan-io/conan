@@ -1,10 +1,10 @@
 import unittest
 
-from conans import tools
 from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import mkdir, load, rmdir
 from conans.model.ref import ConanFileReference
+from conans.client import tools
 
 
 conanfile = '''
@@ -244,7 +244,8 @@ class DevOutSourceFlowTest(unittest.TestCase):
         install_dir = os.path.join(client.current_folder, "install_x86_64")
         tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
                               "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
-                              '"%s/conanbuildinfo.cmake"' % install_dir)
+                              '"%s/conanbuildinfo.cmake"' % install_dir,
+                              output=client.out)
 
         client.run("install . --install-folder install_x86_64 -s arch=x86_64")
         client.run("build . --build-folder build_x86_64 --install-folder '%s' "
