@@ -48,7 +48,7 @@ class CMake(object):
                                           cmake_system_name=cmake_system_name,
                                           make_program=make_program, parallel=parallel,
                                           generator=self._generator, set_cmake_flags=set_cmake_flags,
-                                          build_type=build_type)
+                                          forced_build_type=build_type)
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
@@ -60,6 +60,10 @@ class CMake(object):
     @build_folder.setter
     def build_folder(self, value):
         self.build_dir = value
+
+    @property
+    def build_type(self):
+        return self._build_type
 
     @property
     def generator(self):

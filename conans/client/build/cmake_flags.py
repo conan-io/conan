@@ -105,14 +105,14 @@ def build_type_definition(build_type, generator, check_multi_configuration=True)
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False, build_type=None):
+                 parallel=True, generator=None, set_cmake_flags=False, forced_build_type=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._generator = generator or get_generator(self._conanfile.settings)
         self._set_cmake_flags = set_cmake_flags
-        self._forced_build_type = build_type
+        self._forced_build_type = forced_build_type
 
     def _ss(self, setname):
         """safe setting"""
@@ -246,7 +246,7 @@ class CMakeDefinitionsBuilder(object):
         if self._forced_build_type:
             if build_type != self._forced_build_type:
                 self._conanfile.output.warn("Forced CMake build type ('%s') different from the "
-                                            "settings build_type ('%s')" % (self._forced_build_type,
+                                            "settings build type ('%s')" % (self._forced_build_type,
                                                                             build_type))
             ret.update(build_type_definition(self._forced_build_type, self._generator,
                                              check_multi_configuration=False))
