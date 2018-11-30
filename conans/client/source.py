@@ -208,3 +208,4 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir)
         scm.checkout()
+    _clean_source_folder(dest_dir)
