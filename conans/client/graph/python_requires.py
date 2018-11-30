@@ -36,7 +36,7 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            with self.capture() as py_requires:
+            with self.capture_requires() as py_requires:
                 module, filename = parse_conanfile(path)
                 module.python_requires = py_requires
 
