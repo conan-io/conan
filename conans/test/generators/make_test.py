@@ -269,7 +269,7 @@ CXXFLAGS            += $(CONAN_CPPFLAGS)
 CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
-LDFLAGS             += $(addprefix -l, $(CONAN_LIBS))
+LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
 SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 
 #----------------------------------------
@@ -277,11 +277,11 @@ SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_SHARED_LIB_COMMAND   ?= \
 	g++ -shared $(CXX_OBJ_FILES) \
-	$(CFLAGS) $(CXXFLAGS) $(LDFLAGS) $(SHAREDLINKFLAGS) \
+	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(SHAREDLINKFLAGS) \
 	-o $(SHARED_LIB_FILENAME)
 
 CREATE_STATIC_LIB_COMMAND   ?= \
@@ -377,7 +377,7 @@ CXXFLAGS            += $(CONAN_CPPFLAGS)
 CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
-LDFLAGS             += $(addprefix -l, $(CONAN_LIBS))
+LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
 EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
 #----------------------------------------
@@ -385,11 +385,11 @@ EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_EXE_COMMAND          ?= \
 	g++ $(CXX_OBJ_FILES) \
-	$(CFLAGS) $(CXXFLAGS) $(LDFLAGS) $(EXELINKFLAGS) \
+	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) \
 	-o $(EXE_FILENAME)
 
 
