@@ -47,7 +47,7 @@ class Meson(object):
         self.options['default-library'] = "shared" if shared is None or shared else "static"
 
         # fpic
-        if str(self._os) not in ["Windows", "WindowsStore"]:
+        if self._os and "Windows" not in self._os:
             fpic = self._so("fPIC")
             if fpic is not None:
                 shared = self._so("shared")
@@ -116,8 +116,7 @@ class Meson(object):
         defs = defs or {}
 
         # overwrite default values with user's inputs
-        for key in defs.keys():
-            self.options[key] = defs[key]
+        self.options.update(defs)
 
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
                                                     source_dir, build_dir,
@@ -195,4 +194,4 @@ class Meson(object):
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)
         except Exception as e:
-            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+            raise ConanException("Error retrieving Meson version: '{}'".format(e))
