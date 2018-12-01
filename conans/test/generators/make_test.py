@@ -257,12 +257,15 @@ libhellowrapper.a
 SHARED_LIB_FILENAME = \
 libhellowrapper.so
 
+CXXFLAGS += \
+-fPIC
 
 #----------------------------------------
 #     Prepare flags from variables
 #----------------------------------------
 
 CFLAGS              += $(CONAN_CFLAGS)
+CXXFLAGS            += $(CONAN_CPPFLAGS)
 CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
@@ -274,11 +277,11 @@ SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CFLAGS) $(CPPFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_SHARED_LIB_COMMAND   ?= \
 	g++ -shared $(CXX_OBJ_FILES) \
-	$(CFLAGS) $(LDFLAGS) $(SHAREDLINKFLAGS) \
+	$(CFLAGS) $(CXXFLAGS) $(LDFLAGS) $(SHAREDLINKFLAGS) \
 	-o $(SHARED_LIB_FILENAME)
 
 CREATE_STATIC_LIB_COMMAND   ?= \
@@ -337,7 +340,6 @@ class HelloWrapper(ConanFile):
 
         main = """
 #include "hellowrapper.h"
-CONAN_EXELINKFLAGS
 int main()
 {
      hellowrapper();
@@ -360,28 +362,34 @@ main.o
 EXE_FILENAME = \
 main
 
+CXXFLAGS += \
+-fPIC
+
+EXELINKFLAGS += \
+-fPIE
 
 #----------------------------------------
 #     Prepare flags from variables
 #----------------------------------------
 
 CFLAGS              += $(CONAN_CFLAGS)
+CXXFLAGS            += $(CONAN_CPPFLAGS)
 CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
 LDFLAGS             += $(addprefix -l, $(CONAN_LIBS))
-CONAN_EXELINKFLAGS  += $(CONAN_EXELINKFLAGS)
+EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
 #----------------------------------------
 #     Make Commands
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CFLAGS) $(CPPFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_EXE_COMMAND          ?= \
 	g++ $(CXX_OBJ_FILES) \
-	$(CFLAGS) $(LDFLAGS) $(CONAN_EXELINKFLAGS) \
+	$(CFLAGS) $(CXXFLAGS) $(LDFLAGS) $(EXELINKFLAGS) \
 	-o $(EXE_FILENAME)
 
 
