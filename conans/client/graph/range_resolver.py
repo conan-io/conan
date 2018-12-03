@@ -1,7 +1,7 @@
-
 import re
-from conans.model.ref import ConanFileReference, ConanName
+
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.search.search import search_recipes
 
 
@@ -9,7 +9,7 @@ re_param = re.compile(r"^(include_prerelease|loose)\s*=\s*(True|False)$")
 re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\(\)\s])*$")
 
 
-def _parse_versionexpr(versionexpr, output):
+def _parse_versionexpr(versionexpr):
     expression = [it.strip() for it in versionexpr.split(",")]
     assert 1 <= len(expression) <= 4, "Invalid expression for version_range '{}'".format(versionexpr)
 
@@ -20,7 +20,7 @@ def _parse_versionexpr(versionexpr, output):
     for i, expr in enumerate(expression):
         match_param = re_param.match(expr)
         match_version = re_version.match(expr)
-        
+
         if match_param == match_version:
             raise ConanException("Invalid version range '{}', failed in "
                                  "chunk '{}'".format(versionexpr, expr))
@@ -54,7 +54,7 @@ def satisfying(list_versions, versionexpr, output):
     """
     from semver import SemVer, Range, max_satisfying
 
-    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, output)
+    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr)
 
     # Check version range expression
     try:
@@ -72,7 +72,8 @@ def satisfying(list_versions, versionexpr, output):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
 
     # Search best matching version in range
-    result = max_satisfying(candidates, act_range, loose=loose, include_prerelease=include_prerelease)
+    result = max_satisfying(candidates, act_range, loose=loose,
+                            include_prerelease=include_prerelease)
     return candidates.get(result)
 
 
