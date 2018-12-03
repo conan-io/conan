@@ -3,6 +3,7 @@ import re
 import unittest
 
 from collections import namedtuple
+from nose.plugins.attrib import attr
 
 from conans.client.conf import default_settings_yml
 from conans.client.generators.cmake import CMakeGenerator
@@ -172,10 +173,10 @@ class CMakeGeneratorTest(unittest.TestCase):
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
-        message(STATUS "Conan: called by CMake conan helper")
+        conan_message(STATUS "Conan: called by CMake conan helper")
     endif()
     if(CONAN_IN_LOCAL_CACHE)
-        message(STATUS "Conan: called inside local cache")
+        conan_message(STATUS "Conan: called inside local cache")
     endif()
     conan_check_compiler()
     if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
@@ -183,23 +184,23 @@ class CMakeGeneratorTest(unittest.TestCase):
     endif()
     conan_set_find_library_paths()
     if(NOT ARGUMENTS_TARGETS)
-        message(STATUS "Conan: Using cmake global configuration")
+        conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
-        message(STATUS "Conan: Using cmake targets configuration")
+        conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
     if(ARGUMENTS_SKIP_RPATH)
         # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
-        message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
+        conan_message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        message(STATUS "Conan: Adjusting default RPATHs Conan policies")
+        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
     if(NOT ARGUMENTS_SKIP_STD)
-        message(STATUS "Conan: Adjusting language standard")
+        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
     if(NOT ARGUMENTS_SKIP_FPIC)
@@ -266,10 +267,19 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
 
+    @attr('slow')
     def no_output_test(self):
         client = TestClient()
         client.run("new Test/1.0 --sources")
         cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
+
+        # Test output works as expected
+        client.run("create . danimtb/testing")
+        self.assertIn("Conan: Using cmake global configuration", client.out)
+        self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+        self.assertIn("Conan: Adjusting language standard", client.out)
+
+        # Silence output
         replace_in_file(cmakelists_path,
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
