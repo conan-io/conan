@@ -93,13 +93,10 @@ def runtime_definition(runtime):
     return {runtime_definition_var_name: "/%s" % runtime} if runtime else {}
 
 
-def build_type_definition(build_type, generator, check_multi_configuration=True):
-    result = {}
-
-    if build_type:
-        multi = {"CMAKE_BUILD_TYPE": build_type} if not is_multi_configuration(generator) else {}
-        result = multi if check_multi_configuration else {"CMAKE_BUILD_TYPE": build_type}
-    return result
+def build_type_definition(build_type, generator):
+    if build_type and not is_multi_configuration(generator):
+        return {"CMAKE_BUILD_TYPE": build_type}
+    return {}
 
 
 class CMakeDefinitionsBuilder(object):
@@ -245,12 +242,10 @@ class CMakeDefinitionsBuilder(object):
         ret = OrderedDict()
         ret.update(runtime_definition(runtime))
 
-        if self._forced_build_type:
-            if build_type != self._forced_build_type:
-                self._output.warn("Forced CMake build type ('%s') different from the settings "
-                                  "build type ('%s')" % (self._forced_build_type, build_type))
-            ret.update(build_type_definition(self._forced_build_type, self._generator,
-                                             check_multi_configuration=False))
+        if self._forced_build_type and self._forced_build_type != build_type:
+            self._output.warn("Forced CMake build type ('%s') different from the settings build "
+                              "type ('%s')" % (self._forced_build_type, build_type))
+            ret.update(build_type_definition(self._forced_build_type, self._generator))
         else:
             ret.update(build_type_definition(build_type, self._generator))
 

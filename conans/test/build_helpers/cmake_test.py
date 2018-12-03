@@ -388,7 +388,8 @@ class CMakeTest(unittest.TestCase):
                 cmake = CMake(conan_file)
                 cmake.configure(source_folder="source", build_dir="build")
 
-    def build_type_ovewrite_test(self):
+    def build_type_force_test(self):
+        # 1: No multi-config generator
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
         settings.compiler = "gcc"
@@ -397,6 +398,20 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conan_file = ConanFileMock()
         conan_file.settings = settings
+        # 2: build_type from settings
+        cmake = CMake(conan_file)
+        self.assertNotIn('WARN: Forced CMake build type ', conan_file.output)
+        self.assertEquals(cmake.build_type, "Release")
+
+        # 2: build_type from attribute
+        cmake.build_type = "Debug"
+        expected_output = "WARN: Forced CMake build type ('Debug') different from the settings " \
+                          "build type ('Release')"
+        self.assertIn(expected_output, conan_file.output)
+        self.assertEquals(cmake.build_type, "Debug")
+        self.assertIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
+
+        # 2: build_type from constructor
         cmake = CMake(conan_file, build_type="Debug")
         expected_output = "WARN: Forced CMake build type ('Debug') different from the settings " \
                           "build type ('Release')"
@@ -404,13 +419,7 @@ class CMakeTest(unittest.TestCase):
         self.assertEquals(cmake.build_type, "Debug")
         self.assertIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
 
-        conan_file = ConanFileMock()
-        conan_file.settings = settings
-        cmake = CMake(conan_file)
-        self.assertNotIn('WARN: Forced CMake build type ', conan_file.output)
-        self.assertEquals(cmake.build_type, "Release")
-
-        # Now with visual (multiconfig) but build type forced
+        # 1: Multi-config generator
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -419,16 +428,24 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        cmake = CMake(conan_file, build_type="Debug")
-        self.assertIn(expected_output, conan_file.output)
-        self.assertEquals(cmake.build_type, "Debug")
-        self.assertIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
-        self.assertNotIn("--config Debug", cmake.build_config)
-        # Now with visual (multiconfig) normal
-        conan_file.settings.build_type = "Release"
+        # 2: build_type from settings
         cmake = CMake(conan_file)
         self.assertNotIn('-DCMAKE_BUILD_TYPE="Release"', cmake.command_line)
         self.assertIn("--config Release", cmake.build_config)
+
+        # 2: build_type from attribute
+        cmake.build_type = "Debug"
+        self.assertIn(expected_output, conan_file.output)
+        self.assertEquals(cmake.build_type, "Debug")
+        self.assertNotIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
+        self.assertIn("--config Debug", cmake.build_config)
+
+        # 2: build_type from constructor
+        cmake = CMake(conan_file, build_type="Debug")
+        self.assertIn(expected_output, conan_file.output)
+        self.assertEquals(cmake.build_type, "Debug")
+        self.assertNotIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
+        self.assertIn("--config Debug", cmake.build_config)
 
     def loads_default_test(self):
         settings = Settings.loads(default_settings_yml)

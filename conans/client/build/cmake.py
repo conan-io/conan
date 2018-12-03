@@ -6,8 +6,7 @@ import subprocess
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name, \
-    cmake_in_local_cache_var_name
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, cmake_in_local_cache_var_name
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -39,17 +38,20 @@ class CMake(object):
 
         self._conanfile = conanfile
         self._settings = conanfile.settings
-        self._generator = generator or get_generator(conanfile.settings)
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
-        self._parallel = parallel
 
+        self.generator = generator or get_generator(conanfile.settings)
+        self.parallel = parallel
         # Initialize definitions (won't be updated if conanfile or any of these variables change)
         builder = CMakeDefinitionsBuilder(self._conanfile,
                                           cmake_system_name=cmake_system_name,
                                           make_program=make_program, parallel=parallel,
-                                          generator=self._generator, set_cmake_flags=set_cmake_flags,
+                                          generator=self.generator, set_cmake_flags=set_cmake_flags,
                                           forced_build_type=build_type,
                                           output=self._conanfile.output)
+        # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
+        # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
+
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
@@ -66,9 +68,23 @@ class CMake(object):
     def build_type(self):
         return self._build_type
 
+    @build_type.setter
+    def build_type(self, build_type):
+        settings_build_type = self._settings.get_safe("build_type")
+        if build_type != self._settings.get_safe("build_type"):
+            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
+                                        " build type ('%s')" % (build_type, settings_build_type))
+        self.definitions.pop("CMAKE_BUILD_TYPE", None)
+        self.definitions.update(build_type_definition(build_type, self.generator))
+        self._build_type = build_type
+
     @property
-    def generator(self):
-        return self._generator
+    def in_local_cache(self):
+        try:
+            in_local_cache = self.definitions[cmake_in_local_cache_var_name]
+            return get_bool_from_text(str(in_local_cache))
+        except KeyError:
+            return False
 
     @property
     def flags(self):
@@ -182,7 +198,7 @@ class CMake(object):
         if target is not None:
             args = ["--target", target] + args
 
-        if self.generator and self._parallel:
+        if self.generator and self.parallel:
             compiler_version = self._settings.get_safe("compiler.version")
             if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
