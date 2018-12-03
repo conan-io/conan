@@ -73,7 +73,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return None, captured_revision
 
-    scm = SCM(scm_data, conanfile_dir)
+    scm = SCM(scm_data, conanfile_dir, output)
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url()
