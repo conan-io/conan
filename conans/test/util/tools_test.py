@@ -1279,6 +1279,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertEquals(request.query["file"], "1")
             return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
 
+        @thread.server.get("/error_url")
+        def error_url():
+            from bottle import response
+            response.status = 500
+            return 'This always fail'
+
         thread.run_server()
 
         out = TestBufferConanOutput()
@@ -1303,6 +1309,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       filename="sample.tar.gz", requester=requests, output=out)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
+
+        with self.assertRaisesRegexp(ConanException, "Error"):
+            tools.get("http://localhost:%s/error_url" % thread.port,
+                      filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
+                      retry=3, retry_wait=0)
+
+        # Not found error
+        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     def unix_to_dos_unit_test(self):
 
