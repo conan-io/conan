@@ -440,11 +440,13 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
 
-        if block_v2 or get_env("CONAN_API_V2_BLOCKED", True):
+        if self.block_v2:
             self.revisions = False
         else:
             self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.block_v2 = False
 
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
@@ -569,6 +571,7 @@ servers["r2"] = TestServer()
                                                             self.user_io, self.client_version,
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
+            self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
