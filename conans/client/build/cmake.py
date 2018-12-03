@@ -6,7 +6,8 @@ import subprocess
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset, build_type_definition, cmake_in_local_cache_var_name
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, \
+    cmake_in_local_cache_var_name, runtime_definition_var_name
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -71,7 +72,7 @@ class CMake(object):
     @build_type.setter
     def build_type(self, build_type):
         settings_build_type = self._settings.get_safe("build_type")
-        if build_type != self._settings.get_safe("build_type"):
+        if build_type != settings_build_type:
             self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
                                         " build type ('%s')" % (build_type, settings_build_type))
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
@@ -85,6 +86,10 @@ class CMake(object):
             return get_bool_from_text(str(in_local_cache))
         except KeyError:
             return False
+
+    @property
+    def runtime(self):
+        return defs_to_string(self.definitions.get(runtime_definition_var_name))
 
     @property
     def flags(self):
@@ -108,7 +113,7 @@ class CMake(object):
     def build_config(self):
         """ cmake --build tool have a --config option for Multi-configuration IDEs
         """
-        if self._build_type and "CMAKE_BUILD_TYPE" not in self.definitions:
+        if self._build_type and self.is_multi_configuration:
             return "--config %s" % self._build_type
         return ""
 
