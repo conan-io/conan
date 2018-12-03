@@ -149,7 +149,7 @@ def generate_targets_section(dependencies):
     section.append("\n###  Definition of macros and functions ###\n")
     section.append('macro(conan_define_targets)\n'
                    '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
-                   '        conan_message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
+                   '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
                    '    endif()  # CMAKE > 3.x\n'
                    '    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CMD_CXX_FLAGS}")\n'
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
@@ -319,8 +319,8 @@ macro(conan_split_version VERSION_STRING MAJOR MINOR)
 endmacro()
 
 macro(conan_error_compiler_version)
-    conan_message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}' version 'compiler.version=${CONAN_COMPILER_VERSION}'"
-                              " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}=" ${VERSION_MAJOR}.${VERSION_MINOR}')
+    message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}' version 'compiler.version=${CONAN_COMPILER_VERSION}'"
+                        " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}=" ${VERSION_MAJOR}.${VERSION_MINOR}')
 endmacro()
 
 set(_CONAN_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -403,7 +403,7 @@ function(conan_check_compiler)
             set(CMAKE_CXX_COMPILER_ID ${CMAKE_C_COMPILER_ID})
             set(CMAKE_CXX_COMPILER_VERSION ${CMAKE_C_COMPILER_VERSION})
         else()
-            conan_message(FATAL_ERROR "This project seems to be plain C, but no compiler defined")
+            message(FATAL_ERROR "This project seems to be plain C, but no compiler defined")
         endif()
     endif()
     if(CONAN_DISABLE_CHECK_COMPILER)
@@ -441,8 +441,8 @@ function(conan_check_compiler)
         endif()
 
         if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
-            conan_message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
-                                      "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
+            message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
+                                "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
         endif()
 
     # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
@@ -451,7 +451,7 @@ function(conan_check_compiler)
         (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
         (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
-        conan_message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
+        message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
     endif()
 
 
@@ -625,12 +625,12 @@ cmake_macros_multi = """
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
 else()
-    conan_message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
+    message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
 endif()
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
 else()
-    conan_message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
+    message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
 endif()
 
 macro(conan_basic_setup)
