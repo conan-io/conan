@@ -733,7 +733,6 @@ class PythonRequires0(ConanFile):
         client.run("alias python_requires0/latest2@jgsogo/test "
                    "python_requires0/latest@jgsogo/test")
 
-
         # Create python requires, that require the previous one
         client.save({CONANFILE: """
 from conans import ConanFile, python_requires
@@ -760,7 +759,8 @@ class PythonRequires11(ConanFile):
         """.format(v=version_str)})
         client.run("export . python_requires11/1.0@jgsogo/test")
         client.run("alias python_requires11/latest@jgsogo/test python_requires11/1.0@jgsogo/test")
-        client.run("alias python_requires11/latest2@jgsogo/test python_requires11/latest@jgsogo/test")
+        client.run("alias python_requires11/latest2@jgsogo/test "
+                   "python_requires11/latest@jgsogo/test")
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: """
@@ -786,7 +786,7 @@ base_class = python_requires("python_requires1/{v}@jgsogo/test")
 base_class2 = python_requires("python_requires11/{v}@jgsogo/test")
 
 class PythonRequires2(base_class.PythonRequires1, base_class2.PythonRequires11):
-    
+
     def build(self):
         super(PythonRequires2, self).build()
         self.output.info(">>> PythonRequires2::build (v={{}})".format(self.version))
@@ -803,7 +803,7 @@ base_class = python_requires("python_requires2/{v}@jgsogo/test")
 base_class2 = python_requires("python_requires22/{v}@jgsogo/test")
 
 class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
-    
+
     def build(self):
         super(Project, self).build()
         self.output.info(">>> Project::build (v={{}})".format(self.version))
@@ -829,4 +829,9 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
         self.assertIn("    python_requires1/1.0@jgsogo/test", client.out)
         self.assertIn("    python_requires2/1.0@jgsogo/test", client.out)
         #   - packages
-        self.assertIn("    project/1.0@jgsogo/test:f613591ad277f4bd26922eacbc1ea2cb9cf390d2 - Build", client.out)
+        self.assertIn("    project/1.0@jgsogo/test:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+                      client.out)
+
+        #   - no mention to alias
+        self.assertNotIn("alias", client.out)
+        self.assertNotIn("alias2", client.out)
