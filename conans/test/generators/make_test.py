@@ -36,8 +36,8 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.libs = ['libfoo']
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
-        cpp_info.cflags = ['-fPIC']
-        cpp_info.cppflags = ['-fPIE']
+        cpp_info.cflags = ['-fgimple']
+        cpp_info.cppflags = ['-fdollars-in-identifiers']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -49,8 +49,8 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.libs = ['libbar']
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
-        cpp_info.cflags = ['-mtune=native']
-        cpp_info.cppflags = ['-march=native']
+        cpp_info.cflags = ['-fno-asm']
+        cpp_info.cppflags = ['-pthread']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -86,10 +86,10 @@ CONAN_DEFINES_MYPKG1 +=  \\
 MYDEFINE1
 
 CONAN_CFLAGS_MYPKG1 +=  \\
--fPIC
+-fgimple
 
 CONAN_CPPFLAGS_MYPKG1 +=  \\
--fPIE
+-fdollars-in-identifiers
 
 CONAN_SHAREDLINKFLAGS_MYPKG1 +=  \\
 -framework Cocoa
@@ -125,10 +125,10 @@ CONAN_DEFINES_MYPKG2 +=  \\
 MYDEFINE2
 
 CONAN_CFLAGS_MYPKG2 +=  \\
--mtune=native
+-fno-asm
 
 CONAN_CPPFLAGS_MYPKG2 +=  \\
--march=native
+-pthread
 
 CONAN_SHAREDLINKFLAGS_MYPKG2 +=  \\
 -framework AudioFoundation
@@ -242,7 +242,7 @@ include conanbuildinfo.mak
 #     Make variables for a sample App
 #----------------------------------------
 
-CXX_INCLUDES = \
+INCLUDE_PATHS = \
 ./include
 
 CXX_SRCS = \
@@ -257,28 +257,31 @@ libhellowrapper.a
 SHARED_LIB_FILENAME = \
 libhellowrapper.so
 
+CXXFLAGS += \
+-fPIC
 
 #----------------------------------------
 #     Prepare flags from variables
 #----------------------------------------
 
-CPPFLAGS        += $(addprefix -I, $(CXX_INCLUDES) $(CONAN_INCLUDE_PATHS))
-CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
-LIBS            += $(addprefix -l, $(CONAN_LIBS))
-CXXFLAGS        += $(addprefix -f, PIC)
-
+CFLAGS              += $(CONAN_CFLAGS)
+CXXFLAGS            += $(CONAN_CPPFLAGS)
+CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
+SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 
 #----------------------------------------
 #     Make Commands
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_SHARED_LIB_COMMAND   ?= \
 	g++ -shared $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LDFLAGS_SHARED) $(CPPFLAGS) $(LIBS) \
+	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(SHAREDLINKFLAGS) \
 	-o $(SHARED_LIB_FILENAME)
 
 CREATE_STATIC_LIB_COMMAND   ?= \
@@ -337,7 +340,6 @@ class HelloWrapper(ConanFile):
 
         main = """
 #include "hellowrapper.h"
-
 int main()
 {
      hellowrapper();
@@ -360,27 +362,34 @@ main.o
 EXE_FILENAME = \
 main
 
+CXXFLAGS += \
+-fPIC
+
+EXELINKFLAGS += \
+-fPIE
 
 #----------------------------------------
 #     Prepare flags from variables
 #----------------------------------------
 
-CPPFLAGS        += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
-CPPFLAGS        += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS         += $(addprefix -L, $(CONAN_LIB_PATHS))
-LIBS            += $(addprefix -l, $(CONAN_LIBS))
-
+CFLAGS              += $(CONAN_CFLAGS)
+CXXFLAGS            += $(CONAN_CPPFLAGS)
+CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
+EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
 #----------------------------------------
 #     Make Commands
 #----------------------------------------
 
 COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CXXFLAGS) $(CPPFLAGS) $< -o $@
+	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 CREATE_EXE_COMMAND          ?= \
 	g++ $(CXX_OBJ_FILES) \
-	$(LDFLAGS) $(LIBS) \
+	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) \
 	-o $(EXE_FILENAME)
 
 
