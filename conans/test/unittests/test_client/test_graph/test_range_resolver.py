@@ -10,6 +10,15 @@ class ParseVersionExpr(unittest.TestCase):
         self.assertEqual(_parse_versionexpr("2.3, 3.2", output), ("2.3 3.2", True, False))
         self.assertEqual(_parse_versionexpr("2.3, <=3.2", output), ("2.3 <=3.2", True, False))
 
+    def test_standard_semver(self):
+        output = TestBufferConanOutput()
+        self.assertEqual(_parse_versionexpr("*", output), ("*", True, False))
+        self.assertEqual(_parse_versionexpr("", output), ("", True, False))  # Defaults to '*'
+        self.assertEqual(_parse_versionexpr("~1", output), ("~1", True, False))
+        self.assertEqual(_parse_versionexpr("~1.2.3-beta.2", output), ("~1.2.3-beta.2", True, False))
+        self.assertEqual(_parse_versionexpr("^0.0", output), ("^0.0", True, False))
+        self.assertEqual(_parse_versionexpr("1.2.3 - 2.3.4", output), ("1.2.3 - 2.3.4", True, False))
+
     def test_only_loose(self):
         output = TestBufferConanOutput()
         self.assertEqual(_parse_versionexpr("2.3 ,3.2, loose=True", output), ("2.3 3.2", True, False))

@@ -18,12 +18,14 @@ from conans.test.utils.tools import TestBufferConanOutput
 class BasicMaxVersionTest(unittest.TestCase):
     def prereleases_versions_test(self):
         output = TestBufferConanOutput()
-        self.assertRaises(ConanException, satisfying, ["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
+        result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
+        self.assertEqual(result, "1.1.111")
         # prereleases are ordered
         result = satisfying(["1.1.1-a.1", "1.1.1-a.11", "1.1.1-a.111", "1.1.1-a.21"], "~1.1.1-a",
                             output)
         self.assertEqual(result, "1.1.1-a.111")
-        self.assertRaises(ConanException, satisfying, ["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        self.assertEqual(result, "1.1.1")
         result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.3-pre")
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.4"], "~4.2.3-", output)
@@ -51,7 +53,8 @@ class BasicMaxVersionTest(unittest.TestCase):
 
     def basic_test(self):
         output = TestBufferConanOutput()
-        self.assertRaises(ConanException, satisfying, ["1.1", "1.2", "1.3", "2.1"], "", output)
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
+        self.assertEqual(result, "2.1")
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "1", output)
         self.assertEqual(result, "1.3")
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "1.1", output)
@@ -180,19 +183,14 @@ class SayConan(ConanFile):
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1,<1", "0.3"),
                                (">0.1,<1||2.1", "2.1"),
-                               ("", ConanException),
+                               ("", "2.2.1"),
                                ("~0", "0.3"),
                                ("~=1", "1.2.1"),
                                ("~1.1", "1.1.2"),
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            if solution == ConanException:
-                with self.assertRaises(ConanException):
-                    deps_graph = self.root(hello_content % expr)
-                continue
-            else:
-                deps_graph = self.root(hello_content % expr)
+            deps_graph = self.root(hello_content % expr)
 
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
@@ -216,19 +214,14 @@ class SayConan(ConanFile):
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1,<1", "0.3"),
                                (">0.1,<1||2.1", "2.1"),
-                               ("", ConanException),
+                               ("", "2.2.1"),
                                ("~0", "0.3"),
                                ("~=1", "1.2.1"),
                                ("~1.1", "1.1.2"),
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            if solution == ConanException:
-                with self.assertRaises(ConanException):
-                    deps_graph = self.root(hello_content % expr, update=True)
-                continue
-            else:
-                deps_graph = self.root(hello_content % expr, update=True)
+            deps_graph = self.root(hello_content % expr, update=True)
             self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
