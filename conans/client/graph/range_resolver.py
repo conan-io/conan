@@ -6,7 +6,7 @@ from conans.search.search import search_recipes
 
 
 re_param = re.compile(r"^(include_prerelease|loose)\s*=\s*(True|False)$")
-re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\s])*$")
+re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\(\)\s])*$")
 
 
 def _parse_versionexpr(versionexpr, output):
