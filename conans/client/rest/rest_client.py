@@ -23,7 +23,7 @@ class RestApiClient(object):
         self._put_headers = put_headers
 
         self._cached_capabilities = defaultdict(list)
-        self.block_v2 = True  # TODO: Remove when apiv2 stable, it is set by TestClient in testing
+        self.block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
 
     def _get_api(self):
         if self.remote_url not in self._cached_capabilities:
