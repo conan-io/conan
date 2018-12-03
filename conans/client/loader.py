@@ -43,13 +43,8 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
 
     def load_class(self, conanfile_path):
-        loaded, filename = parse_conanfile(conanfile_path)
-        try:
-            conanfile = parse_module(loaded, filename)
-            conanfile.python_requires = self._python_requires.requires
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+        return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -188,7 +183,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def parse_module(conanfile_module, module_id):
+def _parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
@@ -218,7 +213,18 @@ def _invalid_python_requires(require):
     raise ConanException("Invalid use of python_requires(%s)" % require)
 
 
-def parse_conanfile(conan_file_path):
+def parse_conanfile(conanfile_path, python_requires):
+    with python_requires.capture_requires() as py_requires:
+        module, filename = _parse_conanfile(conanfile_path)
+        try:
+            conanfile = _parse_module(module, filename)
+            conanfile.python_requires = py_requires
+            return module, conanfile
+        except Exception as e:  # re-raise with file name
+            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+
+
+def _parse_conanfile(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 
