@@ -1,5 +1,6 @@
 import os
 import unittest
+from parameterized import parameterized
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
@@ -81,6 +82,20 @@ class MyConanfileBase(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("export . MyConanfileBase/1.1@lasote/testing")
+
+    def with_alias_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        self._define_base(client)
+        client.run("alias MyConanfileBase/LATEST@lasote/testing MyConanfileBase/1.1@lasote/testing")
+
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/LATEST@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    pass
+"""
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@lasote/testing")
 
     def reuse_test(self):
         client = TestClient(servers={"default": TestServer()},
@@ -692,3 +707,131 @@ def external_baz():
         # Should work even if PYTHONPATH is not declared as [], only external resource needed
         client.run('install Hello/0.1@lasote/stable --build missing -e PYTHONPATH="%s"'
                    % external_dir)
+
+
+class PythonRequiresNestedTest(unittest.TestCase):
+
+    @parameterized.expand([(False, False), (True, False), (True, True), ])
+    def test_python_requires_with_alias(self, use_alias, use_alias_of_alias):
+        assert use_alias if use_alias_of_alias else True
+        version_str = "latest2" if use_alias_of_alias else "latest" if use_alias else "1.0"
+        client = TestClient()
+
+        # Create python_requires
+        client.save({CONANFILE: """
+from conans import ConanFile
+
+class PythonRequires0(ConanFile):
+
+    def build(self):
+        super(PythonRequires0, self).build()
+        self.output.info(">>> PythonRequires0::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+        client.run("export . python_requires0/1.0@jgsogo/test")
+        client.run("alias python_requires0/latest@jgsogo/test "
+                   "python_requires0/1.0@jgsogo/test")
+        client.run("alias python_requires0/latest2@jgsogo/test "
+                   "python_requires0/latest@jgsogo/test")
+
+        # Create python requires, that require the previous one
+        client.save({CONANFILE: """
+from conans import ConanFile, python_requires
+
+base = python_requires("python_requires0/{v}@jgsogo/test")
+
+class PythonRequires1(base.PythonRequires0):
+    def build(self):
+        super(PythonRequires1, self).build()
+        self.output.info(">>> PythonRequires1::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+        client.run("export . python_requires1/1.0@jgsogo/test")
+        client.run("alias python_requires1/latest@jgsogo/test python_requires1/1.0@jgsogo/test")
+        client.run("alias python_requires1/latest2@jgsogo/test python_requires1/latest@jgsogo/test")
+
+        # Create python requires
+        client.save({CONANFILE: """
+from conans import ConanFile, python_requires
+
+class PythonRequires11(ConanFile):
+    def build(self):
+        super(PythonRequires11, self).build()
+        self.output.info(">>> PythonRequires11::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+        client.run("export . python_requires11/1.0@jgsogo/test")
+        client.run("alias python_requires11/latest@jgsogo/test python_requires11/1.0@jgsogo/test")
+        client.run("alias python_requires11/latest2@jgsogo/test "
+                   "python_requires11/latest@jgsogo/test")
+
+        # Create python requires, that require the previous one
+        client.save({CONANFILE: """
+from conans import ConanFile, python_requires
+
+base = python_requires("python_requires0/{v}@jgsogo/test")
+
+class PythonRequires22(base.PythonRequires0):
+    def build(self):
+        super(PythonRequires22, self).build()
+        self.output.info(">>> PythonRequires22::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+        client.run("export . python_requires22/1.0@jgsogo/test")
+        client.run("alias python_requires22/latest@jgsogo/test python_requires22/1.0@jgsogo/test")
+        client.run(
+            "alias python_requires22/latest2@jgsogo/test python_requires22/latest@jgsogo/test")
+
+        # Another python_requires, that requires the previous python requires
+        client.save({CONANFILE: """
+from conans import ConanFile, python_requires
+
+base_class = python_requires("python_requires1/{v}@jgsogo/test")
+base_class2 = python_requires("python_requires11/{v}@jgsogo/test")
+
+class PythonRequires2(base_class.PythonRequires1, base_class2.PythonRequires11):
+
+    def build(self):
+        super(PythonRequires2, self).build()
+        self.output.info(">>> PythonRequires2::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+        client.run("export . python_requires2/1.0@jgsogo/test")
+        client.run("alias python_requires2/latest@jgsogo/test python_requires2/1.0@jgsogo/test")
+        client.run("alias python_requires2/latest2@jgsogo/test python_requires2/latest@jgsogo/test")
+
+        # My project, will consume the latest python requires
+        client.save({CONANFILE: """
+from conans import ConanFile, python_requires
+
+base_class = python_requires("python_requires2/{v}@jgsogo/test")
+base_class2 = python_requires("python_requires22/{v}@jgsogo/test")
+
+class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
+
+    def build(self):
+        super(Project, self).build()
+        self.output.info(">>> Project::build (v={{}})".format(self.version))
+        """.format(v=version_str)})
+
+        client.run("create . project/1.0@jgsogo/test --build=missing")
+
+        # Check that everything is being built
+        self.assertIn("project/1.0@jgsogo/test: >>> PythonRequires11::build (v=1.0)", client.out)
+        self.assertIn("project/1.0@jgsogo/test: >>> PythonRequires0::build (v=1.0)", client.out)
+        self.assertIn("project/1.0@jgsogo/test: >>> PythonRequires22::build (v=1.0)", client.out)
+        self.assertIn("project/1.0@jgsogo/test: >>> PythonRequires1::build (v=1.0)", client.out)
+        self.assertIn("project/1.0@jgsogo/test: >>> PythonRequires2::build (v=1.0)", client.out)
+        self.assertIn("project/1.0@jgsogo/test: >>> Project::build (v=1.0)", client.out)
+
+        # Check that all the graph is printed properly
+        #   - requirements
+        self.assertIn("    project/1.0@jgsogo/test from local cache - Cache", client.out)
+        #   - python requires
+        self.assertIn("    python_requires11/1.0@jgsogo/test", client.out)
+        self.assertIn("    python_requires0/1.0@jgsogo/test", client.out)
+        self.assertIn("    python_requires22/1.0@jgsogo/test", client.out)
+        self.assertIn("    python_requires1/1.0@jgsogo/test", client.out)
+        self.assertIn("    python_requires2/1.0@jgsogo/test", client.out)
+        #   - packages
+        self.assertIn("    project/1.0@jgsogo/test:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+                      client.out)
+
+        #   - no mention to alias
+        self.assertNotIn("alias", client.out)
+        self.assertNotIn("alias2", client.out)
