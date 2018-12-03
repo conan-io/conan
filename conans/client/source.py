@@ -201,12 +201,12 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
     local_sources_path = local_sources_path if captured else None
 
     if local_sources_path:
-        excluded = SCM(scm_data, local_sources_path).excluded_files
+        excluded = SCM(scm_data, local_sources_path, output).excluded_files
         output.info("Getting sources from folder: %s" % local_sources_path)
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
     else:
         output.info("Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir)
+        scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
     if cache:
         # This is a bit weird. Why after a SCM should we remove files. Maybe check conan 2.0

@@ -50,8 +50,9 @@ class SCMData(object):
 
 
 class SCM(object):
-    def __init__(self, data, repo_folder):
+    def __init__(self, data, repo_folder, output):
         self._data = data
+        self._output = output
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
@@ -62,7 +63,8 @@ class SCM(object):
             raise ConanException("SCM not supported: %s" % self._data.type)
 
         return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
-                          username=self._data.username, password=self._data.password)
+                          username=self._data.username, password=self._data.password,
+                          output=self._output)
 
     @property
     def excluded_files(self):
