@@ -237,6 +237,7 @@ class RemoteManager(object):
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
                             output=self._output)
+        # REMOVE in Conan 2.0
         c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
