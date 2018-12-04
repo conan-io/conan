@@ -1,15 +1,15 @@
+import os
 import unittest
 
-from conans import tools
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.model.ref import ConanFileReference, PackageReference
-import os
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
 from parameterized.parameterized import parameterized
 from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
 from conans.test.utils.test_files import scan_folder
+from conans.client import tools
 
 
 conanfile_py = """
@@ -77,8 +77,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                                     "other": [("lasote", "mypass")]})
         self.client = client
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        self.package_reference = PackageReference(self.reference,
-                                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.package_reference = PackageReference(self.reference, NO_SETTINGS_PACKAGE_ID)
         self.source_folder = self.client.client_cache.source(self.reference)
         self.package_folder = self.client.client_cache.package(self.package_reference)
         self.export_folder = self.client.client_cache.export(self.reference)

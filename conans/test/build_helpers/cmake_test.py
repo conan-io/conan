@@ -9,7 +9,6 @@ from parameterized.parameterized import parameterized
 
 from collections import namedtuple
 
-from conans import tools
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.build_info import CppInfo, DepsCppInfo
@@ -18,11 +17,12 @@ from conans.client.conf import default_settings_yml
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.tools import cpu_count
+from conans.client.tools.oss import cpu_count
 from conans.util.files import save, load
 from conans.test.utils.test_files import temp_folder
 from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
+from conans.client import tools
 
 
 def _format_path_as_cmake(pathstr):
@@ -139,39 +139,50 @@ class CMakeTest(unittest.TestCase):
         cmake.configure()
         self.assertIsNone(conanfile.command)
         cmake.build()
-        self.assertIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+        self.assertIn("cmake --build %s" %
+                      CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
                       conanfile.command)
         cmake.install()
-        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
-                                                              % cpu_count()), conanfile.command)
+        self.assertNotIn("cmake --build %s" %
+                         CMakeTest.scape(". --target install -- -j%i" %
+                                         cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+        self.assertIn("cmake --build %s" %
+                      CMakeTest.scape(". --target test -- -j%i" %
+                                      cpu_count(output=conanfile.output)),
                       conanfile.command)
         conanfile.should_build = False
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+        self.assertNotIn("cmake --build %s" %
+                         CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
                          conanfile.command)
         cmake.install()
-        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
-                                                              % cpu_count()), conanfile.command)
+        self.assertNotIn("cmake --build %s" %
+                         CMakeTest.scape(". --target install -- -j%i" %
+                                         cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i" % cpu_count()),
+        self.assertIn("cmake --build %s" %
+                      CMakeTest.scape(". --target test -- -j%i" %
+                                      cpu_count(output=conanfile.output)),
                       conanfile.command)
         conanfile.should_install = True
         conanfile.should_test = False
         cmake.configure()
         self.assertNotIn("cd . && cmake", conanfile.command)
         cmake.build()
-        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". -- -j%i" % cpu_count()),
+        self.assertNotIn("cmake --build %s" %
+                         CMakeTest.scape(". -- -j%i" % cpu_count(output=conanfile.output)),
                          conanfile.command)
         cmake.install()
-        self.assertIn("cmake --build %s" % CMakeTest.scape(". --target install -- -j%i"
-                                                           % cpu_count()), conanfile.command)
+        self.assertIn("cmake --build %s" %
+                      CMakeTest.scape(". --target install -- -j%i" %
+                                      cpu_count(output=conanfile.output)), conanfile.command)
         cmake.test()
-        self.assertNotIn("cmake --build %s" % CMakeTest.scape(". --target test -- -j%i"
-                                                              % cpu_count()), conanfile.command)
+        self.assertNotIn("cmake --build %s" %
+                         CMakeTest.scape(". --target test -- -j%i" %
+                                         cpu_count(output=conanfile.output)), conanfile.command)
 
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
@@ -441,7 +452,7 @@ class CMakeTest(unittest.TestCase):
                 new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
                 if "Visual Studio" in text:
                     cores = ('-DCONAN_CXX_FLAGS="/MP{0}" '
-                             '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count()))
+                             '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count(conan_file.output)))
                     new_text = new_text.replace('-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"',
                                                 '%s-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"' % cores)
 
@@ -696,22 +707,27 @@ build_type: [ Release]
 
         cmake.build()
         self.assertEqual('cmake --build %s %s' %
-                         (dot_dir, (CMakeTest.scape('-- -j%i' % cpu_count()))), conan_file.command)
+                         (dot_dir, (CMakeTest.scape('-- -j%i' % cpu_count(conan_file.output)))),
+                         conan_file.command)
 
         cmake.test()
         self.assertEqual('cmake --build %s %s %s' %
-                         (dot_dir, target_test, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         (dot_dir, target_test,
+                          (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         settings.build_type = "Debug"
         cmake = CMake(conan_file)
         cmake.build()
         self.assertEqual('cmake --build %s %s' %
-                         (dot_dir, (CMakeTest.scape('-- -j%i' % cpu_count()))), conan_file.command)
+                         (dot_dir, (CMakeTest.scape('-- -j%i' %
+                                                    cpu_count(output=conan_file.output)))),
+                         conan_file.command)
 
         cmake.test()
         self.assertEqual('cmake --build %s %s %s' %
-                         (dot_dir, target_test, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         (dot_dir, target_test,
+                          (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         cmake.configure(source_dir="/source", build_dir=self.tempdir,
@@ -733,8 +749,9 @@ build_type: [ Release]
             escaped_args = '--target install "--bar \'foo\'"'
         else:
             escaped_args = r"'--target' 'install' '--bar '\''foo'\'''"
-        self.assertEqual('cmake --build %s %s %s'
-                         % (tempdir, escaped_args, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+        self.assertEqual('cmake --build %s %s %s' %
+                         (tempdir, escaped_args,
+                          (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         cmake.test(args=["--bar 'foo'"])
@@ -743,50 +760,60 @@ build_type: [ Release]
         else:
             escaped_args = r"%s '--bar '\''foo'\'''" % target_test
         self.assertEqual('cmake --build %s %s %s' %
-                         (tempdir, escaped_args, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         (tempdir, escaped_args,
+                          (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         settings.build_type = "Release"
         cmake = CMake(conan_file)
         cmake.build()
         self.assertEqual('cmake --build %s %s' %
-                         (dot_dir, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         (dot_dir, (CMakeTest.scape('-- -j%i' %
+                                                    cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         cmake.test()
         self.assertEqual('cmake --build %s %s %s'
-                         % (dot_dir, target_test, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         % (dot_dir, target_test,
+                            (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         cmake.build(build_dir=self.tempdir)
         self.assertEqual('cmake --build %s %s'
-                         % (tempdir, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+                         % (tempdir, (CMakeTest.scape('-- -j%i' %
+                                                      cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         cmake.test(build_dir=self.tempdir)
-        self.assertEqual('cmake --build %s %s %s'
-                         % (tempdir, target_test, (CMakeTest.scape('-- -j%i' % cpu_count()))),
+        self.assertEqual('cmake --build %s %s %s' %
+                         (tempdir, target_test,
+                          (CMakeTest.scape('-- -j%i' % cpu_count(output=conan_file.output)))),
                          conan_file.command)
 
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
         cmake = CMake(conan_file)
         cmake.build()
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. -- -j%i' % cpu_count())),
+        self.assertEqual('cmake --build %s' %
+                         (CMakeTest.scape('. -- -j%i' % cpu_count(output=conan_file.output))),
                          conan_file.command)
 
         cmake.test()
-        self.assertEqual('cmake --build '
-                         '%s' % (CMakeTest.scape('. --target test -- -j%i' % cpu_count())),
+        self.assertEqual('cmake --build %s' %
+                         (CMakeTest.scape('. --target test -- -j%i' %
+                                          cpu_count(output=conan_file.output))),
                          conan_file.command)
 
         cmake.build(args=['foo', '--', 'bar'])
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. foo -- bar -j%i' % cpu_count())),
+        self.assertEqual('cmake --build %s' %
+                         (CMakeTest.scape('. foo -- bar -j%i' %
+                                          cpu_count(output=conan_file.output))),
                          conan_file.command)
 
         cmake.test(args=['foo', '--', 'bar'])
-        self.assertEqual('cmake --build '
-                         '%s' % (CMakeTest.scape('. --target test foo -- bar -j%i' % cpu_count())),
+        self.assertEqual('cmake --build %s' %
+                         (CMakeTest.scape('. --target test foo -- bar -j%i' %
+                                          cpu_count(output=conan_file.output))),
                          conan_file.command)
 
         cmake = CMake(conan_file, parallel=False)
@@ -811,13 +838,15 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         cmake.test()
         self.assertIn('cmake --build '
-                      '%s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' % cpu_count()),
+                      '%s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' %
+                                             cpu_count(output=conan_file.output)),
                       conan_file.command)
 
         cmake.generator = "Ninja Makefiles"
         cmake.test()
         self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
+                         '%s' % CMakeTest.scape('. --target test -- -j%i' %
+                                                cpu_count(output=conan_file.output)),
                          conan_file.command)
 
         cmake.generator = "NMake Makefiles"
@@ -1106,13 +1135,13 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, generator=generator)
 
-        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.configure()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
-        with mock.patch("conans.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()

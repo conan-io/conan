@@ -10,8 +10,8 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 import os
-from conans import tools
 from conans.model.env_info import EnvValues
+from conans.client import tools
 
 
 class VisualStudioGeneratorTest(unittest.TestCase):

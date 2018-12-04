@@ -1,9 +1,10 @@
-from conans import tools
+
 from conans.test.utils.tools import TestClient
 import unittest
 import os
 from parameterized.parameterized import parameterized
 from conans.util.files import load
+from conans.client import tools
 
 
 class CreateTest(unittest.TestCase):

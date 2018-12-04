@@ -4,7 +4,6 @@ import os
 import stat
 import time
 
-from conans import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
@@ -12,6 +11,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
 from conans.util.files import md5sum, load
+from conans.client import tools
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 

@@ -28,6 +28,7 @@ import traceback
 from conans.util.env_reader import get_env
 from .b2 import B2Generator
 from .premake import PremakeGenerator
+from .make import MakeGenerator
 
 
 class _GeneratorManager(object):
@@ -74,6 +75,7 @@ registered_generators.add("pkg_config", PkgConfigGenerator)
 registered_generators.add("json", JsonGenerator)
 registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
+registered_generators.add("make", MakeGenerator)
 
 
 def write_generators(conanfile, path, output):

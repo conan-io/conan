@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from conans import tools
 from conans.client.tools.win import get_cased_path
 from conans.test.utils.test_files import temp_folder
 import os
 import platform
 from conans.util.files import mkdir
+from conans.client import tools
 
 
 class GetCasedPath(unittest.TestCase):

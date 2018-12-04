@@ -93,7 +93,8 @@ class ConanRemover(object):
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            return self._remote_manager.remove(reference, remote)
+            result = self._remote_manager.remove(reference, remote)
+            return result
         else:
             tmp = self._remote_manager.remove_packages(reference, package_ids, remote)
             return tmp
@@ -161,7 +162,7 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % str(reference))
+                                           % reference.full_repr())
                     continue
 
             if self._ask_permission(reference, src, build_ids, package_ids, force):
