@@ -5,13 +5,14 @@ from conans.model.ref import ConanFileReference
 from conans.search.search import search_recipes
 
 
-re_param = re.compile(r"^(include_prerelease|loose)\s*=\s*(True|False)$")
+re_param = re.compile(r"^(?P<function>include_prerelease|loose)\s*=\s*(?P<value>True|False)$")
 re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\(\)\s])*$")
 
 
-def _parse_versionexpr(versionexpr):
+def _parse_versionexpr(versionexpr, output):
     expression = [it.strip() for it in versionexpr.split(",")]
-    assert 1 <= len(expression) <= 4, "Invalid expression for version_range '{}'".format(versionexpr)
+    if len(expression) > 4:
+        raise ConanException("Invalid expression for version_range '{}'".format(versionexpr))
 
     include_prerelease = False
     loose = True
@@ -35,13 +36,17 @@ def _parse_versionexpr(versionexpr):
             version_range.append(expr)
 
         if match_param:
-            if match_param.group(1) == 'loose':
-                loose = match_param.group(2) == "True"
-            elif match_param.group(1) == 'include_prerelease':
-                include_prerelease = match_param.group(2) == "True"
+            if match_param.group('function') == 'loose':
+                loose = match_param.group('value') == "True"
+            elif match_param.group('function') == 'include_prerelease':
+                include_prerelease = match_param.group('value') == "True"
             else:
                 raise ConanException("Unexpected version range "
                                      "parameter '{}'".format(match_param.group(1)))
+
+    if len(version_range) > 1:
+        output.warn("Commas as separator in version '%s' range will are deprecated and will be removed in Conan 2.0" %
+                    str(versionexpr))
 
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease
@@ -54,7 +59,7 @@ def satisfying(list_versions, versionexpr, output):
     """
     from semver import SemVer, Range, max_satisfying
 
-    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr)
+    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, output)
 
     # Check version range expression
     try:
