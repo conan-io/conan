@@ -21,6 +21,7 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.client.tools.files import save
 from conans.util.log import logger
+from conans.client.outputers import OutputerFormats
 
 
 # Exit codes for conan command:
@@ -985,9 +986,6 @@ class Command(object):
                             help='json file path where the search information will be written to')
         args = parser.parse_args(*args)
 
-        if args.table and args.json:
-            raise ConanException("'--table' argument cannot be used together with '--json'")
-
         try:
             reference = ConanFileReference.loads(args.pattern_or_reference)
             if "*" in reference:
@@ -997,22 +995,32 @@ class Command(object):
         except (TypeError, ConanException):
             reference = None
 
-        cwd = os.getcwd()
-        info = None
+        # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
+        try:
+            remote_all = self._conan.get_remote_by_name("all")
+        except NoRemoteAvailable:
+            remote_all = None
+        all_remotes_search = (remote_all is None and args.remote == "all")
+
+        out_kwargs = {'all_remotes_search': all_remotes_search, 'cwd': os.path.abspath(os.getcwd()),
+                      'out': self._user_io.out, 'raw': args.raw}
 
         try:
             if reference:
+                out_kwargs.update({'f': 'search_packages',
+                                   'packages_query': args.query,
+                                   'outdated': args.outdated,
+                                   'query': reference})
 
                 info = self._conan.search_packages(reference.full_repr(), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
-                # search is done for one reference
-                self._outputer.print_search_packages(info["results"], reference, args.query,
-                                                     args.table, outdated=args.outdated)
+                OutputerFormats.get('cli').out(info=info, **out_kwargs)
             else:
-                if args.table:
-                    raise ConanException("'--table' argument can only be used with a reference")
-                elif args.outdated:
+                out_kwargs.update({'f': 'search_recipes',
+                                   'query': args.pattern_or_reference})
+
+                if args.outdated:
                     raise ConanException("'--outdated' argument can only be used with a reference")
 
                 self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
@@ -1020,21 +1028,16 @@ class Command(object):
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
                                                   case_sensitive=args.case_sensitive)
-                # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
-                try:
-                    remote_all = self._conan.get_remote_by_name("all")
-                except NoRemoteAvailable:
-                    remote_all = None
-                all_remotes_search = (remote_all is None and args.remote == "all")
-
-                self._outputer.print_search_references(info["results"], args.pattern_or_reference,
-                                                       args.raw, all_remotes_search)
+                OutputerFormats.get('cli').out(info=info, **out_kwargs)
         except ConanException as exc:
             info = exc.info
             raise
         finally:
-            if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+            if args.json:
+                OutputerFormats.get('json').out(output_filepath=args.json, info=info, **out_kwargs)
+            if args.table:
+                OutputerFormats.get('html').out(output_filepath=args.table, info=info, **out_kwargs)
+
 
     def upload(self, *args):
         """Uploads a recipe and binary packages to a remote.

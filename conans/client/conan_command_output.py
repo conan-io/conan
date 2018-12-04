@@ -57,17 +57,24 @@ class CommandOutputer(object):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
-    def json_output(self, info, json_output, cwd):
-        cwd = os.path.abspath(cwd or get_cwd())
-        if not os.path.isabs(json_output):
-            json_output = os.path.join(cwd, json_output)
+    def cmd_output(self, info, raw=False):
+        from pprint import pformat
+        self.user_io.out.info(pformat(info))
 
+        #if info['error']:
+
+
+        #printer = Printer(self.user_io.out)
+        #printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
+
+    def json_output(self, info, output_filepath):
         def date_handler(obj):
             return obj.isoformat() if hasattr(obj, 'isoformat') else obj
 
-        save(json_output, json.dumps(info, default=date_handler))
-        self.user_io.out.writeln("")
-        self.user_io.out.info("JSON file created at '%s'" % json_output)
+        save(output_filepath, json.dumps(info, default=date_handler))
+
+    def table_output(self, info, output_filepath):
+        a
 
     def _read_dates(self, deps_graph):
         ret = {}
