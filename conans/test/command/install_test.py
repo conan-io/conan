@@ -1,14 +1,14 @@
-import unittest
-import platform
 import os
+import platform
+import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
+from conans.client.conf.detect import detected_os
+from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
-from conans.model.info import ConanInfo
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-from conans.client.conf.detect import detected_os
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir
 
 
@@ -18,6 +18,13 @@ class InstallTest(unittest.TestCase):
         self.client = TestClient()
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
+
+    def test_four_subfolder_install(self):
+        # https://github.com/conan-io/conan/issues/3950
+        conanfile = ""
+        self.client.save({"path/to/sub/folder/conanfile.txt": conanfile})
+        # If this doesn't, fail, all good
+        self.client.run("install path/to/sub/folder")
 
     def install_system_requirements_test(self):
         client = TestClient(servers={"default": TestServer()},

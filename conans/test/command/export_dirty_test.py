@@ -5,6 +5,36 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 import platform
+from conans.util.files import load
+
+
+class SourceDirtyTest(unittest.TestCase):
+    def test_keep_failing_source_folder(self):
+        # https://github.com/conan-io/conan/issues/4025
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.tools import save
+class Pkg(ConanFile):
+    def source(self):
+        save("somefile.txt", "hello world!!!")
+        raise Exception("boom")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/1.0@user/channel", should_error=True)
+        self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        # Check that we can debug and see the folder
+        self.assertEqual(load(os.path.join(client.client_cache.source(ref), "somefile.txt")),
+                         "hello world!!!")
+        client.run("create . pkg/1.0@user/channel", should_error=True)
+        self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
+                      client.out)
+        client.save({"conanfile.py": conanfile.replace("source(", "source2(")})
+        client.run("create . pkg/1.0@user/channel")
+        self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
+                      client.out)
+        # Check that it is empty
+        self.assertEqual(os.listdir(os.path.join(client.client_cache.source(ref))), [])
 
 
 class ExportDirtyTest(unittest.TestCase):

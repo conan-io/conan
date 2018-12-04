@@ -6,8 +6,8 @@ from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
-from conans import tools
 from conans.client.client_cache import PROFILES_FOLDER
+from conans.client import tools
 
 
 class DefaultProfileTest(unittest.TestCase):

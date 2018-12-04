@@ -4,7 +4,7 @@ import os
 from conans.paths import PACKAGE_TGZ_NAME
 import tempfile
 from conans.test import CONAN_TEST_FOLDER
-from conans.tools import untargz
+from conans.client.tools.files import untargz
 from conans.errors import ConanException
 import time
 import shutil

@@ -51,13 +51,8 @@ class ConanFileLoader(object):
         self._python_requires._locked_versions = None
 
     def load_class(self, conanfile_path):
-        loaded, filename = parse_conanfile(conanfile_path)
-        try:
-            conanfile = _parse_module(loaded, filename)
-            conanfile.python_requires = self._python_requires.requires
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+        return conanfile
 
     def export_ref(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -94,7 +89,7 @@ class ConanFileLoader(object):
         result = self.load_class(conanfile_path)
         try:
             if reference:
-                result.name, result.version, user, channel = reference
+                result.name, result.version, user, channel, _ = reference
             else:
                 user, channel = None, None
                 result.in_local_cache = False
@@ -186,7 +181,7 @@ class ConanFileLoader(object):
         conanfile.settings = processed_profile._settings.copy_values()
 
         for reference in references:
-            conanfile.requires.add(str(reference))  # Convert to string necessary
+            conanfile.requires.add(reference.full_repr())  # Convert to string necessary
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
         if scope_options:
@@ -232,7 +227,18 @@ def _invalid_python_requires(require):
     raise ConanException("Invalid use of python_requires(%s)" % require)
 
 
-def parse_conanfile(conan_file_path):
+def parse_conanfile(conanfile_path, python_requires):
+    with python_requires.capture_requires() as py_requires:
+        module, filename = _parse_conanfile(conanfile_path)
+        try:
+            conanfile = _parse_module(module, filename)
+            conanfile.python_requires = py_requires
+            return module, conanfile
+        except Exception as e:  # re-raise with file name
+            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+
+
+def _parse_conanfile(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 

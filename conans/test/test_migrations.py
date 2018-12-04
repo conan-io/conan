@@ -1,11 +1,12 @@
 import unittest
 import os
+from six import StringIO
 
 from conans.client.migrations import migrate_to_default_profile, migrate_plugins_to_hooks
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.tools import save
-from conans.util.files import load
+from conans.util.files import load, save
+from conans.client.output import ConanOutput
 
 
 class TestMigrations(unittest.TestCase):
@@ -84,8 +85,9 @@ the old general
             return old_user_home, old_conan_folder, old_conf_path, old_attribute_checker_plugin,\
                    client_cache
 
+        output = ConanOutput(StringIO())
         old_uh, old_cf, old_cp, old_acp, client_cache = _create_old_layout()
-        migrate_plugins_to_hooks(client_cache)
+        migrate_plugins_to_hooks(client_cache, output=output)
         self.assertFalse(os.path.exists(old_acp))
         self.assertTrue(os.path.join(old_cf, "hooks"))
         conf_content = load(old_cp)
@@ -96,7 +98,7 @@ the old general
         old_uh, old_cf, old_cp, old_acp, client_cache = _create_old_layout()
         existent_hook = os.path.join(old_cf, "hooks", "hook.py")
         save(existent_hook, "")
-        migrate_plugins_to_hooks(client_cache)
+        migrate_plugins_to_hooks(client_cache, output=output)
         self.assertTrue(os.path.exists(old_acp))
         self.assertTrue(os.path.join(old_cf, "hooks"))
         conf_content = load(old_cp)

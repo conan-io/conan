@@ -7,12 +7,18 @@ from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
-from conans import tools
+from conans.client import tools
+from conans.client.tools.env import environment_append
 
 
 @attr('visual_studio')
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsArchTest(unittest.TestCase):
+
+    def assert_vcvars_command(self, settings, expected, **kwargs):
+        command = tools.vcvars_command(settings, **kwargs)
+        command = command.replace('"', '').replace("'", "")
+        self.assertTrue(command.endswith('vcvarsall.bat %s' % expected))
 
     def test_arch(self):
         settings = Settings.loads(default_settings_yml)
@@ -20,29 +26,26 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '14'
 
         settings.arch = 'x86'
-        command = tools.vcvars_command(settings)
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('x86', command)
+        self.assert_vcvars_command(settings, "x86")
+        with environment_append({"PreferredToolArchitecture": "x64"}):
+            self.assert_vcvars_command(settings, "amd64_x86")
 
         settings.arch = 'x86_64'
-        command = tools.vcvars_command(settings)
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('amd64', command)
+        self.assert_vcvars_command(settings, "amd64")
 
         settings.arch = 'armv7'
-        command = tools.vcvars_command(settings)
-        self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('arm64', command)
-        self.assertIn('arm', command)
+        self.assert_vcvars_command(settings, "amd64_arm")
 
         settings.arch = 'armv8'
-        command = tools.vcvars_command(settings)
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('arm64', command)
+        self.assert_vcvars_command(settings, "amd64_arm64")
 
         settings.arch = 'mips'
         with self.assertRaises(ConanException):
             tools.vcvars_command(settings)
+
+        settings.arch_build = 'x86_64'
+        settings.arch = 'x86'
+        self.assert_vcvars_command(settings, "amd64_x86")
 
     def test_arch_override(self):
         settings = Settings.loads(default_settings_yml)
@@ -50,22 +53,10 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '14'
         settings.arch = 'mips64'
 
-        command = tools.vcvars_command(settings, arch='x86')
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('x86', command)
-
-        command = tools.vcvars_command(settings, arch='x86_64')
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('amd64', command)
-
-        command = tools.vcvars_command(settings, arch='armv7')
-        self.assertIn('vcvarsall.bat', command)
-        self.assertNotIn('arm64', command)
-        self.assertIn('arm', command)
-
-        command = tools.vcvars_command(settings, arch='armv8')
-        self.assertIn('vcvarsall.bat', command)
-        self.assertIn('arm64', command)
+        self.assert_vcvars_command(settings, "x86", arch='x86')
+        self.assert_vcvars_command(settings, "amd64", arch='x86_64')
+        self.assert_vcvars_command(settings, "amd64_arm", arch='armv7')
+        self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
 
         with self.assertRaises(ConanException):
             tools.vcvars_command(settings, arch='mips')

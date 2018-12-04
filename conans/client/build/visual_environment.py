@@ -26,6 +26,7 @@ class VisualStudioBuildEnvironment(object):
         """
         self._with_build_type_flags = with_build_type_flags
 
+        self._conanfile = conanfile
         self._settings = conanfile.settings
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._runtime = self._settings.get_safe("compiler.runtime")
@@ -67,7 +68,7 @@ class VisualStudioBuildEnvironment(object):
         ret.extend(self.cxx_flags)
 
         if self.parallel:  # Build source in parallel
-            ret.append(parallel_compiler_cl_flag())
+            ret.append(parallel_compiler_cl_flag(output=self._conanfile.output))
 
         if self.std:
             ret.append(self.std)

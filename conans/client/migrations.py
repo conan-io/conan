@@ -124,7 +124,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
                 conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
 
-                migrate_to_default_profile(conf_path, default_profile_path)
+                migrate_to_default_profile(conf_path, default_profile_path, output=self.out)
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.client_cache, self.out)
@@ -190,9 +190,9 @@ def migrate_c_src_export_source(client_cache, out):
                          "remove it manually" % package_folder)
 
 
-def migrate_plugins_to_hooks(client_cache):
+def migrate_plugins_to_hooks(client_cache, output=None):
     plugins_path = os.path.join(client_cache.conan_folder, "plugins")
     if os.path.exists(plugins_path) and not os.path.exists(client_cache.hooks_path):
         os.rename(plugins_path, client_cache.hooks_path)
     conf_path = client_cache.conan_conf_path
-    replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False)
+    replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)

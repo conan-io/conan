@@ -6,6 +6,7 @@ from bottle import request
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
+from conans import DEFAULT_REVISION_V1
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import ConanService
@@ -101,11 +102,12 @@ class ConanController(Controller):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            reference = ConanFileReference(name, version, username, channel)
+            reference = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_conanfile_upload_urls(reference, filesizes)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
+            app.server_store.update_last_revision(reference)
             return urls_norm
 
         @app.route('%s/upload_urls' % r.package, method=["POST"])
@@ -114,10 +116,12 @@ class ConanController(Controller):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            reference = ConanFileReference(name, version, username, channel)
-            package_reference = PackageReference(reference, package_id)
+            reference = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
+            package_reference = PackageReference(reference, package_id, DEFAULT_REVISION_V1)
+
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_package_upload_urls(package_reference, filesizes)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
+            app.server_store.update_last_package_revision(package_reference)
             return urls_norm

@@ -1,4 +1,5 @@
 from collections import namedtuple
+from contextlib import contextmanager
 
 from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
@@ -6,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 
 
-PythonRequire = namedtuple("PythonRequire", "conan_ref module")
+PythonRequire = namedtuple("PythonRequire", "conan_ref module conanfile")
 
 
 class ConanPythonRequire(object):
@@ -14,24 +15,21 @@ class ConanPythonRequire(object):
         self._cached_requires = {}  # {conan_ref: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
-        self._requires = []
         self._locked_versions = None
+        self._requires = None
 
-    @property
-    def requires(self):
-        result = self._requires
+    @contextmanager
+    def capture_requires(self):
+        old_requires = self._requires
         self._requires = []
-        return result
+        yield self._requires
+        self._requires = old_requires
 
-    def __call__(self, ref):
-        if self._locked_versions:
-            r = ConanFileReference.loads(ref)
-            ref = str(self._locked_versions[r.name])
-
+    def _look_for_require(self, require):
         try:
-            python_require = self._cached_requires[ref]
+            python_require = self._cached_requires[require]
         except KeyError:
-            r = ConanFileReference.loads(ref)
+            r = ConanFileReference.loads(require)
             requirement = Requirement(r)
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
@@ -39,9 +37,19 @@ class ConanPythonRequire(object):
             result = self._proxy.get_recipe(r, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
-            module, _ = parse_conanfile(path)
-            python_require = PythonRequire(reference, module)
-            self._cached_requires[ref] = python_require
+            module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
 
-        self._requires.append(python_require)
-        return python_require.module
+            # Check for alias
+            if getattr(conanfile, "alias", None):
+                # Will register also the aliased
+                python_require = self._look_for_require(conanfile.alias)
+            else:
+                python_require = PythonRequire(reference, module, conanfile)
+            self._cached_requires[require] = python_require
+
+        return python_require
+
+    def __call__(self, require):
+        python_req = self._look_for_require(require)
+        self._requires.append(python_req)
+        return python_req.module

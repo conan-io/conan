@@ -8,6 +8,7 @@ from conans.errors import NotFoundException, NoRemoteAvailable
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
+from conans.util.env_reader import get_env
 from conans.util.files import rmdir, is_dirty
 
 
@@ -27,8 +28,22 @@ class GraphBinariesAnalyzer(object):
             return False
 
     def _check_update(self, package_folder, package_ref, remote, output, node):
+
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if revisions_enabled:
+            metadata = self._client_cache.load_metadata(package_ref.conan)
+            rec_rev = metadata.packages[package_ref.package_id].recipe_revision
+            if rec_rev != node.conan_ref.revision:
+                output.warn("Outdated package! The package doesn't belong "
+                            "to the installed recipe revision: %s" % str(package_ref))
+
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
+            if not revisions_enabled and not node.revision_pinned:
+                # Compatibility mode and user hasn't specified the revision, so unlock
+                # it to find any binary for any revision
+                package_ref = package_ref.copy_clear_rev()
+
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
         except NotFoundException:
             output.warn("Can't update, no package in remote")
@@ -48,6 +63,7 @@ class GraphBinariesAnalyzer(object):
         assert node.binary is None
 
         conan_ref, conanfile = node.conan_ref, node.conanfile
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
         package_ref = PackageReference(conan_ref, package_id)
         # Check that this same reference hasn't already been checked
@@ -81,7 +97,10 @@ class GraphBinariesAnalyzer(object):
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.prefs.get(package_ref)
+            # If the remote_name is not given, follow the binary remote, or
+            # the recipe remote
+            # If it is defined it won't iterate (might change in conan2.0)
+            remote = self._registry.prefs.get(package_ref) or self._registry.refs.get(conan_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):
@@ -99,15 +118,23 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
+            if not revisions_enabled and not node.revision_pinned:
+                # Do not search for packages for the specific resolved recipe revision but all
+                package_ref = package_ref.copy_clear_rev()
+
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
-            elif remotes:  # Iterate all remotes to get this binary
+
+            # If the "remote" came from the registry but the user didn't specified the -r, with
+            # revisions iterate all remotes
+            if not remote or (not remote_info and revisions_enabled and not remote_name):
                 for r in remotes:
                     remote_info = self._get_package_info(package_ref, r)
                     if remote_info:
                         remote = r
                         break
+
             if remote_info:
                 node.binary = BINARY_DOWNLOAD
                 package_hash = remote_info.recipe_hash

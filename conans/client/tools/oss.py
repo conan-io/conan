@@ -8,10 +8,8 @@ import os
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.log import logger
 from conans.client.tools import which
-
-_global_output = None
+from conans.util.fallbacks import default_output
 
 
 def args_to_string(args):
@@ -23,12 +21,13 @@ def args_to_string(args):
         return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
 
 
-def cpu_count():
+def cpu_count(output=None):
+    output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
-        _global_output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+        output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
 
 
@@ -394,10 +393,3 @@ def get_gnu_triplet(os_, arch, compiler=None):
             op_system += "hf"
 
     return "%s-%s" % (machine, op_system)
-
-
-try:
-    os_info = OSInfo()
-except Exception as exc:
-    logger.error(exc)
-    _global_output.error("Error detecting os_info")
