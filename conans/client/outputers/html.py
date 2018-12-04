@@ -61,9 +61,9 @@ class HTMLOutputer(BaseOutputer):
                        compiler=settings.pop('compiler', 'None'),
                        compiler_version=settings.pop('compiler.version', 'None')
                        )
-            extra_row = " ".join(["({})".format(settings.pop(it)) for it in settings.keys()
-                                  if it.startswith('compiler')])
-            row_name += extra_row
+            extra_row_keys = [it for it in settings.keys() if it.startswith('compiler')]
+            extra_row = " ".join(["({})".format(settings.pop(it)) for it in extra_row_keys])
+            row_name += " " + extra_row
 
             # Column name:
             column_name = " ".join(settings.values())
@@ -95,7 +95,7 @@ class HTMLOutputer(BaseOutputer):
                         for h in headers:
                             content.append("<th>{}</th>".format(h))
 
-                for row, values in data.items():
+                for row, values in sorted(data.items()):
                     with html("tr", content) as content:
                         content.append("<td>{}</td>".format(row))
                         for h in headers:

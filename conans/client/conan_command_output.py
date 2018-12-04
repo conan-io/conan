@@ -57,16 +57,6 @@ class CommandOutputer(object):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
-    def cmd_output(self, info, raw=False):
-        from pprint import pformat
-        self.user_io.out.info(pformat(info))
-
-        #if info['error']:
-
-
-        #printer = Printer(self.user_io.out)
-        #printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
-
     def json_output(self, info, output_filepath):
         def date_handler(obj):
             return obj.isoformat() if hasattr(obj, 'isoformat') else obj
@@ -105,20 +95,6 @@ class CommandOutputer(object):
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
-
-    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
-        printer = Printer(self.user_io.out)
-        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
-
-    def print_search_packages(self, search_info, reference, packages_query, table,
-                                outdated=False):
-        if table:
-            from conans.client.graph.grapher import html_binary_graph
-            html_binary_graph(search_info, reference, table)
-        else:
-            printer = Printer(self.user_io.out)
-            printer.print_search_packages(search_info, reference, packages_query,
-                                          outdated=outdated)
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
