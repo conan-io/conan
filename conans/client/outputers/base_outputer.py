@@ -14,3 +14,6 @@ class BaseOutputer(object):
 
     def search_recipes(self, *args, **kwargs):
         raise NotImplementedError
+
+    def search_packages(self, *args, **kwargs):
+        raise NotImplementedError

@@ -1034,10 +1034,11 @@ class Command(object):
             raise
         finally:
             if args.json:
-                OutputerFormats.get('json').out(output_filepath=args.json, info=info, **out_kwargs)
+                filepath = os.path.normpath(os.path.join(os.getcwd(), args.json))
+                OutputerFormats.get('json').out(output_filepath=filepath, info=info, **out_kwargs)
             if args.table:
-                OutputerFormats.get('html').out(output_filepath=args.table, info=info, **out_kwargs)
-
+                filepath = os.path.normpath(os.path.join(os.getcwd(), args.table))
+                OutputerFormats.get('html').out(output_filepath=filepath, info=info, **out_kwargs)
 
     def upload(self, *args):
         """Uploads a recipe and binary packages to a remote.

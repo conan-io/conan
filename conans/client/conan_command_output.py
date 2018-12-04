@@ -73,9 +73,6 @@ class CommandOutputer(object):
 
         save(output_filepath, json.dumps(info, default=date_handler))
 
-    def table_output(self, info, output_filepath):
-        a
-
     def _read_dates(self, deps_graph):
         ret = {}
         for node in sorted(deps_graph.nodes):
