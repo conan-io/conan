@@ -27,8 +27,6 @@ class ParseVersionExprTest(unittest.TestCase):
         self.assertEqual(_parse_versionexpr("~1.2.3-beta.2", output), ("~1.2.3-beta.2", True, False))
         self.assertEqual(_parse_versionexpr("^0.0", output), ("^0.0", True, False))
         self.assertEqual(_parse_versionexpr("1.2.3 - 2.3.4", output), ("1.2.3 - 2.3.4", True, False))
-        self.assertEqual(_parse_versionexpr(">=1.2.3 <1.(2+1).0", output),
-                         (">=1.2.3 <1.(2+1).0", True, False))
 
     def test_only_loose(self):
         output = TestBufferConanOutput()
@@ -63,3 +61,4 @@ class ParseVersionExprTest(unittest.TestCase):
         self.assertRaises(ConanException, _parse_versionexpr, "loose=True, 2.3 3.3", output)
         self.assertRaises(ConanException, _parse_versionexpr,
                           "2.3, 3.2, 1.4, loose=False, include_prerelease=True", output)
+        self.assertRaises(ConanException, _parse_versionexpr, ">=1.2.3 <1.(2+1).0", output)
