@@ -1,16 +1,15 @@
 import os
-
 import shutil
 import subprocess
 from six.moves.urllib.parse import urlparse
 
+from conans.client.tools.files import unzip
+from conans.client import tools
 from conans import load
-from conans import tools
-from conans.client.remote_registry import RemoteRegistry
-from conans.client.remote_registry import load_registry_txt
+from conans.client.remote_registry import RemoteRegistry, load_registry_txt
 from conans.errors import ConanException
-from conans.tools import unzip
 from conans.util.files import rmdir, mkdir, walk
+from conans.client.tools.files import unzip
 
 
 def _hide_password(resource):
@@ -60,7 +59,7 @@ def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl, ar
 
 
 def _process_zip_file(zippath, client_cache, output, tmp_folder, remove=False):
-    unzip(zippath, tmp_folder)
+    unzip(zippath, tmp_folder, output=output)
     if remove:
         os.unlink(zippath)
     _process_folder(tmp_folder, client_cache, output)
@@ -102,17 +101,18 @@ def _process_folder(folder, client_cache, output):
         dirs[:] = [d for d in dirs if d not in ("profiles", ".git")]
 
 
-def _process_download(item, client_cache, output, tmp_folder, verify_ssl):
+def _process_download(item, client_cache, output, tmp_folder, verify_ssl, requester):
     output.info("Trying to download  %s" % _hide_password(item))
     zippath = os.path.join(tmp_folder, "config.zip")
     try:
-        tools.download(item, zippath, out=output, verify=verify_ssl)
+        tools.download(item, zippath, out=output, verify=verify_ssl, requester=requester)
         _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
     except Exception as e:
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(item, client_cache, output, verify_ssl, config_type=None, args=None):
+def configuration_install(item, client_cache, output, verify_ssl, requester,
+                          config_type=None, args=None):
     tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
@@ -132,7 +132,8 @@ def configuration_install(item, client_cache, output, verify_ssl, config_type=No
         elif os.path.isfile(item):
             _process_zip_file(item, client_cache, output, tmp_folder)
         elif item.startswith("http"):
-            _process_download(item, client_cache, output, tmp_folder, verify_ssl)
+            _process_download(item, client_cache, output, tmp_folder, verify_ssl,
+                              requester=requester)
         else:
             raise ConanException("I don't know how to process %s" % item)
     finally:

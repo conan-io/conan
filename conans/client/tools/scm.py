@@ -1,12 +1,12 @@
 
 import os
-import re
+import platform
+import xml.etree.ElementTree as ET
 
+import re
 import subprocess
 from six.moves.urllib.parse import urlparse, quote_plus, unquote
 from subprocess import CalledProcessError, PIPE, STDOUT
-import platform
-import xml.etree.ElementTree as ET
 
 from conans.client.tools.env import no_op, environment_append
 from conans.client.tools.files import chdir
@@ -18,8 +18,8 @@ from conans.util.files import decode_text, to_file_bytes, walk
 class SCMBase(object):
     cmd_command = None
 
-    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
+                 force_english=True, runner=None, output=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -28,6 +28,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
+        self._output = output
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -97,19 +98,24 @@ class Git(SCMBase):
         return output
 
     def excluded_files(self):
+        ret = []
         try:
 
             file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
-            p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
-                                 stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes("\n".join(file_paths))
-            grep_stdout = decode_text(p.communicate(input=paths)[0])
-            tmp = grep_stdout.splitlines()
-        except CalledProcessError:
-            tmp = []
-        return tmp
+            if file_paths:
+                p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
+                                     stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
+                paths = to_file_bytes("\n".join(file_paths))
+                grep_stdout = decode_text(p.communicate(input=paths)[0])
+                ret = grep_stdout.splitlines()
+        except (CalledProcessError, FileNotFoundError) as e:
+            if self._output:
+                self._output.warn("Error checking excluded git files: %s. "
+                                  "Ignoring excluded files" % e)
+            ret = []
+        return ret
 
     def get_remote_url(self, remote_name=None):
         self._check_git_repo()

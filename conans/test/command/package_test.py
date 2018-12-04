@@ -1,12 +1,13 @@
 import os
 import unittest
 
-from conans import tools
+from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 from parameterized import parameterized
+from conans.client import tools
 
 
 class PackageLocalCommandTest(unittest.TestCase):
@@ -21,7 +22,8 @@ class PackageLocalCommandTest(unittest.TestCase):
             # don't need build method
             tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                                   "def build",
-                                  "def skip_build")
+                                  "def skip_build",
+                                  output=the_client.out)
             the_client.run("install . --install-folder build")
             mkdir(os.path.join(client.current_folder, "build2"))
 

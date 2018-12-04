@@ -38,6 +38,6 @@ class Pkg(ConanFile):
         client.run("create . PkgA/0.1@user/testing")
         client.save({"conanfile.py": conanfile.format("B")})
         client.run("install .")
-        client.run("info PkgA@0.1@user/testing")
+        client.run("info PkgA/0.1@user/testing")
         self.assertIn("PkgA/0.1@user/testing", client.out)
         self.assertIn("BuildID: None", client.out)

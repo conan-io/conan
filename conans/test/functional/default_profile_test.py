@@ -4,10 +4,10 @@ import os
 
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
-from conans import tools
 from conans.client.client_cache import PROFILES_FOLDER
+from conans.client import tools
 
 
 class DefaultProfileTest(unittest.TestCase):
@@ -23,8 +23,8 @@ class MyConanfile(ConanFile):
 
         client.save({CONANFILE: conanfile})
         client.run("create . Pkg/0.1@lasote/stable")
-        self.assertIn("Pkg/0.1@lasote/stable: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' "
-                      "created", client.out)
+        self.assertIn("Pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
 
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')

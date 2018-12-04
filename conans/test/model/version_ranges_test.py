@@ -15,6 +15,12 @@ from conans.test.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput
 
 
+def _clear_revs(reqs):
+    for req in reqs.values():
+        req.conan_reference = req.conan_reference.copy_clear_rev()
+    return reqs
+
+
 class BasicMaxVersionTest(unittest.TestCase):
     def prereleases_versions_test(self):
         output = TestBufferConanOutput()
@@ -32,6 +38,24 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.4")
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.3")
+
+    def loose_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,loose=False", output)
+        self.assertEqual(result, "4.2.2")
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=False", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3, loose = False ", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
+        self.assertEqual(result, "1.3")
+
+    def include_prerelease_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease = True", output)
+        self.assertEqual(result, "4.2.3-pre")
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", output)
+        self.assertEqual(result, "4.2.2")
 
     def basic_test(self):
         output = TestBufferConanOutput()
@@ -85,6 +109,14 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, None)
         result = satisfying(["2.1.1"], ">2.1.0", output)
         self.assertEqual(result, "2.1.1")
+
+        # Invalid ranges
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2; include_prerelease=True, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2, include_prerelease=Ture, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "~2.3, abc, loose=False", output)
 
 
 hello_content = """
@@ -176,7 +208,7 @@ class SayConan(ConanFile):
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_basic(self):
         self.resolver._local_search = None
@@ -207,7 +239,7 @@ class SayConan(ConanFile):
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
             say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-            self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_optimized(self):
         self.resolver._local_search = None
@@ -292,12 +324,12 @@ class ChatConan(ConanFile):
 
         self.assertEqual(_get_edges(deps_graph), edges)
 
-        self.assertEqual(hello.conan_ref, hello_ref)
+        self.assertEqual(hello.conan_ref.copy_clear_rev(), hello_ref)
         conanfile = hello.conanfile
         self.assertEqual(conanfile.version, "1.2")
         self.assertEqual(conanfile.name, "Hello")
         say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
-        self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+        self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def duplicated_error_test(self):
         content = """
@@ -348,17 +380,17 @@ class Project(ConanFile):
 
         self.assertEqual(4, len(deps_graph.nodes))
 
-        self.assertEqual(log4cpp.conan_ref, log4cpp_ref)
+        self.assertEqual(log4cpp.conan_ref.copy_clear_rev(), log4cpp_ref)
         conanfile = log4cpp.conanfile
         self.assertEqual(conanfile.version, "1.1.1")
         self.assertEqual(conanfile.name, "log4cpp")
 
-        self.assertEqual(logger_interface.conan_ref, logiface_ref)
+        self.assertEqual(logger_interface.conan_ref.copy_clear_rev(), logiface_ref)
         conanfile = logger_interface.conanfile
         self.assertEqual(conanfile.version, "0.1.1")
         self.assertEqual(conanfile.name, "LoggerInterface")
 
-        self.assertEqual(other.conan_ref, other_ref)
+        self.assertEqual(other.conan_ref.copy_clear_rev(), other_ref)
         conanfile = other.conanfile
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")

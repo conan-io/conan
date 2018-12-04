@@ -1,10 +1,11 @@
 import os
-import time
 
+import time
 from six.moves.urllib.parse import urlparse, urljoin, urlsplit, parse_qs
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import NotFoundException, ConanException
 from conans.model.info import ConanInfo
@@ -185,7 +186,8 @@ class RestV1Methods(RestCommonMethods):
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files, conan_reference
+        rev_time = None
+        return zipped_files, conan_reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
     def get_recipe_sources(self, conan_reference, dest_folder):
         urls = self._get_recipe_urls(conan_reference)
@@ -207,7 +209,9 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_package_urls(package_reference)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        return zipped_files
+        rev_time = None
+        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        return zipped_files, ret_ref, rev_time
 
     def _get_package_urls(self, package_reference):
         """Gets a dict of filename:contents from package"""
@@ -272,17 +276,36 @@ class RestV1Methods(RestCommonMethods):
     def _get_recipe_snapshot(self, reference):
         url = self._recipe_url(reference)
         snap = self._get_snapshot(url)
-        return snap, reference.copy_without_revision()
+        rev_time = None
+        return snap, reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
     def _get_package_snapshot(self, package_reference):
         url = self._package_url(package_reference)
         snap = self._get_snapshot(url)
-        return snap, package_reference
+        rev_time = None
+        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        return snap, ret_ref, rev_time
 
     def _recipe_url(self, conan_reference):
-        return "%s/conans/%s" % (self.remote_api_url, "/".join(conan_reference))
+        return "%s/conans/%s" % (self.remote_api_url, conan_reference.dir_repr())
 
     def _package_url(self, p_reference):
         url = self._recipe_url(p_reference.conan)
         url += "/packages/%s" % p_reference.package_id
         return url
+
+    @handle_return_deserializer()
+    def _remove_conanfile_files(self, conan_reference, files):
+        """ Remove recipe files """
+        self.check_credentials()
+        payload = {"files": [filename.replace("\\", "/") for filename in files]}
+        url = self._recipe_url(conan_reference) + "/remove_files"
+        return self._post_json(url, payload)
+
+    @handle_return_deserializer()
+    def remove_packages(self, conan_reference, package_ids=None):
+        """ Remove any packages specified by package_ids"""
+        self.check_credentials()
+        payload = {"package_ids": package_ids}
+        url = self._recipe_url(conan_reference) + "/packages/delete"
+        return self._post_json(url, payload)

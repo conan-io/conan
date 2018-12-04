@@ -7,15 +7,17 @@ matrix:
     include:
         - python: 2.7
         - python: 3.4
-          if: branch =~ (^release.*)|(^master)
+          if: branch =~ ^release.* OR branch =~ ^master
         - python: 3.5
-          if: branch =~ (^release.*)|(^master)
+          if: branch =~ ^release.* OR branch =~ ^master
         - python: 3.6
+        - python: 3.7
+          dist: xenial
         - language: generic
           os: osx
           osx_image: xcode8.3
           env: PYVER=py27
-          if: branch =~ (^release.*)|(^master)
+          if: branch =~ ^release.* OR branch =~ ^master
         - language: generic
           os: osx
           osx_image: xcode8.3

@@ -7,10 +7,10 @@ from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.model.workspace import WORKSPACE_FILE
-from conans import tools
 import time
 from conans.util.files import load
 import re
+from conans.client import tools
 
 
 conanfile = """from conans import ConanFile
@@ -204,9 +204,9 @@ name: MyProject
         TIME_DELAY = 1
         time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Release', cwd=base_folder)
         time.sleep(TIME_DELAY)
@@ -227,7 +227,7 @@ name: MyProject
         self.assertIn("Hello World A Debug!", client.out)
 
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Bye Moon", "Bye! Mars")
+                              "Bye Moon", "Bye! Mars", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         time.sleep(TIME_DELAY)

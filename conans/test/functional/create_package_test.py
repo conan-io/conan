@@ -45,7 +45,7 @@ class ExporterTest(unittest.TestCase):
         client.init_dynamic_vars()
         files = hello_source_files()
 
-        conan_ref = ConanFileReference.loads("Hello/1.2.1/frodo/stable")
+        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = client.paths.export(conan_ref)
 
         client.save(files, path=reg_folder)

@@ -4,9 +4,11 @@ from collections import OrderedDict
 
 from conans.paths import SimplePaths
 from conans.client.output import Color
+from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
+from conans.util.env_reader import get_env
 
 
 class Printer(object):
@@ -25,10 +27,17 @@ class Printer(object):
 
     def print_inspect(self, inspect):
         for k, v in inspect.items():
-            if isinstance(v, dict):
-                self._out.writeln("%s" % k)
-                for sk, sv in sorted(v.items()):
-                    self._out.writeln("    %s: %s" % (sk, str(sv)))
+            if k == "default_options":
+                if isinstance(v, str):
+                    v = OptionsValues.loads(v)
+                elif isinstance(v, tuple):
+                    v = OptionsValues(v)
+                elif isinstance(v, list):
+                    v = OptionsValues(tuple(v))
+            if isinstance(v, (dict, OptionsValues)):
+                self._out.writeln("%s:" % k)
+                for ok, ov in sorted(v.items()):
+                    self._out.writeln("    %s: %s" % (ok, ov))
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 
@@ -52,8 +61,8 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None, package_filter=None,
-                   show_paths=False):
+    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None,
+                   package_filter=None, show_paths=False):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -135,6 +144,10 @@ class Printer(object):
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
+            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            if revisions_enabled:
+                if isinstance(ref, ConanFileReference) and show("revision") and node.conan_ref.revision:  # Excludes PROJECT
+                    self._out.writeln("    Revision: %s" % node.conan_ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
@@ -186,7 +199,7 @@ class Printer(object):
                 if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
-                    self._out.writeln(conan_item["recipe"]["id"])
+                    self._out.writeln(str(conan_item["recipe"]["id"]))
 
     def print_search_packages(self, search_info, reference, packages_query,
                               outdated=False):

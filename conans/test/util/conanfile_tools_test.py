@@ -1,12 +1,14 @@
 import unittest
 import os
+import sys
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.test.utils.test_files import temp_folder
-from conans import tools
 from parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client import tools
+from conans.client.output import ConanOutput
 
 
 base_conanfile = '''
@@ -52,7 +54,7 @@ class Pkg(ConanFile):
         finally:
             os.chdir(old_path)
         output_dir = os.path.join(tmp_dir, "output_dir")
-        tools.unzip(tar_path, output_dir)
+        tools.unzip(tar_path, output_dir, output=ConanOutput(stream=sys.stdout))
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 

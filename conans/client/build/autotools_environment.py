@@ -9,11 +9,11 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 build_type_flags, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
 from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
+    detected_architecture, get_gnu_triplet
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_SHARE
-from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
-from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
-                          detected_architecture, get_gnu_triplet)
+from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.util.files import get_abs_path
 
@@ -207,7 +207,7 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
+            cpu_count_option = ("-j%s" % cpu_count(output=self._conanfile.output)) if "-j" not in str_args else None
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)

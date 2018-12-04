@@ -3,7 +3,6 @@ import platform
 import unittest
 from collections import namedtuple
 
-from conans import tools
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
@@ -13,8 +12,8 @@ from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
-from conans.test.utils.tools import TestClient
-
+from conans.client import tools
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
                       "--sbindir", "--oldincludedir", "--libexecdir"]
@@ -171,15 +170,18 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.make(make_program="othermake")
-        self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
+        self.assertEquals(runner.command_called, "othermake -j%s" %
+                          cpu_count(output=conanfile.output))
 
         with tools.environment_append({"CONAN_MAKE_PROGRAM": "mymake"}):
             ab.make(make_program="othermake")
-            self.assertEquals(runner.command_called, "mymake -j%s" % cpu_count())
+            self.assertEquals(runner.command_called, "mymake -j%s" %
+                              cpu_count(output=conanfile.output))
 
         ab.make(args=["things"])
         things = "'things'" if platform.system() != "Windows" else "things"
-        self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
+        self.assertEquals(runner.command_called, "make %s -j%s" %
+                          (things, cpu_count(output=conanfile.output)))
 
     def test_variables(self):
         # Visual Studio
@@ -535,9 +537,11 @@ class HelloConan(ConanFile):
         ab.configure()
 
         ab.make(target="install")
-        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
+        self.assertEquals(runner.command_called, "make install -j%s" %
+                          cpu_count(output=conanfile.output))
         ab.install()
-        self.assertEquals(runner.command_called, "make install -j%s" % cpu_count())
+        self.assertEquals(runner.command_called, "make install -j%s" %
+                          cpu_count(output=conanfile.output))
 
     def autotools_install_dir_custom_configure_test(self):
         for flag_to_remove in default_dirs_flags:
@@ -767,7 +771,7 @@ AC_OUTPUT
         client.run("create . danimtb/testing")
         pkg_path = client.client_cache.package(
             PackageReference.loads(
-                "test/1.0@danimtb/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"))
+                "test/1.0@danimtb/testing:%s" % NO_SETTINGS_PACKAGE_ID))
 
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 

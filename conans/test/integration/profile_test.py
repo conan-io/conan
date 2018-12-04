@@ -178,7 +178,8 @@ class ProfileTest(unittest.TestCase):
 
         self.client.client_cache.default_profile # Creates default
         tools.replace_in_file(self.client.client_cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False)
+                              "compiler.libcxx", "#compiler.libcxx", strict=False,
+                              output=self.client.out)
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -273,7 +274,8 @@ class ProfileTest(unittest.TestCase):
         # Change default profile to p1 => p2 => default
         tools.replace_in_file(self.client.client_cache.conan_conf_path,
                               "default_profile = default",
-                              "default_profile = p1")
+                              "default_profile = p1",
+                              output=self.client.out)
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")

@@ -1,23 +1,84 @@
-from conans.model.ref import ConanFileReference
+import re
+
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.search.search import search_recipes
+
+
+re_param = re.compile(r"^(?P<function>include_prerelease|loose)\s*=\s*(?P<value>True|False)$")
+re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\s])*$")
+
+
+def _parse_versionexpr(versionexpr, output):
+    expression = [it.strip() for it in versionexpr.split(",")]
+    if len(expression) > 4:
+        raise ConanException("Invalid expression for version_range '{}'".format(versionexpr))
+
+    include_prerelease = False
+    loose = True
+    version_range = []
+
+    for i, expr in enumerate(expression):
+        match_param = re_param.match(expr)
+        match_version = re_version.match(expr)
+
+        if match_param == match_version:
+            raise ConanException("Invalid version range '{}', failed in "
+                                 "chunk '{}'".format(versionexpr, expr))
+
+        if match_version and i not in [0, 1]:
+            raise ConanException("Invalid version range '{}'".format(versionexpr))
+
+        if match_param and i not in [1, 2, 3]:
+            raise ConanException("Invalid version range '{}'".format(versionexpr))
+
+        if match_version:
+            version_range.append(expr)
+
+        if match_param:
+            if match_param.group('function') == 'loose':
+                loose = match_param.group('value') == "True"
+            elif match_param.group('function') == 'include_prerelease':
+                include_prerelease = match_param.group('value') == "True"
+            else:
+                raise ConanException("Unexpected version range "
+                                     "parameter '{}'".format(match_param.group(1)))
+
+    if len(version_range) > 1:
+        output.warn("Commas as separator in version '%s' range will are deprecated and will be removed in Conan 2.0" %
+                    str(versionexpr))
+
+    version_range = " ".join(map(str, version_range))
+    return version_range, loose, include_prerelease
 
 
 def satisfying(list_versions, versionexpr, output):
     """ returns the maximum version that satisfies the expression
     if some version cannot be converted to loose SemVer, it is discarded with a msg
-    This provides some woraround for failing comparisons like "2.1" not matching "<=2.1"
+    This provides some workaround for failing comparisons like "2.1" not matching "<=2.1"
     """
-    from semver import SemVer, max_satisfying
-    version_range = versionexpr.replace(",", " ")
+    from semver import SemVer, Range, max_satisfying
+
+    version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, output)
+
+    # Check version range expression
+    try:
+        act_range = Range(version_range, loose)
+    except ValueError:
+        raise ConanException("version range expression '%s' is not valid" % version_range)
+
+    # Validate all versions
     candidates = {}
     for v in list_versions:
         try:
-            ver = SemVer(v, loose=True)
+            ver = SemVer(v, loose=loose)
             candidates[ver] = v
         except (ValueError, AttributeError):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
-    result = max_satisfying(candidates, version_range, loose=True)
+
+    # Search best matching version in range
+    result = max_satisfying(candidates, act_range, loose=loose,
+                            include_prerelease=include_prerelease)
     return candidates.get(result)
 
 
@@ -78,8 +139,11 @@ class RangeResolver(object):
         remote_found = remote_cache.get(search_ref)
         if remote_found is None:
             remote_found = self._remote_search.search_remotes(search_ref, remote_name)
+            # We don't want here to resolve the revision that should be done in the proxy
+            # as any other regular flow
+            remote_found = [ref.copy_clear_rev() for ref in remote_found or []]
             # Empty list, just in case it returns None
-            remote_cache[search_ref] = remote_found or []
+            remote_cache[search_ref] = remote_found
         if remote_found:
             return self._resolve_version(version_range, remote_found)
 
