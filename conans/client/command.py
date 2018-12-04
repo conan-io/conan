@@ -1020,6 +1020,8 @@ class Command(object):
                 out_kwargs.update({'f': 'search_recipes',
                                    'query': args.pattern_or_reference})
 
+                if args.table:
+                    raise ConanException("'--table' argument can only be used with a reference")
                 if args.outdated:
                     raise ConanException("'--outdated' argument can only be used with a reference")
 
@@ -1028,7 +1030,7 @@ class Command(object):
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
                                                   case_sensitive=args.case_sensitive)
-                OutputerFormats.get('cli').out(info=info, **out_kwargs)
+                OutputerFormats.get('cli').search_recipes(info=info, **out_kwargs)
         except ConanException as exc:
             info = exc.info
             raise
