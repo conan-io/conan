@@ -1,6 +1,5 @@
 import copy
-from collections import OrderedDict
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues

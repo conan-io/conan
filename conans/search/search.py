@@ -1,15 +1,14 @@
-import re
 import os
-
+import re
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.util.log import logger
-from conans.search.query_parse import infix_to_postfix, evaluate_postfix
+from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import list_folder_subdirs, load
+from conans.util.log import logger
 
 
 def filter_outdated(packages_infos, recipe_hash):

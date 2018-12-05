@@ -3,8 +3,8 @@ import os
 import unittest
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestServer, TestClient
-from conans.util.files import save, load
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class JsonOutputTest(unittest.TestCase):

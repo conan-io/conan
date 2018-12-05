@@ -1,8 +1,9 @@
+from collections import OrderedDict
+
+from conans.client.graph.graph import BINARY_SKIP
 from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.workspace import WORKSPACE_FILE
-from collections import OrderedDict
-from conans.client.graph.graph import BINARY_SKIP
 
 
 def _get_python_requires(conanfile):

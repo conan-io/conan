@@ -2,9 +2,9 @@ import os
 import platform
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import load, save, mkdir
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, mkdir, save
 
 conanfile = """
 from conans import ConanFile

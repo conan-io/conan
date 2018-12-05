@@ -1,7 +1,7 @@
 import platform
 import unittest
-from conans.test.utils.tools import TestClient
 
+from conans.test.utils.tools import TestClient
 
 conanfile_py = """
 from conans import ConanFile

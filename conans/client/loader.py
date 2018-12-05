@@ -2,7 +2,6 @@ import imp
 import inspect
 import os
 import sys
-
 import uuid
 
 from conans.client.generators import registered_generators

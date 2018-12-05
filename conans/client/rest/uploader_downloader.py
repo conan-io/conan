@@ -2,12 +2,12 @@ import os
 import time
 import traceback
 
-from conans.errors import ConanException, ConanConnectionError, NotFoundException, \
-    AuthenticationException
-from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.client.tools.files import human_size
+from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
+    NotFoundException
+from conans.util.files import exception_message_safe, mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
-from conans.client.tools.files import human_size
 
 
 class Uploader(object):

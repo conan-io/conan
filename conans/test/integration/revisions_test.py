@@ -1,16 +1,14 @@
 import os
+import time
 import unittest
 from collections import OrderedDict
-
-import time
 from time import sleep
 
-from conans import REVISIONS, load
+from conans import DEFAULT_REVISION_V1, REVISIONS, load
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
-from conans import DEFAULT_REVISION_V1
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
-    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    create_local_git_repo
 
 
 @unittest.skipUnless(TestClient().revisions,

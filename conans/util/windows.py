@@ -2,9 +2,8 @@ import os
 import subprocess
 import tempfile
 
-from conans.util.files import load, mkdir, save, rmdir
 from conans.util.env_reader import get_env
-
+from conans.util.files import load, mkdir, rmdir, save
 
 CONAN_LINK = ".conan_link"
 

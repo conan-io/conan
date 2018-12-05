@@ -1,7 +1,7 @@
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
 from conans.errors import NotFoundException
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 def download(reference, package_ids, remote_name, recipe, registry, remote_manager,

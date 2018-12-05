@@ -3,7 +3,7 @@ import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 class ShortPathsTest(unittest.TestCase):

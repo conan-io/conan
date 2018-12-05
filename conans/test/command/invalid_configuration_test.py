@@ -1,8 +1,8 @@
 
 import unittest
 
-from conans.test.utils.tools import TestClient
 from conans.client.command import ERROR_INVALID_CONFIGURATION
+from conans.test.utils.tools import TestClient
 
 
 class InvalidConfigurationTest(unittest.TestCase):

@@ -1,11 +1,12 @@
 import platform
 import subprocess
 import unittest
+
 from mock import mock
 
+from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.client import tools
 
 
 class DetectTest(unittest.TestCase):

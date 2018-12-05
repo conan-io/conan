@@ -1,16 +1,16 @@
-import unittest
-
-from conans.client import tools
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.util.files import save, load
 import os
-from conans.paths import CONANFILE
+import unittest
 from collections import OrderedDict
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.profiles import create_profile as _create_profile
+
 from parameterized import parameterized
 
+from conans.client import tools
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.profiles import create_profile as _create_profile
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, save
 
 conanfile_scope_env = """
 from conans import ConanFile

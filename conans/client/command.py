@@ -1,11 +1,11 @@
+import argparse
 import inspect
 import json
 import os
 import sys
-
-import argparse
-import six
 from argparse import ArgumentError
+
+import six
 
 from conans import __version__ as client_version
 from conans.client.conan_api import Conan, default_manifest_folder
@@ -14,14 +14,13 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
-from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
+from conans.client.tools.files import save
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
-from conans.client.tools.files import save
 from conans.util.log import logger
-
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)

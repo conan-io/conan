@@ -7,14 +7,14 @@ from mock import Mock
 from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE, \
-    CONAN_MANIFEST, CONANINFO
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
+    PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer, \
-    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
+    TestServer
 from conans.util.files import load
 
 

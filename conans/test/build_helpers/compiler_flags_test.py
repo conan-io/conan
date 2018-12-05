@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
 import platform
+import unittest
+
 from nose.plugins.attrib import attr
 
-from conans.client.build.compiler_flags import architecture_flag, libcxx_flag, libcxx_define, \
-    pic_flag, build_type_flags, build_type_define, adjust_path, sysroot_flag, format_defines, \
-    format_include_paths, format_library_paths, format_libraries
+from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
+    build_type_flags, format_defines, format_include_paths, format_libraries, format_library_paths, \
+    libcxx_define, libcxx_flag, pic_flag, sysroot_flag
 
 
 class CompilerFlagsTest(unittest.TestCase):

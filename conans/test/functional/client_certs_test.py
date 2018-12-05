@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from conans.test.utils.tools import TestClient
 from conans.client import tools
+from conans.test.utils.tools import TestClient
 
 
 class ClientCertsTest(unittest.TestCase):

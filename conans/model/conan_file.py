@@ -1,18 +1,17 @@
 import os
 from contextlib import contextmanager
 
-from conans.client.tools.env import pythonpath
+from conans.client import tools
+from conans.client.output import Color
+from conans.client.tools.env import environment_append, no_op, pythonpath
+from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
-from conans.model.options import Options, PackageOptions, OptionsValues
+from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.client.tools.env import environment_append, no_op
-from conans.client.output import Color
-from conans.client import tools
-from conans.client.tools.oss import OSInfo
 
 
 def create_options(conanfile):

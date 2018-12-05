@@ -4,13 +4,14 @@
 
 import platform
 import unittest
+
 from mock import mock
 from nose.plugins.attrib import attr
 
-from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
-from conans.errors import ConanException
 from conans.client.tools.win import vcvars_command
+from conans.errors import ConanException
+from conans.model.settings import Settings
 
 
 @attr('visual_studio')

@@ -1,7 +1,8 @@
 import unittest
+
 from conans.client.graph.graph_builder import DepsGraph, Node
-from conans.model.ref import ConanFileReference
 from conans.model.conan_file import ConanFile
+from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 
 

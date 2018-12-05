@@ -2,10 +2,10 @@ import os
 import time
 import unittest
 
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, md5sum
-from conans.paths import PACKAGE_TGZ_NAME
 from conans.client.remote_manager import compress_files
+from conans.paths import PACKAGE_TGZ_NAME
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import md5sum, save
 
 
 class TgzMd5Test(unittest.TestCase):

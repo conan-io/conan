@@ -1,5 +1,5 @@
-from collections import namedtuple, Counter
 import unittest
+from collections import Counter, namedtuple
 
 from parameterized import parameterized
 

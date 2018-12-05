@@ -1,12 +1,11 @@
 import json
+import time
 import unittest
 from collections import OrderedDict
 
-import time
-
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestServer, TestClient
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 

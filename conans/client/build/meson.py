@@ -2,10 +2,10 @@ import os
 import subprocess
 
 from conans.client import defs_to_string, join_arguments, tools
-from conans.errors import ConanException
 from conans.client.tools.oss import args_to_string
-from conans.util.files import mkdir, get_abs_path, decode_text
+from conans.errors import ConanException
 from conans.model.version import Version
+from conans.util.files import decode_text, get_abs_path, mkdir
 
 
 class Meson(object):

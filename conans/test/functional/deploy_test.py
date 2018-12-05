@@ -1,11 +1,12 @@
+import os
 import unittest
 
-from conans.test.utils.tools import TestClient
-from conans.test.utils.test_files import temp_folder
-import os
-from conans.model.manifest import FileTreeManifest
-from conans.util.files import load, mkdir
 from parameterized.parameterized import parameterized
+
+from conans.model.manifest import FileTreeManifest
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, mkdir
 
 
 class DeployTest(unittest.TestCase):
