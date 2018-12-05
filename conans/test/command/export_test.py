@@ -29,6 +29,16 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def export_partial_ref_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+"""})
+        client.run("export . 0.1@myuser/testing")
+        client.run("search")
+        self.assertIn("Pkg/0.1@myuser/testing", client.out)
+
     def export_without_full_reference_test(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile

@@ -207,11 +207,11 @@ class MyPkg(ConanFile):
         assert(self.name=="Pkg")
         self.output.info("Running system requirements!!")
 """})
-        client.run("create . 0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        client.run("create . 0.1@myuser/testing")
+        self.assertIn("Pkg/0.1@myuser/testing: Generating the package", client.out)
         self.assertIn("Running system requirements!!", client.out)
         client.run("search")
-        self.assertIn("Pkg/0.1@lasote/testing", client.out)
+        self.assertIn("Pkg/0.1@myuser/testing", client.out)
 
     def create_werror_test(self):
         client = TestClient()
