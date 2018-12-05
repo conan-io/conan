@@ -1462,7 +1462,11 @@ def get_reference_fields(arg_reference):
 
     try:
         name_version, user_channel = arg_reference.split("@")
-        name, version = name_version.split("/")
+        name_version = name_version.split("/")
+        try:
+            name, version = name_version
+        except ValueError:
+            name, version = None, name_version[0]
         user, channel = user_channel.split("/")
     except ValueError:
         name, version = None, None
