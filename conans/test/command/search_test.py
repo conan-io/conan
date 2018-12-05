@@ -82,7 +82,6 @@ conan_vars4 = """[settings]
   HelloInfo1/0.45@myuser/testing:33333
 """
 
-
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -179,8 +178,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEquals("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n",
-                          self.client.out)
+                          "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
@@ -287,30 +285,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello* --table=table.html", ignore_error=True)
         self.assertIn("ERROR: '--table' argument can only be used with a reference",
                       self.client.out)
-
-    def recipe_pattern_search_test(self):
-        self.client.run("search Hello*")
-        self.assertEquals("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
-
-        self.client.run("search Hello* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
-
-        self.client.run("search *myuser* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\n"
-                          "Bye/0.14@myuser/testing\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "MissFile/1.0.2@myuser/stable\n"
-                          "NodeInfo/1.0.2@myuser/stable\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
     def package_search_with_invalid_reference_test(self):
         self.client.run("search Hello -q 'a=1'", ignore_error=True)
