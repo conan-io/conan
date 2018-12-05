@@ -362,7 +362,8 @@ class ConanAPIV1(object):
             profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
                                                 input_lock_file, self._client_cache)
 
-            reference = self._loader.export_ref(conanfile_path, name, version, user, channel)
+            name, version = self._loader.load_name_version(conanfile_path, name, version)
+            reference = ConanFileReference(name, version, user, channel)
 
             if graph_lock:
                 node = graph_lock.get_node_from_ref(reference)
@@ -445,8 +446,10 @@ class ConanAPIV1(object):
             else:
                 profile = read_conaninfo_profile(install_folder)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                            channel)
+            name, version = self._loader.load_name_version(conanfile_path, name, version)
+            reference = ConanFileReference(name, version, user, channel)
+            conanfile = self._loader.load_export(conanfile_path, reference)
+
             recorder.recipe_exported(reference)
             recorder.add_recipe_being_developed(reference)
             cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
@@ -598,9 +601,9 @@ class ConanAPIV1(object):
             item = os.path.abspath(item)
 
         from conans.client.conf.config_installer import configuration_install
+        requester = self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
-                                     requester=self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
-                                     config_type=config_type, args=args)
+                                     requester=requester, config_type=config_type, args=args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env,
                           lock_file):
@@ -765,8 +768,9 @@ class ConanAPIV1(object):
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                        channel)
+        name, version = self._loader.load_name_version(conanfile_path, name, version)
+        reference = ConanFileReference(name, version, user, channel)
+        conanfile = self._loader.load_export(conanfile_path, reference)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                    self._client_cache, self._hook_manager)
 

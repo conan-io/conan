@@ -45,8 +45,8 @@ def _parse_versionexpr(versionexpr, output):
                                      "parameter '{}'".format(match_param.group(1)))
 
     if len(version_range) > 1:
-        output.warn("Commas as separator in version '%s' range will are deprecated and will be removed in Conan 2.0" %
-                    str(versionexpr))
+        output.warn("Commas as separator in version '%s' range will are deprecated "
+                    "and will be removed in Conan 2.0" % str(versionexpr))
 
     version_range = " ".join(map(str, version_range))
     return version_range, loose, include_prerelease

@@ -26,17 +26,21 @@ class ConanPythonRequire(object):
         self._requires = old_requires
 
     def _look_for_require(self, require):
+        ref = ConanFileReference.loads(require)
+        if self._locked_versions is not None:
+            ref = self._locked_versions[ref.name]  # Locked one instead
+
         try:
-            python_require = self._cached_requires[require]
+            python_require = self._cached_requires[ref]
         except KeyError:
-            r = ConanFileReference.loads(require)
-            requirement = Requirement(r)
-            self._range_resolver.resolve(requirement, "python_require", update=False,
-                                         remote_name=None)
-            r = requirement.conan_reference
-            result = self._proxy.get_recipe(r, False, False, remote_name=None,
+            if self._locked_versions is None:
+                requirement = Requirement(ref)
+                self._range_resolver.resolve(requirement, "python_require", update=False,
+                                             remote_name=None)
+                ref = requirement.conan_reference
+            result = self._proxy.get_recipe(ref, False, False, remote_name=None,
                                             recorder=ActionRecorder())
-            path, _, _, reference = result
+            path, _, _, ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
 
             # Check for alias
@@ -44,8 +48,8 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                python_require = PythonRequire(reference, module, conanfile)
-            self._cached_requires[require] = python_require
+                python_require = PythonRequire(ref, module, conanfile)
+            self._cached_requires[ref] = python_require
 
         return python_require
 

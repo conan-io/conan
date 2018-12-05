@@ -54,34 +54,33 @@ class ConanFileLoader(object):
         _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
         return conanfile
 
-    def export_ref(self, conanfile_path, name, version, user, channel):
+    def load_name_version(self, conanfile_path, name, version):
         conanfile = self.load_class(conanfile_path)
-        if not conanfile.name:
-            if name:
-                conanfile.name = name
+        # Do not inherit the name from python-requires
+        if "name" in conanfile.__dict__:
+            if name and name != conanfile.name:
+                raise ConanException("Package recipe exported with name %s!=%s"
+                                     % (name, conanfile.name))
             else:
-                raise ConanException("conanfile didn't specify name")
-        elif name and name != conanfile.name:
-            raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
+                name = conanfile.name
+        elif not name:
+            raise ConanException("conanfile didn't specify name")
 
-        if not conanfile.version:
-            if version:
-                conanfile.version = version
+        if "version" in conanfile.__dict__:
+            if version and version != conanfile.version:
+                raise ConanException("Package recipe exported with version %s!=%s"
+                                     % (version, conanfile.version))
             else:
-                raise ConanException("conanfile didn't specify version")
-        elif version and version != conanfile.version:
-            raise ConanException("Package recipe exported with version %s!=%s"
-                                 % (version, conanfile.version))
-
-        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        return ref
+                version = conanfile.version
+        elif not version:
+            raise ConanException("conanfile didn't specify version")
+        return name, version
 
     def load_export(self, conanfile_path, ref):
         # We need to silent range_resolver output of python_requires of this load_class
         conanfile = self.load_class(conanfile_path)
         conanfile.name = ref.name
         conanfile.version = ref.version
-
         output = ScopedOutput(str(ref), self._output)
         return conanfile(output, self._runner, ref.user, ref.channel)
 
