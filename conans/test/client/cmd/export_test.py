@@ -3,14 +3,14 @@ import shutil
 import unittest
 from collections import namedtuple
 
-from conans.client.tools import chdir
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TestClient
-from conans.util.files import save, load
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.loader import _parse_conanfile
-from conans.test.utils.test_files import temp_folder
+from conans.client.tools import chdir
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class ReplaceSCMDataInConanfileTest(unittest.TestCase):

@@ -1,18 +1,19 @@
 import os
-from unittest import TestCase
-import six
-import unittest
 import tarfile
+import unittest
+from unittest import TestCase
+
+import six
 from six import StringIO
 
 from conans import DEFAULT_REVISION_V1
-from conans.test.utils.test_files import temp_folder
-from conans.client.tools.files import unzip, save
-from conans.util.files import load, save_files
-from conans.errors import ConanException
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.output import ConanOutput
+from conans.client.tools.files import save, unzip
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, save_files
 
 
 class XZTest(TestCase):

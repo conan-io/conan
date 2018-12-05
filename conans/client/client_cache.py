@@ -1,27 +1,24 @@
 import os
+import shutil
 from collections import OrderedDict
 from contextlib import contextmanager
 from os.path import join, normpath
 
-import shutil
-
-from conans import DEFAULT_REVISION_V1
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
+from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case, \
-    CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS, SimplePaths, check_ref_case
 from conans.unicode import get_cwd
-from conans.util.files import save, load, normalize, list_folder_subdirs
-from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
+from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"

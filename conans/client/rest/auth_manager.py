@@ -12,11 +12,12 @@ Flow:
     get_conan with the new token.
 """
 
-from conans.errors import AuthenticationException, ForbiddenException, ConanException
-from uuid import getnode as get_mac
 import hashlib
-from conans.util.log import logger
+from uuid import getnode as get_mac
+
 from conans.client.cmd.user import update_localdb
+from conans.errors import AuthenticationException, ConanException, ForbiddenException
+from conans.util.log import logger
 
 
 def input_credentials_if_unauthorized(func):

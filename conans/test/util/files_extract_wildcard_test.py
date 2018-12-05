@@ -1,14 +1,13 @@
 import os
+import sys
 import tarfile
 import zipfile
-import sys
-
 from unittest import TestCase
 
-from conans.test.utils.test_files import temp_folder
-from conans.client.tools.files import unzip
-from conans.util.files import save_files
 from conans.client.output import ConanOutput
+from conans.client.tools.files import unzip
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save_files
 
 
 def create_archive(archive, root, relative_file_paths):

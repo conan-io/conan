@@ -1,5 +1,5 @@
-import os
 import fnmatch
+import os
 import shutil
 from collections import defaultdict
 

@@ -2,15 +2,14 @@ import os
 import time
 
 from conans.client.remote_manager import check_compressed_files
-from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
+from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
-from conans.errors import NotFoundException, ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
-from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 from conans.util.log import logger
 

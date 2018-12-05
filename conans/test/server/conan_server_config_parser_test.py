@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import unittest
 import os
+import unittest
 
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, mkdir
-from conans.server.conf import ConanServerConfigParser
 from conans.errors import ConanException
+from conans.server.conf import ConanServerConfigParser
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import mkdir, save
 
 
 class ServerConfigParseTest(unittest.TestCase):

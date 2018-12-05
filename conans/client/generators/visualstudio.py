@@ -1,8 +1,8 @@
 import os
+import re
 
 from conans.model import Generator
 from conans.paths import BUILD_INFO_VISUAL_STUDIO
-import re
 
 
 class VisualStudioGenerator(Generator):

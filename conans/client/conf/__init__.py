@@ -1,11 +1,11 @@
 import os
 
-from six.moves.configparser import ConfigParser, NoSectionError
 from six.moves import urllib
+from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
+from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
 from conans.util.env_reader import get_env
 from conans.util.files import load
 

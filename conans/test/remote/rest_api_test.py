@@ -5,18 +5,17 @@ import unittest
 import requests
 from nose.plugins.attrib import attr
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
-from conans import DEFAULT_REVISION_V1
+from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 from conans.test.server.utils.server_launcher import TestServerLauncher
-from conans.test.utils.test_files import hello_source_files
-from conans.test.utils.test_files import temp_folder
+from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import md5, save
 

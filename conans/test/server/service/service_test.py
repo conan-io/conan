@@ -1,21 +1,21 @@
-import unittest
-from conans.model.ref import ConanFileReference, PackageReference
-from conans import DEFAULT_REVISION_V1
-from conans.server.service.service import ConanService, FileUploadDownloadService,\
-    SearchService
-from conans.paths import CONAN_MANIFEST, CONANINFO
-from conans.server.store.server_store import ServerStore
-from conans.util.files import save_files, save, mkdir, load, md5sum
-from conans.server.service.authorize import BasicAuthorizer
 import os
-from conans.errors import NotFoundException, RequestErrorException
-from conans.test.utils.test_files import hello_source_files
-from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+import unittest
 from datetime import timedelta
 from time import sleep
+
+from conans import DEFAULT_REVISION_V1
+from conans.errors import NotFoundException, RequestErrorException
 from conans.model.manifest import FileTreeManifest
-from conans.test.utils.test_files import temp_folder
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANINFO, CONAN_MANIFEST
+from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+from conans.server.service.authorize import BasicAuthorizer
+from conans.server.service.service import ConanService, FileUploadDownloadService, \
+    SearchService
 from conans.server.store.disk_adapter import ServerDiskAdapter
+from conans.server.store.server_store import ServerStore
+from conans.test.utils.test_files import hello_source_files, temp_folder
+from conans.util.files import load, md5sum, mkdir, save, save_files
 
 
 class MockFileSaver(object):

@@ -1,15 +1,16 @@
+import os
+import platform
 import unittest
 
-from conans.client.generators.text import TXTGenerator
-from conans.test.utils.tools import TestServer, TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
-from conans.util.files import load
-import os
-from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
-import platform
+
+from conans.client.generators.text import TXTGenerator
+from conans.model.ref import ConanFileReference
+from conans.paths import BUILD_INFO, BUILD_INFO_CMAKE, CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import wait_until_removed
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 @attr("slow")

@@ -1,16 +1,15 @@
-import unittest
 import os
 import shutil
+import unittest
 
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.test.utils.test_files import hello_source_files
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANINFO, CONANFILE
-from conans.client.packager import create_package
+from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.client.output import ScopedOutput
-from conans.client.graph.python_requires import ConanPythonRequire
-
+from conans.client.packager import create_package
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.test_files import hello_source_files
+from conans.test.utils.tools import TestBufferConanOutput, TestClient
 
 myconan1 = """
 from conans import ConanFile

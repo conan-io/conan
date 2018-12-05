@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-import unittest
-import platform
-import zipfile
 import os
+import platform
+import unittest
+import zipfile
+
 from six import StringIO
 
+from conans.client import tools
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
-from conans.client import tools
+from conans.util.files import load, save
 
 
 class OutputTest(unittest.TestCase):

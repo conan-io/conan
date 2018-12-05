@@ -1,5 +1,7 @@
-from conans.test.utils.tools import TestClient
 import unittest
+
+from conans.test.utils.tools import TestClient
+
 test_conanfile = """from conans import ConanFile
 
 class test_packageConan(ConanFile):

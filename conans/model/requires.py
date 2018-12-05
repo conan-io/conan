@@ -1,7 +1,9 @@
 from collections import OrderedDict
+
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-import six
 
 
 class Requirement(object):

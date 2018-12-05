@@ -2,14 +2,15 @@ import os
 import platform
 import stat
 import zipfile
-from unittest import TestCase
 from os.path import basename
+from unittest import TestCase
+
 from six import StringIO
 
-from conans.test.utils.test_files import temp_folder
-from conans.client.tools.files import unzip
-from conans.util.files import save
 from conans.client.output import ConanOutput
+from conans.client.tools.files import unzip
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 class ZipPermissionsTest(TestCase):

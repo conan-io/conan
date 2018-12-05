@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from datetime import datetime
 
 from conans.model.ref import ConanFileReference

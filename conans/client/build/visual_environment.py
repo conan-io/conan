@@ -1,8 +1,8 @@
 import copy
 import os
 
-from conans.client.build.compiler_flags import build_type_define, build_type_flags, visual_runtime, format_defines, \
-    include_path_option, parallel_compiler_cl_flag
+from conans.client.build.compiler_flags import build_type_define, build_type_flags, format_defines, \
+    include_path_option, parallel_compiler_cl_flag, visual_runtime
 from conans.client.build.cppstd_flags import cppstd_flag
 
 

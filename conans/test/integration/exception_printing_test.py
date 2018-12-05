@@ -1,8 +1,8 @@
 import unittest
 
+from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.client import tools
 
 
 class ExceptionPrintingTest(unittest.TestCase):

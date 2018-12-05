@@ -1,10 +1,10 @@
 import os
 
 from conans.client.remote_registry import Remote
-from conans.paths import SimplePaths
-from conans.model.manifest import FileTreeManifest
 from conans.errors import ConanException
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
+from conans.paths import SimplePaths
 
 
 class ManifestManager(object):

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 conanfile_basic = """
 from conans import ConanFile
