@@ -4,7 +4,9 @@
 
 
 import unittest
+
 from mock import mock
+
 from conans.client.tools.oss import detected_architecture
 
 

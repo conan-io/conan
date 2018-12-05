@@ -1,8 +1,8 @@
 import os
 import re
 import unittest
-
 from collections import namedtuple
+
 from nose.plugins.attrib import attr
 
 from conans.client.conf import default_settings_yml

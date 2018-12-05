@@ -1,12 +1,11 @@
 import unittest
 
-from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.graph.proxy import ConanProxy
-from conans.errors import NotFoundException, ConanException
+from conans.client.recorder.action_recorder import ActionRecorder
+from conans.client.remote_registry import RemoteRegistry
+from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
-from conans.client.remote_registry import RemoteRegistry
-
 
 myconan1 = """
 from conans import ConanFile

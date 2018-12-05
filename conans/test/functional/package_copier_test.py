@@ -1,13 +1,14 @@
-import unittest
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
-from conans.client.userio import UserIO
+import os
 import sys
-from conans.util.files import mkdir, save, load
+import unittest
+
+from conans.client.cmd.copy import package_copy
+from conans.client.userio import UserIO
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SimplePaths
-import os
-from conans.client.cmd.copy import package_copy
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.files import load, mkdir, save
 
 
 class MockedBooleanUserIO(UserIO):

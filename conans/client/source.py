@@ -1,16 +1,15 @@
 import os
-
 import shutil
+
 import six
 
 from conans.client import tools
-from conans.errors import (ConanException, conanfile_exception_formatter,
-                           ConanExceptionInUserConanfileMethod)
+from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
+                           conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
-from conans.util.files import (rmdir, set_dirty, is_dirty, clean_dirty, mkdir, walk,
-                               load)
+from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
 
 
 def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):

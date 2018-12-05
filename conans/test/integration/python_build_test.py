@@ -1,15 +1,15 @@
 import os
 import unittest
+
 from parameterized import parameterized
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, BUILD_INFO
+from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
-    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    create_local_git_repo
 from conans.util.files import load, save
-
 
 conanfile = """from conans import ConanFile
 

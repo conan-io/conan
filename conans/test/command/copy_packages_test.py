@@ -1,7 +1,8 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import unittest
+
 from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient
 
 
 class CopyPackagesTest(unittest.TestCase):

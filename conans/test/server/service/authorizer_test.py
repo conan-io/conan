@@ -1,7 +1,8 @@
 import unittest
-from conans.server.service.authorize import BasicAuthorizer
-from conans.errors import ForbiddenException, InternalErrorException, AuthenticationException
+
+from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.server.service.authorize import BasicAuthorizer
 
 
 class AuthorizerTest(unittest.TestCase):

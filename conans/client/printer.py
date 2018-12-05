@@ -1,13 +1,11 @@
 import fnmatch
-
 from collections import OrderedDict
 
-from conans.paths import SimplePaths
+from conans.client.installer import build_id
 from conans.client.output import Color
 from conans.model.options import OptionsValues
-from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
-from conans.client.installer import build_id
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import SimplePaths
 from conans.util.env_reader import get_env
 
 

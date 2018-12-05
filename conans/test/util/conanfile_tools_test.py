@@ -1,15 +1,16 @@
-import unittest
 import os
 import sys
-from conans.util.files import save, load
-from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.test.utils.test_files import temp_folder
-from parameterized.parameterized import parameterized
-from conans.test.utils.tools import TestClient
-from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client import tools
-from conans.client.output import ConanOutput
+import unittest
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.output import ConanOutput
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, save
 
 base_conanfile = '''
 from conans import ConanFile

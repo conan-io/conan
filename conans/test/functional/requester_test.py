@@ -1,8 +1,8 @@
 import unittest
 
+from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.client import tools
 
 
 class MyRequester(object):

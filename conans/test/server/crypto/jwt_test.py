@@ -1,10 +1,12 @@
-import unittest
-from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
-from conans.server.crypto.jwt.jwt_manager import JWTManager
-from datetime import timedelta
 import time
+import unittest
+from datetime import timedelta
+
 import jwt
 from jwt import DecodeError
+
+from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
+from conans.server.crypto.jwt.jwt_manager import JWTManager
 
 
 class JwtTest(unittest.TestCase):

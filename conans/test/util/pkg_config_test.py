@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-import platform
 import os
+import platform
+import unittest
+
 from nose.plugins.attrib import attr
+
 from conans.client.tools.env import environment_append
 from conans.client.tools.pkg_config import PkgConfig
-from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
+from conans.test.utils.test_files import temp_folder
 
 libastral_pc = """
 PC FILE EXAMPLE:

@@ -1,8 +1,9 @@
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-import unittest
-from conans.paths import CONANFILE, BUILD_INFO
-from conans.model.ref import PackageReference
 import os
+import unittest
+
+from conans.model.ref import PackageReference
+from conans.paths import BUILD_INFO, CONANFILE
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load, mkdir
 
 conanfile_scope_env = """

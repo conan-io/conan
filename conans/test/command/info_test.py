@@ -1,11 +1,12 @@
-import unittest
 import os
 import re
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE
-from conans.model.ref import ConanFileReference
 import textwrap
+import unittest
+
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 

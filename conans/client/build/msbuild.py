@@ -2,16 +2,16 @@ import copy
 import re
 import subprocess
 
+from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
+from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import tmp_file, decode_text
-from conans.model.conan_file import ConanFile
-from conans.client import tools
+from conans.util.files import decode_text, tmp_file
 
 
 class MSBuild(object):

@@ -3,6 +3,7 @@ import platform
 import unittest
 from collections import namedtuple
 
+from conans.client import tools
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
@@ -11,9 +12,8 @@ from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.build_helpers.cmake_test import ConanFileMock
 from conans.test.util.tools_test import RunnerMock
-from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
-from conans.client import tools
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.conanfile import MockConanfile, MockOptions, MockSettings
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
                       "--sbindir", "--oldincludedir", "--libexecdir"]

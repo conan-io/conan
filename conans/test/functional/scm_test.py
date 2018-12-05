@@ -2,17 +2,17 @@ import json
 import os
 import unittest
 from collections import namedtuple
+
 from nose.plugins.attrib import attr
 
 from conans.client.tools.scm import Git, SVN
+from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
-    SVNLocalRepoTestCase, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, SVNLocalRepoTestCase, TestClient, \
+    TestServer, create_local_git_repo
 from conans.util.files import load, rmdir, save, to_file_bytes
-from conans.client.tools.win import get_cased_path
-
 
 base = '''
 import os

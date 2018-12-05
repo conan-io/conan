@@ -2,20 +2,19 @@ import json
 import os
 import platform
 import re
-import deprecation
-
 import subprocess
-
 from contextlib import contextmanager
 
+import deprecation
+
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import detected_architecture, OSInfo
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text, save, mkdir_tmp
-from conans.unicode import get_cwd
 from conans.model.version import Version
+from conans.unicode import get_cwd
+from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
+from conans.util.files import decode_text, mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):

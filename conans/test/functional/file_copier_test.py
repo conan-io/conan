@@ -4,7 +4,7 @@ import unittest
 
 from conans.client.file_copier import FileCopier
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conans.util.files import load, save
 
 
 class FileCopierTest(unittest.TestCase):

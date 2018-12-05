@@ -1,9 +1,9 @@
+import json
 import os
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-import json
 
 
 class ConanInspectTest(unittest.TestCase):

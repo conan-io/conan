@@ -1,14 +1,15 @@
-import unittest
-from conans.test.utils.test_files import temp_folder
-import os
-from conans.model.ref import ConanFileReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestServer, TestClient
-from conans.util.files import load
 import json
-from conans.paths import CONANFILE, RUN_LOG_NAME
-from conans.client.runner import ConanRunner
+import os
+import unittest
+
 from conans.client import tools
+from conans.client.runner import ConanRunner
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, RUN_LOG_NAME
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 class ConanTraceTest(unittest.TestCase):

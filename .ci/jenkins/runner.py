@@ -1,8 +1,8 @@
 import os
-
-from conf import winpylocation, linuxpylocation, macpylocation, Extender, environment_append, chdir, get_environ
 import platform
 
+from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
+    winpylocation
 
 pylocations = {"Windows": winpylocation,
                "Linux": linuxpylocation,

@@ -4,13 +4,12 @@ import shutil
 import unittest
 from collections import OrderedDict
 
-from conans import COMPLEX_SEARCH_CAPABILITY
-from conans import DEFAULT_REVISION_V1
+from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER
+from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, list_folder_subdirs
+from conans.util.files import list_folder_subdirs, load
 
 conan_vars1 = '''
 [settings]

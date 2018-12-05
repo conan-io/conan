@@ -1,4 +1,5 @@
 import unittest
+
 from conans.model.info import ConanInfo
 
 info_text = '''[settings]

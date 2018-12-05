@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+
 import six
 
 from conans.client.cmd.export_linter import conan_linter
@@ -9,9 +10,9 @@ from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
 
 

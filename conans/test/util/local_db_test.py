@@ -1,6 +1,7 @@
-import unittest
-from conans.client.store.localdb import LocalDB
 import os
+import unittest
+
+from conans.client.store.localdb import LocalDB
 from conans.test.utils.test_files import temp_folder
 
 
