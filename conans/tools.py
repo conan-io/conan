@@ -15,12 +15,16 @@ from __future__ import print_function
 import requests
 
 from conans.client.output import ConanOutput
+# Tools from conans.client.tools
 from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
     system_pm as tools_system_pm, win as tools_win
-# Tools from conans.client.tools
 from conans.client.tools.env import *  # pylint: disable=unused-import
+from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
+from conans.client.tools.scm import *  # pylint: disable=unused-import
 # Tools form conans.util
-from conans.util.files import save as files_save, save_append
+from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
+    rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
+    to_file_bytes, touch
 from conans.util.log import logger
 
 # This global variables are intended to store the configuration of the running Conan application

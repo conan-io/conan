@@ -20,9 +20,9 @@ class AConan(ConanFile):
 """
 
 conanfile_dep = """
+import os
 from conans import ConanFile
 from conans.tools import mkdir
-import os
 
 class AConan(ConanFile):
     name = "Hello"
