@@ -1,18 +1,20 @@
 import json
 import time
+
+from requests.auth import AuthBase, HTTPBasicAuth
+from six.moves.urllib.parse import urlencode
+
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
-from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
-                           AuthenticationException)
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_NO_OVERWRITE, \
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE
+from conans.errors import (AuthenticationException, ConanException, EXCEPTION_CODE_MAPPING,
+                           NotFoundException)
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.search import filter_packages
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
-from requests.auth import AuthBase, HTTPBasicAuth
-from six.moves.urllib.parse import urlencode
 
 
 class JWTAuth(AuthBase):

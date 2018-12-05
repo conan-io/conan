@@ -1,9 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 import os
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.util.files import load
+import unittest
 
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import load
 
 base_conanfile = '''
 from conans import ConanFile

@@ -2,9 +2,9 @@ import hashlib
 import os
 import tempfile
 
-from conans.util.files import rmdir
-from conans.util.env_reader import get_env
 from conans.client.cmd.build import build
+from conans.util.env_reader import get_env
+from conans.util.files import rmdir
 
 
 class PackageTester(object):

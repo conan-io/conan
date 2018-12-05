@@ -1,48 +1,42 @@
 # -*- coding: utf-8 -*-
-from bottle import static_file, request
-import mock
 import os
 import platform
-import unittest
-import uuid
 import shutil
 import subprocess
 import sys
-
+import unittest
+import uuid
 from collections import namedtuple
 
+import mock
+import requests
 import six
-from mock.mock import patch, mock_open
+from bottle import request, static_file
+from mock.mock import mock_open, patch
+from nose.plugins.attrib import attr
 from six import StringIO
 from six.moves.urllib.parse import quote
 
+from conans.client import tools
 from conans.client.client_cache import CONAN_CONF
-from conans.model.version import Version
-
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf import default_settings_yml, default_client_conf
+from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
-from conans.client.tools.win import vcvars_dict, vswhere
+from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.scm import Git, SVN
-
+from conans.client.tools.system_pm import AptTool, ChocolateyTool, OSInfo, SystemPackageTool
+from conans.client.tools.win import vcvars_dict, vswhere
 from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
+from conans.model.version import Version
 from conans.test.build_helpers.cmake_test import ConanFileMock
-
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, create_local_git_repo, \
-    SVNLocalRepoTestCase, StoppableThreadBottle, try_remove_readonly
-
-from conans.client.tools.files import which, replace_in_file
-from conans.client.tools.system_pm import OSInfo, AptTool, ChocolateyTool, SystemPackageTool
-from conans.client import tools
-from conans.util.files import save, load, md5, mkdir
-import requests
-
-from nose.plugins.attrib import attr
+from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
+    TestBufferConanOutput, TestClient, create_local_git_repo, try_remove_readonly
 from conans.tools import get_global_instances
+from conans.util.files import load, md5, mkdir, save
 
 
 class SystemPackageToolTest(unittest.TestCase):

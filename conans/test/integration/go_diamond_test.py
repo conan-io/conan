@@ -1,11 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference
-import platform
 import os
+import platform
+import unittest
+
+from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference
 from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import hello_conan_files
-from nose.plugins.attrib import attr
+from conans.test.utils.tools import TestClient, TestServer
 
 
 @attr('golang')

@@ -1,8 +1,9 @@
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
+from collections import OrderedDict
+
 from conans.model.version import Version
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from collections import OrderedDict
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class VersionCheckTest(unittest.TestCase):

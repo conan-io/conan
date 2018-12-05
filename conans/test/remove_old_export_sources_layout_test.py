@@ -1,11 +1,11 @@
-import unittest
 import os
+import unittest
 
-from conans.paths import EXPORT_SOURCES_DIR_OLD
-from conans.util.files import tar_extract
-from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
+from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import tar_extract
 
 
 class DoNotKeepOldExportSourcesLayoutTest(unittest.TestCase):

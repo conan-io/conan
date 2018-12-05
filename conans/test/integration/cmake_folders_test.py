@@ -1,8 +1,10 @@
+import os
 import unittest
+
+from parameterized import parameterized
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
-import os
-from parameterized import parameterized
 
 
 class CMakeFoldersTest(unittest.TestCase):

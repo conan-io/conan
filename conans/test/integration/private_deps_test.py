@@ -1,13 +1,14 @@
 import os
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANINFO, BUILD_INFO_CMAKE
-from conans.util.files import load
-from conans.model.info import ConanInfo
 from nose.plugins.attrib import attr
+
+from conans.model.info import ConanInfo
+from conans.model.ref import ConanFileReference
+from conans.paths import BUILD_INFO_CMAKE, CONANINFO
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load
 
 
 class PrivateBinariesTest(unittest.TestCase):

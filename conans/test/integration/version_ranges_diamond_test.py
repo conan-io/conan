@@ -5,8 +5,8 @@ from collections import OrderedDict
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer, \
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.files import load
 
 

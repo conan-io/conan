@@ -2,7 +2,6 @@ import imp
 import inspect
 import os
 import sys
-
 import uuid
 
 from conans.client.generators import registered_generators
@@ -46,30 +45,34 @@ class ConanFileLoader(object):
         _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
         return conanfile
 
-    def load_export(self, conanfile_path, name, version, user, channel):
+    def load_name_version(self, conanfile_path, name, version):
         conanfile = self.load_class(conanfile_path)
-
-        # check name and version were specified
-        if not conanfile.name:
-            if name:
-                conanfile.name = name
+        # Do not inherit the name from python-requires
+        if "name" in conanfile.__dict__:
+            if name and name != conanfile.name:
+                raise ConanException("Package recipe exported with name %s!=%s"
+                                     % (name, conanfile.name))
             else:
-                raise ConanException("conanfile didn't specify name")
-        elif name and name != conanfile.name:
-            raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
+                name = conanfile.name
+        elif not name:
+            raise ConanException("conanfile didn't specify name")
 
-        if not conanfile.version:
-            if version:
-                conanfile.version = version
+        if "version" in conanfile.__dict__:
+            if version and version != conanfile.version:
+                raise ConanException("Package recipe exported with version %s!=%s"
+                                     % (version, conanfile.version))
             else:
-                raise ConanException("conanfile didn't specify version")
-        elif version and version != conanfile.version:
-            raise ConanException("Package recipe exported with version %s!=%s"
-                                 % (version, conanfile.version))
+                version = conanfile.version
+        elif not version:
+            raise ConanException("conanfile didn't specify version")
+        return name, version
 
-        conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        output = ScopedOutput(str(conan_ref), self._output)
-        return conan_ref, conanfile(output, self._runner, user, channel)
+    def load_export(self, conanfile_path, ref):
+        conanfile = self.load_class(conanfile_path)
+        conanfile.name = ref.name
+        conanfile.version = ref.version
+        output = ScopedOutput(str(ref), self._output)
+        return conanfile(output, self._runner, ref.user, ref.channel)
 
     def load_basic(self, conanfile_path, output, reference=None):
         result = self.load_class(conanfile_path)

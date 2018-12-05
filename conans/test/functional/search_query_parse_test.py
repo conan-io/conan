@@ -1,5 +1,6 @@
 import unittest
-from conans.search.query_parse import infix_to_postfix, evaluate_postfix
+
+from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 
 
 class QueryParseTest(unittest.TestCase):

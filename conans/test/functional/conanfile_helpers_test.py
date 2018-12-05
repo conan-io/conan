@@ -1,7 +1,8 @@
 import unittest
 
-from conans.test.utils.tools import TestClient
 from parameterized.parameterized import parameterized
+
+from conans.test.utils.tools import TestClient
 
 
 class ConanfileHelpersTest(unittest.TestCase):

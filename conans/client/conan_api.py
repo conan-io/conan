@@ -1,64 +1,61 @@
 import os
 import sys
-import requests
-
 from collections import OrderedDict
+
+import requests
 
 import conans
 from conans import __version__ as client_version
-from conans.client.cmd.create import create
-from conans.client.hook_manager import HookManager
-from conans.client.recorder.action_recorder import ActionRecorder
+from conans.client import packager, tools
 from conans.client.client_cache import ClientCache
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
+from conans.client.cmd.build import build
+from conans.client.cmd.create import create
+from conans.client.cmd.download import download
+from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export_pkg import export_pkg
+from conans.client.cmd.profile import cmd_profile_create, cmd_profile_delete_key, cmd_profile_get, \
+    cmd_profile_list, cmd_profile_update
+from conans.client.cmd.search import Search
+from conans.client.cmd.test import PackageTester
+from conans.client.cmd.uploader import CmdUpload
+from conans.client.cmd.user import user_set, users_clean, users_list
+from conans.client.conf import ConanClientConfigParser, MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.proxy import ConanProxy
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.range_resolver import RangeResolver
+from conans.client.hook_manager import HookManager
+from conans.client.importer import run_imports, undo_imports
+from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
-from conans.client.profile_loader import read_profile, profile_from_args, \
-    read_conaninfo_profile
+from conans.client.profile_loader import profile_from_args, read_conaninfo_profile, read_profile
+from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.recorder.search_recorder import SearchRecorder
 from conans.client.recorder.upload_recoder import UploadRecorder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
+from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.conan_requester import ConanRequester
+from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
+from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
-from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
-from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
+from conans.model.workspace import Workspace
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.tools import set_global_instances
+from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, exception_message_safe, mkdir
+from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.tools import set_global_instances
-from conans.client.cmd.uploader import CmdUpload
-from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
-    cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
-from conans.client.cmd.search import Search
-from conans.client.cmd.user import users_clean, users_list, user_set
-from conans.client.importer import undo_imports, run_imports
-from conans.client.cmd.export import cmd_export, export_alias, export_source, export_recipe
-from conans.unicode import get_cwd
-from conans.client.remover import ConanRemover
-from conans.client.cmd.download import download
-from conans.model.workspace import Workspace
-from conans.client.graph.graph_manager import GraphManager
-from conans.client.loader import ConanFileLoader
-from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.graph.range_resolver import RangeResolver
-from conans.client import packager
-from conans.client.source import config_source_local
-from conans.client.cmd.build import build
-from conans.client.cmd.export_pkg import export_pkg
-from conans.client import tools
-
 
 default_manifest_folder = '.conan_manifests'
 
@@ -353,8 +350,9 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                            channel)
+            name, version = self._loader.load_name_version(conanfile_path, name, version)
+            reference = ConanFileReference(name, version, user, channel)
+            conanfile = self._loader.load_export(conanfile_path, reference)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
@@ -426,8 +424,10 @@ class ConanAPIV1(object):
             else:
                 profile = read_conaninfo_profile(install_folder)
 
-            reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                            channel)
+            name, version = self._loader.load_name_version(conanfile_path, name, version)
+            reference = ConanFileReference(name, version, user, channel)
+            conanfile = self._loader.load_export(conanfile_path, reference)
+
             recorder.recipe_exported(reference)
             recorder.add_recipe_being_developed(reference)
             cmd_export(conanfile_path, conanfile, reference, False, self._user_io.out,
@@ -567,9 +567,9 @@ class ConanAPIV1(object):
             item = os.path.abspath(item)
 
         from conans.client.conf.config_installer import configuration_install
+        requester = self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
         return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
-                                     requester=self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
-                                     config_type=config_type, args=args)
+                                     requester=requester, config_type=config_type, args=args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
@@ -714,8 +714,9 @@ class ConanAPIV1(object):
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        reference, conanfile = self._loader.load_export(conanfile_path, name, version, user,
-                                                        channel)
+        name, version = self._loader.load_name_version(conanfile_path, name, version)
+        reference = ConanFileReference(name, version, user, channel)
+        conanfile = self._loader.load_export(conanfile_path, reference)
         cmd_export(conanfile_path, conanfile, reference, keep_source, self._user_io.out,
                    self._client_cache, self._hook_manager)
 

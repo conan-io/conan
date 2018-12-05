@@ -3,13 +3,13 @@ import unittest
 
 from conans.client.client_cache import ClientCache
 from conans.client.tools import chdir
-from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, SimplePaths, CONANINFO)
+from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
+from conans.paths import (BUILD_FOLDER, CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER)
+from conans.search.search import search_packages, search_recipes
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-from conans.model.info import ConanInfo
-from conans.search.search import search_recipes, search_packages
 
 
 class SearchTest(unittest.TestCase):

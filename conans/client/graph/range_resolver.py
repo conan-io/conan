@@ -4,7 +4,6 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.search.search import search_recipes
 
-
 re_param = re.compile(r"^(?P<function>include_prerelease|loose)\s*=\s*(?P<value>True|False)$")
 re_version = re.compile(r"^((?!(include_prerelease|loose))[a-zA-Z0-9_+.\-~<>=|*^\s])*$")
 

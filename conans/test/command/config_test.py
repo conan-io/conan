@@ -1,7 +1,7 @@
 import unittest
 
-from conans.util.files import load
 from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class ConfigTest(unittest.TestCase):

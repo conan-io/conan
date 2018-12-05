@@ -1,13 +1,14 @@
+import os
 import unittest
+
+from conans.client.generators import PremakeGenerator
+from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
-from conans.model.settings import Settings
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
-from conans.model.build_info import CppInfo
-from conans.client.generators import PremakeGenerator
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-import os
 
 
 class PremakeGeneratorTest(unittest.TestCase):

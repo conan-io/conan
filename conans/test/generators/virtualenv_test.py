@@ -2,10 +2,10 @@ import copy
 import os
 import unittest
 
-from conans.test.utils.tools import TestClient
-from conans.client.tools.oss import OSInfo
-from conans.util.files import load
 from conans.client import tools
+from conans.client.tools.oss import OSInfo
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
