@@ -131,6 +131,12 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
+        version_ranges_output = self._resolver.output
+        if version_ranges_output:
+            self._output.success("Version ranges solved")
+            for msg in version_ranges_output:
+                self._output.info("    %s" % msg)
+            self._output.writeln("")
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 

@@ -240,7 +240,7 @@ class ConanAPIV1(object):
 
         self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
                                  registry=self._registry)
-        resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
+        resolver = RangeResolver(client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
 
