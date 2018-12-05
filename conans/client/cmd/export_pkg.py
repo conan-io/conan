@@ -1,12 +1,11 @@
 import os
 
-from conans.client.output import ScopedOutput
 from conans.client import packager
-from conans.errors import ConanException
-
-from conans.util.files import rmdir
-from conans.model.ref import PackageReference
 from conans.client.graph.graph_manager import load_deps_info
+from conans.client.output import ScopedOutput
+from conans.errors import ConanException
+from conans.model.ref import PackageReference
+from conans.util.files import rmdir
 
 
 def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,

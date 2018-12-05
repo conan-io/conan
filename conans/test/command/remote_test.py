@@ -1,14 +1,10 @@
 import json
-import unittest
-
-
-from conans.test.utils.tools import TestClient, TestServer
-
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-
-from collections import OrderedDict
-from conans.util.files import load
 import re
+import unittest
+from collections import OrderedDict
+
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load
 
 
 class RemoteTest(unittest.TestCase):

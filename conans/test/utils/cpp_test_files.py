@@ -1,7 +1,6 @@
 import platform
 
-from conans.paths import CONANFILE, BUILD_INFO_CMAKE
-
+from conans.paths import BUILD_INFO_CMAKE, CONANFILE
 
 conanfile_build_cmake = """    def build(self):
         defs = {

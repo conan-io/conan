@@ -1,6 +1,7 @@
-from conans.errors import ConanException
 import unittest
-from conans.model.settings import Settings, bad_value_msg, undefined_value, undefined_field
+
+from conans.errors import ConanException
+from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
 
 
 class SettingsLoadsTest(unittest.TestCase):

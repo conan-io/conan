@@ -1,21 +1,21 @@
-import os
 import fnmatch
+import os
 from collections import OrderedDict
 
-from conans.model.ref import ConanFileReference
-from conans.errors import conanfile_exception_formatter, ConanException
-from conans.model.conan_file import get_env_context_manager
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
 from conans.client import settings_preprocessor
-from conans.client.output import ScopedOutput
+from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.loader import ProcessedProfile
+from conans.client.output import ScopedOutput
 from conans.client.profile_loader import read_conaninfo_profile
+from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.conan_file import get_env_context_manager
+from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.client.generators.text import TXTGenerator
-from conans.client.loader import ProcessedProfile
 
 
 class _RecipeBuildRequires(OrderedDict):

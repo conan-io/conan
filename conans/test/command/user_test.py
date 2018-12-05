@@ -1,7 +1,6 @@
 import json
-import unittest
-
 import os
+import unittest
 from collections import OrderedDict
 
 from conans.test.utils.tools import TestClient, TestServer

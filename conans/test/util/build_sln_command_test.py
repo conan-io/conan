@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import unittest
 
+from nose.plugins.attrib import attr
+from six import StringIO
 
-from conans.test.utils.conanfile import MockSettings
-from conans.client.tools.win import build_sln_command
+from conans.client import tools
+from conans.client.output import ConanOutput
 from conans.client.tools.oss import cpu_count
+from conans.client.tools.win import build_sln_command
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from nose.plugins.attrib import attr
-from conans.util.files import save, load
-from six import StringIO
-from conans.client.output import ConanOutput
+from conans.test.utils.conanfile import MockSettings
 from conans.test.utils.test_files import temp_folder
-import os
-from conans.client import tools
+from conans.util.files import load, save
 
 
 @attr('visual_studio')

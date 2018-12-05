@@ -1,8 +1,9 @@
-from conans.util.files import save
-from conans.client.installer import build_id
 from collections import defaultdict, namedtuple
-from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
-    BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
+
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
+    BINARY_UPDATE
+from conans.client.installer import build_id
+from conans.util.files import save
 
 
 def html_binary_graph(search_info, reference, table_filename):

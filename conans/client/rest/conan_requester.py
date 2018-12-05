@@ -1,12 +1,12 @@
 import fnmatch
 import os
-import requests
 import platform
-
 import time
 
-from conans.util.files import save
+import requests
+
 from conans import __version__ as client_version
+from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
 

@@ -1,10 +1,12 @@
-import six
 import sys
 import unittest
-from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
+
+import six
+
+from conans.errors import ConanException
+from conans.model.options import Options, OptionsValues, PackageOptionValues, PackageOptions, \
     option_undefined_msg
 from conans.model.ref import ConanFileReference
-from conans.errors import ConanException
 
 
 class OptionsTest(unittest.TestCase):

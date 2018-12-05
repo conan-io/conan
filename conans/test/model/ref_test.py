@@ -1,8 +1,8 @@
 import unittest
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, check_valid_ref
-from conans.model.ref import PackageReference
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
+    check_valid_ref
 
 
 class RefTest(unittest.TestCase):

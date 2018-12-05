@@ -1,28 +1,28 @@
 import os
+import platform
 import shutil
 import stat
 import sys
 import unittest
-import platform
+from collections import namedtuple
+
 import mock
 from parameterized.parameterized import parameterized
 
-from collections import namedtuple
-
-from conans.model.conan_file import ConanFile
-from conans.model.ref import ConanFileReference
-from conans.model.build_info import CppInfo, DepsCppInfo
-from conans.model.settings import Settings
-from conans.client.conf import default_settings_yml
+from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.client.conf import default_settings_yml
 from conans.client.tools.oss import cpu_count
-from conans.util.files import save, load
-from conans.test.utils.test_files import temp_folder
-from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
-from conans.client import tools
+from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.conan_file import ConanFile
+from conans.model.options import Options, PackageOptions
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.files import load, save
 
 
 def _format_path_as_cmake(pathstr):

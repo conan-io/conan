@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save
 import os
+import unittest
+
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import save
 
 
 class ReadOnlyTest(unittest.TestCase):

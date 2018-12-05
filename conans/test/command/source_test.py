@@ -1,8 +1,9 @@
+import os
 import unittest
-from conans.paths import CONANFILE, BUILD_INFO
+
+from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
-import os
 
 
 class SourceTest(unittest.TestCase):

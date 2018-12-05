@@ -6,7 +6,6 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 
-
 PythonRequire = namedtuple("PythonRequire", "conan_ref module conanfile")
 
 

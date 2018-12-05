@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_default
+from conans.client.build.cppstd_flags import cppstd_default, cppstd_flag
 
 
 class CompilerFlagsTest(unittest.TestCase):

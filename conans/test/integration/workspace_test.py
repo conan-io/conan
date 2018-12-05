@@ -1,17 +1,16 @@
-import unittest
 import os
 import platform
+import re
 import shutil
+import time
+import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
-from conans.model.workspace import WORKSPACE_FILE
-import time
-from conans.util.files import load
-import re
 from conans.client import tools
-
+from conans.model.workspace import WORKSPACE_FILE
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 conanfile = """from conans import ConanFile
 import os

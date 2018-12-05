@@ -5,8 +5,7 @@ import unittest
 from conans.client.conf.detect import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO
-from conans.paths import CONANFILE_TXT
+from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir

@@ -2,34 +2,34 @@ import errno
 import os
 import random
 import shlex
+import shutil
 import stat
+import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
 import requests
-import shutil
 import six
-import subprocess
-import threading
-import time
-import uuid
 from mock import Mock
-from six.moves.urllib.parse import urlsplit, urlunsplit, quote
+from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
-from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
+from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_client_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
-from conans.client.output import ConanOutput
 from conans.client.hook_manager import HookManager
+from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -41,18 +41,15 @@ from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
-                                                      TESTING_REMOTE_PRIVATE_PASS,
+from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                                      TESTING_REMOTE_PRIVATE_USER,
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
-from conans.util.files import save_files, save, mkdir
-from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.client.tools.win import get_cased_path
 from conans.tools import set_global_instances
+from conans.util.env_reader import get_env
+from conans.util.files import mkdir, save, save_files
+from conans.util.log import logger
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 

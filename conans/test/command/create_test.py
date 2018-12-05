@@ -1,10 +1,11 @@
 import os
 import unittest
 
+from parameterized.parameterized import parameterized
+
 from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from parameterized.parameterized import parameterized
 
 
 class CreateTest(unittest.TestCase):

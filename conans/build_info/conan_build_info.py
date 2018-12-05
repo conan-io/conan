@@ -2,7 +2,8 @@ import json
 import os
 from collections import defaultdict
 
-from conans.build_info.model import BuildInfo, BuildInfoModule, BuildInfoModuleArtifact, BuildInfoModuleDependency
+from conans.build_info.model import BuildInfo, BuildInfoModule, BuildInfoModuleArtifact, \
+    BuildInfoModuleDependency
 from conans.model.info import ConanInfo, PackageReference
 from conans.model.ref import ConanFileReference
 from conans.util.files import load

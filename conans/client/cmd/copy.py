@@ -1,9 +1,10 @@
-from conans.model.ref import PackageReference, ConanFileReference
 import os
-from conans.util.files import rmdir
 import shutil
-from conans.errors import ConanException
+
 from conans.client.source import complete_recipe_sources
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import rmdir
 
 
 def _prepare_sources(client_cache, reference, remote_manager, registry, loader):

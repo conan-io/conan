@@ -1,10 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.paths import CONANFILE, CONANINFO, BUILD_INFO_CMAKE
 import os
+import unittest
+
 from conans.model.info import ConanInfo
+from conans.paths import BUILD_INFO_CMAKE, CONANFILE, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.util.files import mkdir, load
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, mkdir
 
 
 class InstallSubfolderTest(unittest.TestCase):

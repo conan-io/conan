@@ -1,16 +1,16 @@
 import os
 import unittest
-
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
-from parameterized.parameterized import parameterized
-from conans.util.files import load, save, md5sum
-from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
-from conans.test.utils.test_files import scan_folder
-from conans.client import tools
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.test.utils.test_files import scan_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, md5sum, save
 
 conanfile_py = """
 from conans import ConanFile

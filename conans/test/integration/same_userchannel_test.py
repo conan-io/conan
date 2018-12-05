@@ -1,6 +1,7 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import unittest
+
+from conans.test.utils.tools import TestClient
 
 
 class UserChannelTestPackage(unittest.TestCase):
