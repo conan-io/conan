@@ -243,7 +243,7 @@ class ConanAPIV1(object):
 
         self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
                                  registry=self._registry)
-        resolver = RangeResolver(self._user_io.out, client_cache, self._proxy)
+        resolver = RangeResolver(client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
 
@@ -372,9 +372,11 @@ class ConanAPIV1(object):
                 python_requires = graph_lock.python_requires(node)
             else:
                 python_requires = None
-            print "LOCKED PYTHON REQUIRES!!! ", python_requires
+
             with self._loader.lock_versions(python_requires):
                 conanfile = self._loader.load_export(conanfile_path, reference)
+                # Capture the output to remove range_resolver resolution messages for python_requires
+                self._graph_manager._resolver.output
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build

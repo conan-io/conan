@@ -45,24 +45,16 @@ class Pkg(ConanFile):
         # Normal install will use it
         client.save({"conanfile.py": consumer})
         client.run("create . Pkg/0.1@user/channel")
-        print client.out
         out = "".join(str(client.out).splitlines())
         self.assertIn("Python requires    Tool/0.2@user/channel", out)
         self.assertIn("Pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
                       out)
         self.assertIn("Pkg/0.1@user/channel: VAR=24", out)
 
-        # Locked install will use Tool/0.1
+        # Locked create will use Tool/0.1
         client.run("create . Pkg/0.1@user/channel --input-lock=default.lock")
-        print client.out
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-
-        # Info also works
-        client.run("info . --input-lock=default.lock")
-        print client.out
-        self.assertIn("PkgA/0.1@user/channel", client.out)
-        self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
     def version_ranges_lock_test(self):
         # locking a version range

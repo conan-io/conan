@@ -16,8 +16,7 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader import ProcessedProfile
-from conans.client.graph.graph_lock_builder import DepsGraphLockBuilder,\
-    GraphLockNode
+from conans.client.graph.graph_lock_builder import DepsGraphLockBuilder, GraphLockNode
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -150,6 +149,14 @@ class GraphManager(object):
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile,
                                       graph_lock=graph_lock)
+
+        version_ranges_output = self._resolver.output
+        if version_ranges_output:
+            self._output.success("Version ranges solved")
+            for msg in version_ranges_output:
+                self._output.info("    %s" % msg)
+            self._output.writeln("")
+
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 

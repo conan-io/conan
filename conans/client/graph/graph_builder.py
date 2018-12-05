@@ -247,7 +247,7 @@ class DepsGraphBuilder(object):
                                    % (requirement.conan_reference, base_ref))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
-            
+
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
 

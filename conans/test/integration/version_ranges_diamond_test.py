@@ -178,6 +178,7 @@ class HelloReuseConan(ConanFile):
 
         self.client.run('remove "Hello0/0.*" -f')
         self.client.run("install . --build missing")
+        print self.client.out
         self.assertIn("Version range '>0.1,<0.3' required by 'None' "
                       "resolved to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
         self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
