@@ -82,6 +82,26 @@ conan_vars4 = """[settings]
   HelloInfo1/0.45@myuser/testing:33333
 """
 
+conan_vars_tool_winx86 = """[settings]
+  os_build=Windows
+  arch_build=x86
+"""
+
+conan_vars_tool_winx64 = """[settings]
+  os_build=Windows
+  arch_build=x86_64
+"""
+
+conan_vars_tool_linx86 = """[settings]
+  os_build=Linux
+  arch_build=x86
+"""
+
+conan_vars_tool_linx64 = """[settings]
+  os_build=Linux
+  arch_build=x86_64
+"""
+
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -104,6 +124,7 @@ class SearchTest(unittest.TestCase):
         root_folder5 = 'MissFile/1.0.2/myuser/stable'
         root_folder11 = 'Hello/1.4.11/myuser/testing'
         root_folder12 = 'Hello/1.4.12/myuser/testing'
+        root_folder_tool = 'Tool/1.0.0/myuser/testing'
 
         self.client.save({"Empty/1.10/fake/test/export/fake.txt": "//",
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
@@ -132,7 +153,19 @@ class SearchTest(unittest.TestCase):
                                                        CONANINFO): conan_vars4,
                           "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
                                                        PACKAGES_FOLDER,
-                                                       "hello.txt"): "Hello"},
+                                                       "hello.txt"): "Hello",
+                          "%s/%s/winx86/%s" % (root_folder_tool,
+                                               PACKAGES_FOLDER,
+                                               CONANINFO): conan_vars_tool_winx86,
+                          "%s/%s/winx64/%s" % (root_folder_tool,
+                                               PACKAGES_FOLDER,
+                                               CONANINFO): conan_vars_tool_winx64,
+                          "%s/%s/linx86/%s" % (root_folder_tool,
+                                               PACKAGES_FOLDER,
+                                               CONANINFO): conan_vars_tool_linx86,
+                          "%s/%s/linx64/%s" % (root_folder_tool,
+                                               PACKAGES_FOLDER,
+                                               CONANINFO): conan_vars_tool_linx64},
                          self.client.paths.store)
 
         # Fake some manifests to be able to calculate recipe hash
@@ -144,6 +177,7 @@ class SearchTest(unittest.TestCase):
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder11, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.paths.store, root_folder12, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.paths.store, root_folder_tool, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].paths.store)
@@ -188,6 +222,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.12@myuser/testing\n"
                           "MissFile/1.0.2@myuser/stable\n"
                           "NodeInfo/1.0.2@myuser/stable\n"
+                          "Tool/1.0.0@myuser/testing\n"
                           "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello/*@myuser/testing")
@@ -354,6 +389,16 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             self.assertEquals(pack_name in self.client.out,
                               pack_name in packages_found, "%s fail" % pack_name)
 
+    def _assert_pkg_query_tool(self, query, packages_found, remote):
+        command = 'search Tool/1.0.0@myuser/testing -q \'%s\'' % query
+        if remote:
+            command += " -r %s" % remote
+        self.client.run(command)
+
+        for pack_name in ["winx86", "winx64", "linx86", "linx64"]:
+            self.assertEquals(pack_name in self.client.out,
+                              pack_name in packages_found, "%s fail" % pack_name)
+
     def package_search_complex_queries_test(self):
 
         def test_cases(remote=None):
@@ -411,6 +456,24 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["WindowsPackageSHA", "LinuxPackageSHA"], remote)
+
+            q = 'os_build="Windows"'
+            self._assert_pkg_query_tool(q, ["winx86", "winx64"], remote)
+
+            q = 'os_build="Linux"'
+            self._assert_pkg_query_tool(q, ["linx86", "linx64"], remote)
+
+            q = 'arch_build="x86"'
+            self._assert_pkg_query_tool(q, ["winx86", "linx86"], remote)
+
+            q = 'arch_build="x86_64"'
+            self._assert_pkg_query_tool(q, ["winx64", "linx64"], remote)
+
+            q = 'os_build="Windows" AND arch_build="x86_64"'
+            self._assert_pkg_query_tool(q, ["winx64"], remote)
+
+            q = 'os_build="Windoooows"'
+            self._assert_pkg_query_tool(q, [], remote)
 
         # test in local
         test_cases()
