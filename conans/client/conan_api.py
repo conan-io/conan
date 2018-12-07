@@ -524,9 +524,6 @@ class ConanAPIV1(object):
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
                 input_lock_file=None, output_lock_file=None):
 
-        if input_lock_file and output_lock_file:
-            raise ConanException("Specifying both input and output lock file is not possible")
-
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
