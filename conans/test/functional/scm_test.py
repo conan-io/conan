@@ -476,6 +476,40 @@ class ConanLib(ConanFile):
         data2 = json.loads(the_json)
         self.assertEquals(data, data2)
 
+    def test_git_delegated_function(self):
+        conanfile = """
+import os
+from conans import ConanFile
+from conans.client.tools.scm import Git
+
+def get_revision():
+    here = os.path.dirname(__file__)
+    git = Git(here)
+    return git.get_commit()
+    
+def get_url():
+    def nested_url():
+        here = os.path.dirname(__file__)
+        git = Git(here)
+        return git.get_remote_url()
+    return nested_url()
+    
+class MyLib(ConanFile):
+    name = "issue"
+    version = "3831"
+    scm = {'type': 'git', 'url': get_url(), 'revision': get_revision()}
+
+"""
+        self.client.save({"conanfile.py": conanfile})
+        path, commit = create_local_git_repo(folder=self.client.current_folder)
+        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
+
+        self.client.run("export . user/channel")
+        reference = ConanFileReference.loads("issue/3831@user/channel")
+        exported_conanfile = self.client.client_cache.conanfile(reference)
+        content = load(exported_conanfile)
+        self.assertIn(commit, content)
+
 
 @attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
