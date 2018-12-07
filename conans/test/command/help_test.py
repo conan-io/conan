@@ -1,8 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans import __version__
 import sys
+import unittest
+
 from six import StringIO
+
+from conans import __version__
+from conans.test.utils.tools import TestClient
 
 
 class BasicClientTest(unittest.TestCase):

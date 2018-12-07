@@ -1,14 +1,15 @@
-import os
-from conans.errors import ConanException
-import fasteners
-
-from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
+import copy
 import json
-from conans.model.ref import PackageReference, ConanFileReference
+import os
 import time
 from os.path import isdir
-import copy
+
+import fasteners
+
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import md5sum, sha1sum
+from conans.util.log import logger
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",

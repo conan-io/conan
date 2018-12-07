@@ -1,11 +1,11 @@
-import unittest
 import os
+import unittest
+from time import sleep
 
 import six
 
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, walk, to_file_bytes
-from time import sleep
+from conans.util.files import save, to_file_bytes, walk
 
 
 class SaveTestCase(unittest.TestCase):

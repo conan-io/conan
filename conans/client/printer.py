@@ -1,12 +1,11 @@
 import fnmatch
-
 from collections import OrderedDict
 
-from conans.paths.simple_paths import SimplePaths
-from conans.client.output import Color
-from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
 from conans.client.installer import build_id
+from conans.client.output import Color
+from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths.simple_paths import SimplePaths
 from conans.util.env_reader import get_env
 
 
@@ -26,10 +25,17 @@ class Printer(object):
 
     def print_inspect(self, inspect):
         for k, v in inspect.items():
-            if isinstance(v, dict):
-                self._out.writeln("%s" % k)
-                for sk, sv in sorted(v.items()):
-                    self._out.writeln("    %s: %s" % (sk, str(sv)))
+            if k == "default_options":
+                if isinstance(v, str):
+                    v = OptionsValues.loads(v)
+                elif isinstance(v, tuple):
+                    v = OptionsValues(v)
+                elif isinstance(v, list):
+                    v = OptionsValues(tuple(v))
+            if isinstance(v, (dict, OptionsValues)):
+                self._out.writeln("%s:" % k)
+                for ok, ov in sorted(v.items()):
+                    self._out.writeln("    %s: %s" % (ok, ov))
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 

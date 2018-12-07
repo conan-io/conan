@@ -1,7 +1,8 @@
+import os
 import unittest
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import os
 
 
 class ConanfileExtendTest(unittest.TestCase):

@@ -2,6 +2,9 @@ import os
 
 from requests.exceptions import RequestException
 
+from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
+                                       RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
+                                       RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
@@ -10,9 +13,6 @@ from conans.util.env_reader import get_env
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
-from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
-                                       RECIPE_UPDATED, RECIPE_NEWER, RECIPE_UPDATEABLE,
-                                       RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE, RECIPE_EDITABLE)
 
 
 class ConanProxy(object):

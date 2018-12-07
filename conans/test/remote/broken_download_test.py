@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient, TestRequester
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
 import os
+import unittest
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 
 

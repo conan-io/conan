@@ -1,11 +1,10 @@
 import os
-
 import time
 
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import PackageReference, ConanFileReference, check_valid_ref
-from conans.search.search import search_recipes, search_packages
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.search.search import search_packages, search_recipes
 from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.util.log import logger

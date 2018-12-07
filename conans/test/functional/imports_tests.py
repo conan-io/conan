@@ -1,9 +1,9 @@
+import os
 import unittest
+
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import os
-from conans.model.ref import ConanFileReference, PackageReference
-
 
 conanfile = """from conans import ConanFile
 

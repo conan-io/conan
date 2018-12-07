@@ -1,11 +1,11 @@
+import os
 import unittest
+
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
-import os
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
-
 
 tool_conanfile = """from conans import ConanFile
 

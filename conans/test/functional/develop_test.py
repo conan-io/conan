@@ -1,7 +1,8 @@
 import unittest
-from conans.test.utils.tools import TestClient
+
 from parameterized import parameterized
 
+from conans.test.utils.tools import TestClient
 
 conanfile = """from conans import ConanFile
 class Pkg(ConanFile):

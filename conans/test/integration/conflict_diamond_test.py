@@ -1,6 +1,7 @@
 import unittest
-from conans.test.utils.tools import TestClient
+
 from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient
 
 
 class ConflictDiamondTest(unittest.TestCase):

@@ -1,9 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient
-import platform
-from conans.util.files import load
 import os
+import platform
+import unittest
 
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 file_content = '''
 from conans import ConanFile, CMake

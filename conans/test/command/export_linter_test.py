@@ -1,10 +1,11 @@
+import os
 import unittest
+
+import six
+
+from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-import six
-import os
-from conans import tools
-
 
 conanfile = """
 from conans import ConanFile, tools

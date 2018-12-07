@@ -1,11 +1,27 @@
+import os
 import unittest
-from conans.paths import CONANFILE, BUILD_INFO
+
+from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
-import os
 
 
 class SourceTest(unittest.TestCase):
+
+    def test_conanfile_removed(self):
+        # https://github.com/conan-io/conan/issues/4013
+        conanfile = """from conans import ConanFile
+class ScmtestConan(ConanFile):
+    scm = {
+        "type": "git",
+        "url": "auto",
+        "revision": "auto"
+    }
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertEqual(["conanfile.py"], os.listdir(client.current_folder))
 
     def local_flow_patch_test(self):
         # https://github.com/conan-io/conan/issues/2327

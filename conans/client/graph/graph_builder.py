@@ -1,15 +1,14 @@
 import time
 
-from conans.model.conan_file import get_env_context_manager
-from conans.model.requires import Requirements
-from conans.model.ref import ConanFileReference
-from conans.errors import (ConanException, conanfile_exception_formatter,
-                           ConanExceptionInUserConanfileMethod)
-from conans.client.output import ScopedOutput
-from conans.util.log import logger
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE, RECIPE_EDITABLE
+from conans.client.output import ScopedOutput
+from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
+                           conanfile_exception_formatter)
+from conans.model.conan_file import get_env_context_manager, ConanFileEditable
+from conans.model.ref import ConanFileReference
+from conans.model.requires import Requirements
 from conans.model.workspace import WORKSPACE_FILE
-from conans.model.conan_file import ConanFileEditable
+from conans.util.log import logger
 
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2

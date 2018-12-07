@@ -1,15 +1,14 @@
-import unittest
 import os
 import platform
 import re
 import subprocess
+import unittest
 
-from conans import tools
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.test.utils.test_files import temp_folder
-from conans.paths import CONANFILE
+from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
-
+from conans.paths import CONANFILE
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 conanfile_py = """
 from conans import ConanFile

@@ -1,15 +1,15 @@
 import os
 import unittest
+
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestServer, TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference
-from conans.util.files import save, load, md5
-from conans.model.ref import PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
-from conans.model.manifest import FileTreeManifest
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, md5, save
 
 
 class ManifestValidationTest(unittest.TestCase):

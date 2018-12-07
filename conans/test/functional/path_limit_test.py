@@ -1,13 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import load
 import os
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.tools import environment_append
-from conans.test import CONAN_TEST_FOLDER
-import tempfile
 import platform
+import tempfile
+import unittest
 
+from conans.client.tools.env import environment_append
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load
 
 base = '''
 from conans import ConanFile

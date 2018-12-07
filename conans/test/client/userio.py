@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import unittest
+
 from mock import mock
 
 from conans.client.userio import UserIO

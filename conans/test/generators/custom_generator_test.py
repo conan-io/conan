@@ -1,11 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE, CONANFILE_TXT
-from conans.util.files import load
+import unittest
 
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, CONANFILE_TXT
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 generator = """
 from conans.model import Generator

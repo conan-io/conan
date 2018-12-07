@@ -1,5 +1,5 @@
-from collections import namedtuple, Counter
 import unittest
+from collections import Counter, namedtuple
 
 from parameterized import parameterized
 
@@ -38,6 +38,24 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.4")
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.3")
+
+    def loose_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,loose=False", output)
+        self.assertEqual(result, "4.2.2")
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=False", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3, loose = False ", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
+        self.assertEqual(result, "1.3")
+
+    def include_prerelease_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease = True", output)
+        self.assertEqual(result, "4.2.3-pre")
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", output)
+        self.assertEqual(result, "4.2.2")
 
     def basic_test(self):
         output = TestBufferConanOutput()
@@ -91,6 +109,14 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, None)
         result = satisfying(["2.1.1"], ">2.1.0", output)
         self.assertEqual(result, "2.1.1")
+
+        # Invalid ranges
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2; include_prerelease=True, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "2.3 3.2, include_prerelease=Ture, loose=False", output)
+        with self.assertRaises(ConanException):
+            satisfying(["2.1.1"], "~2.3, abc, loose=False", output)
 
 
 hello_content = """

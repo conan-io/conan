@@ -1,7 +1,7 @@
-import unittest
 import os
+import unittest
 
-from conans import tools
+from conans.client import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.test.utils.test_files import temp_folder
 

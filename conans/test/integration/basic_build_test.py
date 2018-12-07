@@ -1,12 +1,14 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import platform
+import unittest
+
+from nose.plugins.attrib import attr
+
+from conans.model.info import ConanInfo
 from conans.paths import CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from nose.plugins.attrib import attr
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.model.info import ConanInfo
-import platform
 
 
 @attr("slow")
