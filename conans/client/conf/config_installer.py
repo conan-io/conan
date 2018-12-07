@@ -131,15 +131,16 @@ def configuration_install(path_or_url, client_cache, output, verify_ssl, request
         config_type = config_type or _config_type
         args = args or _args
 
+        if os.path.exists(path_or_url):
+            path_or_url = os.path.abspath(path_or_url)
+
         if config_type == "git":
             _process_git_repo(path_or_url, client_cache, output, tmp_folder, verify_ssl, args)
         elif config_type == "dir":
             args = None
-            path_or_url = os.path.abspath(path_or_url)
             _process_folder(path_or_url, client_cache, output)
         elif config_type == "file":
             args = None
-            path_or_url = os.path.abspath(path_or_url)
             _process_zip_file(path_or_url, client_cache, output, tmp_folder)
         elif config_type == "url":
             args = None
