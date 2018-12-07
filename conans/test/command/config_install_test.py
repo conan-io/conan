@@ -181,7 +181,7 @@ class Pkg(ConanFile):
         """
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self._check(zippath)
+        self._check("file:[%s, None]" % zippath)
         self.assertTrue(os.path.exists(zippath))
 
     def install_dir_test(self):
@@ -190,7 +190,7 @@ class Pkg(ConanFile):
         folder = self._create_profile_folder()
         self.assertTrue(os.path.isdir(folder))
         self.client.run('config install "%s"' % folder)
-        self._check(folder)
+        self._check("dir:[%s, None]" % folder)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.client_cache.profiles_path)
@@ -210,18 +210,18 @@ class Pkg(ConanFile):
 
         with patch.object(Downloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check("http://myfakeurl.com/myconf.zip")
+            self._check("url:[http://myfakeurl.com/myconf.zip, None]")
 
             # repeat the process to check
             self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check("http://myfakeurl.com/myconf.zip")
+            self._check("url:[http://myfakeurl.com/myconf.zip, None]")
 
     def failed_install_repo_test(self):
         """ should install from a git repo
         """
         error = self.client.run('config install notexistingrepo.git', ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: config install error. Can't clone repo", self.client.out)
+        self.assertIn("ERROR: Can't clone repo", self.client.out)
 
     def failed_install_http_test(self):
         """ should install from a http zip
@@ -244,7 +244,8 @@ class Pkg(ConanFile):
             self.client.runner('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % folder)
-        self._check("%s/.git" % folder)
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, None]" % check_path)
 
     def install_repo_relative_test(self):
         relative_folder = "./config"
@@ -259,7 +260,7 @@ class Pkg(ConanFile):
             self.client.runner('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % relative_folder)
-        self._check(os.path.join("%s" % folder, ".git"))
+        self._check("git:[%s, None]" % os.path.join("%s" % folder, ".git"))
 
     def install_custom_args_test(self):
         """ should install from a git repo
@@ -273,8 +274,9 @@ class Pkg(ConanFile):
             self.client.runner('git config user.email myname@mycompany.com')
             self.client.runner('git commit -m "mymsg"')
 
-        self.client.run('config install "%s/.git" --args="-c init.templateDir=\"\""' % folder)
-        self._check("%s/.git" % folder)
+        self.client.run('config install "%s/.git" --args="-c init.templateDir=value"' % folder)
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, -c init.templateDir=value]" % check_path)
 
     def force_git_type_test(self):
         client = TestClient()
@@ -288,7 +290,7 @@ class Pkg(ConanFile):
         zippath = self._create_zip()
         self.client.run('config set general.config_install="%s"' % zippath)
         self.client.run("config install")
-        self._check(zippath)
+        self._check("file:[%s, None]" % zippath)
 
     def reinstall_error_test(self):
         """ should use configured URL in conan.conf
@@ -346,7 +348,7 @@ class Pkg(ConanFile):
             self.assertIn(fake_url_hidden_password, self.client.out)
 
             # Check credentials still stored in configuration
-            self._check(fake_url_with_credentials)
+            self._check("url:[%s, None]" % fake_url_with_credentials)
 
     def ssl_verify_test(self):
         fake_url = "https://fakeurl.com/myconf.zip"
