@@ -2,8 +2,8 @@
 
 import os
 
-from conans.util.files import load
 from conans.model.ref import ConanFileReference
+from conans.util.files import load
 
 
 class PackageUserLayout(object):
