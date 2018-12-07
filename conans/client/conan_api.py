@@ -30,7 +30,7 @@ from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
-from conans.client.profile_loader import profile_from_args, read_conaninfo_profile, read_profile
+from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.recorder.search_recorder import SearchRecorder
 from conans.client.recorder.upload_recoder import UploadRecorder
@@ -56,6 +56,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 
 default_manifest_folder = '.conan_manifests'
 
@@ -316,13 +317,13 @@ class ConanAPIV1(object):
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
-        profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                    self._client_cache)
+        graph_info = install_input(profile_name, settings, options, env, cwd, None,
+                                   self._client_cache, self._user_io.out)
         reference = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         pt = PackageTester(manager, self._user_io)
-        pt.install_build_and_test(conanfile_path, reference, profile, remote_name,
+        pt.install_build_and_test(conanfile_path, reference, graph_info, remote_name,
                                   update, build_modes=build_modes,
                                   test_build_folder=test_build_folder)
 
@@ -368,13 +369,13 @@ class ConanAPIV1(object):
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
-            profile = profile_from_args(profile_name, settings, options, env,
-                                        cwd, self._client_cache)
+            graph_info = install_input(profile_name, settings, options, env, cwd, None,
+                                       self._client_cache, self._user_io.out)
 
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(reference)
 
-            create(reference, manager, self._user_io, profile, remote_name, update, build_modes,
+            create(reference, manager, self._user_io, graph_info, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
@@ -397,12 +398,6 @@ class ConanAPIV1(object):
 
         try:
             recorder = ActionRecorder()
-
-            # Checks that info files exists if the install folder is specified
-            if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
-                raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
-                                     "files" % (CONANINFO, BUILD_INFO))
-
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
             if package_folder:
@@ -412,17 +407,18 @@ class ConanAPIV1(object):
                 package_folder = _make_abs_path(package_folder, cwd)
 
             build_folder = _make_abs_path(build_folder, cwd)
-            install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
+            if install_folder:
+                install_folder = _make_abs_path(install_folder, cwd)
+            else:
+                # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
+                if os.path.exists(os.path.join(build_folder, GRAPH_INFO_FILE)):
+                    install_folder = build_folder
             source_folder = _make_abs_path(source_folder, cwd,
                                            default=os.path.dirname(conanfile_path))
 
             # Checks that no both settings and info files are specified
-            infos_present = existing_info_files(install_folder)
-            if profile_name or settings or options or env or not infos_present:
-                profile = profile_from_args(profile_name, settings, options, env=env,
-                                            cwd=cwd, client_cache=self._client_cache)
-            else:
-                profile = read_conaninfo_profile(install_folder)
+            graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
+                                       self._client_cache, self._user_io.out)
 
             name, version = self._loader.load_name_version(conanfile_path, name, version)
             reference = ConanFileReference(name, version, user, channel)
@@ -436,7 +432,7 @@ class ConanAPIV1(object):
                        self._user_io.out,
                        reference, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
-                       profile=profile, force=force)
+                       graph_info=graph_info, force=force)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
@@ -472,8 +468,8 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                        self._client_cache)
+            graph_info = install_input(profile_name, settings, options, env, cwd, None,
+                                       self._client_cache, self._user_io.out)
 
             if not generators:  # We don't want the default txt
                 generators = False
@@ -481,7 +477,7 @@ class ConanAPIV1(object):
             mkdir(install_folder)
             manager = self._init_manager(recorder)
             manager.install(reference=reference, install_folder=install_folder,
-                            remote_name=remote_name, profile=profile, build_modes=build,
+                            remote_name=remote_name, graph_info=graph_info, build_modes=build,
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
@@ -504,8 +500,8 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                        self._client_cache)
+            graph_info = install_input(profile_name, settings, options, env, cwd, None,
+                                       self._client_cache, self._user_io.out)
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -519,7 +515,7 @@ class ConanAPIV1(object):
             if workspace:
                 self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
                 manager = self._init_manager(recorder)
-                manager.install_workspace(profile, workspace, remote_name, build, update)
+                manager.install_workspace(graph_info, workspace, remote_name, build, update)
                 return
 
             install_folder = _make_abs_path(install_folder, cwd)
@@ -528,7 +524,7 @@ class ConanAPIV1(object):
             manager.install(reference=conanfile_path,
                             install_folder=install_folder,
                             remote_name=remote_name,
-                            profile=profile,
+                            graph_info=graph_info,
                             build_modes=build,
                             update=update,
                             manifest_folder=manifest_folder,
@@ -577,24 +573,27 @@ class ConanAPIV1(object):
             reference = ConanFileReference.loads(reference)
         except ConanException:
             reference = _get_conanfile_path(reference, cwd=None, py=None)
-            if install_folder or not (profile_name or settings or options or env):
-                # When not install folder is specified but neither any setting, we try to read the
-                # info from cwd
-                install_folder = _make_abs_path(install_folder, cwd)
-                if existing_info_files(install_folder):
-                    return reference, read_conaninfo_profile(install_folder)
 
-        return reference, profile_from_args(profile_name, settings, options, env=env,
-                                            cwd=cwd, client_cache=self._client_cache)
+        if install_folder:
+            install_folder = _make_abs_path(install_folder, cwd)
+        else:
+            # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
+            if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
+                install_folder = cwd
+
+        graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
+                                   self._client_cache, self._user_io.out)
+
+        return reference, graph_info
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, remote_name=None, build_order=None, check_updates=None,
                          install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
-                                                    settings, options, env)
+        reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
+                                                       settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, profile, ["missing"],
+        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                           check_updates, False, remote_name,
                                                           recorder, workspace=None)
         return deps_graph.build_order(build_order)
@@ -603,10 +602,10 @@ class ConanAPIV1(object):
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote_name=None, check_updates=None,
                             install_folder=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
-                                                    settings, options, env)
+        reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
+                                                       settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile,
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info,
                                                                   build_modes, check_updates,
                                                                   False, remote_name, recorder,
                                                                   workspace=None)
@@ -616,10 +615,10 @@ class ConanAPIV1(object):
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
              profile_name=None, update=False, install_folder=None, build=None):
-        reference, profile = self._info_get_profile(reference, install_folder, profile_name,
-                                                    settings, options, env)
+        reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
+                                                       settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, profile, build,
+        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                   update, False, remote_name,
                                                                   recorder, workspace=None)
         return deps_graph, conanfile
@@ -951,6 +950,26 @@ class ConanAPIV1(object):
 
 
 Conan = ConanAPIV1
+
+
+def install_input(profile_name, settings, options, env, cwd, install_folder, client_cache, output):
+    try:
+        graph_info = GraphInfo.load(install_folder)
+    except Exception:
+        if install_folder:
+            raise ConanException("Failed to load graphinfo file in install-folder: %s"
+                                 % install_folder)
+        graph_info = None
+
+    if profile_name or settings or options or profile_name or env or not graph_info:
+        if graph_info:
+            # FIXME: Convert to Exception in Conan 2.0
+            output.warn("Settings, options, env or profile specified. "
+                        "GraphInfo found from previous install won't be used: %s"
+                        % install_folder)
+        profile = profile_from_args(profile_name, settings, options, env, cwd, client_cache)
+        graph_info = GraphInfo(profile=profile)
+    return graph_info
 
 
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):

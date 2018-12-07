@@ -3,6 +3,7 @@ import platform
 import re
 import unittest
 
+from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
@@ -49,7 +50,8 @@ ycm
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
-                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py'] + venv_files),
+                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
+                                 GRAPH_INFO_FILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):

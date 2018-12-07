@@ -250,10 +250,9 @@ class TestConan(ConanFile):
                          "//Windows header4")
 
         # Try to specify a install folder with no files
-        error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", ignore_error=True)
+        error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", should_error=True)
         self.assertTrue(error)
-        self.assertIn("The specified install folder doesn't contain 'conaninfo.txt' and "
-                      "'conanbuildinfo.txt' files", client.user_io.out)
+        self.assertIn("ERROR: Failed to load graphinfo file in install-folder", client.out)
 
     def _consume(self, client, install_args):
         consumer = """
@@ -519,7 +518,7 @@ class MyConan(ConanFile):
 """
         self.client = TestClient()
         self.client.save({"conanfile_dep.py": conanfile,
-                     "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
+                          "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
         self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
         self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
         _check_json_output()

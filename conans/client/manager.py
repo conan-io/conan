@@ -29,9 +29,9 @@ class ConanManager(object):
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
 
-    def install_workspace(self, profile, workspace, remote_name, build_modes, update):
+    def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
+        deps_graph, _, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
                                                           False, update, remote_name, self._recorder,
                                                           workspace)
 
@@ -45,7 +45,7 @@ class ConanManager(object):
         installer.install(deps_graph, keep_build=False)
         workspace.generate()
 
-    def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
+    def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
                 keep_build=False):
@@ -71,8 +71,8 @@ class ConanManager(object):
             generators.add("txt")  # Add txt generator by default
 
         self._user_io.out.info("Configuration:")
-        self._user_io.out.writeln(profile.dumps())
-        result = self._graph_manager.load_graph(reference, create_reference, profile,
+        self._user_io.out.writeln(graph_info.profile.dumps())
+        result = self._graph_manager.load_graph(reference, create_reference, graph_info,
                                                 build_modes, False, update, remote_name,
                                                 self._recorder, None)
         deps_graph, conanfile, cache_settings = result
@@ -125,6 +125,8 @@ class ConanManager(object):
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
                 output.info("Generated %s" % CONANINFO)
+                graph_info.save(install_folder)
+                output.info("Generated graphinfo")
             if not no_imports:
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)

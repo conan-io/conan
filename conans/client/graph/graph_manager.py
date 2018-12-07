@@ -89,7 +89,7 @@ class GraphManager(object):
                                    processed_profile=processed_profile)
         return graph
 
-    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update,
+    def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
         def _inject_require(conanfile, reference):
@@ -106,6 +106,7 @@ class GraphManager(object):
 
         # Computing the full dependency graph
         cache_settings = self._client_cache.settings.copy()
+        profile = graph_info.profile
         cache_settings.values = profile.settings_values
         settings_preprocessor.preprocess(cache_settings)
         processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
