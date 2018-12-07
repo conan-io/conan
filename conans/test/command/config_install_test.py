@@ -366,3 +366,49 @@ class Pkg(ConanFile):
 
         with patch.object(Downloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
+
+    def test_git_checkout_is_possible(self):
+        folder = self._create_profile_folder()
+        with tools.chdir(folder):
+            self.client.runner('git init .')
+            self.client.runner('git add .')
+            self.client.runner('git config user.name myname')
+            self.client.runner('git config user.email myname@mycompany.com')
+            self.client.runner('git commit -m "mymsg"')
+            self.client.runner('git checkout -b other_branch')
+            save(os.path.join(folder, "hooks", "cust", "cust.py"), "")
+            self.client.runner('git add .')
+            self.client.runner('git commit -m "my file"')
+            self.client.runner('git tag 0.0.1')
+            self.client.runner('git checkout master')
+
+        # Without checkout
+        self.client.run('config install "%s/.git"' % folder)
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, None]" % check_path)
+        file_path = os.path.join(self.client.client_cache.conan_folder, "hooks", "cust", "cust.py")
+        self.assertFalse(os.path.exists(file_path))
+        # With checkout tag and reuse url
+        self.client.run('config install --args="-b 0.0.1"')
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, -b 0.0.1]" % check_path)
+        self.assertTrue(os.path.exists(file_path))
+        # With checkout branch and reuse url
+        self.client.run('config install --args="-b other_branch"')
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, -b other_branch]" % check_path)
+        self.assertTrue(os.path.exists(file_path))
+        # Add changes to that branch and update
+        with tools.chdir(folder):
+            self.client.runner('git checkout other_branch')
+            save(os.path.join(folder, "hooks", "other", "other.py"), "")
+            self.client.runner('git add .')
+            self.client.runner('git commit -m "my other file"')
+            self.client.runner('git checkout master')
+        other_path = os.path.join(self.client.client_cache.conan_folder, "hooks", "other",
+                                  "other.py")
+        self.assertFalse(os.path.exists(other_path))
+        self.client.run('config install')
+        check_path = os.path.join(folder, ".git")
+        self._check("git:[%s, -b other_branch]" % check_path)
+        self.assertTrue(os.path.exists(other_path))
