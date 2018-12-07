@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
 import os
-import stat
 import platform
-from conans import tools
+import stat
+import unittest
+
+from conans.client import tools
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 

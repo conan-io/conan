@@ -1,9 +1,8 @@
+import os
 import unittest
 
-import os
-
-from conans.test.utils.tools import TestClient
 from conans.test.utils.profiles import create_profile
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 

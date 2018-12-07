@@ -1,9 +1,8 @@
 import os
 import sqlite3
-
-from conans.errors import ConanException
 from sqlite3 import OperationalError
 
+from conans.errors import ConanException
 
 REMOTES_USER_TABLE = "users_remotes"
 

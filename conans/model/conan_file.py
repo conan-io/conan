@@ -1,18 +1,17 @@
 import os
 from contextlib import contextmanager
 
-from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
-from conans.client.tools.env import pythonpath
+from conans.client import tools
+from conans.client.output import Color
+from conans.client.tools.env import environment_append, no_op, pythonpath
+from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
-from conans.model.options import Options, PackageOptions, OptionsValues
+from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.tools import environment_append, no_op
-from conans.client.output import Color
-from conans.client.tools.oss import os_info
 
 
 def create_options(conanfile):
@@ -110,6 +109,11 @@ class ConanFile(object):
     # Defaulting the reference fields
     default_channel = None
     default_user = None
+
+    # Settings and Options
+    settings = None
+    options = None
+    default_options = None
 
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -251,7 +255,7 @@ class ConanFile(object):
                                              msys_mingw=msys_mingw)
         if run_environment:
             with tools.run_environment(self):
-                if os_info.is_macos:
+                if OSInfo().is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                                              command)
                 retcode = _run()

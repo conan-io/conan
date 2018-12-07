@@ -1,12 +1,11 @@
 
-import yaml
-import six
 import fnmatch
-from collections import Counter
 
-from conans.util.sha import sha1
+import six
+import yaml
+
 from conans.errors import ConanException
-
+from conans.util.sha import sha1
 
 _falsey_options = ["false", "none", "0", "off", ""]
 

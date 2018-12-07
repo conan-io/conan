@@ -1,8 +1,8 @@
 import unittest
 
-from conans import tools
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.client import tools
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
+from conans.test.utils.conanfile import MockConanfile, MockSettings
 from conans.test.utils.tools import TestClient
 
 
@@ -50,7 +50,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Od',
                    '-mycppflag',
                    '-mycppflag2',
-                   '/MP%s' % tools.cpu_count()],
+                   '/MP%s' % tools.cpu_count(output=conanfile.output)],
             "LIB": ["/one/lib/path", "/two/lib/path"],
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })

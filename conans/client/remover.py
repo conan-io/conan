@@ -1,11 +1,10 @@
 import os
+
 from conans.client.remote_registry import Remote
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.search.search import filter_outdated, search_recipes, \
-    search_packages
+from conans.search.search import filter_outdated, search_packages, search_recipes
 from conans.util.log import logger
 
 

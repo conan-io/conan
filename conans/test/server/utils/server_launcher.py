@@ -1,19 +1,19 @@
 #!/usr/bin/python
 import os
-import time
 import shutil
+import time
 
-from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
-from conans.server.rest.server import ConanServer
-from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
-from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
-from conans.util.log import logger
-from conans.util.files import mkdir
-from conans.test.utils.test_files import temp_folder
-from conans.server.migrate import migrate_and_get_server_config
 from conans import SERVER_CAPABILITIES
 from conans.paths.simple_paths import SimplePaths
 from conans.server.conf import get_server_store
+from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
+from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
+from conans.server.migrate import migrate_and_get_server_config
+from conans.server.rest.server import ConanServer
+from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import mkdir
+from conans.util.log import logger
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
 TESTING_REMOTE_PRIVATE_PASS = "private_pass"

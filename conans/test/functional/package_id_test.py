@@ -1,5 +1,6 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class PackageIdTest(unittest.TestCase):

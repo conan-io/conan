@@ -2,20 +2,19 @@ import unittest
 from collections import namedtuple
 
 from conans import DEFAULT_REVISION_V1
-from conans.test.utils.tools import TestBufferConanOutput, NO_SETTINGS_PACKAGE_ID
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.model.ref import ConanFileReference
-from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
-from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.model.settings import Settings, bad_value_msg
-from conans.errors import ConanException
-from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
-from conans.model.values import Values
-from conans.model.profile import Profile
-from conans.test.model.fake_retriever import Retriever
+from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
-
+from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.errors import ConanException
+from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
+from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference
+from conans.model.requires import Requirements
+from conans.model.settings import Settings, bad_value_msg
+from conans.model.values import Values
+from conans.test.model.fake_retriever import Retriever
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput
 
 say_content = """
 from conans import ConanFile

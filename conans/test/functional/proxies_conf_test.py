@@ -1,10 +1,10 @@
-import unittest
 import os
+import unittest
 
-from conans import tools
+from conans.client import tools
+from conans.client.conan_api import get_basic_requester
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.client.conan_api import get_basic_requester
 
 
 class ProxiesConfTest(unittest.TestCase):

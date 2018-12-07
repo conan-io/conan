@@ -3,10 +3,10 @@ import json
 
 from bottle import request
 
+from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
-from conans import DEFAULT_REVISION_V1
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import ConanService

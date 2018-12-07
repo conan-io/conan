@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-import platform
 import os
-from conans import tools
+import platform
+import unittest
+
+from conans.client import tools
 
 
 class FakeSettings(object):

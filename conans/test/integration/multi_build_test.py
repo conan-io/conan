@@ -1,9 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.model.ref import ConanFileReference
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+import unittest
+
 from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
 
 
 @attr("slow")

@@ -1,5 +1,6 @@
 import unittest
-from conans.model.env_info import DepsEnvInfo, EnvValues, EnvInfo
+
+from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.ref import ConanFileReference
 
 

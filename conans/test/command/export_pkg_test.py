@@ -1,14 +1,15 @@
 import json
-import unittest
-import platform
 import os
+import platform
+import unittest
 
-from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, mkdir
-from conans.test.utils.conanfile import TestConanFile
 from parameterized import parameterized
+
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE
+from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, mkdir
 
 
 class ExportPkgTest(unittest.TestCase):

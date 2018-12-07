@@ -3,7 +3,7 @@ import os
 import unittest
 from collections import OrderedDict
 
-from conans import tools
+from conans.client import tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import CONANFILE_TXT

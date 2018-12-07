@@ -1,5 +1,6 @@
-from conans.errors import ConanException
 import yaml
+
+from conans.errors import ConanException
 from conans.model.values import Values
 
 

@@ -1,16 +1,15 @@
 import os
 from collections import OrderedDict
 
-from conans import tools
+from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE, DEFAULT_SHARE
 from conans.errors import ConanException
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
 from conans.util.env_reader import get_env
 from conans.util.log import logger
-
 
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
 cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"
@@ -102,13 +101,14 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False):
+                 parallel=True, generator=None, set_cmake_flags=False, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._forced_generator = generator
         self._set_cmake_flags = set_cmake_flags
+        self._output = output
 
     @property
     def generator(self):
@@ -252,8 +252,7 @@ class CMakeDefinitionsBuilder(object):
         ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
-        ret[cmake_in_local_cache_var_name] =\
-            in_local_cache_definition(self._conanfile.in_local_cache)[cmake_in_local_cache_var_name]
+        ret.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:
             ret["CONAN_COMPILER"] = compiler
@@ -291,7 +290,7 @@ class CMakeDefinitionsBuilder(object):
 
         if str(os_) in ["Windows", "WindowsStore"] and compiler == "Visual Studio":
             if self._parallel:
-                flag = parallel_compiler_cl_flag()
+                flag = parallel_compiler_cl_flag(output=self._output)
                 ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', flag)
                 ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', flag)
 

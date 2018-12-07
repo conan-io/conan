@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import unittest
-import tempfile
-import shutil
-import uuid
 import codecs
+import os
+import shutil
+import tempfile
+import unittest
+import uuid
+
 import six
 
-from conans.util.files import load
-from conans.test.utils.tools import try_remove_readonly
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
+from conans.test.utils.tools import try_remove_readonly
+from conans.util.files import load
 
 
 class ASTReplacementTest(unittest.TestCase):

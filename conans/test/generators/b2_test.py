@@ -1,12 +1,12 @@
 import unittest
 
-from conans.client.generators.b2 import B2Generator
-from conans.model.settings import Settings
-from conans.model.conan_file import ConanFile
-from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
-from conans.model.env_info import EnvValues
 from conans.client.conf import default_settings_yml
+from conans.client.generators.b2 import B2Generator
+from conans.model.build_info import CppInfo
+from conans.model.conan_file import ConanFile
+from conans.model.env_info import EnvValues
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
 
 
 class B2GeneratorTest(unittest.TestCase):

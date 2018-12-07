@@ -1,5 +1,6 @@
-from conans.client import conan_api
 import unittest
+
+from conans.client import conan_api
 
 
 class ConfigTest(unittest.TestCase):

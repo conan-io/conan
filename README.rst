@@ -38,6 +38,14 @@ Conan is compatible with Python 2 and Python 3.
 
         $ pip install conan
 
+You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+
+
+    .. code-block:: bash
+
+        $ pip install --index-url https://test.pypi.org/simple/ conan
+
+
 From Homebrew (OSx)
 -------------------
 
@@ -103,6 +111,7 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
       download   Downloads recipe and binaries to the local cache, without using settings.
 
     Conan commands. Type "conan <command> -h" for help
+
 
 Running the tests
 =================
