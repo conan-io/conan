@@ -26,7 +26,8 @@ class TestServerLauncher(object):
                  write_permissions=None, users=None, base_url=None, plugins=None,
                  server_version=None,
                  min_client_compatible_version=None,
-                 server_capabilities=None):
+                 server_capabilities=None,
+                 only_v1=False):
 
         plugins = plugins or []
         if not base_path:
@@ -79,7 +80,7 @@ class TestServerLauncher(object):
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.server_store,
                               server_version, min_client_compatible_version,
-                              server_capabilities)
+                              server_capabilities, only_v1)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
             self.ra.api_v2.install(plugin)
