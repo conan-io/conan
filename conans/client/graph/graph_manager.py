@@ -10,9 +10,9 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ScopedOutput
-from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
+from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
@@ -57,7 +57,12 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
-        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
+        try:
+            graph_info = GraphInfo.load(info_folder)
+            profile = graph_info.profile
+        except Exception:
+            # This is very dirty, should be removed for Conan 2.0 (source() method only)
+            profile = self._client_cache.default_profile
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
         # We are recovering state from captured profile from conaninfo, remove not defined
