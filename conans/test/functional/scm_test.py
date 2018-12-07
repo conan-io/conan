@@ -510,6 +510,36 @@ class MyLib(ConanFile):
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
+    def test_delegated_python_code(self):
+        conanfile = """
+from conans import ConanFile
+from recipe_code import get_commit
+
+class MyLib(ConanFile):
+    name = "issue"
+    version = "3831"
+    scm = {'type': 'git', 'url': 'url', 'revision': get_commit()}
+"""
+
+        code_file = """
+import os
+from conans.client.tools.scm import Git
+
+def get_commit():
+    here = os.path.dirname(__file__)
+    git = Git(here)
+    return git.get_commit()
+"""
+        self.client.save({"conanfile.py": conanfile, "recipe_code/__init__.py": code_file})
+        path, commit = create_local_git_repo(folder=self.client.current_folder)
+        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
+
+        self.client.run("export . user/channel")
+        reference = ConanFileReference.loads("issue/3831@user/channel")
+        exported_conanfile = self.client.client_cache.conanfile(reference)
+        content = load(exported_conanfile)
+        self.assertIn(commit, content)
+
 
 @attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
