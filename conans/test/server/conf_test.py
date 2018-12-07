@@ -1,13 +1,13 @@
-from conans.errors import ConanException
-from conans.util.config_parser import ConfigParser
-import unittest
-from conans.util.files import save
 import os
-from conans.server.conf import ConanServerConfigParser
+import unittest
 from datetime import timedelta
-from conans.test.utils.test_files import temp_folder
-from conans.paths import conan_expand_user
 
+from conans.errors import ConanException
+from conans.paths import conan_expand_user
+from conans.server.conf import ConanServerConfigParser
+from conans.test.utils.test_files import temp_folder
+from conans.util.config_parser import ConfigParser
+from conans.util.files import save
 
 fileconfig = '''
 [server]

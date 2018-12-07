@@ -1,6 +1,7 @@
 import os
+
+from conans.client.tools.oss import OSInfo
 from conans.model import Generator
-from conans.tools import os_info
 
 
 class VirtualEnvGenerator(Generator):
@@ -119,6 +120,7 @@ class VirtualEnvGenerator(Generator):
 
     @property
     def content(self):
+        os_info = OSInfo()
         result = {}
         if os_info.is_windows and not os_info.is_posix:
             activate, deactivate = self._cmd_lines()

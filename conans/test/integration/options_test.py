@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conans.paths import CONANINFO
-from conans.util.files import load
 import os
+import unittest
+
+from conans.paths import CONANINFO
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import load
 
 
 class OptionsTest(unittest.TestCase):

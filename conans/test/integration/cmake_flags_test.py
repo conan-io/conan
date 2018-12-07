@@ -9,7 +9,6 @@ from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 
-
 conanfile_py = """
 from conans import ConanFile
 

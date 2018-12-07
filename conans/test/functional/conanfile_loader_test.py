@@ -1,18 +1,19 @@
-import unittest
-from conans.client.loader import ConanFileTextLoader, ConanFileLoader,\
-    ProcessedProfile
-from conans.errors import ConanException
-from conans.util.files import save
 import os
-from conans.model.requires import Requirements
-from conans.model.options import OptionsValues
+import unittest
+from collections import OrderedDict
+
 from mock import Mock
+from mock.mock import call
+
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.loader import ConanFileLoader, ConanFileTextLoader, ProcessedProfile
+from conans.errors import ConanException
+from conans.model.options import OptionsValues
+from conans.model.profile import Profile
+from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.model.profile import Profile
-from collections import OrderedDict
-from mock.mock import call
-from conans.client.graph.python_requires import ConanPythonRequire
+from conans.util.files import save
 
 
 class ConanLoaderTest(unittest.TestCase):

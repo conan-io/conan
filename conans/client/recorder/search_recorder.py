@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 
 
 class _SearchRecipe(namedtuple("SearchRecipe", "reference")):

@@ -4,8 +4,10 @@
 
 
 import unittest
+
 from mock import mock
-from conans.tools import detected_architecture
+
+from conans.client.tools.oss import detected_architecture
 
 
 class DetectedArchitectureTest(unittest.TestCase):

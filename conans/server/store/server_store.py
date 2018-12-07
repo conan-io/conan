@@ -1,12 +1,10 @@
-from os.path import normpath, join
-from os.path import relpath
+from os.path import join, normpath, relpath
 
-from conans.errors import NotFoundException, ConanException
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.paths.simple_paths import SimplePaths
+from conans.errors import ConanException, NotFoundException
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths.simple_paths import SimplePaths
 from conans.server.revision_list import RevisionList
-
 
 REVISIONS_FILE = "revisions.txt"
 

@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.model.ref import ConanFileReference
 import os
 import platform
+import unittest
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient
 
 
 class RMdirFailTest(unittest.TestCase):

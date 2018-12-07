@@ -1,6 +1,6 @@
-from conans.util.log import logger
 from conans.errors import ConanOutdatedClient
 from conans.model.version import Version
+from conans.util.log import logger
 
 
 class VersionCheckerRequester(object):

@@ -2,34 +2,34 @@ import errno
 import os
 import random
 import shlex
+import shutil
 import stat
+import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
 import requests
-import shutil
 import six
-import subprocess
-import threading
-import time
-import uuid
 from mock import Mock
-from six.moves.urllib.parse import urlsplit, urlunsplit, quote
+from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
-from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
+from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_client_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
-from conans.client.output import ConanOutput
 from conans.client.hook_manager import HookManager
+from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -41,14 +41,14 @@ from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
-                                                      TESTING_REMOTE_PRIVATE_PASS,
+from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                                      TESTING_REMOTE_PRIVATE_USER,
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, save, mkdir
+from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -569,8 +569,7 @@ servers["r2"] = TestServer()
                                                             self.min_server_compatible_version,
                                                             self.hook_manager)
             self.rest_api_client.block_v2 = self.block_v2
-
-            set_global_instances(output, self.requester)
+            return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -578,14 +577,14 @@ servers["r2"] = TestServer()
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
-        self._init_collaborators(user_io)
+        return self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, ignore_error=False):
+    def run(self, command_line, user_io=None, ignore_error=False, should_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        self.init_dynamic_vars(user_io)
+        output, requester = self.init_dynamic_vars(user_io)
         with tools.environment_append(self.client_cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
@@ -599,9 +598,12 @@ servers["r2"] = TestServer()
         old_path = sys.path[:]
         sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
+
+        old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
         finally:
+            set_global_instances(old_output, old_requester)
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -609,7 +611,7 @@ servers["r2"] = TestServer()
             for added in added_modules:
                 sys.modules.pop(added, None)
 
-        if not ignore_error and error:
+        if not ignore_error and error and not should_error:
             exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
                 command_header='{:-^80}'.format(" Command failed: "),
                 output_header='{:-^80}'.format(" Output: "),
@@ -618,6 +620,9 @@ servers["r2"] = TestServer()
                 output=self.user_io.out
             )
             raise Exception(exc_message)
+
+        if should_error and not error:
+            raise Exception("This command should have failed: %s" % command_line)
 
         self.all_output += str(self.user_io.out)
         return error

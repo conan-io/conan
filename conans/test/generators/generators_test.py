@@ -1,11 +1,10 @@
 import os
 import platform
+import re
 import unittest
 
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
-import re
 
 
 class GeneratorsTest(unittest.TestCase):

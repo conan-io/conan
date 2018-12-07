@@ -2,9 +2,9 @@ import os
 
 from requests.exceptions import RequestException
 
-from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE,
-                                       RECIPE_UPDATED, RECIPE_NEWER, RECIPE_UPDATEABLE,
-                                       RECIPE_NO_REMOTE, RECIPE_NOT_IN_REMOTE)
+from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
+                                       RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
+                                       RECIPE_UPDATED)
 from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover

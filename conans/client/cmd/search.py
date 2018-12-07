@@ -1,7 +1,7 @@
-from conans.search.search import filter_outdated, search_recipes,\
-    search_packages
 from collections import OrderedDict, namedtuple
+
 from conans.errors import NotFoundException
+from conans.search.search import filter_outdated, search_packages, search_recipes
 
 
 class Search(object):

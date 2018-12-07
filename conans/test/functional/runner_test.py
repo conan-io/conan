@@ -1,6 +1,7 @@
 import os
-import six
 import unittest
+
+import six
 
 from conans.client.runner import ConanRunner
 from conans.test.utils.tools import TestClient

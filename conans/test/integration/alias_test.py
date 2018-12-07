@@ -1,9 +1,11 @@
+import os
 import unittest
+
+from parameterized.parameterized import parameterized
+
+from conans.client.tools.files import replace_in_file
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-import os
-from parameterized.parameterized import parameterized
-from conans.client.tools.files import replace_in_file
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -297,7 +299,8 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"')
+                        '"myoption=True", "LibD:myoption=False"',
+                        output=client.out)
         client.run("export . LibB/0.1@user/testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
 

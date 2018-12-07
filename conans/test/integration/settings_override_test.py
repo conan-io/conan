@@ -1,11 +1,12 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE, CONANINFO
-from conans.model.ref import ConanFileReference
-from conans.util.files import load
 import os
-from conans import tools
+import unittest
+
+from conans.client import tools
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class SettingsOverrideTest(unittest.TestCase):

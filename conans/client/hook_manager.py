@@ -1,14 +1,13 @@
-import traceback
 import os
 import sys
+import traceback
 import uuid
 from collections import defaultdict
 
 from conans.client.output import ScopedOutput
+from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
-from conans.tools import chdir
 from conans.util.files import save
-
 
 attribute_checker_hook = """
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):

@@ -1,11 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import unittest
+
 from conans.client.importer import IMPORTS_MANIFESTS
-from conans.util.files import load, mkdir
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
-
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, mkdir
 
 conanfile = """
 from conans import ConanFile

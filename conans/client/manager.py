@@ -2,18 +2,18 @@ import os
 
 from conans.client.client_cache import ClientCache
 from conans.client.generators import write_generators
-from conans.client.importer import run_imports, run_deploy
+from conans.client.graph.printer import print_graph
+from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
-from conans.client.output import ScopedOutput, Color
+from conans.client.output import Color, ScopedOutput
 from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
-from conans.util.files import save, normalize
-from conans.client.graph.printer import print_graph
+from conans.util.files import normalize, save
 
 
 class ConanManager(object):

@@ -1,16 +1,16 @@
-import unittest
-
-from conans.client import tools
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.util.files import save, load
 import os
-from conans.paths import CONANFILE
+import unittest
 from collections import OrderedDict
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.profiles import create_profile as _create_profile
+
 from parameterized import parameterized
 
+from conans.client import tools
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.profiles import create_profile as _create_profile
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, save
 
 conanfile_scope_env = """
 from conans import ConanFile
@@ -178,7 +178,8 @@ class ProfileTest(unittest.TestCase):
 
         self.client.client_cache.default_profile # Creates default
         tools.replace_in_file(self.client.client_cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False)
+                              "compiler.libcxx", "#compiler.libcxx", strict=False,
+                              output=self.client.out)
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -273,7 +274,8 @@ class ProfileTest(unittest.TestCase):
         # Change default profile to p1 => p2 => default
         tools.replace_in_file(self.client.client_cache.conan_conf_path,
                               "default_profile = default",
-                              "default_profile = p1")
+                              "default_profile = p1",
+                              output=self.client.out)
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")

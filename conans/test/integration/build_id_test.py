@@ -3,7 +3,7 @@ import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
