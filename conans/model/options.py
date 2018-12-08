@@ -561,7 +561,7 @@ class Options(object):
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, name)
 
-    def initialize_upstream(self, user_values, local=False, name=None):
+    def initialize_upstream(self, user_values, name=None):
         """ used to propagate from downstream the options to the upper requirements
         """
         if user_values is not None:
