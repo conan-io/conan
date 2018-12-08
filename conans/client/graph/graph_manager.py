@@ -60,17 +60,26 @@ class GraphManager(object):
         try:
             graph_info = GraphInfo.load(info_folder)
             profile = graph_info.profile
+            profile.process_settings(self._client_cache, preprocess=False)
+            print "LOADED PROFILE FROM ", info_folder
+            print "PROFILE ", profile.dumps()
+            print "CONANFINFO ", load(os.path.join(info_folder, "conaninfo.txt"))
         except Exception:
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._client_cache.default_profile
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        # We are recovering state from captured profile from conaninfo, remove not defined
-        cache_settings.remove_undefined()
-        processed_profile = ProcessedProfile(cache_settings, profile, None)
+            profile.process_settings(self._client_cache)
+        processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,
-                                                    local=True, processed_profile=processed_profile)
+                                                    processed_profile=processed_profile)
+            with get_env_context_manager(conanfile, without_python=True):
+                with conanfile_exception_formatter(str(conanfile), "config_options"):
+                    conanfile.config_options()
+                with conanfile_exception_formatter(str(conanfile), "configure"):
+                    conanfile.configure()
+
+                conanfile.settings.validate()  # All has to be ok!
+                conanfile.options.validate()
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
 
@@ -84,10 +93,7 @@ class GraphManager(object):
         # # https://github.com/conan-io/conan/issues/3432
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    workspace=None, recorder=recorder)
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        settings_preprocessor.preprocess(cache_settings)
-        processed_profile = ProcessedProfile(cache_settings, profile, create_reference=None)
+        processed_profile = ProcessedProfile(profile, create_reference=None)
         conanfile = self._loader.load_virtual([reference], processed_profile)
         root_node = Node(None, conanfile)
         graph = builder.load_graph(root_node, check_updates=False, update=False, remote_name=None,
@@ -110,11 +116,9 @@ class GraphManager(object):
             conanfile._conan_channel = reference.channel
 
         # Computing the full dependency graph
-        cache_settings = self._client_cache.settings.copy()
         profile = graph_info.profile
-        cache_settings.values = profile.settings_values
-        settings_preprocessor.preprocess(cache_settings)
-        processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
+        cache_settings = profile.processed_settings
+        processed_profile = ProcessedProfile(profile, create_reference)
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):

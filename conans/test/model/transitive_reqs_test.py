@@ -1625,12 +1625,12 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         profile = Profile()
+        profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
-        processed_profile = ProcessedProfile(settings=full_settings,
-                                             profile=profile)
+        processed_profile = ProcessedProfile(profile=profile)
         root_conan = retriever.root(content, processed_profile)
         deps_graph = builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
@@ -1910,6 +1910,7 @@ class ChatConan(ConanFile):
 """
         output = TestBufferConanOutput()
         profile = Profile()
+        profile.processed_settings = Settings()
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")

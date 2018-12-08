@@ -437,14 +437,6 @@ class PackageOptions(object):
             self._ensure_exists(name)
             self._data[name].value = value
 
-    def set_local(self, values):
-        # For local commands, to restore state from conaninfo it is necessary to remove
-        for k in list(self._data):
-            try:
-                self._data[k].value = values._dict[k]
-            except KeyError:
-                self._data.pop(k)
-
     def initialize_patterns(self, values):
         # Need to apply only those that exists
         for option, value in values.items():
@@ -574,17 +566,13 @@ class Options(object):
         """
         if user_values is not None:
             assert isinstance(user_values, OptionsValues)
-            # This values setter implements an update, not an overwrite
-            if local:
-                self._package_options.set_local(user_values._package_values)
-            else:
-                # This code is necessary to process patterns like *:shared=True
-                # To apply to the current consumer, which might not have name
-                for pattern, pkg_options in sorted(user_values._reqs_options.items()):
-                    if fnmatch.fnmatch(name or "", pattern):
-                        self._package_options.initialize_patterns(pkg_options)
-                # Then, the normal assignment of values, which could override patterns
-                self._package_options.values = user_values._package_values
+            # This code is necessary to process patterns like *:shared=True
+            # To apply to the current consumer, which might not have name
+            for pattern, pkg_options in sorted(user_values._reqs_options.items()):
+                if fnmatch.fnmatch(name or "", pattern):
+                    self._package_options.initialize_patterns(pkg_options)
+            # Then, the normal assignment of values, which could override patterns
+            self._package_options.values = user_values._package_values
             for package_name, package_values in user_values._reqs_options.items():
                 pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
                 pkg_values.update(package_values)

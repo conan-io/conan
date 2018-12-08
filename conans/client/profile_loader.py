@@ -218,16 +218,16 @@ def profile_from_args(profile, settings, options, env, cwd, client_cache):
     default_profile = client_cache.default_profile  # Ensures a default profile creating
 
     if profile is None:
-        file_profile = default_profile
+        result = default_profile
     else:
-        file_profile, _ = read_profile(profile, cwd, client_cache.profiles_path)
+        result, _ = read_profile(profile, cwd, client_cache.profiles_path)
     args_profile = _profile_parse_args(settings, options, env)
 
-    if file_profile:
-        file_profile.update(args_profile)
-        return file_profile
+    if result:
+        result.update(args_profile)
     else:
-        return args_profile
+        result = args_profile
+    return result
 
 
 def _profile_parse_args(settings, options, envs):

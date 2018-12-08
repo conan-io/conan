@@ -502,6 +502,7 @@ class ConanAPIV1(object):
 
             graph_info = install_input(profile_name, settings, options, env, cwd, None,
                                        self._client_cache, self._user_io.out)
+            print "EFFECTIVE INSTALL PROFILE ", graph_info.profile.dumps()
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -955,6 +956,7 @@ Conan = ConanAPIV1
 def install_input(profile_name, settings, options, env, cwd, install_folder, client_cache, output):
     try:
         graph_info = GraphInfo.load(install_folder)
+        graph_info.profile.process_settings(client_cache, preprocess=False)
     except Exception:
         if install_folder:
             raise ConanException("Failed to load graphinfo file in install-folder: %s"
@@ -968,7 +970,9 @@ def install_input(profile_name, settings, options, env, cwd, install_folder, cli
                         "GraphInfo found from previous install won't be used: %s"
                         % install_folder)
         profile = profile_from_args(profile_name, settings, options, env, cwd, client_cache)
+        profile.process_settings(client_cache)
         graph_info = GraphInfo(profile=profile)
+        # Preprocess settings and convert to real settings
     return graph_info
 
 

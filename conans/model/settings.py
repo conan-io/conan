@@ -185,10 +185,6 @@ class SettingsItem(object):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()
 
-    def remove_undefined(self):
-        if isinstance(self._definition, dict):
-            self._definition[self._value].remove_undefined()
-
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
