@@ -574,7 +574,8 @@ class Options(object):
             # Then, the normal assignment of values, which could override patterns
             self._package_options.values = user_values._package_values
             for package_name, package_values in user_values._reqs_options.items():
-                pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
+                pkg_values = self._deps_package_values.setdefault(package_name,
+                                                                  PackageOptionValues())
                 pkg_values.update(package_values)
 
     def validate(self):

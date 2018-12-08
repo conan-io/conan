@@ -502,7 +502,6 @@ class ConanAPIV1(object):
 
             graph_info = install_input(profile_name, settings, options, env, cwd, None,
                                        self._client_cache, self._user_io.out)
-            print "EFFECTIVE INSTALL PROFILE ", graph_info.profile.dumps()
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -572,15 +571,16 @@ class ConanAPIV1(object):
         cwd = get_cwd()
         try:
             reference = ConanFileReference.loads(reference)
+            install_folder = None
         except ConanException:
             reference = _get_conanfile_path(reference, cwd=None, py=None)
 
-        if install_folder:
-            install_folder = _make_abs_path(install_folder, cwd)
-        else:
-            # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
-            if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
-                install_folder = cwd
+            if install_folder:
+                install_folder = _make_abs_path(install_folder, cwd)
+            else:
+                # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
+                if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
+                    install_folder = cwd
 
         graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
                                    self._client_cache, self._user_io.out)

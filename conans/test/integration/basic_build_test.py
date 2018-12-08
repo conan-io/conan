@@ -17,7 +17,6 @@ class BasicBuildTest(unittest.TestCase):
     def build_cmake_test(self):
         for cmd, lang, static, pure_c in [("install .", 0, True, True),
                                           ("install . -o language=1 -o static=False", 1, False, False)]:
-            print "--------------- ITERATION ", cmd, 
             build(self, cmd, static, pure_c, use_cmake=True, lang=lang)
 
     def build_default_test(self):

@@ -61,9 +61,6 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
             profile = graph_info.profile
             profile.process_settings(self._client_cache, preprocess=False)
-            print "LOADED PROFILE FROM ", info_folder
-            print "PROFILE ", profile.dumps()
-            print "CONANFINFO ", load(os.path.join(info_folder, "conaninfo.txt"))
         except Exception:
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._client_cache.default_profile
@@ -141,6 +138,8 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
+        # THIS IS NECESSARY to store dependencies options in profile, for consumer
+        profile.options = root_node.conanfile.options.values
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
