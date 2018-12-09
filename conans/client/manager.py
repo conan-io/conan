@@ -42,7 +42,7 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder, workspace=workspace,
                                    hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build=False)
+        installer.install(deps_graph, keep_build=False, graph_info=graph_info)
         workspace.generate()
 
     def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,

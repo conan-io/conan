@@ -47,14 +47,12 @@ class Pkg(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run("source ..")  # Without install you can access build_type, no one has removed it
-        client.run("install ..")
-        # This raised an error because build_type wasn't defined
-        client.run("build ..")
-
         error = client.run("source ..", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("'settings.build_type' doesn't exist", client.user_io.out)
+        # This doesn't fail, it doesn't access build_type
+        client.run("install ..")
+        client.run("build ..")
 
     def remove_runtime_test(self):
         # https://github.com/conan-io/conan/issues/2327
