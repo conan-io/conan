@@ -60,6 +60,8 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
             profile = graph_info.profile
             profile.process_settings(self._client_cache, preprocess=False)
+            # This is the hack of recovering the options from the graph_info
+            profile.options.update(graph_info.options)
         except Exception:
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._client_cache.default_profile
@@ -138,7 +140,8 @@ class GraphManager(object):
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        profile.options = root_node.conanfile.options.values
+        # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
+        graph_info.options = root_node.conanfile.options.values
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
