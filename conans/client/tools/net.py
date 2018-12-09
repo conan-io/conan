@@ -34,7 +34,6 @@ def ftp_download(ip, filename, login='', password=''):
     import ftplib
     try:
         ftp = ftplib.FTP(ip, login, password)
-        ftp.login()
         filepath, filename = os.path.split(filename)
         if filepath:
             ftp.cwd(filepath)
