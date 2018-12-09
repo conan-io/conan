@@ -37,7 +37,6 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
 
     client.save(files)
     client.run(cmd)
-    print client.out
     client.run('build .')
     ld_path = ("LD_LIBRARY_PATH=`pwd`"
                if not static and not platform.system() == "Windows" else "")

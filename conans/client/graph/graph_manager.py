@@ -2,7 +2,6 @@ import fnmatch
 import os
 from collections import OrderedDict
 
-from conans.client import settings_preprocessor
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
