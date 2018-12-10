@@ -560,8 +560,7 @@ servers["r2"] = TestServer()
                                             get_request_timeout())
 
             self.hook_manager = HookManager(self.client_cache.hooks_path,
-                                              get_env("CONAN_HOOKS", list()),
-                                              self.user_io.out)
+                                            get_env("CONAN_HOOKS", list()), self.user_io.out)
 
             self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                             self.requester, self.client_cache,
