@@ -32,8 +32,7 @@ class Pkg(ConanFile):
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
         # This is an error. test_package/conanfile won't have build_type defined, more restrictive
-        error = client.run("create . Pkg/0.1@lasote/testing -pr=myprofile", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing -pr=myprofile", assert_error=True)
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
         self.assertIn("ConanException: 'settings.build_type' doesn't exist", client.out)
 

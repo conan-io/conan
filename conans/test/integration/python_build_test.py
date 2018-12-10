@@ -150,8 +150,7 @@ class PkgTest(ConanFile):
 """
 
         client.save({"conanfile.py": reuse})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4", client.out)
         self.assertIn('base = python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
         self.assertIn("Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
@@ -579,7 +578,7 @@ class ToolsTest(ConanFile):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run("install Consumer/0.1@lasote/stable --build", ignore_error=True)
+        client.run("install Consumer/0.1@lasote/stable --build", assert_error=True)
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
@@ -607,7 +606,7 @@ class ToolsTest(ConanFile):
         client.run("install .")
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
-        client.run("source .", ignore_error=True)
+        client.run("source .", assert_error=True)
         # Output in py3 is different, uses single quote
         # Now it works automatically without the env generator file
         self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))

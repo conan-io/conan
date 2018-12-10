@@ -22,9 +22,9 @@ class InfoOptionsTest(unittest.TestCase):
         self.assertIn("My-Package/1.3@PROJECT", client.user_io.out)
 
         # errors
-        client.run("info . -o shared2=True", ignore_error=True)
+        client.run("info . -o shared2=True", assert_error=True)
         self.assertIn("'options.shared2' doesn't exist", client.user_io.out)
-        client.run("info . -o My-Package:shared2=True", ignore_error=True)
+        client.run("info . -o My-Package:shared2=True", assert_error=True)
         self.assertIn("'options.shared2' doesn't exist", client.user_io.out)
 
     def info_wrong_options_test(self):

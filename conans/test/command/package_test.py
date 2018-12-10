@@ -35,7 +35,8 @@ class PackageLocalCommandTest(unittest.TestCase):
 
         # In current dir subdir with conanfile path
         prepare_for_package(client)
-        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package-folder=subdir")
+        client.run("package ./conanfile.py --build-folder build2 --install-folder build "
+                   "--package-folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path
@@ -69,24 +70,22 @@ class PackageLocalCommandTest(unittest.TestCase):
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
-        error = client.run("package conanfile.txt --build-folder build2 --install-folder build",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("package conanfile.txt --build-folder build2 --install-folder build",
+                   assert_error=True)
         self.assertIn(
             "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
             client.out)
 
         # Path with wrong conanfile path
-        error = client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
+                   assert_error=True)
+
         self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
                                                                  "conanfile.py"), client.out)
 
     def package_with_reference_errors_test(self):
         client = TestClient()
-        error = client.run("package MyLib/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("package MyLib/0.1@lasote/stable", assert_error=True)
         self.assertIn("conan package' doesn't accept a reference anymore",
                       client.out)
 

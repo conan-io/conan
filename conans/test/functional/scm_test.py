@@ -114,8 +114,7 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url="auto", revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
-        error = self.client.run("export . user/channel", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("export . user/channel", assert_error=True)
         self.assertIn("Repo origin cannot be deduced by 'auto'",
                       self.client.out)
 
@@ -191,8 +190,7 @@ class ConanLib(ConanFile):
         self.client.current_folder = new_curdir
         # delete old source, so it will try to checkout the remote because of the missing local dir
         rmdir(curdir)
-        error = self.client.run("install lib/0.1@user/channel --build", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install lib/0.1@user/channel --build", assert_error=True)
         self.assertIn("Getting sources from url: '%s'" % path.replace("\\", "/"), self.client.out)
 
     def test_excluded_repo_fies(self):
@@ -378,12 +376,11 @@ class ConanLib(ConanFile):
         conanfile = tmp.format(url=path, revision=commit, submodule="invalid")
         self.client.save({"conanfile.py": conanfile})
 
-        error = self.client.run("create . user/channel", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid 'submodule' attribute value in the 'scm'.",
                       self.client.out)
 
-        # Check shallow 
+        # Check shallow
         conanfile = tmp.format(url=path, revision=commit, submodule="shallow")
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")

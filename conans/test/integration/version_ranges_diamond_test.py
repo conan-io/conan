@@ -255,9 +255,8 @@ class HelloReuseConan(ConanFile):
                       "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
 
         self.client.run("remove '*' -f")
-        error = self.client.run("install Project/1.0.0@lasote/stable --build missing",
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
+
         self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
                       "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
 

@@ -81,7 +81,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # remove packages
-        client.run("remove Test* -f -p 544", ignore_error=True)
+        client.run("remove Test* -f -p 544", assert_error=True)
         self.assertTrue(os.path.exists(client.paths.system_reqs_package(package_ref)))
         client.run("remove Test* -f -p f0ba3ca2c218df4a877080ba99b65834b9413798")
         self.assertFalse(os.path.exists(client.paths.system_reqs_package(package_ref)))

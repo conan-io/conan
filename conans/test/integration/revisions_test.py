@@ -125,10 +125,9 @@ class HelloConan(ConanFile):
         self.assertEquals(contents, "1")
 
         # Specify a package revision without a recipe revision
-        error = self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
-                                "15ab113a16e2ac8c9ecffb4ba48306b2" % str(self.ref),
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
+                        "15ab113a16e2ac8c9ecffb4ba48306b2" % str(self.ref),
+                        assert_error=True)
         self.assertIn("It is needed to specify the recipe revision if "
                       "you specify a package revision", self.client.out)
 
@@ -139,7 +138,7 @@ from conans import ConanFile
 class HelloConan(ConanFile):
     settings = "os"
     def build(self):
-        self.output.warn("Revision 1")        
+        self.output.warn("Revision 1")
 '''
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux")
         rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
@@ -370,16 +369,14 @@ class HelloConan(ConanFile):
         ref_d = ConanFileReference.loads("libD/1.0@lasote/testing")
         repl = 'requires = "%s", "%s"' % (str(ref_c), str(ref_b))
         self.client.save({"conanfile.py": conanfile.replace("pass", repl)})
-        error = self.client.run("create . %s" % str(ref_d), ignore_error=True)
+        self.client.run("create . %s" % str(ref_d), assert_error=True)
 
-        self.assertTrue(error)
         self.assertIn("Different revisions of libA/1.0@lasote/testing "
                       "has been requested", self.client.out)
 
         self.client.run('remove "*" -f')
-        self.client.run("create . %s" % str(ref_d), ignore_error=True)
-        error = self.client.run("create . %s" % str(ref_d), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("create . %s" % str(ref_d), assert_error=True)
+        self.client.run("create . %s" % str(ref_d), assert_error=True)
         self.assertIn("Different revisions of libA/1.0@lasote/testing "
                       "has been requested", self.client.out)
 
@@ -634,14 +631,11 @@ class HelloConan(ConanFile):
         self.client.run("remove '*' -f")
 
         # Use the regular v2 client and try to install specifying revisions
-        error = self.client.run("install %s#%s" % (self.ref, rev1), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s#%s" % (self.ref, rev1), assert_error=True)
         self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
-        error = self.client.run("install %s#%s" % (self.ref, rev2), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s#%s" % (self.ref, rev2), assert_error=True)
         self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
-        error = self.client.run("install %s#%s" % (self.ref, rev3), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s#%s" % (self.ref, rev3), assert_error=True)
         self.assertIn("Can't find a 'lib/1.0@lasote/testing' package", self.client.out)
 
     def test_v1_with_revisions_behavior(self):
@@ -739,8 +733,7 @@ class ConanFileToolsTest(ConanFile):
 
         # Now install it from a client, it won't find the binary in remote2
         # because the recipe revision is NOT the same
-        error = self.client.run("install %s" % ref, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s" % ref, assert_error=True)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
 
 
@@ -832,8 +825,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("remove %s -f" % str(ref))
 
         # Try to install binaries from the rev1, it should fail
-        error = self.client.run("install %s#%s" % (str(ref), rev1), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s#%s" % (str(ref), rev1), assert_error=True)
         self.assertIn("Missing prebuilt package for 'Hello/0.1@lasote/stable", self.client.out)
 
         # Try to install binaries from the rev2, it should succeed

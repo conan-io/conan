@@ -68,7 +68,6 @@ class MyConanfile(ConanFile):
         client = TestClient(servers={"default": test_server},
                             users={"default": [("lasote", "mypass")]},
                             requester_class=BuggyRequester)
-        error = client.run("install Pkg/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@lasote/stable", assert_error=True)
         self.assertEquals(str(client.out).count("Waiting 0 seconds to retry..."), 2)
         self.assertEquals(str(client.out).count("ERROR: Error 200 downloading"), 3)

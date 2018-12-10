@@ -119,8 +119,7 @@ class V3D(ConanFile):
     requires = "zlib/1.2.11@conan/stable", "MyPackage/1.0@testing/testing"
 """
         client.save({"conanfile.py": conanfile})
-        error = client.run("install . -g=cmake", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install . -g=cmake", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'zlib/1.2.11@conan/stable'",
                       client.out)
         client.run("install zlib/1.2.11@conan/stable --build=missing")

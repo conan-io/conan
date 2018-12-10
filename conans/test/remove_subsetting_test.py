@@ -26,8 +26,7 @@ class Pkg(ConanFile):
         mkdir(build_folder)
         client.current_folder = build_folder
         client.run("install ..")
-        error = client.run("build ..", ignore_error=True)
-        self.assertTrue(error)
+        client.run("build ..", assert_error=True)
         self.assertIn("ConanException: 'options.opt2' doesn't exist", client.out)
         self.assertIn("Possible options are ['opt1']", client.out)
 
@@ -52,8 +51,7 @@ class Pkg(ConanFile):
         # This raised an error because build_type wasn't defined
         client.run("build ..")
 
-        error = client.run("source ..", ignore_error=True)
-        self.assertTrue(error)
+        client.run("source ..", assert_error=True)
         self.assertIn("'settings.build_type' doesn't exist", client.user_io.out)
 
     def remove_runtime_test(self):
@@ -76,7 +74,8 @@ class Pkg(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 -s arch=x86')
+        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+                   '-s arch=x86')
         # This raised an error because build_type wasn't defined
         client.run("build ..")
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)

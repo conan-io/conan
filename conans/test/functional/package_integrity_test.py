@@ -19,11 +19,9 @@ class PackageIngrityTest(unittest.TestCase):
         self.assertIn("locks", os.listdir(conan_folder))
         self.assertTrue(os.path.exists(conan_folder + ".count"))
         self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
-        error = client.run("remove * --locks", ignore_error=True)
-        self.assertTrue(error)
+        client.run("remove * --locks", assert_error=True)
         self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
-        error = client.run("remove", ignore_error=True)
-        self.assertTrue(error)
+        client.run("remove", assert_error=True)
         self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
         client.run("remove --locks")
         self.assertNotIn("locks", os.listdir(conan_folder))
@@ -47,8 +45,7 @@ class PackageIngrityTest(unittest.TestCase):
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 
-        error = client.run("upload * --all --confirm", ignore_error=True)
-        self.assertTrue(error)
+        client.run("upload * --all --confirm", assert_error=True)
         self.assertIn("ERROR: Package Hello/0.1@lasote/testing:12345 is corrupted, aborting upload", client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=12345'", client.out)
 
