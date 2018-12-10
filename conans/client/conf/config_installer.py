@@ -98,7 +98,13 @@ def _process_folder(folder, client_cache, output):
                 profiles_path = client_cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
                 break
-        dirs[:] = [d for d in dirs if d not in ("profiles", ".git")]
+            elif d == "hooks" and ".git" not in root:  # Avoid git hooks
+                output.info("Installing hooks:")
+                src_hooks_path = os.path.join(root, d)
+                dst_hooks_path = client_cache.hooks_path
+                _handle_hooks(src_hooks_path, dst_hooks_path, output)
+                break
+        dirs[:] = [d for d in dirs if d not in ("profiles", ".git", "hooks")]
 
 
 def _process_download(item, client_cache, output, tmp_folder, verify_ssl, requester):
@@ -173,3 +179,21 @@ def _process_config_install_item(item):
         path_or_url, args = [item.strip() for item in rest[1:-1].rstrip().split(",", 1)]
         args = None if "none" in args.lower() else args
     return config_type, path_or_url, args
+
+
+def _handle_hooks(src_hooks_path, dst_hooks_path, output):
+    hooks_dirs = []
+    for root, dirs, files in walk(src_hooks_path):
+        if root == src_hooks_path:
+            hooks_dirs = dirs
+        else:
+            copied_files = False
+            relpath = os.path.relpath(root, src_hooks_path)
+            for f in files:
+                if ".git" not in f:
+                    dst = os.path.join(dst_hooks_path, relpath)
+                    mkdir(dst)
+                    shutil.copy(os.path.join(root, f), dst)
+                    copied_files = True
+            if copied_files and relpath in hooks_dirs:
+                output.info(" - %s" % relpath)
