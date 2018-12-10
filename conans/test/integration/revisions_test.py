@@ -6,6 +6,7 @@ import time
 from time import sleep
 
 from conans import REVISIONS, load
+from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans import DEFAULT_REVISION_V1
 from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
@@ -93,7 +94,7 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*")
 '''
-        with tools.environment_append({"PACKAGE_CONTENTS": "1"}):
+        with environment_append({"PACKAGE_CONTENTS": "1"}):
             self._create_and_upload(conanfile, self.ref)
         rev = self.servers["remote0"].paths.get_last_revision(self.ref).revision
         self.assertEquals(rev, "202f9ce41808083a0f0c0d071fb5f398")
@@ -104,7 +105,7 @@ class HelloConan(ConanFile):
         self.assertEquals(pkg_rev, "15ab113a16e2ac8c9ecffb4ba48306b2")
 
         # Create new package revision for the same recipe
-        with tools.environment_append({"PACKAGE_CONTENTS": "2"}):
+        with environment_append({"PACKAGE_CONTENTS": "2"}):
             self._create_and_upload(conanfile, self.ref.copy_clear_rev())
         pkg_rev = self.servers["remote0"].paths.get_last_package_revision(p_ref).revision
         self.assertEquals(pkg_rev, "8e54c6ea967722f2f9bdcbacb21792f5")
@@ -116,13 +117,13 @@ class HelloConan(ConanFile):
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "8e54c6ea967722f2f9bdcbacb21792f5" % self.ref.full_repr())
 
-        contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
+        contents = load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "2")
 
         # Download previous package revision
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "15ab113a16e2ac8c9ecffb4ba48306b2" % self.ref.full_repr())
-        contents = tools.load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
+        contents = load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "1")
 
         # Specify a package revision without a recipe revision
