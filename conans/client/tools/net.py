@@ -33,7 +33,8 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
 def ftp_download(ip, filename, login='', password=''):
     import ftplib
     try:
-        ftp = ftplib.FTP(ip, login, password)
+        ftp = ftplib.FTP(ip)
+        ftp.login(login, password)
         filepath, filename = os.path.split(filename)
         if filepath:
             ftp.cwd(filepath)
