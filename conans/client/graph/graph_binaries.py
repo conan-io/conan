@@ -5,11 +5,10 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_EDITABLE, BINARY_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
-from conans.model.conan_file import ConanFileEditable
+from conans.model.conan_file import ConanFileEditable, parse_package_layout_content
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths.package_layouts.package_user_layout import parse_package_layout_content
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, is_dirty, load, clean_dirty
 from conans.util.log import logger

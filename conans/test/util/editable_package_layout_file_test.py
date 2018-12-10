@@ -5,7 +5,7 @@ import six
 import unittest
 from parameterized import parameterized
 
-from conans.paths.package_layouts.package_user_layout import parse_package_layout_content
+from conans.model.conan_file import parse_package_layout_content
 
 
 def _make_abs(base_path, *args):

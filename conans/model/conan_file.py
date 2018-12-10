@@ -1,5 +1,9 @@
+import configparser
 import os
+import re
 from contextlib import contextmanager
+import ntpath
+import posixpath
 
 from conans.client import tools
 from conans.client.output import Color
@@ -318,3 +322,26 @@ class ConanFileEditable(object):
 
     def set_cpp_info_directories(self, cpp_info_directories):
         self._cpp_info_directories = cpp_info_directories
+
+
+def parse_package_layout_content(content, base_path=None):
+    """ Returns a dictionary containing information about paths for a CppInfo object: includes,
+    libraries, resources, binaries,... """
+    ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
+
+    def make_abs(value):
+        value = re.sub(r'\\\\+', r'\\', value)
+        value = value.replace('\\', '/')
+        isabs = ntpath.isabs(value) or posixpath.isabs(value)
+        if base_path and not isabs:
+            value = os.path.abspath(os.path.join(base_path, value))
+        value = os.path.normpath(value)
+        return value
+
+    parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
+    parser.optionxform = str
+    parser.read_string(content)
+    for section in ret.keys():
+        if section in parser:
+            ret[section] = [make_abs(value) for value in parser[section]]
+    return ret

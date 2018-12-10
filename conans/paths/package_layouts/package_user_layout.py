@@ -1,10 +1,6 @@
 # coding=utf-8
 
 import os
-import re
-import configparser
-import ntpath
-import posixpath
 
 from conans.paths import CONANFILE
 from conans.util.files import load
@@ -26,7 +22,9 @@ class PackageEditableLayout(object):
         return self._base_folder
 
     def conanfile(self):
-        """ Path to the conanfile. We can agree that an editable package needs to be a Conan package """
+        """ Path to the conanfile. We can agree that an editable package
+            needs to be a Conan package
+        """
         return os.path.join(self.conan(), CONANFILE)
 
     def installed_as_editable(self):
@@ -47,24 +45,3 @@ class PackageEditableLayout(object):
         raise IOError("Package metadata is not available for editable packages")
 
 
-def parse_package_layout_content(content, base_path=None):
-    """ Returns a dictionary containing information about paths for a CppInfo object: includes,
-    libraries, resources, binaries,... """
-    ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
-
-    def make_abs(value):
-        value = re.sub(r'\\\\+', r'\\', value)
-        value = value.replace('\\', '/')
-        isabs = ntpath.isabs(value) or posixpath.isabs(value)
-        if base_path and not isabs:
-            value = os.path.abspath(os.path.join(base_path, value))
-        value = os.path.normpath(value)
-        return value
-
-    parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
-    parser.optionxform = str
-    parser.read_string(content)
-    for section in ret.keys():
-        if section in parser:
-            ret[section] = [make_abs(value) for value in parser[section]]
-    return ret
