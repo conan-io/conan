@@ -40,10 +40,15 @@ class ConanFileLoader(object):
         self._output = output
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
+        self._loaded_conanfiles = {}
 
     def load_class(self, conanfile_path):
-        _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
-        return conanfile
+        try:
+            return self._loaded_conanfiles[conanfile_path]
+        except KeyError:
+            _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+            self._loaded_conanfiles[conanfile_path] = conanfile
+            return conanfile
 
     def load_name_version(self, conanfile_path, name, version):
         conanfile = self.load_class(conanfile_path)
