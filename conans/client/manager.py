@@ -2,7 +2,6 @@ import os
 
 from conans.client.client_cache import ClientCache
 from conans.client.generators import write_generators
-from conans.client.graph.graph_lock_builder import GraphLock
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import ConanInstaller, call_system_requirements
@@ -29,9 +28,9 @@ class ConanManager(object):
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
 
-    def install_workspace(self, profile, workspace, remote_name, build_modes, update):
+    def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        deps_graph, _, _ = self._graph_manager.load_graph(references, None, profile, build_modes,
+        deps_graph, _, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
                                                           False, update, remote_name, self._recorder,
                                                           workspace)
 
@@ -42,13 +41,13 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
                                    self._registry, recorder=self._recorder, workspace=workspace,
                                    hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build=False)
+        installer.install(deps_graph, keep_build=False, graph_info=graph_info)
         workspace.generate()
 
-    def install(self, reference, install_folder, profile, remote_name=None, build_modes=None,
+    def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False, graph_lock=None, output_lock_file=None):
+                keep_build=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -71,10 +70,10 @@ class ConanManager(object):
             generators.add("txt")  # Add txt generator by default
 
         self._user_io.out.info("Configuration:")
-        self._user_io.out.writeln(profile.dumps())
-        result = self._graph_manager.load_graph(reference, create_reference, profile,
+        self._user_io.out.writeln(graph_info.profile.dumps())
+        result = self._graph_manager.load_graph(reference, create_reference, graph_info,
                                                 build_modes, False, update, remote_name,
-                                                self._recorder, None, graph_lock=graph_lock)
+                                                self._recorder, None)
         deps_graph, conanfile, cache_settings = result
 
         if not isinstance(reference, ConanFileReference):
@@ -113,10 +112,6 @@ class ConanManager(object):
                                          interactive=manifest_interactive)
             manifest_manager.print_log()
 
-        if output_lock_file:
-            self._user_io.out.info("Saving graph lock file: %s" % output_lock_file)
-            graph_lock = GraphLock(deps_graph, profile)
-            graph_lock.save(output_lock_file)
         if install_folder:
             # Write generators
             if generators is not False:
@@ -129,6 +124,8 @@ class ConanManager(object):
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
                 output.info("Generated %s" % CONANINFO)
+                graph_info.save(install_folder)
+                output.info("Generated graphinfo")
             if not no_imports:
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)

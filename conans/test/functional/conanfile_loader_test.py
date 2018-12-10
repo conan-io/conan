@@ -204,21 +204,22 @@ class MyTest(ConanFile):
 
         # Apply windows for MyPackage
         profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
 
         recipe = loader.load_conanfile(conanfile_path, None,
-                                       ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
+                                       ProcessedProfile(profile))
         self.assertEquals(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
         recipe = loader.load_conanfile(conanfile_path, None,
-                                       ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
+                                       ProcessedProfile(profile))
         self.assertEquals(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
         recipe = loader.load_conanfile(conanfile_path, None,
-                                       ProcessedProfile(Settings({"os": ["Windows", "Linux"]}), profile))
+                                       ProcessedProfile(profile))
         self.assertIsNone(recipe.settings.os.value)
