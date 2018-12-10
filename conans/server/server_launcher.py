@@ -44,7 +44,7 @@ class ServerLauncher(object):
         self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, server_store,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities, only_v1=False)
+                              server_capabilities)
 
     def launch(self):
         self.ra.run(host="0.0.0.0")
