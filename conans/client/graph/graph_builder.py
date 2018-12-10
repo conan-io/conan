@@ -25,6 +25,7 @@ class DepsGraphBuilder(object):
         self._recorder = recorder
 
     def load_graph(self, root_node, check_updates, update, remote_name, processed_profile):
+        self._loader.cached_conanfiles = {}
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -41,6 +42,7 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         dep_graph.compute_package_ids()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
+        self._loader.cached_conanfiles = {}
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update, remote_name):
