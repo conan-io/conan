@@ -156,7 +156,7 @@ def configuration_install(path_or_url, client_cache, output, verify_ssl, request
 
 def _process_config_install_item(item):
     config_type, path_or_url, args = None, None, None
-    if not item.startswith(("git:", "dir:", "url:", "file")):
+    if not item.startswith(("git:", "dir:", "url:", "file:")):
         path_or_url = item
         if path_or_url.endswith(".git"):
             config_type = "git"
