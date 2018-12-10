@@ -154,8 +154,8 @@ class PkgTest(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4", client.out)
         self.assertIn('base = python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
-        self.assertIn("ConanException: Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
-                      client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
     def invalid2_test(self):
         client = TestClient()
@@ -170,9 +170,10 @@ class PkgTest(conans.ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4",
                       client.out)
-        self.assertIn('base = conans.python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
-        self.assertIn("ConanException: Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
+        self.assertIn('base = conans.python_requires("MyConanfileBase/1.0@lasote/testing',
                       client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
     def transitive_multiple_reuse_test(self):
         client = TestClient()

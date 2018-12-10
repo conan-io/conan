@@ -240,6 +240,10 @@ def _parse_conanfile(conan_file_path):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
             loaded.python_requires = _invalid_python_requires
+            try:
+                loaded.conans.python_requires = _invalid_python_requires
+            except AttributeError:
+                pass
             sys.dont_write_bytecode = False
 
         # These lines are necessary, otherwise local conanfile imports with same name
