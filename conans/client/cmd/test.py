@@ -16,7 +16,7 @@ class PackageTester(object):
     def install_build_and_test(self, conanfile_abs_path, reference, graph_info,
                                remote_name, update, build_modes=None, manifest_folder=None,
                                manifest_verify=False, manifest_interactive=False, keep_build=False,
-                               test_build_folder=None):
+                               test_build_folder=None, output_graph_info=None):
         """
         Installs the reference (specified by the parameters or extracted from the test conanfile)
         and builds the test_package/conanfile.py running the test() method.
@@ -39,7 +39,8 @@ class PackageTester(object):
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
-                                  keep_build=keep_build)
+                                  keep_build=keep_build,
+                                  output_graph_info=output_graph_info)
 
             # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
             build(self._manager._graph_manager, self._manager._hook_manager, conanfile_abs_path,

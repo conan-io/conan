@@ -13,6 +13,7 @@ from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
+from conans.util.files import normalize, save
 
 
 class ConanManager(object):
@@ -47,7 +48,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False):
+                keep_build=False, output_graph_info=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -111,6 +112,11 @@ class ConanManager(object):
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)
             manifest_manager.print_log()
+
+        if output_graph_info:
+            folder, filename = os.path.split(output_graph_info)
+            graph_info.save(folder, filename)
+            output.info("Saved graphinfo")
 
         if install_folder:
             # Write generators

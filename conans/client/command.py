@@ -295,8 +295,8 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      input_lock_file=args.input_lock,
-                                      output_lock_file=args.output_lock)
+                                      input_graph_info=args.input_lock,
+                                      output_graph_info=args.output_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -382,8 +382,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           input_lock_file=args.input_lock,
-                                           output_lock_file=args.output_lock)
+                                           input_graph_info=args.input_lock,
+                                           output_graph_info=args.output_lock)
             else:
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
@@ -395,8 +395,8 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     input_lock_file=args.input_lock,
-                                                     output_lock_file=args.output_lock)
+                                                     input_graph_info=args.input_lock,
+                                                     output_graph_info=args.output_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -514,7 +514,7 @@ class Command(object):
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder,
-                                               input_lock_file=args.input_lock)
+                                               input_graph_info=args.input_lock)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, get_cwd())
@@ -545,8 +545,8 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    input_lock_file=args.input_lock,
-                                    output_lock_file=args.output_lock)
+                                    input_graph_info=args.input_lock,
+                                    output_graph_info=args.output_lock)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:

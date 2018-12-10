@@ -1,10 +1,8 @@
 from collections import defaultdict
 from collections import namedtuple
-import json
 
 from conans.client.graph.graph import DepsGraph, Node
 from conans.client.output import ScopedOutput
-from conans.client.profile_loader import _load_profile
 from conans.errors import (ConanException, conanfile_exception_formatter,
                            ConanExceptionInUserConanfileMethod)
 from conans.model.conan_file import get_env_context_manager
@@ -21,8 +19,7 @@ GraphLockNode = namedtuple("GraphLockNode", "conan_ref binary_id options_values 
 
 class GraphLock(object):
 
-    def __init__(self, graph, profile):
-        self._profile = profile
+    def __init__(self, graph):
         self._nodes = {}  # id: conan_ref, binaryID, options_values, dependencies
         for node in graph.nodes:
             conan_ref = node.conan_ref
@@ -45,10 +42,6 @@ class GraphLock(object):
         id_ = str(id(new_node))
         self._nodes[id_] = new_node
         return id_
-
-    @property
-    def profile(self):
-        return self._profile
 
     def get_node_from_ref(self, conan_ref):
         for id_, node in self._nodes.items():
@@ -130,13 +123,10 @@ class GraphLock(object):
         return self._nodes[node_id].dependencies
 
     @staticmethod
-    def loads(text):
-        graph_json = json.loads(text)
-        profile = graph_json["profile"]
+    def load_json(graph_json):
         # FIXME: Reading private very ugly
-        profile, _ = _load_profile(profile, None, None)
-        graph_lock = GraphLock(DepsGraph(), profile)
-        for id_, graph_node in graph_json["graph"].items():
+        graph_lock = GraphLock(DepsGraph())
+        for id_, graph_node in graph_json.items():
             try:
                 conan_ref = ConanFileReference.loads(graph_node["conan_ref"])
             except ConanException:
@@ -154,8 +144,7 @@ class GraphLock(object):
         serialized_graph_str = self.dumps()
         save(filename, serialized_graph_str)
 
-    def dumps(self):
-        result = {"profile": self._profile.dumps()}
+    def dump_json(self):
         graph = {}
         for id_, node in self._nodes.items():
             graph[id_] = {"conan_ref": str(node.conan_ref),
@@ -163,8 +152,7 @@ class GraphLock(object):
                           "options": node.options_values.dumps(),
                           "dependencies": node.dependencies,
                           "python_requires": [r.full_repr() for r in node.python_requires]}
-        result["graph"] = graph
-        return json.dumps(result, indent=True)
+        return graph
 
 
 class DepsGraphLockBuilder(object):

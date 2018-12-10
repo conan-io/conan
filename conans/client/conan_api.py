@@ -56,7 +56,7 @@ from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances, save
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
-from conans.util.files import exception_message_safe, mkdir, save_files, load
+from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
@@ -322,6 +322,8 @@ class ConanAPIV1(object):
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
+        if output_graph_info:
+            output_graph_info = _make_abs_path(output_graph_info, cwd)
         graph_info = install_input(profile_name, settings, options, env, cwd, None,
                                    input_graph_info, self._client_cache, self._user_io.out)
 
@@ -332,7 +334,7 @@ class ConanAPIV1(object):
         pt.install_build_and_test(conanfile_path, reference, graph_info, remote_name,
                                   update, build_modes=build_modes,
                                   test_build_folder=test_build_folder,
-                                  output_lock_file=output_lock_file)
+                                  output_graph_info=output_graph_info)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -342,7 +344,7 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               input_lock_file=None, output_lock_file=None):
+               input_graph_info=None, output_graph_info=None):
         """
         API method to create a conan package
 
@@ -359,12 +361,13 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
-                                                input_lock_file, self._client_cache)
+            graph_info = install_input(profile_name, settings, options, env, cwd, None,
+                                       input_graph_info, self._client_cache, self._user_io.out)
 
             name, version = self._loader.load_name_version(conanfile_path, name, version)
             reference = ConanFileReference(name, version, user, channel)
 
+            graph_lock = graph_info.graph_lock
             if graph_lock:
                 node = graph_lock.get_node_from_ref(reference)
                 if node is None:
@@ -392,20 +395,15 @@ class ConanAPIV1(object):
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
-<<<<<<< HEAD
-=======
-            graph_info = install_input(profile_name, settings, options, env, cwd, None,
-                                       self._client_cache, self._user_io.out)
->>>>>>> feature/graph_info
 
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(reference)
-            if output_lock_file:
-                output_lock_file = _make_abs_path(output_lock_file, cwd)
+            if output_graph_info:
+                output_graph_info = _make_abs_path(output_graph_info, cwd)
 
             create(reference, manager, self._user_io, graph_info, remote_name, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
-                   test_build_folder, test_folder, conanfile_path, graph_lock, output_lock_file)
+                   test_build_folder, test_folder, conanfile_path, output_graph_info)
 
             return recorder.get_info()
 
@@ -487,25 +485,19 @@ class ConanAPIV1(object):
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          input_lock_file=None, output_lock_file=None):
+                          input_graph_info=None, output_graph_info=None):
 
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
 
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
-                                                input_lock_file, self._client_cache)
-
             install_folder = _make_abs_path(install_folder, cwd)
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-<<<<<<< HEAD
-=======
             graph_info = install_input(profile_name, settings, options, env, cwd, None,
-                                       self._client_cache, self._user_io.out)
+                                       input_graph_info, self._client_cache, self._user_io.out)
 
->>>>>>> feature/graph_info
             if not generators:  # We don't want the default txt
                 generators = False
 
@@ -516,8 +508,8 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators, graph_lock=graph_lock,
-                            output_lock_file=output_lock_file
+                            generators=generators,
+                            output_graph_info=output_graph_info
                             )
             return recorder.get_info()
         except ConanException as exc:
@@ -530,7 +522,7 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                input_lock_file=None, output_lock_file=None):
+                input_graph_info=None, output_graph_info=None):
 
         try:
             recorder = ActionRecorder()
@@ -538,13 +530,8 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-<<<<<<< HEAD
-            profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
-                                                input_lock_file, self._client_cache)
-=======
             graph_info = install_input(profile_name, settings, options, env, cwd, None,
-                                       self._client_cache, self._user_io.out)
->>>>>>> feature/graph_info
+                                       input_graph_info, self._client_cache, self._user_io.out)
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -563,8 +550,8 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
-            if output_lock_file:
-                output_lock_file = _make_abs_path(output_lock_file, cwd)
+            if output_graph_info:
+                output_graph_info = _make_abs_path(output_graph_info, cwd)
             manager = self._init_manager(recorder)
             manager.install(reference=conanfile_path,
                             install_folder=install_folder,
@@ -577,8 +564,7 @@ class ConanAPIV1(object):
                             manifest_interactive=manifest_interactive,
                             generators=generators,
                             no_imports=no_imports,
-                            graph_lock=graph_lock,
-                            output_lock_file=output_lock_file)
+                            output_graph_info=output_graph_info)
 
             return recorder.get_info()
         except ConanException as exc:
@@ -616,10 +602,10 @@ class ConanAPIV1(object):
                                      requester=requester, config_type=config_type, args=args)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env,
-                          lock_file):
+                          input_graph_info):
         cwd = get_cwd()
-        profile, graph_lock = install_input(profile_name, settings, options, env, cwd, lock_file,
-                                            self._client_cache)
+        graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
+                                   input_graph_info, self._client_cache, self._user_io.out)
         try:
             reference = ConanFileReference.loads(reference)
             install_folder = None
@@ -628,45 +614,29 @@ class ConanAPIV1(object):
 
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)
-<<<<<<< HEAD
-                if existing_info_files(install_folder):
-                    return reference, read_conaninfo_profile(install_folder), graph_lock
-
-        return reference, profile, graph_lock
-=======
             else:
                 # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
                 if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
                     install_folder = cwd
 
-        graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
-                                   self._client_cache, self._user_io.out)
-
         return reference, graph_info
->>>>>>> feature/graph_info
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, remote_name=None, build_order=None, check_updates=None,
-<<<<<<< HEAD
-                         install_folder=None, input_lock_file=None):
-        reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
-                                                                profile_name, settings, options, env,
-                                                                input_lock_file)
-=======
-                         install_folder=None):
+                         install_folder=None, input_graph_info=None):
         reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
-                                                       settings, options, env)
->>>>>>> feature/graph_info
+                                                       settings, options, env, input_graph_info)
+
         recorder = ActionRecorder()
         deps_graph, _, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                           check_updates, False, remote_name,
-                                                          recorder, workspace=None,
-                                                          graph_lock=graph_lock)
-        if input_lock_file:
+                                                          recorder, workspace=None)
+        if input_graph_info:
+            graph_lock = graph_info.graph_lock
             build_order = graph_lock.build_order(node_id=None)
             build_order = [[str(n) for n in level] for level in build_order]
-            basename, _ = os.path.splitext(input_lock_file)
+            basename, _ = os.path.splitext(input_graph_info)
             basename += "_build_order.json"
             save(basename, json.dumps(build_order))
 
@@ -675,47 +645,34 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote_name=None, check_updates=None,
-<<<<<<< HEAD
-                            install_folder=None, input_lock_file=None):
-        reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
-                                                                profile_name, settings, options, env,
-                                                                input_lock_file)
-=======
-                            install_folder=None):
+                            install_folder=None, input_graph_info=None):
+
         reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
-                                                       settings, options, env)
->>>>>>> feature/graph_info
+                                                       settings, options, env, input_graph_info)
+
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info,
                                                                   build_modes, check_updates,
                                                                   False, remote_name, recorder,
-                                                                  workspace=None,
-                                                                  graph_lock=graph_lock)
+                                                                  workspace=None)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-<<<<<<< HEAD
-             profile_name=None, update=False, install_folder=None, build=None, input_lock_file=None,
+             profile_name=None, update=False, install_folder=None, build=None, input_graph_info=None,
              output_lock_file=None):
-        reference, profile, graph_lock = self._info_get_profile(reference, install_folder,
-                                                                profile_name, settings, options, env,
-                                                                input_lock_file)
-=======
-             profile_name=None, update=False, install_folder=None, build=None):
+
         reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
-                                                       settings, options, env)
->>>>>>> feature/graph_info
+                                                       settings, options, env, input_graph_info)
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                   update, False, remote_name,
-                                                                  recorder, workspace=None,
-                                                                  graph_lock=graph_lock)
+                                                                  recorder, workspace=None)
         if output_lock_file:
             self._user_io.out.info("Saving graph lock file: %s" % output_lock_file)
-            graph_lock = GraphLock(deps_graph, profile)
-            graph_lock.save(output_lock_file)
+            graph_info.graph_lock = GraphLock(deps_graph)
+            graph_info.save(output_lock_file)
 
         return deps_graph, conanfile
 
@@ -1047,15 +1004,15 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def install_input(profile_name, settings, options, env, cwd, install_folder, graph_info_file, client_cache, output):
+def install_input(profile_name, settings, options, env, cwd, install_folder, graph_info_file,
+                  client_cache, output):
     assert not (install_folder and graph_info_file)
     if graph_info_file:
         graph_info_file = _make_abs_path(graph_info_file, cwd)
-        install_folder, filename = os.path.split(graph_info_file)
     else:
-        filename = None
+        graph_info_file = install_folder
     try:
-        graph_info = GraphInfo.load(install_folder, filename)
+        graph_info = GraphInfo.load(graph_info_file)
         graph_info.profile.process_settings(client_cache, preprocess=False)
     except Exception:
         if install_folder:
