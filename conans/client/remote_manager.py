@@ -441,7 +441,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output, clean_macos_do
     tgz_file = files.pop(tgz_name, None)
     check_compressed_files(tgz_name, files)
     if tgz_file:
-        uncompress_file(tgz_file, destination_dir, output=output)
+        uncompress_file(tgz_file, destination_dir,
+                        output=output, clean_macos_dot_files=clean_macos_dot_files)
         os.remove(tgz_file)
 
 
