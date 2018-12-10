@@ -5,6 +5,7 @@ from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
+from conans.errors import ConanException
 
 
 PythonRequire = namedtuple("PythonRequire", "conan_ref module conanfile")
@@ -16,6 +17,7 @@ class ConanPythonRequire(object):
         self._proxy = proxy
         self._range_resolver = range_resolver
         self._requires = None
+        self.valid = True
 
     @contextmanager
     def capture_requires(self):
@@ -49,6 +51,8 @@ class ConanPythonRequire(object):
         return python_require
 
     def __call__(self, require):
+        if not self.valid:
+            raise ConanException("Invalid use of python_requires(%s)" % require)
         python_req = self._look_for_require(require)
         self._requires.append(python_req)
         return python_req.module
