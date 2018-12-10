@@ -308,12 +308,11 @@ class ConanFileEditable(object):
 
                 content = load(self.package_layout_file)
                 base_path = os.path.dirname(self.package_layout_file)
-                data = parse_package_layout_content(content=content, base_path=base_path)
+                data = parse_package_layout_content(content=content, base_path=base_path,
+                                                    settings=self.settings, options=self.options)
 
                  # Replace directories with those in 'data'
                 for key, items in data.items():
-                    items = [p.format(settings=self.settings, options=self.options) for p in items]
-                    # TODO: with f-string instead of format we can put more logic here
                     setattr(cpp_info, key, items)
 
             return package_info
@@ -330,18 +329,19 @@ class ConanFileEditable(object):
         self._package_layout_file = filepath
 
 
-def parse_package_layout_content(content, base_path):
+def parse_package_layout_content(content, base_path, settings=None, options=None):
     """ Returns a dictionary containing information about paths for a CppInfo object: includes,
     libraries, resources, binaries,... """
     ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
 
-    def make_abs(value):
+    def _work_on_value(value, base_path_, settings_, options_):
         value = re.sub(r'\\\\+', r'\\', value)
         value = value.replace('\\', '/')
         isabs = ntpath.isabs(value) or posixpath.isabs(value)
-        if base_path and not isabs:
-            value = os.path.abspath(os.path.join(base_path, value))
+        if base_path_ and not isabs:
+            value = os.path.abspath(os.path.join(base_path_, value))
         value = os.path.normpath(value)
+        value = value.format(settings=settings_, options=options_)
         return value
 
     parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
@@ -349,5 +349,6 @@ def parse_package_layout_content(content, base_path):
     parser.read_string(content)
     for section in ret.keys():
         if section in parser:
-            ret[section] = [make_abs(value) for value in parser[section]]
+            ret[section] = [_work_on_value(value, base_path, settings, options)
+                            for value in parser[section]]
     return ret
