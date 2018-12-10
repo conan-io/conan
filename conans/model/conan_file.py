@@ -306,8 +306,8 @@ class ConanFileEditable(object):
                 self._conanfile.package_info()
                 cpp_info = self._conanfile.cpp_info
 
-                content = load(self.package_layout_file)
-                base_path = os.path.dirname(self.package_layout_file)
+                content = load(self._package_layout_file)
+                base_path = os.path.dirname(self._package_layout_file)
                 data = parse_package_layout_content(content=content, base_path=base_path,
                                                     settings=self.settings, options=self.options)
 
@@ -320,7 +320,7 @@ class ConanFileEditable(object):
         return getattr(self._conanfile, item)
 
     def __setattr__(self, key, value):
-        if key == '_conanfile' or key == '_cpp_info_directories':
+        if key == '_conanfile' or key == '_package_layout_file':
             self.__dict__[key] = value
             return
         setattr(self._conanfile, key, value)
