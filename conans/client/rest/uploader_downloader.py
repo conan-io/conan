@@ -25,7 +25,7 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
-            if response.status_code != 404:
+            if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
         headers = headers or {}
