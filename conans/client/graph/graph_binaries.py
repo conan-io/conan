@@ -5,12 +5,12 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_EDITABLE, BINARY_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
-from conans.model.conan_file import ConanFileEditable, parse_package_layout_content
+from conans.model.conan_file import ConanFileEditable
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, is_dirty, load, clean_dirty
+from conans.util.files import rmdir, is_dirty, clean_dirty
 from conans.util.log import logger
 
 
@@ -83,9 +83,7 @@ class GraphBinariesAnalyzer(object):
             # Gather directories from CONAN_PACKAGE_LAYOUT_FILE
             package_layout = self._client_cache.package_layout(conan_ref)
             package_layout_file = package_layout.editable_package_layout_file()
-            data = parse_package_layout_content(content=load(package_layout_file),
-                                                base_path=os.path.dirname(package_layout_file))
-            conanfile.set_cpp_info_directories(data)
+            conanfile.set_package_layout_file(package_layout_file)
             node.binary = BINARY_EDITABLE
             return
 

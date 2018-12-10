@@ -16,6 +16,7 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
+from conans.util.files import load
 
 
 def create_options(conanfile):
@@ -297,15 +298,20 @@ class ConanFileEditable(object):
     def __init__(self, conanfile):
         assert isinstance(conanfile, ConanFile)
         self._conanfile = conanfile
-        self._cpp_info_directories = None
+        self._package_layout_file = None
 
     def __getattr__(self, item):
         if item == 'package_info':
             def package_info():
                 self._conanfile.package_info()
                 cpp_info = self._conanfile.cpp_info
-                 # Replace directories with those in '_cpp_info_directories'
-                for key, items in self._cpp_info_directories.items():
+
+                content = load(self.package_layout_file)
+                base_path = os.path.dirname(self.package_layout_file)
+                data = parse_package_layout_content(content=content, base_path=base_path)
+
+                 # Replace directories with those in 'data'
+                for key, items in data.items():
                     items = [p.format(settings=self.settings, options=self.options) for p in items]
                     # TODO: with f-string instead of format we can put more logic here
                     setattr(cpp_info, key, items)
@@ -320,11 +326,11 @@ class ConanFileEditable(object):
             return
         setattr(self._conanfile, key, value)
 
-    def set_cpp_info_directories(self, cpp_info_directories):
-        self._cpp_info_directories = cpp_info_directories
+    def set_package_layout_file(self, filepath):
+        self._package_layout_file = filepath
 
 
-def parse_package_layout_content(content, base_path=None):
+def parse_package_layout_content(content, base_path):
     """ Returns a dictionary containing information about paths for a CppInfo object: includes,
     libraries, resources, binaries,... """
     ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
