@@ -18,9 +18,10 @@ class GraphInfo(object):
         self.options = options
 
     @staticmethod
-    def load(folder, filename=None):
-        filename = filename or GRAPH_INFO_FILE
-        p = os.path.join(folder, filename)
+    def load(path):
+        if not path:
+            raise IOError("Invalid path")
+        p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
         return GraphInfo.loads(load(p))
 
     @staticmethod

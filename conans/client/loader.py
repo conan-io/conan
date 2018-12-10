@@ -20,10 +20,7 @@ from conans.util.files import load
 
 
 class ProcessedProfile(object):
-    def __init__(self, profile=None, create_reference=None):
-        if profile is None:  # FIXME: Only for testing interface
-            profile = Profile()
-            profile.processed_settings = Settings()
+    def __init__(self, profile, create_reference=None):
         self._settings = profile.processed_settings
         self._user_options = profile.options.copy()
 

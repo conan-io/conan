@@ -6,10 +6,10 @@ from parameterized.parameterized import parameterized
 
 from conans.client import tools
 from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.loader import ConanFileLoader
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, test_processed_profile
 from conans.util.files import load, save
 
 base_conanfile = '''
@@ -164,7 +164,7 @@ class Pkg(ConanFile):
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        ret = loader.load_conanfile(file_path, None, ProcessedProfile())
+        ret = loader.load_conanfile(file_path, None, test_processed_profile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

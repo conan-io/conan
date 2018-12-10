@@ -22,6 +22,7 @@ from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
+
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
@@ -29,6 +30,7 @@ from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
+from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
@@ -39,7 +41,9 @@ from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.settings import Settings
 from conans.model.version import Version
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                       TESTING_REMOTE_PRIVATE_USER,
@@ -50,6 +54,7 @@ from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -68,6 +73,14 @@ def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
+
+
+def test_processed_profile(profile=None, settings=None):
+    if profile is None:
+        profile = Profile()
+    if profile.processed_settings is None:
+        profile.processed_settings = settings or Settings()
+    return ProcessedProfile(profile=profile)
 
 
 class TestingResponse(object):
