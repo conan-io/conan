@@ -225,8 +225,7 @@ class ConanLib(ConanFile):
 
         client.run("install . --install-folder build --build ")
         client.run("source conanfile.py --install-folder='%s' --source-folder='%s'"
-                   % (build_folder, src_folder),
-                   assert_error=True)
+                   % (build_folder, src_folder))
         self.assertIn("FLAG=FLAG", client.out)
         self.assertIn("MYVAR=foo", client.out)
         self.assertIn("OTHERVAR=bar", client.out)

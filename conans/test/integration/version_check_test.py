@@ -42,11 +42,8 @@ class VersionCheckTest(unittest.TestCase):
                                  users={"default": [("lasote", "mypass")]}, client_version=10,
                                  min_server_compatible_version=1)
 
-        errors = self.client.run("search something -r default", assert_error=True)
-        self.assertNotIn("The conan remote version is outdated (v1). Please, contact"
-                         " with your system administrator and upgrade the remote to"
-                         " avoid deprecation", self.client.user_io.out)
-        self.assertFalse(errors)  # No Errors
+        self.client.run("search something -r default")
+        self.assertNotIn("The conan remote version is outdated (v1)", self.client.user_io.out)
 
         # Server deprecated
         self.servers = {"default": self._get_server(1, 1)}

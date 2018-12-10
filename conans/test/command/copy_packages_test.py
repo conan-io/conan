@@ -37,6 +37,6 @@ class Pkg(ConanFile):
         self.assertEquals(len(packages), 1)
 
         # Copy only recipe
-        client.run("copy Hello0/0.1@lasote/stable pepe/alpha", assert_error=True)
+        client.run("copy Hello0/0.1@lasote/stable pepe/alpha")
         pkgdir = client.paths.packages(ConanFileReference.loads("Hello0/0.1@pepe/alpha"))
         self.assertFalse(os.path.exists(pkgdir))

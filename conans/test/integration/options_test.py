@@ -235,7 +235,7 @@ class LibB(ConanFile):
             client.save({"conanfile.py": conanfile})
 
             # Test info
-            client.run("info . -o *:shared=True", assert_error=True)
+            client.run("info . -o *:shared=True")
             self.assertIn("PROJECT: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
             # Test create

@@ -578,7 +578,7 @@ class ToolsTest(ConanFile):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run("install Consumer/0.1@lasote/stable --build", assert_error=True)
+        client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
