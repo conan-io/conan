@@ -133,7 +133,7 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 if node.recipe == RECIPE_EDITABLE:
-                    node.binary == BINARY_EDITABLE
+                    node.binary = BINARY_EDITABLE
                 else:
                     node.binary = BINARY_CACHE
                     package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
