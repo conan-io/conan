@@ -123,7 +123,7 @@ class MyPackage(ConanFile):
         self.assertNotIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
-        client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=False)
+        client.run("upload Hello0/1.0@lasote/stable --all")
 
         #  --- Build policy to always ---
         files[CONANFILE] = files[CONANFILE].replace("build_policy = 'missing'", "build_policy = 'always'")

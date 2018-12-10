@@ -24,19 +24,17 @@ class VersionCheckTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers,
                                  users={"default": [("lasote", "mypass")]}, client_version=4)
 
-        errors = self.client.run("search something -r default", ignore_error=False)
+        self.client.run("search something -r default")
         self.assertIn(" A new conan version (v10) is available in current remote. Please, "
                       "upgrade conan client to avoid deprecation.", self.client.user_io.out)
-        self.assertFalse(errors)  # Not Errors
 
         # Client ok
         self.servers = {"default": self._get_server(10, 4)}
         self.client = TestClient(servers=self.servers,
                                  users={"default": [("lasote", "mypass")]}, client_version=10)
 
-        errors = self.client.run("search something -r default", ignore_error=False)
+        self.client.run("search something -r default")
         self.assertNotIn("conan client", self.client.user_io.out)
-        self.assertFalse(errors)  # Not Errors
 
         # Server outdated
         self.servers = {"default": self._get_server(1, 1)}

@@ -549,7 +549,7 @@ class ConanLib(ConanFile):
         # Export again but now with absolute reference, so no pointer file is created nor kept
         svn = SVN(curdir)
         self.client.save({"conanfile.py": base_svn.format(url=svn.get_remote_url(), revision=svn.get_revision())})
-        self.client.run("create . user/channel", ignore_error=False)
+        self.client.run("create . user/channel")
         sources_dir = self.client.client_cache.scm_folder(self.reference)
         self.assertFalse(os.path.exists(sources_dir))
         self.assertNotIn("Repo origin deduced by 'auto'", self.client.out)
