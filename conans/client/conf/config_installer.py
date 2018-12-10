@@ -7,6 +7,8 @@ from six.moves.urllib.parse import urlparse
 from conans import load
 from conans.client import tools
 from conans.client.remote_registry import RemoteRegistry, load_registry_txt
+from conans.client.runner import ConanRunner
+from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk
@@ -48,13 +50,11 @@ def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl, ar
     with tools.chdir(tmp_folder):
         try:
             args = args or ""
-            subprocess.check_output('git clone -c http.sslVerify=%s %s "%s" config'
-                                    % (verify_ssl, args, repo_url), shell=True)
+            git = Git(verify_ssl=verify_ssl, output=output)
+            git.clone(repo_url, args=args)
             output.info("Repo cloned!")
         except Exception as e:
             raise ConanException("Can't clone repo: %s" % str(e))
-
-    tmp_folder = os.path.join(tmp_folder, "config")
     _process_folder(tmp_folder, client_cache, output)
 
 
