@@ -924,12 +924,12 @@ class ConanAPIV1(object):
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
-        from conans.client.local_file_getter import get_path
         reference = ConanFileReference.loads(reference)
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote_name:
+            from conans.client.local_file_getter import get_path
             return get_path(self._client_cache, reference, package_id, path), path
         else:
             remote = self.get_remote_by_name(remote_name)
