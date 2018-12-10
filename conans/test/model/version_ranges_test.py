@@ -181,6 +181,7 @@ class SayConan(ConanFile):
 
     def root(self, content, update=False):
         processed_profile = ProcessedProfile()
+        self.loader.cached_conanfiles = {}
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
         return deps_graph

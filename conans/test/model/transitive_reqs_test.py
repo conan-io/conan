@@ -115,6 +115,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def root(self, content):
         processed_profile = ProcessedProfile()
+        self.loader.cached_conanfiles = {}
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              processed_profile)
