@@ -314,7 +314,7 @@ class ConanAPIV1(object):
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
              remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
-             input_lock_file=None, output_lock_file=None):
+             input_graph_info=None, output_graph_info=None):
 
         settings = settings or []
         options = options or []
@@ -322,20 +322,16 @@ class ConanAPIV1(object):
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
-<<<<<<< HEAD
-        profile, graph_lock = install_input(profile_name, settings, options, env, cwd,
-                                            input_lock_file, self._client_cache)
-=======
         graph_info = install_input(profile_name, settings, options, env, cwd, None,
-                                   self._client_cache, self._user_io.out)
->>>>>>> feature/graph_info
+                                   input_graph_info, self._client_cache, self._user_io.out)
+
         reference = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         pt = PackageTester(manager, self._user_io)
         pt.install_build_and_test(conanfile_path, reference, graph_info, remote_name,
                                   update, build_modes=build_modes,
-                                  test_build_folder=test_build_folder, graph_lock=graph_lock,
+                                  test_build_folder=test_build_folder,
                                   output_lock_file=output_lock_file)
 
     @api_method
@@ -1051,24 +1047,15 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-<<<<<<< HEAD
-def install_input(profile_name, settings, options, env, cwd, lock_file, client_cache):
-    if lock_file:
-        if settings or options or profile_name:
-            raise ConanException("Lock file cannot be used with settings, options or profile")
-        lock_file = _make_abs_path(lock_file, cwd)
-        graph_lock = GraphLock.loads(load(lock_file))
-        profile = graph_lock.profile
-        # Here the profile should be allowed to be mixed with new Env values
+def install_input(profile_name, settings, options, env, cwd, install_folder, graph_info_file, client_cache, output):
+    assert not (install_folder and graph_info_file)
+    if graph_info_file:
+        graph_info_file = _make_abs_path(graph_info_file, cwd)
+        install_folder, filename = os.path.split(graph_info_file)
     else:
-        graph_lock = None
-        profile = profile_from_args(profile_name, settings, options, env, cwd, client_cache)
-
-    return profile, graph_lock
-=======
-def install_input(profile_name, settings, options, env, cwd, install_folder, client_cache, output):
+        filename = None
     try:
-        graph_info = GraphInfo.load(install_folder)
+        graph_info = GraphInfo.load(install_folder, filename)
         graph_info.profile.process_settings(client_cache, preprocess=False)
     except Exception:
         if install_folder:
@@ -1087,7 +1074,6 @@ def install_input(profile_name, settings, options, env, cwd, install_folder, cli
         graph_info = GraphInfo(profile=profile)
         # Preprocess settings and convert to real settings
     return graph_info
->>>>>>> feature/graph_info
 
 
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):

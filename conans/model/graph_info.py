@@ -35,6 +35,8 @@ class GraphInfo(object):
             options = None
         else:
             options = OptionsValues(options)
+        
+        graph_lock = GraphLock.loads(load(lock_file))
         return GraphInfo(profile=profile, options=options)
 
     def save(self, folder, filename=None):
