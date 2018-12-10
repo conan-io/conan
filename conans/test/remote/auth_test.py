@@ -109,10 +109,8 @@ class AuthorizeTest(unittest.TestCase):
                                         ]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s" % str(self.conan_reference), assert_error=True)
+        self.conan.run("upload %s" % str(self.conan_reference))
 
-        # Check that return was ok
-        self.assertFalse(errors)
         # Check that upload was granted
         self.assertTrue(os.path.exists(self.test_server.paths.export(self.conan_reference)))
 
