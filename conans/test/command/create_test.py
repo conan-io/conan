@@ -132,8 +132,7 @@ class MyPkg(ConanFile):
     pass
 """
         client.save({"conanfile.py": conanfile})
-        error = client.run("create . Pkg/0.1@lasote/testing --keep-build", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing --keep-build", assert_error=True)
         self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
     def create_test(self):
@@ -171,12 +170,10 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
         # Create with only user will raise an error because of no name/version
-        error = client.run("create conanfile.py lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create conanfile.py lasote/testing", assert_error=True)
         self.assertIn("ERROR: conanfile didn't specify name", client.out)
         # Same with only user, (default testing)
-        error = client.run("create . lasote", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . lasote", assert_error=True)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
@@ -236,8 +233,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
         """})
-        error = client.run("create ./conanfile.py Consumer/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create ./conanfile.py Consumer/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
                       client.out)
 
@@ -251,11 +247,9 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . Hello/1.2@lasote/stable")
-        error = client.run("create ./ Pkg/1.2@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create ./ Pkg/1.2@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe exported with name Pkg!=Hello", client.out)
-        error = client.run("create . Hello/1.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe exported with version 1.1!=1.2", client.out)
 
     def create_user_channel_test(self):
@@ -270,8 +264,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
-        error = client.run("create . lasote", ignore_error=True)  # testing default
-        self.assertTrue(error)
+        client.run("create . lasote", assert_error=True)  # testing default
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 

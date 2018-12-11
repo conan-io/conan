@@ -84,7 +84,7 @@ find_package(Hello0 REQUIRED)
 
 """
         client.save(files, clean_first=True)
-        client.run("create . user/channel -s build_type=Release", ignore_error=True)
+        client.run("create . user/channel -s build_type=Release", assert_error=True)
         self.assertIn("Skipping already existing target: CONAN_LIB::Hello0_helloHello0", client.out)
 
     def cmake_find_package_test(self):

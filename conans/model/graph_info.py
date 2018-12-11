@@ -1,11 +1,11 @@
 import json
 import os
 
+from conans.client.graph.graph_lock_builder import GraphLock
 from conans.client.profile_loader import _load_profile
+from conans.model.options import OptionsValues
 from conans.tools import save
 from conans.util.files import load
-from conans.model.options import OptionsValues
-from conans.client.graph.graph_lock_builder import GraphLock
 
 
 GRAPH_INFO_FILE = "graph_info.json"
@@ -21,6 +21,8 @@ class GraphInfo(object):
 
     @staticmethod
     def load(path):
+        if not path:
+            raise IOError("Invalid path")
         p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
         return GraphInfo.loads(load(p))
 

@@ -59,14 +59,15 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
+        except IOError:  # Only if file is missing
+            # This is very dirty, should be removed for Conan 2.0 (source() method only)
+            profile = self._client_cache.default_profile
+            profile.process_settings(self._client_cache)
+        else:
             profile = graph_info.profile
             profile.process_settings(self._client_cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
-        except Exception:
-            # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._client_cache.default_profile
-            profile.process_settings(self._client_cache)
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,

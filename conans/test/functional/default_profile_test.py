@@ -175,7 +175,7 @@ class MyConanfile(ConanFile):
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
         with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': profile_path}):
-            client.run("create . name/version@user/channel", ignore_error=True)
+            client.run("create . name/version@user/channel", assert_error=True)
             self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                           "an existing profile file.", client.out)
 

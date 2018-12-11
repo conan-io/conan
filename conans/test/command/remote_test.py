@@ -52,13 +52,11 @@ class HelloConan(ConanFile):
         self.client.run('remote list_pref lib/1.0@lasote/channel')
         self.assertIn("%s: remote1" % pref, self.client.out)
 
-
         # Remove from remote2, the reference should be kept there
         self.client.run('remove "lib/1.0@lasote/channel" '
                         '-p %s -f -r remote2' % NO_SETTINGS_PACKAGE_ID)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
         self.assertIn("%s: remote1" % pref, self.client.out)
-
 
         # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
         self.client.run('upload "*" -c -r remote2 --all')
@@ -68,7 +66,6 @@ class HelloConan(ConanFile):
         self.assertIn("%s: remote1" % ref, self.client.out)
         self.client.run('remote list_pref lib/1.0@lasote/channel')
         self.assertIn("%s: remote1" % pref, self.client.out)
-
 
         # Remove package locally
         self.client.run('upload "*" -c -r remote1 --all')
@@ -217,8 +214,7 @@ class HelloConan(ConanFile):
         self.assertIn("Hello/0.1@user/testing: mynewr2", client.out)
 
         # Rename to an existing one
-        error = client.run("remote rename r2 r1", ignore_error=True)
-        self.assertTrue(error)
+        client.run("remote rename r2 r1", assert_error=True)
         self.assertIn("Remote 'r1' already exists", client.out)
 
     def insert_test(self):
@@ -286,9 +282,8 @@ class HelloConan(ConanFile):
 
     def verify_ssl_error_test(self):
         client = TestClient()
-        error = client.run("remote add my-remote http://someurl some_invalid_option=foo",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
+
         self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
                       client.user_io.out)
         data = json.loads(load(client.client_cache.registry))
@@ -296,29 +291,26 @@ class HelloConan(ConanFile):
         self.assertEqual(data["references"], {})
 
     def errors_test(self):
-        self.client.run("remote update origin url", ignore_error=True)
+        self.client.run("remote update origin url", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
 
-        self.client.run("remote remove origin", ignore_error=True)
+        self.client.run("remote remove origin", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
 
     def duplicated_error_tests(self):
         """ check remote name and URL are not duplicated
         """
-        error = self.client.run("remote add remote1 http://otherurl", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("remote add remote1 http://otherurl", assert_error=True)
         self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
                       self.client.user_io.out)
 
         self.client.run("remote list")
         url = str(self.client.user_io.out).split()[1]
-        error = self.client.run("remote add newname %s" % url, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("remote add newname %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL",
                       self.client.user_io.out)
 
-        error = self.client.run("remote update remote1 %s" % url, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("remote update remote1 %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL",
                       self.client.user_io.out)
 

@@ -17,8 +17,7 @@ class BasicClientTest(unittest.TestCase):
         client.run("--version")
         self.assertIn("Conan version %s" % __version__, client.out)
 
-        error = client.run("some_unknown_command123", ignore_error=True)
-        self.assertTrue(error)
+        client.run("some_unknown_command123", assert_error=True)
         self.assertIn("ERROR: Unknown command 'some_unknown_command123'", client.out)
 
     def help_cmd_test(self):
@@ -49,6 +48,5 @@ class BasicClientTest(unittest.TestCase):
 
     def help_cmd_error_test(self):
         client = TestClient()
-        error = client.run("help not-exists", ignore_error=True)
-        self.assertTrue(error)
+        client.run("help not-exists", assert_error=True)
         self.assertIn("ERROR: Unknown command 'not-exists'", client.out)

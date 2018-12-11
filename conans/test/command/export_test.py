@@ -27,7 +27,7 @@ class TestConan(ConanFile):
         client.save(files)
         client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
-        client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
+        client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
@@ -47,16 +47,14 @@ class MyPkg(ConanFile):
 class MyPkg(ConanFile):
     pass
 """})
-        error = client.run("export . lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify name", client.out)
 
         client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
     name="Lib"
 """})
-        error = client.run("export . lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify version", client.out)
 
         client.save({"conanfile.py": """from conans import ConanFile
@@ -72,8 +70,7 @@ class MyPkg(ConanFile):
     name="Lib"
     version="1.0"
 """})
-        error = client.run("export . lasote", ignore_error=True)
-        self.assertTrue(error)
+        client.run("export . lasote", assert_error=True)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
@@ -300,8 +297,7 @@ class ExportTest(unittest.TestCase):
         self.files = cpp_hello_conan_files("hello0", "0.1")
         self.conan_ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
         self.conan.save(self.files)
-        error = self.conan.run("export . lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        self.conan.run("export . lasote/stable", assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case",
                       self.conan.user_io.out)
 
