@@ -76,7 +76,7 @@ class Pkg(ConanFile):
         client.current_folder = build_folder
         client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                    '-s arch=x86')
-        # This raised an error because build_type wasn't defined
+        # Before fixing #2327 this raised an error because build_type wasn't defined
         client.run("build ..")
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
         self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
