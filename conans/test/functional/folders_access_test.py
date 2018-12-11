@@ -149,8 +149,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        error = self.client.run("source .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("source .", assert_error=True)
         self.assertIn("self.deps_user_info not defined. If you need it for a "
                       "local command run 'conan install'", self.client.out)
 
@@ -175,8 +174,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        error = self.client.run("build .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("build .", assert_error=True)
         self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
@@ -195,8 +193,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        error = self.client.run("package .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("package .", assert_error=True)
         self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
         self.client.run("install . --build missing")
@@ -211,8 +208,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        error = self.client.run("imports .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("imports .", assert_error=True)
         self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
     def deploy_test(self):

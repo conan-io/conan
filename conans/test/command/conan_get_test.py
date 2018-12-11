@@ -98,11 +98,10 @@ class HelloConan(ConanFile):
                           self.client.user_io.out)
 
     def test_not_found(self):
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default', ignore_error=True)
+        self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
         self.assertIn("Recipe Hello0/0.1@lasote/channel not found", self.client.user_io.out)
 
-        error = self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
+                        assert_error=True)
         self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found",
                       self.client.user_io.out)

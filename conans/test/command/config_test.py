@@ -25,24 +25,17 @@ class ConfigTest(unittest.TestCase):
         self.assertNotIn("path:", self.client.user_io.out)
 
     def errors_test(self):
-        error = self.client.run("config get whatever", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("config get whatever", assert_error=True)
         self.assertIn("'whatever' is not a section of conan.conf", self.client.user_io.out)
-        error = self.client.run("config get whatever.what", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("config get whatever.what", assert_error=True)
         self.assertIn("'whatever' is not a section of conan.conf", self.client.user_io.out)
-
-        error = self.client.run("config get storage.what", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("config get storage.what", assert_error=True)
         self.assertIn("'what' doesn't exist in [storage]", self.client.user_io.out)
-
-        error = self.client.run('config set proxies=https:', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config set proxies=https:', assert_error=True)
         self.assertIn("You can't set a full section, please specify a key=value",
                       self.client.user_io.out)
 
-        error = self.client.run('config set proxies.http:Value', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config set proxies.http:Value', assert_error=True)
         self.assertIn("Please specify 'key=value'", self.client.user_io.out)
 
     def define_test(self):
