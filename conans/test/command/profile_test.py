@@ -115,13 +115,13 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("OneMyEnv", load(pr_path))
 
         # Remove a non existent key
-        client.run("profile remove settings.os ./MyProfile", ignore_error=True)
+        client.run("profile remove settings.os ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'settings.os' doesn't exist", client.user_io.out)
 
-        client.run("profile remove options.foo ./MyProfile", ignore_error=True)
+        client.run("profile remove options.foo ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'options.foo' doesn't exist", client.user_io.out)
 
-        client.run("profile remove env.foo ./MyProfile", ignore_error=True)
+        client.run("profile remove env.foo ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.user_io.out)
 
     def profile_update_env_test(self):
@@ -155,7 +155,7 @@ class ProfileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "MyProfile2")))
         self.assertIn("os=", load(pr_path))
 
-        client.run("profile new ./MyProfile2 --detect", ignore_error=True)
+        client.run("profile new ./MyProfile2 --detect", assert_error=True)
         self.assertIn("Profile already exists", client.user_io.out)
 
         client.run("profile new MyProfile3")

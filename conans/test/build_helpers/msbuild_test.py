@@ -76,9 +76,8 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
-        error = client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
-                           'compiler="Visual Studio" -s compiler.version=14', ignore_error=True)
-        self.assertTrue(error)
+        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
+                   'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                    '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)

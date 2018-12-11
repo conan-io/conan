@@ -61,7 +61,7 @@ class ProfileTest(unittest.TestCase):
         clang_profile_path = os.path.join(self.client.client_cache.profiles_path, "clang")
         save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
         self.assertIn("Bad syntax", self.client.user_io.out)
 
@@ -71,7 +71,7 @@ class ProfileTest(unittest.TestCase):
         '''
         save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Unrecognized field 'invented'", self.client.user_io.out)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
 
@@ -81,7 +81,7 @@ class ProfileTest(unittest.TestCase):
         '''
         save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'",
                       self.client.user_io.out)
 
@@ -91,7 +91,7 @@ class ProfileTest(unittest.TestCase):
         '''
         save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Error reading 'clang' profile: Invalid env line 'as'",
                       self.client.user_io.out)
 
@@ -101,7 +101,7 @@ class ProfileTest(unittest.TestCase):
         '''
         save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
+                        assert_error=True)
         # stripped "a value"
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.user_io.out)
 
@@ -128,8 +128,7 @@ class ProfileTest(unittest.TestCase):
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
     def install_with_missing_profile_test(self, path):
         self.client.save({CONANFILE: conanfile_scope_env})
-        error = self.client.run('install . -pr "%sscopes_env"' % path, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
 
