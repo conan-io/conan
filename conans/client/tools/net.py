@@ -41,6 +41,10 @@ def ftp_download(ip, filename, login='', password=''):
         with open(filename, 'wb') as f:
             ftp.retrbinary('RETR ' + filename, f.write)
     except Exception as e:
+        try:
+            os.unlink(filename)
+        except OSError:
+            pass
         raise ConanException("Error in FTP download from %s\n%s" % (ip, str(e)))
     finally:
         try:
