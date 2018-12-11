@@ -39,9 +39,9 @@ class Pkg(ConanFile):
             self.client.run("export . lasote/stable")
             expected_output = textwrap.dedent(
                 """\
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'license'. It is recommended to add it as attribute
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'description'. It is recommended to add it as attribute
+                [HOOK - attribute_checker/attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute
+                [HOOK - attribute_checker/attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'license'. It is recommended to add it as attribute
+                [HOOK - attribute_checker/attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'description'. It is recommended to add it as attribute
                 """)
             self.assertIn(expected_output, self.client.user_io.out)
 
