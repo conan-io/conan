@@ -77,6 +77,11 @@ def get_env_context_manager(conanfile, without_python=False):
     return _env_and_python(conanfile)
 
 
+def is_alias_conanfile(conanfile):
+    assert isinstance(conanfile, ConanFile), type(conanfile)
+    return hasattr(conanfile, "alias")
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """

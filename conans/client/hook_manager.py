@@ -10,8 +10,13 @@ from conans.errors import ConanException, NotFoundException
 from conans.util.files import save
 
 attribute_checker_hook = """
+from conans.model.conan_file import is_alias_conanfile
+
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
     # Check basic meta-data
+    if is_alias_conanfile(conanfile):
+        return
+        
     for field in ["url", "license", "description"]:
         field_value = getattr(conanfile, field, None)
         if not field_value:

@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
+from conans.model.conan_file import is_alias_conanfile
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 
@@ -38,7 +39,7 @@ class ConanPythonRequire(object):
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
 
             # Check for alias
-            if getattr(conanfile, "alias", None):
+            if is_alias_conanfile(conanfile):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
