@@ -618,8 +618,12 @@ servers["r2"] = TestServer()
                 sys.modules.pop(added, None)
 
         if (assert_error and not error) or (not assert_error and error):
+            if assert_error:
+                msg = " Command succeeded (failure expected): "
+            else:
+                msg = " Command failed (unexpectedly): "
             exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
-                header='{:-^80}'.format(" Command failed: "),
+                header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
                 cmd=command_line,
