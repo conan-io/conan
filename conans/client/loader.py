@@ -40,10 +40,12 @@ class ConanFileLoader(object):
         self._runner = runner
         self._output = output
         self._python_requires = python_requires
-        sys.modules["conans"].python_requires = python_requires
+        sys.modules["conans"].python_requires = self._python_requires
 
     def load_class(self, conanfile_path):
+        self._python_requires.valid = True
         _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+        self._python_requires.valid = False
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel):
@@ -209,10 +211,6 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def _invalid_python_requires(require):
-    raise ConanException("Invalid use of python_requires(%s)" % require)
-
-
 def parse_conanfile(conanfile_path, python_requires):
     with python_requires.capture_requires() as py_requires:
         module, filename = _parse_conanfile(conanfile_path)
@@ -239,7 +237,6 @@ def _parse_conanfile(conan_file_path):
         with chdir(current_dir):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
-            loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
 
         # These lines are necessary, otherwise local conanfile imports with same name
