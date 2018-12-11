@@ -14,6 +14,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
+from conans.client.graph.graph_lock_builder import GraphLock
 
 
 class ConanManager(object):
@@ -115,6 +116,7 @@ class ConanManager(object):
 
         if output_graph_info:
             folder, filename = os.path.split(output_graph_info)
+            graph_info.graph_lock = GraphLock(deps_graph)
             graph_info.save(folder, filename)
             output.info("Saved graphinfo")
 

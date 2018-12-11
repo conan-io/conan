@@ -245,7 +245,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile % "requires = 'PkgC/0.1@user/channel'"})
 
         client.run("info . -o PkgA:custom_option=2 "
-                   "-o PkgB:custom_option=3 -o PkgC:custom_option=4 --output-loc=options.lock")
+                   "-o PkgB:custom_option=3 -o PkgC:custom_option=4 --output-lock=options.lock")
 
         out = "".join(str(client.out).splitlines())
         self.assertIn("PkgA/0.1@user/channel    ID: ff96d88607d8cfb182c50ad39b2c73b5ef569728",

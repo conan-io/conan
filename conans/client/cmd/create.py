@@ -26,7 +26,7 @@ def get_test_conanfile_path(tf, conanfile_path):
 
 def create(reference, manager, user_io, graph_info, remote_name, update, build_modes,
            manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
-           test_folder, conanfile_path, output_graph_info):
+           test_folder, conanfile_path, output_graph_info=None):
 
     test_conanfile_path = get_test_conanfile_path(test_folder, conanfile_path)
 
