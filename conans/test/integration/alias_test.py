@@ -37,9 +37,7 @@ class Pkg(ConanFile):
 
     def test_alias_different_name(self):
         client = TestClient()
-        error = client.run("alias myalias/1.0@user/channel lib/1.0@user/channel",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("alias myalias/1.0@user/channel lib/1.0@user/channel", assert_error=True)
         self.assertIn("An alias can only be defined to a package with the same name",
                       client.out)
 

@@ -45,7 +45,7 @@ class HelloConan(ConanFile):
         save(self.client.client_cache.settings_path, default_settings)
         # Ensure the runtime setting is not there anymore
         self.client.run('install Hello0/0.1@lasote/channel --build missing -s '
-                        'compiler="Visual Studio" -s compiler.runtime="MDd"', ignore_error=True)
+                        'compiler="Visual Studio" -s compiler.runtime="MDd"', assert_error=True)
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'",
                       self.client.user_io.out)
 
