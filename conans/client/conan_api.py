@@ -444,7 +444,7 @@ class ConanAPIV1(object):
 
             # Checks that no both settings and info files are specified
             graph_info = install_input(profile_name, settings, options, env, cwd, install_folder,
-                                       self._client_cache, self._user_io.out)
+                                       None, self._client_cache, self._user_io.out)
 
             name, version = self._loader.load_name_version(conanfile_path, name, version)
             reference = ConanFileReference(name, version, user, channel)
@@ -661,7 +661,7 @@ class ConanAPIV1(object):
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
              profile_name=None, update=False, install_folder=None, build=None, input_graph_info=None,
-             output_lock_file=None):
+             output_graph_info=None):
 
         reference, graph_info = self._info_get_profile(reference, install_folder, profile_name,
                                                        settings, options, env, input_graph_info)
@@ -669,10 +669,10 @@ class ConanAPIV1(object):
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                   update, False, remote_name,
                                                                   recorder, workspace=None)
-        if output_lock_file:
-            self._user_io.out.info("Saving graph lock file: %s" % output_lock_file)
+        if output_graph_info:
+            self._user_io.out.info("Saving graph-info file: %s" % output_graph_info)
             graph_info.graph_lock = GraphLock(deps_graph)
-            graph_info.save(output_lock_file)
+            graph_info.save(output_graph_info)
 
         return deps_graph, conanfile
 
