@@ -154,8 +154,75 @@ class PkgTest(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4", client.out)
         self.assertIn('base = python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
-        self.assertIn("Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid2_test(self):
+        client = TestClient()
+        reuse = """import conans
+class PkgTest(conans.ConanFile):
+    def source(self):
+        base = conans.python_requires("MyConanfileBase/1.0@lasote/testing")
+"""
+
+        client.save({"conanfile.py": reuse})
+        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4",
                       client.out)
+        self.assertIn('base = conans.python_requires("MyConanfileBase/1.0@lasote/testing',
+                      client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid3_test(self):
+        client = TestClient()
+        reuse = """from conans import ConanFile
+from helpers import my_print
+
+class PkgTest(ConanFile):
+    exports = "helpers.py"
+    def source(self):
+        my_print()
+"""
+        base = """from conans import python_requires
+
+def my_print():
+    base = python_requires("MyConanfileBase/1.0@lasote/testing")
+        """
+
+        client.save({"conanfile.py": reuse, "helpers.py": base})
+        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
+                      client.out)
+        self.assertIn('my_print()', client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid4_test(self):
+        client = TestClient()
+        reuse = """from conans import ConanFile
+from helpers import my_print
+
+class PkgTest(ConanFile):
+    exports = "helpers.py"
+    def source(self):
+        my_print()
+    """
+        base = """import conans
+def my_print():
+    base = conans.python_requires("MyConanfileBase/1.0@lasote/testing")
+            """
+
+        client.save({"conanfile.py": reuse, "helpers.py": base})
+        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
+                      client.out)
+        self.assertIn('my_print()', client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
     def transitive_multiple_reuse_test(self):
         client = TestClient()
