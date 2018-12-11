@@ -4,7 +4,7 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.conan_file import get_env_context_manager
+from conans.model.conan_file import get_env_context_manager, is_alias_conanfile
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.model.workspace import WORKSPACE_FILE
@@ -252,7 +252,7 @@ class DepsGraphBuilder(object):
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
-        if getattr(dep_conanfile, "alias", None):
+        if is_alias_conanfile(dep_conanfile):
             alias_reference = alias_ref or new_ref.copy_clear_rev()
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             aliased[alias_reference] = requirement.conan_reference
