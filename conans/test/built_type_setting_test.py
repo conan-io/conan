@@ -39,15 +39,14 @@ class Pkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[settings]\nbuild_type=Release"})
 
-        # This won't fail, as it has a build_type=None, which is allowed
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("install Pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Release"))
 
-        # This is NOT an error. build_type has a value = None
         client.run("create . Pkg/0.1@lasote/testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Release"))
 
+        # Explicit build_tyep=None
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[settings]\nbuild_type=None"})
@@ -57,6 +56,5 @@ class Pkg(ConanFile):
         client.run("install Pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
-        # This is NOT an error. build_type has a value = None
         client.run("create . Pkg/0.1@lasote/testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))

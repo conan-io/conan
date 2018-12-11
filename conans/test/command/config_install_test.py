@@ -219,15 +219,13 @@ class Pkg(ConanFile):
     def failed_install_repo_test(self):
         """ should install from a git repo
         """
-        error = self.client.run('config install notexistingrepo.git', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config install notexistingrepo.git', assert_error=True)
         self.assertIn("ERROR: config install error. Can't clone repo", self.client.out)
 
     def failed_install_http_test(self):
         """ should install from a http zip
         """
-        error = self.client.run('config install httpnonexisting', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting",
                       self.client.out)
 
@@ -278,8 +276,7 @@ class Pkg(ConanFile):
 
     def force_git_type_test(self):
         client = TestClient()
-        error = client.run('config install httpnonexisting --type=git', ignore_error=True)
-        self.assertTrue(error)
+        client.run('config install httpnonexisting --type=git', assert_error=True)
         self.assertIn("Can't clone repo", client.out)
 
     def reinstall_test(self):
@@ -293,8 +290,7 @@ class Pkg(ConanFile):
     def reinstall_error_test(self):
         """ should use configured URL in conan.conf
         """
-        error = self.client.run("config install", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("config install", assert_error=True)
         self.assertIn("Called config install without arguments", self.client.out)
 
     def removed_credentials_from_url_unit_test(self):

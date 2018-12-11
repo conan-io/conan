@@ -24,8 +24,7 @@ class Pkg(ConanFile):
     settings = "os", "compiler"
 """
         client.save({"conanfile.py": conanfile})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
 
     def custom_compiler_preprocessor_test(self):
@@ -191,8 +190,7 @@ class Test(ConanFile):
                      "test_package/conanfile.py": test})
         default_profile = os.path.join(client.base_folder, ".conan/profiles/default")
         save(default_profile, "[settings]\ncompiler=gcc\ncompiler.version=6.3")
-        error = client.run("create . user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid setting '6.3' is not a valid 'settings.compiler.version'",
                       client.user_io.out)
         client.run("create . user/channel -s compiler=gcc -s compiler.version=7.1")
@@ -273,7 +271,7 @@ class SayConan(ConanFile):
 """
 
         client.save({CONANFILE: content})
-        client.run("install . --build missing", ignore_error=True)
+        client.run("install . --build missing", assert_error=True)
         self.assertIn(str(undefined_value("settings.os")), str(client.user_io.out))
 
     def invalid_settings_test2(self):
@@ -290,7 +288,7 @@ class SayConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
-                   ignore_error=True)
+                   assert_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
                       str(client.user_io.out))
 
@@ -307,7 +305,7 @@ class SayConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
-                   ignore_error=True)
+                   assert_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
                       str(client.user_io.out))
 
@@ -322,7 +320,7 @@ class SayConan(ConanFile):
 """
 
         client.save({CONANFILE: content})
-        client.run("install . --build missing", ignore_error=True)
+        client.run("install . --build missing", assert_error=True)
         self.assertIn("invalid' is not defined",
                       str(client.user_io.out))
 
@@ -338,7 +336,7 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=ChromeOS --build missing", ignore_error=True)
+        client.run("install . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['Android', 'Arduino', 'FreeBSD', 'Linux', 'Macos', 'SunOS',
                                      'Windows', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),

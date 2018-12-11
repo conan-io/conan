@@ -2,9 +2,9 @@ import json
 import os
 
 from conans.client.profile_loader import _load_profile
+from conans.model.options import OptionsValues
 from conans.tools import save
 from conans.util.files import load
-from conans.model.options import OptionsValues
 
 
 GRAPH_INFO_FILE = "graph_info.json"

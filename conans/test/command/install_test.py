@@ -85,7 +85,8 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
         # Prevalence of exact named option reverse
-        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header --build=missing")
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header "
+                   "--build=missing")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
@@ -139,16 +140,13 @@ class Pkg(ConanFile):
 
     def install_error_never_test(self):
         self._create("Hello0", "0.1", export=False)
-        error = self.client.run("install . --build never --build missing", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install . --build never --build missing", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
-        error = self.client.run("install conanfile.py --build never --build Hello", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install conanfile.py --build never --build Hello", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
-        error = self.client.run("install ./conanfile.py --build never --build outdated", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
 
@@ -230,8 +228,8 @@ class Pkg(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
-        self.client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 -o Hello0:language=1 %s"
-                        " --build missing" % self.settings)
+        self.client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 "
+                        "-o Hello0:language=1 %s --build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
@@ -360,14 +358,14 @@ class Pkg(ConanFile):
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
         self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn(message, self.client.user_io.out)
 
         # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
         message = "Cross-build from '%s:x86_64' to '%s:x86_64'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
-        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, assert_error=True)
         self.assertIn(message, self.client.user_io.out)
 
     def install_cwd_test(self):
@@ -430,28 +428,22 @@ class TestConan(ConanFile):
         client.save({"myotherprofile": "Some garbage without sense [garbage]"})
         client.run("install . -pr=myotherprofile")
         self.assertIn("PKGOS=FreeBSD", client.out)
-        error = client.run("install . -pr=./myotherprofile", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install . -pr=./myotherprofile", assert_error=True)
         self.assertIn("Error parsing the profile", client.out)
 
     def install_with_path_errors_test(self):
         client = TestClient()
 
         # Install without path param not allowed
-        error = client.run("install", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
         # Path with wrong conanfile.txt path
-        error = client.run("install not_real_dir/conanfile.txt --install-folder subdir",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("install not_real_dir/conanfile.txt --install-folder subdir", assert_error=True)
         self.assertIn("Conanfile not found", client.out)
 
         # Path with wrong conanfile.py path
-        error = client.run("install not_real_dir/conanfile.py --install-folder build",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("install not_real_dir/conanfile.py --install-folder build", assert_error=True)
         self.assertIn("Conanfile not found", client.out)
 
     def install_broken_reference_test(self):
@@ -467,15 +459,13 @@ class Pkg(ConanFile):
         conan_reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         rmdir(os.path.join(client.client_cache.conan(conan_reference)))
 
-        error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Hello/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Hello/0.1@lasote/stable was not found in remote 'default'",
                       client.out)
 
         # If it was associated, it has to be desasociated
         client.run("remote remove_ref Hello/0.1@lasote/stable")
-        error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Hello/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
                       client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",

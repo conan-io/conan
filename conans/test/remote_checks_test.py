@@ -97,7 +97,7 @@ class Pkg(ConanFile):
 
         # Remove all, install a package for debug
         client.run('remove -f "*"')
-        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', ignore_error=True)
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', assert_error=True)
         # Force binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 
@@ -279,10 +279,8 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Cache", client.out)
 
         # Build missing
-        error = client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3 -r=server2", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3 -r=server2", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'Pkg/0.1@lasote/testing'", client.out)
 
-        error = client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'Pkg/0.1@lasote/testing'", client.out)

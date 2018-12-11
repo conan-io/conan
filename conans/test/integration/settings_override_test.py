@@ -54,7 +54,7 @@ class SettingsOverrideTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
-                        "-s MinGWBuild:missingsetting='gcc' ", ignore_error=True)
+                        "-s MinGWBuild:missingsetting='gcc' ", assert_error=True)
         self.assertIn("settings.missingsetting' doesn't exist", self.client.user_io.out)
 
     def test_override_in_non_existing_recipe(self):

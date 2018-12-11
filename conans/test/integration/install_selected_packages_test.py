@@ -74,7 +74,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.new_client.run("remove Hello* -f -r default")
 
         # Try to install all
-        self.new_client.run("download Hello0/0.1@lasote/stable", ignore_error=True)
+        self.new_client.run("download Hello0/0.1@lasote/stable", assert_error=True)
         self.assertIn("'Hello0/0.1@lasote/stable' not found in remote", self.new_client.user_io.out)
 
         # Upload only the recipe

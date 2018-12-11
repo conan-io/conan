@@ -66,8 +66,7 @@ class RequireOverrideTest(unittest.TestCase):
             self._save_and_export("libC", "1.0", req_method, ["libA/2.0@user/channel"])
             self._save("project", "1.0", req_method, ["libB/1.0@user/channel",
                                                       "libC/1.0@user/channel"])
-            error = self.client.run("create . user/channel", ignore_error=True)
-            self.assertTrue(error)
+            self.client.run("create . user/channel", assert_error=True)
             self.assertIn("Requirement libA/2.0@user/channel conflicts with "
                           "already defined libA/1.0@user/channel", self.client.out)
 
