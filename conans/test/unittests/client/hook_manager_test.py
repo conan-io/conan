@@ -66,13 +66,13 @@ class HookManagerTest(unittest.TestCase):
         hook_path = os.path.join(temp_dir, "my_hook.py")
         save(os.path.join(temp_dir, "my_hook.py"), my_hook)
         output = TestBufferConanOutput()
-        hook_manager = HookManager(temp_dir, ["my_hook"], output)
+        hook_manager = HookManager(temp_dir, ["my_hook.py"], output)
         return hook_manager, output, hook_path
 
     def load_test(self):
         hook_manager, output, _ = self._init()
         self.assertEqual({}, hook_manager.hooks)
-        self.assertEqual(["my_hook"], hook_manager._hook_names)
+        self.assertEqual(["my_hook.py"], hook_manager._hook_names)
         hook_manager.load_hooks()
         self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
 
@@ -82,7 +82,7 @@ class HookManagerTest(unittest.TestCase):
         methods = hook_manager.hooks.keys()
         for method in methods:
             hook_manager.execute(method)
-            self.assertIn("[HOOK - my_hook] %s(): %s()" % (method, method), output)
+            self.assertIn("[HOOK - my_hook.py] %s(): %s()" % (method, method), output)
 
     def no_error_with_no_method_test(self):
         hook_manager, output, hook_path = self._init()
@@ -110,4 +110,4 @@ def pre_build(output, **kwargs):
         try:
             hook_manager.execute("pre_build")
         except ConanException as e:
-            self.assertIn("[HOOK - my_hook] pre_build(): My custom exception", str(e))
+            self.assertIn("[HOOK - my_hook.py] pre_build(): My custom exception", str(e))
