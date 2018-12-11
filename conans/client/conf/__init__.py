@@ -141,7 +141,7 @@ path = ~/.conan/data
 # no_proxy_match = *bintray.com*, https://myserver.*
 
 [hooks]    # environment CONAN_HOOKS
-attribute_checker
+attribute_checker/attribute_checker.py
 
 # Default settings now declared in the default profile
 
