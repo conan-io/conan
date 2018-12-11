@@ -29,8 +29,7 @@ class XZTest(TestCase):
                             "conan_export.txz": "#"})
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
-        error = client.run("install Pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
 
@@ -49,8 +48,7 @@ class Pkg(ConanFile):
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1",
                             "conan_sources.txz": "#"})
-        error = client.run("install Pkg/0.1@user/channel --build", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@user/channel --build", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_sources.txz' file format", client.out)
 
@@ -76,8 +74,7 @@ class Pkg(ConanFile):
         save_files(package, {"conaninfo.txt": "#",
                              "conanmanifest.txt": "1",
                              "conan_package.txz": "#"})
-        error = client.run("install Pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_package.txz' file format", client.out)
 

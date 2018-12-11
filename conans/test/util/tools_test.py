@@ -1620,7 +1620,7 @@ class HelloConan(ConanFile):
         assert(os.path.exists("file.h"))
 """ % git_repo.replace("\\", "/")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel", ignore_error=True)
+        client.run("create . user/channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
 

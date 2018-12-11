@@ -84,7 +84,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd"  # Do not exist
         client2 = TestClient(servers=servers, users=self.users)
-        err = client2.run("install MyLib/0.1@conan/testing --build=missing", ignore_error=True)
+        err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
@@ -143,8 +143,7 @@ class ConanFileToolsTest(ConanFile):
 
         self.servers.pop("remote1")
         # Now install it from a client, it won't find the binary in remote2
-        error = self.client.run("install %s" % ref, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s" % ref, assert_error=True)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
         self.assertNotIn("remote2", self.client.out)
 

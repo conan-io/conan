@@ -101,6 +101,7 @@ conan_vars_tool_linx64 = """[settings]
   arch_build=x86_64
 """
 
+
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -281,8 +282,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEquals("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
-        error = self.client.run("search Hello/1.4.10@myuser/test", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
         self.assertEquals("ERROR: Recipe not found: Hello/1.4.10@myuser/test\n", self.client.out)
 
     def search_raw_test(self):
@@ -316,12 +316,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(html.count("<td>Windows Visual Studio 8.1</td>"), 2)
 
     def search_html_table_with_no_reference_test(self):
-        self.client.run("search Hello* --table=table.html", ignore_error=True)
+        self.client.run("search Hello* --table=table.html", assert_error=True)
         self.assertIn("ERROR: '--table' argument can only be used with a reference",
                       self.client.out)
 
     def package_search_with_invalid_reference_test(self):
-        self.client.run("search Hello -q 'a=1'", ignore_error=True)
+        self.client.run("search Hello -q 'a=1'", assert_error=True)
         self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.out))
 
     def package_search_with_empty_query_test(self):
@@ -517,27 +517,27 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
 
     def package_search_with_invalid_query_test(self):
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'invalid'", ignore_error=True)
+        self.client.run("search Hello/1.4.10@myuser/testing -q 'invalid'", assert_error=True)
         self.assertIn("Invalid package query: invalid", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os= 3'", ignore_error=True)
+        self.client.run("search Hello/1.4.10@myuser/testing -q 'os= 3'", assert_error=True)
         self.assertIn("Invalid package query: os= 3", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 FAKE '", ignore_error=True)
+        self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 FAKE '", assert_error=True)
         self.assertIn("Invalid package query: os=3 FAKE ", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 os.compiler=4'",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/testing -q 'not os=3 AND os.compiler=4'",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Invalid package query: not os=3 AND os.compiler=4. "
                       "'not' operator is not allowed",
                       self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 AND !os.compiler=4'",
-                        ignore_error=True)
+                        assert_error=True)
         self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed",
                       self.client.out)
 
@@ -632,32 +632,27 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_with_no_local_test(self):
         client = TestClient()
-        error = client.run("search nonexist/1.0@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("search nonexist/1.0@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: nonexist/1.0@lasote/stable", client.out)
 
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
         os.remove(os.path.join(client.client_cache.registry))
-        error = client.run("search nonexist/1.0@lasote/stable -r=myremote", ignore_error=True)
-        self.assertTrue(error)
+        client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
     def search_json_test(self):
         # Test invalid arguments
-        error = self.client.run("search h* -r all --json search.json --table table.html",
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("search h* -r all --json search.json --table table.html", assert_error=True)
         self.assertIn("'--table' argument cannot be used together with '--json'", self.client.out)
         json_path = os.path.join(self.client.current_folder, "search.json")
         self.assertFalse(os.path.exists(json_path))
 
         # Test search packages for unknown reference
-        error = self.client.run("search fake/0.1@danimtb/testing --json search.json",
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("search fake/0.1@danimtb/testing --json search.json", assert_error=True)
+
         json_path = os.path.join(self.client.current_folder, "search.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
@@ -1043,8 +1038,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(expected_output, output)
 
     def search_packages_with_reference_not_exported_test(self):
-        error = self.client.run("search my_pkg/1.0@conan/stable", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
 
     def initial_search_without_registry_test(self):
