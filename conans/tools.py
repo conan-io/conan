@@ -27,9 +27,6 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     to_file_bytes, touch
 from conans.util.log import logger
 
-# Keep this list up to date with docs
-__all__ = ["mango-django", ]
-
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
