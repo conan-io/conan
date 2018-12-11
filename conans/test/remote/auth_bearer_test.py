@@ -93,7 +93,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         # Upload will fail, as conan_server is expecting a signed URL
-        errors = client.run("upload Hello/0.1@lasote/stable", ignore_error=True)
+        errors = client.run("upload Hello/0.1@lasote/stable", assert_error=True)
         self.assertTrue(errors)
 
         expected_calls = [('ping', None),

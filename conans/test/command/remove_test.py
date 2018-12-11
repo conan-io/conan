@@ -321,7 +321,7 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remote_build_error_test(self):
-        self.client.run("remove hello/* -b -r=default", ignore_error=True)
+        self.client.run("remove hello/* -b -r=default", assert_error=True)
         self.assertIn("Remotes don't have 'build' or 'src' folder", self.client.user_io.out)
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

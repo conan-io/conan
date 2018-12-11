@@ -156,13 +156,10 @@ class Pkg(ConanFile):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
 
-        error = client.run("install . --profile ./profile.txt", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install . --profile ./profile.txt", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
                       client.user_io.out)
-        error = client.run("install . --profile ./profile.txt --build=PythonTool",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
                       client.user_io.out)
         client.run("install . --profile ./profile.txt --build=*Tool")

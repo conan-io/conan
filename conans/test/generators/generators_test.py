@@ -16,8 +16,7 @@ unknown
 '''
         client = TestClient()
         client.save({"conanfile.txt": base})
-        error = client.run("install . --build", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install . --build", assert_error=True)
         self.assertIn("ERROR: Invalid generator 'unknown'. Available types:", client.out)
 
     def test_base(self):

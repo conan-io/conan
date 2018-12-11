@@ -19,8 +19,7 @@ class Pkg(ConanFile):
     requires = "Pkg/1.0.x@user/testing"
 """
         client.save({"conanfile.py": conanfile})
-        error = client.run("info .", ignore_error=True)
-        self.assertTrue(error)
+        client.run("info .", assert_error=True)
         self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
         client.run("search")
         self.assertIn("There are no packages", client.out)
@@ -96,9 +95,9 @@ class MyTest(ConanFile):
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
         # Both should raise
-        error = client.run("info . --install-folder=MyInstall -s build_type=Release",
-                           ignore_error=True)  # Re-uses debug from MyInstall folder
-        self.assertTrue(error)
+        client.run("info . --install-folder=MyInstall -s build_type=Release",
+                   assert_error=True)  # Re-uses debug from MyInstall folder
+
         self.assertIn("--install-folder cannot be used together with -s, -o, -e or -pr", client.out)
 
     def graph_test(self):
@@ -162,8 +161,7 @@ class MyTest(ConanFile):
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
 
         # default case - file will be named graph.dot
-        error = self.client.run("info . --graph", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("info . --graph", assert_error=True)
 
         # arbitrary case - file will be named according to argument
         arg_filename = "test.dot"
@@ -244,11 +242,11 @@ class AConan(ConanFile):
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date"], lines)
 
-        self.client.run("info . --only=invalid", ignore_error=True)
+        self.client.run("info . --only=invalid", assert_error=True)
         self.assertIn("Invalid --only value", self.client.out)
         self.assertNotIn("with --path specified, allowed values:", self.client.out)
 
-        self.client.run("info . --paths --only=bad", ignore_error=True)
+        self.client.run("info . --paths --only=bad", assert_error=True)
         self.assertIn("Invalid --only value", self.client.out)
         self.assertIn("with --path specified, allowed values:", self.client.out)
 
@@ -381,7 +379,8 @@ class MyTest(ConanFile):
         self.assertEqual("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n",
                          self.client.user_io.out)
 
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json=file.json")
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
+                        "--json=file.json")
         self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
                          load(os.path.join(self.client.current_folder, "file.json")))
 
@@ -474,13 +473,13 @@ class AConan(ConanFile):
     def wrong_path_parameter_test(self):
         self.client = TestClient()
 
-        self.client.run("info", ignore_error=True)
+        self.client.run("info", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
 
-        self.client.run("info not_real_path", ignore_error=True)
+        self.client.run("info not_real_path", assert_error=True)
         self.assertIn("ERROR: Conanfile not found", self.client.out)
 
-        self.client.run("info conanfile.txt", ignore_error=True)
+        self.client.run("info conanfile.txt", assert_error=True)
         self.assertIn("ERROR: Conanfile not found", self.client.out)
 
     def test_common_attributes(self):
