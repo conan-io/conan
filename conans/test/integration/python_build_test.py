@@ -165,8 +165,7 @@ class PkgTest(conans.ConanFile):
 """
 
         client.save({"conanfile.py": reuse})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4",
                       client.out)
         self.assertIn('base = conans.python_requires("MyConanfileBase/1.0@lasote/testing',
@@ -191,8 +190,7 @@ def my_print():
         """
 
         client.save({"conanfile.py": reuse, "helpers.py": base})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
                       client.out)
         self.assertIn('my_print()', client.out)
@@ -215,8 +213,7 @@ def my_print():
             """
 
         client.save({"conanfile.py": reuse, "helpers.py": base})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
                       client.out)
         self.assertIn('my_print()', client.out)
