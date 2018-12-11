@@ -113,26 +113,27 @@ def _process_download(item, client_cache, output, tmp_folder, verify_ssl, reques
 
 def configuration_install(path_or_url, client_cache, output, verify_ssl, requester,
                           config_type=None, args=None):
+    if path_or_url is None:
+        try:
+            item = client_cache.conan_config.get_item("general.config_install")
+            _config_type, path_or_url, _args = _process_config_install_item(item)
+        except ConanException:
+            raise ConanException("Called config install without arguments and "
+                                 "'general.config_install' not defined in conan.conf")
+    else:
+        _config_type, path_or_url, _args = _process_config_install_item(path_or_url)
+
+    config_type = config_type or _config_type
+    args = args or _args
+
+    if os.path.exists(path_or_url):
+        path_or_url = os.path.abspath(path_or_url)
+
     tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
     mkdir(tmp_folder)
     try:
-        if path_or_url is None:
-            try:
-                item = client_cache.conan_config.get_item("general.config_install")
-                _config_type, path_or_url, _args = _process_config_install_item(item)
-            except ConanException:
-                raise ConanException("Called config install without arguments and "
-                                     "'general.config_install' not defined in conan.conf")
-        else:
-            _config_type, path_or_url, _args = _process_config_install_item(path_or_url)
-
-        config_type = config_type or _config_type
-        args = args or _args
-
-        if os.path.exists(path_or_url):
-            path_or_url = os.path.abspath(path_or_url)
 
         if config_type == "git":
             _process_git_repo(path_or_url, client_cache, output, tmp_folder, verify_ssl, args)
@@ -149,12 +150,22 @@ def configuration_install(path_or_url, client_cache, output, verify_ssl, request
         else:
             raise ConanException("Unable to process config install: %s" % path_or_url)
     finally:
-        value = "%s:[%s, %s]" % (config_type, path_or_url, args)
-        client_cache.conan_config.set_item("general.config_install", value)
+        if config_type is not None and path_or_url is not None:
+            value = "%s:[%s, %s]" % (config_type, path_or_url, args)
+            client_cache.conan_config.set_item("general.config_install", value)
         rmdir(tmp_folder)
 
 
 def _process_config_install_item(item):
+    """
+    Processes a config_install item and outputs a tuple with the configuration type, the path/url
+    and additional args
+
+    :param item: config_install item value from conan.conf with a simple path/url or a string
+    following this pattern: "<config_type>:[<path_or_url>, <args>]"
+    :return: configuration source type (git, url, dir or file), path to file/dir or git/http url and
+    additional arguments
+    """
     config_type, path_or_url, args = None, None, None
     if not item.startswith(("git:", "dir:", "url:", "file:")):
         path_or_url = item
