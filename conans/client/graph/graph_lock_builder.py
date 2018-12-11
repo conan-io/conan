@@ -124,6 +124,8 @@ class GraphLock(object):
 
     @staticmethod
     def load_json(graph_json):
+        if graph_json is None:
+            return None
         # FIXME: Reading private very ugly
         graph_lock = GraphLock(DepsGraph())
         for id_, graph_node in graph_json.items():
