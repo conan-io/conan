@@ -30,11 +30,9 @@ class TgzMacosDotFilesTest(unittest.TestCase):
 
             # Compress all files, add meta-data to one of them
             for f in files:
-                subprocess.check_output(["touch", f], stderr=subprocess.STDOUT)
-            subprocess.check_output(["xattr", "-w", "name", "value", actual_file],
-                                    stderr=subprocess.STDOUT)
-            subprocess.check_output(["tar", "-zcvf", compressed_file, "-C", src_folder, "."],
-                                    stderr=subprocess.STDOUT)
+                subprocess.call(["touch", f])
+            subprocess.call(["xattr", "-w", "name", "value", actual_file])
+            subprocess.call(["tar", "-zcvf", compressed_file, "-C", src_folder, "."])
 
             # Check that the offending file is in place
             tar = tarfile.open(compressed_file)
