@@ -1,14 +1,15 @@
 # coding=utf-8
 
-import unittest
-import textwrap
-import tempfile
-import shutil
-import uuid
 import os
-from conans.client.tools import save
+import shutil
+import tempfile
+import textwrap
+import unittest
+import uuid
+
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.tools import save
 from conans.model.conan_file import is_alias_conanfile
 
 

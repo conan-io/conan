@@ -1,16 +1,17 @@
 # coding=utf-8
 
 import os
-import unittest
-import tempfile
 import shutil
+import tempfile
 import textwrap
+import unittest
+
 from parameterized import parameterized
 
-from conans.client.hook_manager import HookManager, attribute_checker_hook
-from conans.test.utils.tools import TestBufferConanOutput, save
 from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.hook_manager import HookManager
 from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.test.utils.tools import TestBufferConanOutput, save
 
 
 class AttributeCheckerTest(unittest.TestCase):
@@ -24,7 +25,7 @@ class AttributeCheckerTest(unittest.TestCase):
     conanfile_alias = conanfile_base.format(placeholder='alias = "something"')
 
     def run(self, *args, **kwargs):
-        hooks_folder = tempfile.mkdtemp(suffix='_hooks')
+        hooks_folder = tempfile.mkdtemp()
         self.tmp_folder = tempfile.mkdtemp()
         try:
             output = TestBufferConanOutput()
