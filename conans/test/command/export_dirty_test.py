@@ -21,13 +21,13 @@ class Pkg(ConanFile):
         raise Exception("boom")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/1.0@user/channel", should_error=True)
+        client.run("create . pkg/1.0@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         # Check that we can debug and see the folder
         self.assertEqual(load(os.path.join(client.client_cache.source(ref), "somefile.txt")),
                          "hello world!!!")
-        client.run("create . pkg/1.0@user/channel", should_error=True)
+        client.run("create . pkg/1.0@user/channel", assert_error=True)
         self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
                       client.out)
         client.save({"conanfile.py": conanfile.replace("source(", "source2(")})
@@ -66,7 +66,7 @@ class ExportDirtyTest(unittest.TestCase):
                       "Will be marked as corrupted for deletion",
                       self.client.user_io.out)
 
-        err = self.client.run("install Hello0/0.1@lasote/stable --build", ignore_error=True)
+        err = self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
         self.assertTrue(err)
         self.assertIn("ERROR: Unable to remove source folder", self.client.user_io.out)
 

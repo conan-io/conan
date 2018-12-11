@@ -194,9 +194,10 @@ class AConan(ConanFile):
         # Try different source
         with client.chdir("other/build"):
             client.run("install ../..")
-        error = client.run("build . --source-folder '%s' --build-folder other/build" %
-                           os.path.join(client.current_folder, "mysrc"), ignore_error=True)
-        self.assertTrue(error)  # src is not created automatically, it makes no sense
+        # src is not created automatically, it makes no sense
+        client.run("build . --source-folder '%s' --build-folder other/build" %
+                   os.path.join(client.current_folder, "mysrc"), assert_error=True)
+
         mkdir(os.path.join(client.current_folder, "mysrc"))
 
         client.run("build . --source-folder '%s' --build-folder other/build"
