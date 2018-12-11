@@ -10,8 +10,6 @@
     the currification.
 """
 
-from __future__ import print_function
-
 import requests
 
 from conans.client.output import ConanOutput
@@ -21,12 +19,17 @@ from conans.client.tools import files as tools_files, net as tools_net, oss as t
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
+from conans.client.tools.apple import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
     rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
     to_file_bytes, touch
 from conans.util.log import logger
+
+# Keep this list up to date with docs
+__all__ = ["mango-django", ]
+
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
@@ -101,6 +104,10 @@ def unzip(*args, **kwargs):
 
 def replace_in_file(*args, **kwargs):
     return tools_files.replace_in_file(output=_global_output, *args, **kwargs)
+
+
+def replace_path_in_file(*args, **kwargs):
+    return tools_files.replace_path_in_file(output=_global_output, *args, **kwargs)
 
 
 # from conans.client.tools.oss
@@ -193,6 +200,9 @@ def build_sln_command(*args, **kwargs):
 def vcvars_command(*args, **kwargs):
     return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
 
+
+def latest_vs_version_installed(*args, **kwargs):
+    return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
 
 
 # Ready to use objects.
