@@ -37,8 +37,6 @@ class PackageEditableLayout(object):
         assert isinstance(package_reference, PackageReference)
         assert package_reference.conan == self._conan_ref
         raise RuntimeError("Cannot retrieve this path for an editable package")
-        return self.conan()
-        return os.path.join(self.conan(), "package_reference")
 
     def package_metadata(self):
         # FIXME: I know that downstream there is an except for this
