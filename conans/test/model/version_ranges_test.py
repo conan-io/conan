@@ -3,6 +3,7 @@ from collections import Counter, namedtuple
 
 from parameterized import parameterized
 
+from conans.paths.simple_paths import SimplePaths
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver, satisfying
@@ -10,7 +11,6 @@ from conans.client.loader import ConanFileLoader, ProcessedProfile
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.paths import SimplePaths
 from conans.test.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput
 

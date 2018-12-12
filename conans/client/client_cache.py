@@ -15,7 +15,8 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import CONAN_MANIFEST, PUT_HEADERS, SimplePaths, check_ref_case
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS
+from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
@@ -244,7 +245,6 @@ class ClientCache(SimplePaths):
         """conan_id = sha(zip file)"""
         assert isinstance(conan_reference, ConanFileReference)
         export_folder = self.export(conan_reference)
-        check_ref_case(conan_reference, export_folder, self.store)
         return FileTreeManifest.load(export_folder)
 
     def load_package_manifest(self, package_reference):

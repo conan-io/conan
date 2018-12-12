@@ -4,7 +4,7 @@ import shutil
 import time
 
 from conans import SERVER_CAPABILITIES
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
