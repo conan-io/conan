@@ -1,7 +1,9 @@
 // ########## CONFIGURATION ##################
 def full_py_vers = false
 def test_revisions = false
-// ############################
+// ###########################################
+
+echo "Starting ${env.JOB_NAME} with branch ${env.BRANCH_NAME}"
 
 if(env.JOB_NAME == "ConanNightly"){
     full_py_vers = true
@@ -25,7 +27,6 @@ if (full_py_vers){
 }
 
 
-
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
@@ -36,22 +37,6 @@ def runner = ".ci/jenkins/runner.py"
 def commit
 def branch
 
-
-node("master"){
-    stage("Check PR info"){
-        def pr_number
-        def vars = checkout scm
-        branch = vars["GIT_BRANCH"]
-        if(branch.startsWith("PR-"){
-            pr_number = branch.substring(3)
-            withCredentials([string(credentialsId: 'GH_TOKEN', variable: 'GH_TOKEN')]) {
-                def cmd = "python pr_info.py > exclude_tags.txt"
-                sh(script: cmd)
-                def tags_exclude=readFile('exclude_tags.txt').trim()
-            }
-        }
-    }
-}
 
 try{
     for (flavor in flavors){
@@ -103,14 +88,14 @@ try{
                             if(slave == "Linux"){
                                 sh "docker pull lasote/conantests"
                                 docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor}")
+                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
                                 }
                             }
                             else if(slave == "Windows"){
                                 try{
 
                                   withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores} --flavor ${flavor}")
+                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
                                   }
                                 }
                                 finally{
@@ -121,7 +106,7 @@ try{
                             else if(slave == "Macos"){
                                 try{
                                   withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor}")
+                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
                                   }
                                 }
                                 finally{
@@ -206,12 +191,4 @@ if(env.JOB_NAME == "ConanNightly"){
     def subject = "SUCCESS ${env.JOB_NAME}! Another day with a green ${branch}!"
     def summary = "${subject} (${env.BUILD_URL})"
     slackSend (color: '#00FF00', message: summary)
-}
-
-
-def build_linux(){
-    sh "docker pull lasote/conantests"
-    docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-        sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
-    }
 }
