@@ -36,6 +36,23 @@ def runner = ".ci/jenkins/runner.py"
 def commit
 def branch
 
+
+node("master"){
+    stage("Check PR info"){
+        def pr_number
+        def vars = checkout scm
+        branch = vars["GIT_BRANCH"]
+        if(branch.startsWith("PR-"){
+            pr_number = branch.substring(3)
+            withCredentials([string(credentialsId: 'GH_TOKEN', variable: 'GH_TOKEN')]) {
+                def cmd = "python pr_info.py > exclude_tags.txt"
+                sh(script: cmd)
+                def tags_exclude=readFile('exclude_tags.txt').trim()
+            }
+        }
+    }
+}
+
 try{
     for (flavor in flavors){
         def builders = [:]
