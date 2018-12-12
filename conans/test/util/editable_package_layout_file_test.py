@@ -129,9 +129,3 @@ C:\\{settings.compiler}\\include\\
                       includedirs)
         self.assertIn(os.path.join('C:' + os.sep, 'Visual Studio', 'include'), includedirs)
         self.assertIn(os.path.join(os.sep, 'usr', 'path with spaces', 'Visual Studio', 'dir'), includedirs)
-
-
-# TODO: Add tests with interpolations:
-#   https://docs.python.org/3/library/configparser.html#interpolation-of-values
-
-# TODO: Add tests with conditionals inside f-strings
