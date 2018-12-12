@@ -645,9 +645,9 @@ class ConanAPIV1(object):
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, remote_name=None, check_updates=None,
                             install_folder=None, input_graph_info=None):
-
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env, input_graph_info)
+
         recorder = ActionRecorder()
         deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info,
                                                                   build_modes, check_updates,
@@ -1013,12 +1013,12 @@ def get_graph_info(profile_name, settings, options, env, cwd, install_folder, gr
         graph_info_file = install_folder
 
     try:
-        graph_info = GraphInfo.load(graph_info_file)
+        graph_info = GraphInfo.load(install_folder)
         graph_info.profile.process_settings(client_cache, preprocess=False)
     except IOError:  # Only if file is missing
-        if graph_info_file:
+        if install_folder:
             raise ConanException("Failed to load graphinfo file in install-folder: %s"
-                                 % graph_info_file)
+                                 % install_folder)
         graph_info = None
 
     if profile_name or settings or options or profile_name or env or not graph_info:

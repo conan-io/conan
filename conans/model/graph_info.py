@@ -52,5 +52,6 @@ class GraphInfo(object):
         result = {"profile": self.profile.dumps()}
         if self.options is not None:
             result["options"] = self.options.as_list()
+
         result["lock"] = self.graph_lock.dump_json() if self.graph_lock else None
         return json.dumps(result, indent=True)

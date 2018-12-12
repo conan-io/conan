@@ -162,16 +162,16 @@ class GraphManager(object):
                                       processed_profile=processed_profile,
                                       graph_lock=graph_lock)
 
+        # THIS IS NECESSARY to store dependencies options in profile, for consumer
+        # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
+        graph_info.options = root_node.conanfile.options.values
+
         version_ranges_output = self._resolver.output
         if version_ranges_output:
             self._output.success("Version ranges solved")
             for msg in version_ranges_output:
                 self._output.info("    %s" % msg)
             self._output.writeln("")
-
-        # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
-        graph_info.options = root_node.conanfile.options.values
 
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
