@@ -10,8 +10,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, is_dirty, clean_dirty
-from conans.util.log import logger
+from conans.util.files import rmdir, is_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -104,11 +103,8 @@ class GraphBinariesAnalyzer(object):
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                if not node.recipe == RECIPE_EDITABLE:
-                    rmdir(package_folder)  # Do not remove if it is EDITABLE
-                else:
-                    logger.error("Editable package folder is dirty")  # It should raise
-                    clean_dirty(package_folder)
+                assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
+                rmdir(package_folder)  # Do not remove if it is EDITABLE
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
@@ -131,11 +127,10 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.warn("Can't update, no remote defined")
             if not node.binary:
-                if node.recipe == RECIPE_EDITABLE:
-                    node.binary == BINARY_EDITABLE
-                else:
-                    node.binary = BINARY_CACHE
-                    package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
+                assert node.recipe != RECIPE_EDITABLE, "Unexpected editable recipe here"
+                node.binary = BINARY_CACHE
+                package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
+
         else:  # Binary does NOT exist locally
             if not revisions_enabled and not node.revision_pinned:
                 # Do not search for packages for the specific resolved recipe revision but all
