@@ -5,7 +5,7 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.conf import default_settings_yml
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.model.profile import Profile
@@ -14,7 +14,8 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.model.fake_retriever import Retriever
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
+    test_processed_profile
 
 say_content = """
 from conans import ConanFile
@@ -114,7 +115,7 @@ class ConanRequirementsTest(unittest.TestCase):
                                         MockRequireResolver(), None, None)
 
     def root(self, content):
-        processed_profile = ProcessedProfile()
+        processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              processed_profile)
@@ -1513,7 +1514,7 @@ class ConsumerConan(ConanFile):
         self.retriever.conan(libd_ref, self.libd_content)
 
     def root(self, content):
-        processed_profile = ProcessedProfile()
+        processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
@@ -1625,12 +1626,12 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         profile = Profile()
+        profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
-        processed_profile = ProcessedProfile(settings=full_settings,
-                                             profile=profile)
+        processed_profile = test_processed_profile(profile=profile)
         root_conan = retriever.root(content, processed_profile)
         deps_graph = builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
@@ -1910,6 +1911,7 @@ class ChatConan(ConanFile):
 """
         output = TestBufferConanOutput()
         profile = Profile()
+        profile.processed_settings = Settings()
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
@@ -1919,7 +1921,7 @@ class ChatConan(ConanFile):
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
-        processed_profile = ProcessedProfile(profile=profile)
+        processed_profile = test_processed_profile(profile=profile)
         root_conan = retriever.root(chat_content, processed_profile)
         deps_graph = builder.load_graph(root_conan, False, False, None,
                                         processed_profile=processed_profile)
