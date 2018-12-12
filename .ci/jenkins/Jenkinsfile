@@ -3,8 +3,6 @@ def full_py_vers = false
 def test_revisions = false
 // ###########################################
 
-echo "Starting ${env.JOB_NAME} with branch ${env.BRANCH_NAME}"
-
 if(env.JOB_NAME == "ConanNightly"){
     full_py_vers = true
     test_revisions = true
@@ -14,7 +12,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_py_vers = true
 }
 
-def slaves = ['Linux', 'Windows', 'Macos']
+
 def flavors = ["blocked_v2"]
 if(test_revisions){
     flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
@@ -38,6 +36,7 @@ def commit
 def branch
 
 
+def slaves = ['Linux', 'Windows', 'Macos']
 try{
     for (flavor in flavors){
         def builders = [:]
@@ -66,6 +65,7 @@ try{
                                 def vars = checkout scm
                                 commit = vars["GIT_COMMIT"].substring(0, 4)
                                 branch = vars["GIT_BRANCH"]
+                                echo "Starting ${env.JOB_NAME} with branch ${env.BRANCH_NAME}"
                                 def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
                                 workdir = "${base_dir}${commit}/${pyver}/${flavor}"
                                 base_source = "${base_dir}source/${commit}"
