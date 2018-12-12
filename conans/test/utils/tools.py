@@ -484,7 +484,8 @@ class TestClient(object):
             # Generate base file
             self.client_cache.conan_config
             replace_in_file(os.path.join(self.client_cache.conan_conf_path),
-                            "revisions_enabled = False", "revisions_enabled = True", strict=False)
+                            "revisions_enabled = False", "revisions_enabled = True", strict=False,
+                            output=TestBufferConanOutput())
             # Invalidate the cached config
             self.client_cache.invalidate()
 

@@ -149,7 +149,7 @@ class GraphLock(object):
     def dump_json(self):
         graph = {}
         for id_, node in self._nodes.items():
-            graph[id_] = {"conan_ref": str(node.conan_ref),
+            graph[id_] = {"conan_ref": node.conan_ref.full_repr() if node.conan_ref else "None",
                           "binary_id": node.binary_id,
                           "options": node.options_values.dumps(),
                           "dependencies": node.dependencies,
@@ -190,7 +190,7 @@ class DepsGraphLockBuilder(object):
                 continue
             dep_id = dependency.node_id
             dep_ref = graph_lock.conan_ref(dep_id)
-            requires.add(str(dep_ref), dependency.private)
+            requires.add(dep_ref.full_repr(), dependency.private)
 
             previous = visited_deps.get(dep_ref)
             if not previous:  # new node, must be added and expanded
