@@ -17,7 +17,7 @@ class CreateEditablePackageTests(unittest.TestCase):
             pass
         """)
 
-    def test_command_line(self):
+    def test_install_existing(self):
         test_server = TestServer()
         servers = {"default": test_server}
         t = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -26,7 +26,7 @@ class CreateEditablePackageTests(unittest.TestCase):
         reference = ConanFileReference.loads('lib/version@user/name')
 
         t.save(files={os.path.join(localpath_to_editable, 'conanfile.py'): self.conanfile})
-        t.run('create  "{}" {}'.format(localpath_to_editable, reference))
+        t.run('create  "{}" {}'.format(localpath_to_editable, reference))  # TODO: Need to create first!!
         t.run('install --editable="{}" {}'.format(localpath_to_editable, reference))
 
         self.assertTrue(t.client_cache.installed_as_editable(reference))
@@ -35,3 +35,15 @@ class CreateEditablePackageTests(unittest.TestCase):
         self.assertEqual(layout.conan(), localpath_to_editable)
 
         self.assertIn("Installed as editable!", t.out)
+
+    def test_install_not_existing(self):
+        pass
+
+    def test_install_with_deps(self):
+        pass
+
+    def test_editable_over_editable(self):
+        pass
+
+    def test_remove_editable(self):
+        pass
