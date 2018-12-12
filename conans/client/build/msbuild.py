@@ -11,7 +11,7 @@ from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.files import decode_text, tmp_file
+from conans.util.files import decode_text, tmp_file, save
 
 
 class MSBuild(object):
@@ -29,23 +29,25 @@ class MSBuild(object):
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
-              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None):
+              vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
+              property_file_name=None):
 
+        property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents()
-            with tmp_file(props_file_contents) as props_file_path:
-                vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
-                                        vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
-                command = self.get_command(project_file, props_file_path,
-                                           targets=targets, upgrade_project=upgrade_project,
-                                           build_type=build_type, arch=arch, parallel=parallel,
-                                           toolset=toolset, platforms=platforms,
-                                           use_env=use_env, properties=properties, output_binary_log=output_binary_log)
-                command = "%s && %s" % (vcvars, command)
-                return self._conanfile.run(command)
+            save(property_file_name, props_file_contents)
+            vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+                                    vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+            command = self.get_command(project_file, property_file_name,
+                                       targets=targets, upgrade_project=upgrade_project,
+                                       build_type=build_type, arch=arch, parallel=parallel,
+                                       toolset=toolset, platforms=platforms,
+                                       use_env=use_env, properties=properties, output_binary_log=output_binary_log)
+            command = "%s && %s" % (vcvars, command)
+            return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
