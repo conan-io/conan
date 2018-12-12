@@ -118,16 +118,6 @@ int main() {
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp})
 
-        """
-        client.run("install . -g txt -g cmake")
-
-        text = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
-        #txt = ";".join(text.splitlines())
-        #self.assertNotIn("[libs];MyLib", txt)
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
-        #self.assertIn("set(CONAN_LIBS MyLib ${CONAN_LIBS})", cmake)
-        """
-
         # Build consumer project
         client.run("create . pkg/0.0@user/testing")
         self.assertIn("Hello EDITABLE!", client.out)

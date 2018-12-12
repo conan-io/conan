@@ -5,13 +5,12 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_EDITABLE, BINARY_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
+from conans.model.conan_file import ConanFileEditable
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.util.files import rmdir, is_dirty, load
-from conans.model.conan_file import ConanFileEditable
-from conans.paths.package_layouts.package_user_layout import parse_package_layout_content
 from conans.util.env_reader import get_env
+from conans.util.files import rmdir, is_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -83,9 +82,7 @@ class GraphBinariesAnalyzer(object):
             # Gather directories from CONAN_PACKAGE_LAYOUT_FILE
             package_layout = self._client_cache.package_layout(conan_ref)
             package_layout_file = package_layout.editable_package_layout_file()
-            data = parse_package_layout_content(content=load(package_layout_file),
-                                                base_path=os.path.dirname(package_layout_file))
-            conanfile.set_cpp_info_directories(data)
+            conanfile.set_package_layout_file(package_layout_file)
             node.binary = BINARY_EDITABLE
             return
 
@@ -106,10 +103,8 @@ class GraphBinariesAnalyzer(object):
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                if not node.recipe == RECIPE_EDITABLE:
-                    rmdir(package_folder)  # TODO: Do not remove if it is EDITABLE!!!!
-                else:
-                    raise NotImplementedError("Editable folder cannot be dirty")  # TODO: Remove raise, but how did we get to this situation?
+                assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
+                rmdir(package_folder)  # Do not remove if it is EDITABLE
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
@@ -132,11 +127,10 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.warn("Can't update, no remote defined")
             if not node.binary:
-                if node.recipe == RECIPE_EDITABLE:
-                    node.binary = BINARY_EDITABLE
-                else:
-                    node.binary = BINARY_CACHE
-                    package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
+                assert node.recipe != RECIPE_EDITABLE, "Unexpected editable recipe here"
+                node.binary = BINARY_CACHE
+                package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
+
         else:  # Binary does NOT exist locally
             if not revisions_enabled and not node.revision_pinned:
                 # Do not search for packages for the specific resolved recipe revision but all

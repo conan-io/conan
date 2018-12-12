@@ -1,9 +1,8 @@
 import os
+import shutil
 from collections import OrderedDict
 from contextlib import contextmanager
 from os.path import join, normpath
-
-import shutil
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings

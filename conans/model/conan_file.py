@@ -1,5 +1,9 @@
+import configparser
 import os
+import re
 from contextlib import contextmanager
+import ntpath
+import posixpath
 
 from conans.client import tools
 from conans.client.output import Color
@@ -12,6 +16,7 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
+from conans.util.files import load
 
 
 def create_options(conanfile):
@@ -293,17 +298,21 @@ class ConanFileEditable(object):
     def __init__(self, conanfile):
         assert isinstance(conanfile, ConanFile)
         self._conanfile = conanfile
-        self._cpp_info_directories = None
+        self._package_layout_file = None
 
     def __getattr__(self, item):
         if item == 'package_info':
             def package_info():
                 self._conanfile.package_info()
                 cpp_info = self._conanfile.cpp_info
-                 # Replace directories with those in '_cpp_info_directories'
-                for key, items in self._cpp_info_directories.items():
-                    items = [p.format(settings=self.settings, options=self.options) for p in items]
-                    # TODO: with f-string instead of format we can put more logic here
+
+                content = load(self._package_layout_file)
+                base_path = os.path.dirname(self._package_layout_file)
+                data = parse_package_layout_content(content=content, base_path=base_path,
+                                                    settings=self.settings, options=self.options)
+
+                 # Replace directories with those in 'data'
+                for key, items in data.items():
                     setattr(cpp_info, key, items)
 
             return package_info
@@ -311,10 +320,35 @@ class ConanFileEditable(object):
         return getattr(self._conanfile, item)
 
     def __setattr__(self, key, value):
-        if key == '_conanfile' or key == '_cpp_info_directories':
+        if key == '_conanfile' or key == '_package_layout_file':
             self.__dict__[key] = value
             return
         setattr(self._conanfile, key, value)
 
-    def set_cpp_info_directories(self, cpp_info_directories):
-        self._cpp_info_directories = cpp_info_directories
+    def set_package_layout_file(self, filepath):
+        self._package_layout_file = filepath
+
+
+def parse_package_layout_content(content, base_path, settings=None, options=None):
+    """ Returns a dictionary containing information about paths for a CppInfo object: includes,
+    libraries, resources, binaries,... """
+    ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
+
+    def _work_on_value(value, base_path_, settings_, options_):
+        value = re.sub(r'\\\\+', r'\\', value)
+        value = value.replace('\\', '/')
+        isabs = ntpath.isabs(value) or posixpath.isabs(value)
+        if base_path_ and not isabs:
+            value = os.path.abspath(os.path.join(base_path_, value))
+        value = os.path.normpath(value)
+        value = value.format(settings=settings_, options=options_)
+        return value
+
+    parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
+    parser.optionxform = str
+    parser.read_string(content)
+    for section in ret.keys():
+        if section in parser:
+            ret[section] = [_work_on_value(value, base_path, settings, options)
+                            for value in parser[section]]
+    return ret

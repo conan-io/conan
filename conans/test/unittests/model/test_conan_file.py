@@ -1,11 +1,14 @@
 # coding=utf-8
 
 import os
-import six
 import unittest
+
+import six
 from parameterized import parameterized
 
-from conans.paths.package_layouts.package_user_layout import parse_package_layout_content
+from conans.client.conf import default_settings_yml
+from conans.model.conan_file import parse_package_layout_content
+from conans.model.settings import Settings
 
 
 def _make_abs(base_path, *args):
@@ -110,18 +113,19 @@ class ParsePlaceholdersTestCase(unittest.TestCase):
         base_path = os.path.dirname(__file__) if make_abs else None
         content = six.u(r"""
 [includedirs]
-src/{compiler}{compiler.version}/{build_type}/include
-C:\\{compiler}\\include\\
-/usr/path with spaces/{compiler}/dir
+src/{settings.compiler}{settings.compiler.version}/{settings.build_type}/include
+C:\\{settings.compiler}\\include\\
+/usr/path with spaces/{settings.compiler}/dir
 """)
-        data = parse_package_layout_content(content, base_path=base_path)
+
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '14'
+        settings.build_type = 'Debug'
+
+        data = parse_package_layout_content(content, base_path=base_path, settings=settings)
         includedirs = data['includedirs']
-        self.assertIn(_make_abs(base_path, 'src', '{compiler}{compiler.version}', '{build_type}', 'include'), includedirs)
-        self.assertIn(os.path.join('C:' + os.sep, '{compiler}', 'include'), includedirs)
-        self.assertIn(os.path.join(os.sep, 'usr', 'path with spaces', '{compiler}', 'dir'), includedirs)
-
-
-# TODO: Add tests with interpolations:
-#   https://docs.python.org/3/library/configparser.html#interpolation-of-values
-
-# TODO: Add tests with conditionals inside f-strings
+        self.assertIn(_make_abs(base_path, 'src', 'Visual Studio14', 'Debug', 'include'),
+                      includedirs)
+        self.assertIn(os.path.join('C:' + os.sep, 'Visual Studio', 'include'), includedirs)
+        self.assertIn(os.path.join(os.sep, 'usr', 'path with spaces', 'Visual Studio', 'dir'), includedirs)
