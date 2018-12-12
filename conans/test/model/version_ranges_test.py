@@ -40,12 +40,14 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.3")
 
     def loose_versions_test(self):
-        output = TestBufferConanOutput()
+        output = []
         result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,loose=False", output)
         self.assertEqual(result, "4.2.2")
-        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=False", output)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3,loose=False",
+                            output)
         self.assertEqual(result, None)
-        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3, loose = False ", output)
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"],
+                            "1.8||1.3, loose = False ", output)
         self.assertEqual(result, None)
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
@@ -58,7 +60,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.2")
 
     def basic_test(self):
-        output = TestBufferConanOutput()
+        output = []
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
         self.assertEqual(result, "2.1")
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "1", output)
@@ -86,7 +88,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<1.3", output)
         self.assertEqual(result, "1.2.1")
         result = satisfying(["1.a.1", "master", "X.2", "1.2.1", "1.3", "2.1"], "1.3", output)
-        self.assertIn("Version 'master' is not semver", output)
+        self.assertIn("Version 'master' is not semver", "".join(output))
         self.assertEqual(result, "1.3")
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
@@ -125,7 +127,7 @@ from conans import ConanFile
 class HelloConan(ConanFile):
     name = "Hello"
     version = "1.2"
-    requires = "Say/[%s]@memsharded/testing"
+    requires = "Say/[%s]@myuser/testing"
 """
 
 
@@ -164,7 +166,7 @@ class VersionRangesTest(unittest.TestCase):
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
-        self.resolver = RangeResolver(self.output, paths, self.remote_search)
+        self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
                                         None, None)
 
@@ -176,13 +178,14 @@ class SayConan(ConanFile):
     name = "Say"
     version = "%s"
 """ % v
-            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             self.retriever.conan(say_ref, say_content)
 
     def root(self, content, update=False):
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
+        self.output.write("\n".join(self.resolver.output))
         return deps_graph
 
     def test_local_basic(self):
@@ -207,14 +210,14 @@ class SayConan(ConanFile):
             conanfile = hello.conanfile
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
-            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
             self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_basic(self):
         self.resolver._local_search = None
         remote_packages = []
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)
         self.remote_search.packages = remote_packages
         for expr, solution in [(">0.0", "2.2.1"),
@@ -228,7 +231,7 @@ class SayConan(ConanFile):
                                ("~=2.1", "2.1"),
                                ]:
             deps_graph = self.root(hello_content % expr, update=True)
-            self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
+            self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
             say = _get_nodes(deps_graph, "Say")[0]
@@ -238,30 +241,30 @@ class SayConan(ConanFile):
             conanfile = hello.conanfile
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
-            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
             self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def test_remote_optimized(self):
         self.resolver._local_search = None
         remote_packages = []
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-            say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % v)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)
         self.remote_search.packages = remote_packages
 
         dep_content = """from conans import ConanFile
 class Dep1Conan(ConanFile):
-    requires = "Say/[%s]@memsharded/testing"
+    requires = "Say/[%s]@myuser/testing"
 """
-        dep_ref = ConanFileReference.loads("Dep1/0.1@memsharded/testing")
+        dep_ref = ConanFileReference.loads("Dep1/0.1@myuser/testing")
         self.retriever.conan(dep_ref, dep_content % ">=0.1")
-        dep_ref = ConanFileReference.loads("Dep2/0.1@memsharded/testing")
+        dep_ref = ConanFileReference.loads("Dep2/0.1@myuser/testing")
         self.retriever.conan(dep_ref, dep_content % ">=0.1")
 
         hello_content = """from conans import ConanFile
 class HelloConan(ConanFile):
     name = "Hello"
-    requires = "Dep1/0.1@memsharded/testing", "Dep2/0.1@memsharded/testing"
+    requires = "Dep1/0.1@myuser/testing", "Dep2/0.1@myuser/testing"
 """
         deps_graph = self.root(hello_content, update=True)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -273,22 +276,22 @@ class HelloConan(ConanFile):
                                                   Edge(dep1, say), Edge(dep2, say)})
 
         # Most important check: counter of calls to remote
-        self.assertEqual(self.remote_search.count, {'Say/*@memsharded/testing': 1})
+        self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
 
     @parameterized.expand([("", "0.3", None, None),
-                           ('"Say/1.1@memsharded/testing"', "1.1", False, False),
-                           ('"Say/0.2@memsharded/testing"', "0.2", False, True),
-                           ('("Say/1.1@memsharded/testing", "override")', "1.1", True, False),
-                           ('("Say/0.2@memsharded/testing", "override")', "0.2", True, True),
+                           ('"Say/1.1@myuser/testing"', "1.1", False, False),
+                           ('"Say/0.2@myuser/testing"', "0.2", False, True),
+                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, False),
+                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True),
                            # ranges
-                           ('"Say/[<=1.2]@memsharded/testing"', "1.2.1", False, False),
-                           ('"Say/[>=0.2,<=1.0]@memsharded/testing"', "0.3", False, True),
-                           ('("Say/[<=1.2]@memsharded/testing", "override")', "1.2.1", True, False),
-                           ('("Say/[>=0.2,<=1.0]@memsharded/testing", "override")', "0.3", True, True),
+                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
+                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
+                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
+                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = hello_content % ">0.1, <1"
-        hello_ref = ConanFileReference.loads("Hello/1.2@memsharded/testing")
+        hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.conan(hello_ref, hello_text)
 
         chat_content = """
@@ -297,7 +300,7 @@ from conans import ConanFile
 class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
-    requires = "Hello/1.2@memsharded/testing", %s
+    requires = "Hello/1.2@myuser/testing", %s
 """
         if valid is False:
             with self.assertRaisesRegexp(ConanException, "not valid"):
@@ -318,6 +321,7 @@ class ChatConan(ConanFile):
 
         if valid is True:
             self.assertIn(" valid", self.output)
+            self.assertNotIn("not valid", self.output)
         elif valid is False:
             self.assertIn("not valid", self.output)
         self.assertEqual(3, len(deps_graph.nodes))
@@ -328,7 +332,7 @@ class ChatConan(ConanFile):
         conanfile = hello.conanfile
         self.assertEqual(conanfile.version, "1.2")
         self.assertEqual(conanfile.name, "Hello")
-        say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+        say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
         self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def duplicated_error_test(self):
@@ -339,7 +343,7 @@ class Log3cppConan(ConanFile):
     name = "log4cpp"
     version = "1.1.1"
 """
-        log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@memsharded/testing")
+        log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
         self.retriever.conan(log4cpp_ref, content)
 
         content = """
@@ -350,9 +354,9 @@ class LoggerInterfaceConan(ConanFile):
     version = "0.1.1"
 
     def requirements(self):
-        self.requires("log4cpp/[~1.1]@memsharded/testing")
+        self.requires("log4cpp/[~1.1]@myuser/testing")
 """
-        logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@memsharded/testing")
+        logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@myuser/testing")
         self.retriever.conan(logiface_ref, content)
 
         content = """
@@ -361,16 +365,16 @@ from conans import ConanFile
 class OtherConan(ConanFile):
     name = "other"
     version = "2.0.11549"
-    requires = "LoggerInterface/[~0.1]@memsharded/testing"
+    requires = "LoggerInterface/[~0.1]@myuser/testing"
 """
-        other_ref = ConanFileReference.loads("other/2.0.11549@memsharded/testing")
+        other_ref = ConanFileReference.loads("other/2.0.11549@myuser/testing")
         self.retriever.conan(other_ref, content)
 
         content = """
 from conans import ConanFile
 
 class Project(ConanFile):
-    requires = "LoggerInterface/[~0.1]@memsharded/testing", "other/[~2.0]@memsharded/testing"
+    requires = "LoggerInterface/[~0.1]@myuser/testing", "other/[~2.0]@myuser/testing"
 """
         deps_graph = self.root(content)
 
