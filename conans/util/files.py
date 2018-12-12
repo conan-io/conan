@@ -155,23 +155,6 @@ def mkdir_tmp():
     return tempfile.mkdtemp(suffix='tmp_conan')
 
 
-@contextmanager
-def tmp_file(contents):
-    """ Usage:
-
-    with tmp_file("mycontents") as filepath:
-        # Here exists filepath tmp file with "mycontents" inside
-
-    """
-    try:
-        tmp_dir = mkdir_tmp()
-        path = os.path.join(tmp_dir, "t")
-        save(path, contents)
-        yield path
-    finally:
-        rmdir(tmp_dir)
-
-
 def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
