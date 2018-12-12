@@ -10,13 +10,13 @@ from conans.util.files import rmdir
 
 def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
                reference, source_folder, build_folder, package_folder, install_folder,
-               profile, force):
+               graph_info, force):
 
     conan_file_path = client_cache.conanfile(reference)
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-    deps_graph = graph_manager.load_simple_graph(reference, profile, recorder)
+    deps_graph = graph_manager.load_simple_graph(reference, graph_info.profile, recorder)
 
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg

@@ -268,15 +268,15 @@ class ConanInstaller(object):
         self._workspace = workspace
         self._hook_manager = hook_manager
 
-    def install(self, deps_graph, keep_build=False):
+    def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, deps_graph, keep_build, root_node)
+        self._build(nodes_by_level, deps_graph, keep_build, root_node, graph_info)
 
-    def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
+    def _build(self, nodes_by_level, deps_graph, keep_build, root_node, graph_info):
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
         processed_package_refs = set()
@@ -296,7 +296,8 @@ class ConanInstaller(object):
 
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
                 if workspace_package:
-                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
+                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
+                                                graph_info)
                 else:
                     package_ref = PackageReference(conan_ref, package_id)
                     _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
@@ -343,7 +344,7 @@ class ConanInstaller(object):
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
-    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
+    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph, graph_info):
         conan_ref, conan_file = node.conan_ref, node.conanfile
         output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
         include_dirs = workspace_package.includedirs
@@ -365,6 +366,8 @@ class ConanInstaller(object):
         write_generators(conan_file, build_folder, output)
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
         output.info("Generated %s" % CONANINFO)
+        graph_info.save(build_folder)
+        output.info("Generated graphinfo")
         save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
         output.info("Generated %s" % BUILD_INFO)
         # Build step might need DLLs, binaries as protoc to generate source files

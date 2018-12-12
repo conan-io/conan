@@ -109,7 +109,7 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertNotIn("False", client.out)
 
-        client.run("create . lasote/stable -o conan_test_package:shared=False")
+        client.run("create . lasote/stable -o shared=False")
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
