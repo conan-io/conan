@@ -1,0 +1,37 @@
+# coding=utf-8
+
+import os
+import textwrap
+import unittest
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, TestServer
+
+
+class CreateEditablePackageTests(unittest.TestCase):
+
+    conanfile = textwrap.dedent("""\
+        from conans import ConanFile
+        
+        class APck(ConanFile):
+            pass
+        """)
+
+    def test_command_line(self):
+        test_server = TestServer()
+        servers = {"default": test_server}
+        t = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        localpath_to_editable = os.path.join(t.current_folder, 'local', 'path')
+        reference = ConanFileReference.loads('lib/version@user/name')
+
+        t.save(files={os.path.join(localpath_to_editable, 'conanfile.py'): self.conanfile})
+        t.run('create  "{}" {}'.format(localpath_to_editable, reference))
+        t.run('install --editable="{}" {}'.format(localpath_to_editable, reference))
+
+        self.assertTrue(t.client_cache.installed_as_editable(reference))
+        layout = t.client_cache.package_layout(reference)
+        self.assertTrue(layout.installed_as_editable())
+        self.assertEqual(layout.conan(), localpath_to_editable)
+
+        self.assertIn("Installed as editable!", t.out)
