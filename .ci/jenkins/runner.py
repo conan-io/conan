@@ -2,7 +2,7 @@ import os
 import platform
 
 from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
-    winpylocation
+    winpylocation, win_msbuilds_logs_folder
 
 pylocations = {"Windows": winpylocation,
                "Linux": linuxpylocation,
@@ -68,6 +68,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
     env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
+    # Try to specify a known folder to keep there msbuild failure logs
+    env["MSBUILDDEBUGPATH"] = win_msbuilds_logs_folder
 
     with chdir(source_folder):
         with environment_append(env):
