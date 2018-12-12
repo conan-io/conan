@@ -86,8 +86,8 @@ try{
                                 }
                             }
                             if(slave == "Linux"){
-                                sh "docker pull lasote/conantests"
-                                docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+                                sh "docker pull conanio/conantests"
+                                docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
                                     sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
                                 }
                             }
@@ -146,7 +146,7 @@ try{
         builders["Linux Rest API Test"] = {
             node("Linux"){
                 stage("REST tests Linux ${pyver}"){
-                    docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
                         sh(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
                     }
                 }

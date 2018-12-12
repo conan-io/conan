@@ -21,3 +21,14 @@ def get_tag_from_pr(pr_number, tag):
     body = pr.body
     value = _get_value(body, tag)
     return value
+
+
+"""
+PYVERS=py27,py36,py37
+CI_TAGS=svn or now slow
+
+
+
+
+
+"""
