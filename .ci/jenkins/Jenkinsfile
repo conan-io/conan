@@ -43,12 +43,14 @@ else{
 if(is_pr){ // Read the PR body to
     node("Linux") {
         stage("Check PR tags"){
-            checkout scm
-            docker.image('conanio/conantests').inside(){
-                sh(script: "python .ci/jenkins/pr_tags.py out.json")
-                def info = readJSON file: 'out.json'
-                echo info
-                excluded_tags.removeAll(info["tags"] as Object[])
+            withCredentials([string(credentialsId: 'GH_TOKEN', variable: 'GH_TOKEN')]) {
+                checkout scm
+                docker.image('conanio/conantests').inside("-e GH_TOKEN=${GH_TOKEN}"){
+                    sh(script: "python .ci/jenkins/pr_tags.py out.json")
+                    def info = readJSON file: 'out.json'
+                    echo info
+                    excluded_tags.removeAll(info["tags"] as Object[])
+                }
             }
         }
     }
