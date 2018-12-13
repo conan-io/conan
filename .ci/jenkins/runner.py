@@ -98,10 +98,10 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
-    parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
+    parser.add_argument('--exclude_tags', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
     parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              num_cores=args.num_cores)
+              args.exclude_tags, num_cores=args.num_cores)
