@@ -2,6 +2,7 @@ import os
 import re
 import unittest
 
+from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
@@ -40,7 +41,7 @@ xcode
         client.run('install . --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
                                  BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
-                                 BUILD_INFO_XCODE, CONANINFO]),
+                                 BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE]),
                          sorted(os.listdir(client.current_folder)))
 
         cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
