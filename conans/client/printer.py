@@ -59,7 +59,7 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None,
+    def print_info(self, deps_graph, _info, client_cache, node_times=None, path_resolver=None,
                    package_filter=None, show_paths=False):
         """ Print the dependency information for a conan file
 
@@ -98,7 +98,7 @@ class Printer(object):
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
-                reg_remote = registry.refs.get(ref)
+                reg_remote = client_cache.get_ref_remote(ref)
             except:
                 reg_remote = None
 

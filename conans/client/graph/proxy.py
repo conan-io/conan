@@ -47,7 +47,7 @@ class ConanProxy(object):
 
         metadata = self._client_cache.load_metadata(reference)
         cur_revision = metadata.recipe.revision
-        remote = self._registry.refs.get(reference)
+        remote = metadata.recipe.remote
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
         update_remote = named_remote or remote
 
@@ -59,7 +59,7 @@ class ConanProxy(object):
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
             new_ref = self._remote_manager.get_recipe(reference, update_remote)
-            self._registry.refs.set(new_ref, update_remote.name)
+            self._client_cache.set_ref_remote(new_ref, update_remote.name)
             status = RECIPE_UPDATED
             return conanfile_path, status, update_remote, new_ref
 
@@ -90,7 +90,7 @@ class ConanProxy(object):
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(reference, update_remote)
-                    self._registry.refs.set(new_ref, update_remote.name)
+                    self._client_cache.set_ref_remote(new_ref, update_remote.name)
                     status = RECIPE_UPDATED
                     return conanfile_path, status, update_remote, new_ref
                 else:
@@ -107,7 +107,7 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             _new_ref = self._remote_manager.get_recipe(conan_reference, the_remote)
-            self._registry.refs.set(_new_ref, the_remote.name)
+            self._client_cache.set_ref_remote(new_ref, the_remote.name)
             recorder.recipe_downloaded(conan_reference, the_remote.url)
             return _new_ref
 
@@ -115,7 +115,7 @@ class ConanProxy(object):
             output.info("Not found, retrieving from server '%s' " % remote_name)
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._registry.refs.get(conan_reference)
+            remote = self._client_cache.get_ref_remote(conan_reference)
             if remote:
                 output.info("Retrieving from predefined remote '%s'" % remote.name)
 

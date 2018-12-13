@@ -850,22 +850,22 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list_ref(self):
-        return {r: remote_name for r, remote_name in self._registry.refs.list.items()}
+        return {r: remote_name for r, remote_name in self._client_cache.ref_list.items()}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.set(reference, remote_name, check_exists=True)
+        return self._client_cache.set_ref_remote(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.remove(reference)
+        return self._client_cache.set_ref_remote(reference, None)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.update(reference, remote_name)
+        return self._client_cache.set_ref_remote(reference, remote_name)
 
     @api_method
     def remote_list_pref(self, reference):

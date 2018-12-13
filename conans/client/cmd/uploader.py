@@ -75,7 +75,7 @@ class CmdUpload(object):
         """Uploads the recipes and binaries identified by conan_ref"""
 
         default_remote = self._registry.remotes.default
-        cur_recipe_remote = self._registry.refs.get(conan_ref)
+        cur_recipe_remote = self._client_cache.get_ref_remote(conan_ref)
         if remote_name:  # If remote_name is given, use it
             recipe_remote = self._registry.remotes.get(remote_name)
         else:
@@ -132,7 +132,7 @@ class CmdUpload(object):
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)
-        current_remote = self._registry.refs.get(conan_reference)
+        current_remote = self._client_cache.get_ref_remote(conan_reference)
 
         if remote != current_remote:
             conanfile = self._loader.load_class(conan_file_path)
@@ -141,10 +141,9 @@ class CmdUpload(object):
         self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                            policy=policy, remote_manifest=remote_manifest)
 
-        cur_recipe_remote = self._registry.refs.get(conan_reference)
         # The recipe wasn't in the registry or it has changed the revision field only
-        if not cur_recipe_remote and policy != UPLOAD_POLICY_SKIP:
-            self._registry.refs.set(conan_reference, remote.name)
+        if not current_remote and policy != UPLOAD_POLICY_SKIP:
+            self._client_cache.set_ref_remote(conan_reference, remote.name)
 
         return conan_reference
 

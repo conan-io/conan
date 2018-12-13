@@ -113,7 +113,6 @@ class ConanRemover(object):
                 self._registry.prefs.remove(pref)
         if not src and build_ids is None and package_ids is None:
             remover.remove(reference)
-            self._registry.refs.remove(reference, quiet=True)
             self._registry.prefs.remove_all(reference)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None, force=False,

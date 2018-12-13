@@ -13,6 +13,7 @@ from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import load, mkdir, save, save_files
+from conans.model.ref import ConanFileReference
 
 win_profile = """[settings]
     os: Windows
@@ -98,11 +99,15 @@ class ConfigInstallTest(unittest.TestCase):
   "MyPkg/0.1@user/channel": "my-repo-2", 
   "Other/1.2@user/channel": "conan-center"
  }
-}        
+}
 """)
         save(os.path.join(self.client.client_cache.profiles_path, "default"),
              "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
+        self.client.client_cache.set_ref_remote(ConanFileReference.loads("MyPkg/0.1@user/channel"),
+                                                "my-repo-2")
+        self.client.client_cache.set_ref_remote(ConanFileReference.loads("Other/1.2@user/channel"),
+                                                "conan-center")
 
         self.old_env = dict(os.environ)
 
@@ -137,7 +142,8 @@ class ConfigInstallTest(unittest.TestCase):
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
-        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        self.assertEqual(self.client.client_cache.ref_list(),
+                         {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),

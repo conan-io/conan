@@ -301,6 +301,25 @@ class ClientCache(SimplePaths):
         except IOError:
             return PackageMetadata()
 
+    def list_refs(self):
+        subdirs = list_folder_subdirs(basedir=self.store, level=4)
+        return [ConanFileReference(*f.split("/")) for f in subdirs]
+
+    def ref_list(self):
+        result = {}
+        for ref in self.list_refs():
+            result[ref] = self.get_ref_remote(ref)
+        return result
+
+    def get_ref_remote(self, ref):
+        return self.load_metadata(ref).recipe.remote
+
+    def set_ref_remote(self, ref, remote, check_exists=False):
+        with self.update_metadata(ref) as metadata:
+            if check_exists and metadata.remote:
+                raise ConanException("%s already exists. Use update" % str(ref))
+            metadata.recipe.remote = remote
+
     @contextmanager
     def update_metadata(self, conan_reference):
         metadata = self.load_metadata(conan_reference)

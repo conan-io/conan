@@ -10,6 +10,7 @@ class _RecipeMetadata(object):
         self._revision = DEFAULT_REVISION_V1
         self.time = None
         self.properties = {}
+        self.remote = None
 
     @property
     def revision(self):
@@ -21,6 +22,7 @@ class _RecipeMetadata(object):
 
     def to_dict(self):
         ret = {"revision": self.revision,
+               "remote": self.remote,
                "properties": self.properties,
                "time": self.time}
         return ret
@@ -29,6 +31,7 @@ class _RecipeMetadata(object):
     def loads(data):
         ret = _RecipeMetadata()
         ret.revision = data["revision"]
+        ret.remote = data["remote"]
         ret.properties = data["properties"]
         ret.time = data["time"]
         return ret
@@ -41,6 +44,7 @@ class _BinaryPackageMetadata(object):
         self._recipe_revision = DEFAULT_REVISION_V1
         self.time = None
         self.properties = {}
+        self.remote = None
 
     @property
     def revision(self):
@@ -62,6 +66,7 @@ class _BinaryPackageMetadata(object):
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,
                "properties": self.properties,
+               "remote": self.remote,
                "time": self.time}
         return ret
 
@@ -71,6 +76,7 @@ class _BinaryPackageMetadata(object):
         ret.revision = data.get("revision")
         ret.recipe_revision = data.get("recipe_revision")
         ret.properties = data.get("properties")
+        ret.remote = data.get("remote")
         ret.time = data.get("time")
         return ret
 
