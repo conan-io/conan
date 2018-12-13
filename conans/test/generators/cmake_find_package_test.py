@@ -76,16 +76,26 @@ message("Compile options: ${tmp}")
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8)
-# Create a target first to check if it is not redefined
-add_library(CONAN_LIB::Hello0_helloHello0)
+cmake_minimum_required(VERSION 3.1)
+
+# Add fake library
+add_library(fake)
+# Create an alias target to check if it is not redefined.
+# Only IMPORTED and ALIAS libraries may use :: as part of the
+# target name (See CMake policy CMP0037). This ALIAS target
+# fakes the IMPORTED targets used in the generated FindXXXX.cmake files
+add_library(CONAN_LIB::Hello0_helloHello0 ALIAS fake)
 
 find_package(Hello0 REQUIRED)
+
+get_target_property(tmp Hello0::Hello0 INTERFACE_LINK_LIBRARIES)
+message("Target libs: ${tmp}")
 
 """
         client.save(files, clean_first=True)
         client.run("create . user/channel -s build_type=Release", assert_error=True)
         self.assertIn("Skipping already existing target: CONAN_LIB::Hello0_helloHello0", client.out)
+        self.assertIn("Target libs: CONAN_LIB::Hello0_helloHello0", client.out)
 
     def cmake_find_package_test(self):
         """First package without custom find_package"""
