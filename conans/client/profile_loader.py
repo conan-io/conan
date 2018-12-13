@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict, defaultdict
 
+from build.lib.conans.util.log import logger
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
@@ -100,6 +101,7 @@ def read_profile(profile_name, cwd, default_folder):
         return None, None
 
     profile_path = get_profile_path(profile_name, default_folder, cwd)
+    logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
 
     try:

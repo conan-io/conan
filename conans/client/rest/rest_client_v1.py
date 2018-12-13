@@ -158,7 +158,7 @@ class RestV1Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
         else:
-            logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+            logger.debug("UPLOAD: \nAll uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_files_to_folder(self, file_urls, to_folder):
         """

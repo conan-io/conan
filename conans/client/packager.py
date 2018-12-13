@@ -103,7 +103,7 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-    logger.debug("Creating config files to %s" % package_folder)
+    logger.debug("PACKAGE: Creating config files to %s" % package_folder)
     if copy_info:
         try:
             shutil.copy(os.path.join(install_folder, CONANINFO), package_folder)
