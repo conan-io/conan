@@ -5,9 +5,9 @@ By default the PRs will skip the slower tests and will use a limited set of pyth
 Use the following tags in the body of the Pull Request:
 
 ```
-@PYVERS=Macos@py27, Windows@py36, Linux@py27, py34
-@TAGS=svn, slow
-@REVISIONS=1
+@PYVERS: Macos@py27, Windows@py36, Linux@py27, py34
+@TAGS: svn, slow
+@REVISIONS: 1
 ```
 
 - **@PYVERS** adds new python versions to the slaves, it can be scoped to a slave with a @ (Macos, Windows, Linux) or 
