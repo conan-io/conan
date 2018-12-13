@@ -10,7 +10,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
-from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.functional.build_helpers import ConanFileMock
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.conanfile import MockConanfile, MockOptions, MockSettings
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient

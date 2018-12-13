@@ -8,7 +8,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.tools import args_to_string
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.functional.build_helpers import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
 
