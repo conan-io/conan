@@ -1,7 +1,6 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from build.lib.conans.util.log import logger
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
@@ -9,6 +8,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
+from conans.util.log import logger
 
 
 class ProfileParser(object):
