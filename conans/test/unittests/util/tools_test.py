@@ -1838,8 +1838,11 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
 
 @attr("slow")
 @attr('svn')
-@unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
+
+    def setUp(self):
+        unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION,
+                            "SVN::is_pristine not implemented")
 
     def test_checkout(self):
         svn = SVN(folder=self.gimme_tmp())
