@@ -101,8 +101,8 @@ class _ConanPackageBuilder(object):
                 ignore = None
 
             shutil.copytree(self.source_folder, self.build_folder, symlinks=True, ignore=ignore)
-            logger.debug("Copied to %s", self.build_folder)
-            logger.debug("Files copied %s", os.listdir(self.build_folder))
+            logger.debug("BUILD: Copied to %s", self.build_folder)
+            logger.debug("BUILD: Files copied %s", ",".join(os.listdir(self.build_folder)))
             self._conan_file.source_folder = self.build_folder
 
     def build(self):
@@ -161,9 +161,9 @@ class _ConanPackageBuilder(object):
         self._conan_file.install_folder = self.build_folder
 
         # Read generators from conanfile and generate the needed files
-        logger.debug("Writing generators")
+        logger.info("GENERATORS: Writing generators")
         write_generators(self._conan_file, self.build_folder, self._out)
-        logger.debug("Files copied after generators %s", os.listdir(self.build_folder))
+        logger.debug("GENERATORS: Files copied after generators %s", os.listdir(self.build_folder))
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files

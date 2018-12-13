@@ -68,7 +68,7 @@ class CmdUpload(object):
                 self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
                              integrity_check, policy, remote_name, recorder)
 
-        logger.debug("====> Time manager upload: %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _upload(self, conan_file, conan_ref, packages_ids, retry, retry_wait,
                 integrity_check, policy, remote_name, recorder):
@@ -167,7 +167,7 @@ class CmdUpload(object):
 
         new_pref = self._remote_manager.upload_package(pref, p_remote, retry, retry_wait,
                                                        integrity_check, policy)
-        logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
         cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
         if (not cur_package_remote or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:

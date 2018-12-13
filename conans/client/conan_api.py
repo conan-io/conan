@@ -5,6 +5,7 @@ from collections import OrderedDict
 import requests
 
 import conans
+from build.lib.conans.util.log import logger
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.client_cache import ClientCache
@@ -191,6 +192,7 @@ class ConanAPIV1(object):
         try:
             user_home = get_conan_user_home()
             client_cache = migrate_and_get_client_cache(user_home, out)
+            logger.debug("INIT: Using config '%s'" % client_cache.conan_conf_path)
             sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))

@@ -42,11 +42,9 @@ class VersionCheckerRequester(object):
 
     def _handle_ret(self, ret):
         ret_version_status = ret.headers.get('X-Conan-Client-Version-Check', None)
-        logger.debug("Remote version check result '%s' " % ret_version_status)
         if ret_version_status:
             server_version = ret.headers.get('X-Conan-Server-Version', None)
             server_version = Version(server_version)
-            logger.debug("Remote version '%s' " % server_version)
 
             if ret_version_status == "current":
                 return

@@ -15,8 +15,8 @@ def build(graph_manager, hook_manager, conanfile_path, output,
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
-    logger.debug("Building in %s" % build_folder)
-    logger.debug("Conanfile in %s" % conanfile_path)
+    logger.debug("BUILD: folder '%s'" % build_folder)
+    logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
 
     try:
         # Append env_vars to execution environment and clear when block code ends
