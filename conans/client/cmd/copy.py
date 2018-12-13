@@ -7,11 +7,10 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
 
-def _prepare_sources(client_cache, reference, remote_manager, registry, loader):
+def _prepare_sources(client_cache, reference, remote_manager, loader):
     conan_file_path = client_cache.conanfile(reference)
     conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, client_cache, registry,
-                            conanfile, reference)
+    complete_recipe_sources(remote_manager, client_cache, conanfile, reference)
     return conanfile.short_paths
 
 
@@ -28,11 +27,11 @@ def _get_package_ids(client_cache, reference, package_ids):
 
 
 def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote_manager,
-             registry, loader, force=False):
+             loader, force=False):
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
-    short_paths = _prepare_sources(client_cache, reference, remote_manager, registry, loader)
+    short_paths = _prepare_sources(client_cache, reference, remote_manager, loader)
     package_ids = _get_package_ids(client_cache, reference, package_ids)
     package_copy(reference, user_channel, package_ids, client_cache, user_io,
                  short_paths, force)

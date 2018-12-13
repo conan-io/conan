@@ -258,12 +258,11 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace,
-                 hook_manager):
+    def __init__(self, client_cache, output, remote_manager, recorder, workspace, hook_manager):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
@@ -382,7 +381,7 @@ class ConanInstaller(object):
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
         for python_require in conan_file.python_requires:
-            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+            complete_recipe_sources(self._remote_manager, self._client_cache,
                                     conan_file, python_require.conan_ref)
 
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
@@ -406,7 +405,7 @@ class ConanInstaller(object):
             with self._client_cache.conanfile_write_lock(conan_ref):
                 set_dirty(builder.build_folder)
                 complete_recipe_sources(self._remote_manager, self._client_cache,
-                                        self._registry, conan_file, conan_ref)
+                                        conan_file, conan_ref)
                 builder.prepare_build()
 
         with self._client_cache.conanfile_read_lock(conan_ref):
