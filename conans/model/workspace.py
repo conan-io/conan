@@ -146,8 +146,8 @@ project({name} CXX)
             if not self._root:
                 raise ConanException("Conan workspace needs at least 1 root conanfile")
             for package_name, data in yml.items():
-                if type(data) is not dict or data.get("folder") is None:
-                    continue
+                #if type(data) is not dict or data.get("folder") is None:
+                    #continue
                 workspace_package = LocalPackage(self._base_folder, self._install_folder, data)
                 self._workspace_packages[package_name] = workspace_package
             for package_name in self._root:
