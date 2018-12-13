@@ -44,7 +44,7 @@ if(is_pr){ // Read the PR body to
     node("Linux") {
         stage("Check PR tags"){
             checkout scm
-            docker.image('conanio/conantests'){
+            docker.image('conanio/conantests').inside(){
                 sh(script: "python .ci/jenkins/pr_tags.py out.json")
                 def info = readJSON file: 'out.json'
                 echo info
