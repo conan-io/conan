@@ -72,6 +72,7 @@ if(excluded_tags){
     e_tags = "-e " + excluded_tags.join(' -e ')
 }
 
+
 def slaves = ['Linux', 'Windows', 'Macos']
 try{
     for (flavor in flavors){
@@ -83,7 +84,7 @@ try{
                 if(slave != "Linux" && pyver=="py37"){
                     continue;
                 }
-                def name = "${slave} - ${flavor} - ${pyver}"
+                def name = "${slave} - ${flavor} - ${pyver} - ${e_tags}"
                 builders[name] = {
                     node(slave) {
                         stage(name){
@@ -124,14 +125,14 @@ try{
                             if(slave == "Linux"){
                                 sh "docker pull conanio/conantests"
                                 docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
+                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
                                 }
                             }
                             else if(slave == "Windows"){
                                 try{
 
                                   withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
+                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
                                   }
                                 }
                                 finally{
@@ -142,7 +143,7 @@ try{
                             else if(slave == "Macos"){
                                 try{
                                   withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
+                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
                                   }
                                 }
                                 finally{
