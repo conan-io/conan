@@ -85,6 +85,18 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
 
+        # Try with a custom property file name
+        files[CONANFILE] = conan_build_vs.replace('msbuild.build("MyProject.sln")',
+                                                  'msbuild.build("MyProject.sln", '
+                                                  'property_file_name="myprops.props")')
+        client.save(files, clean_first=True)
+        client.run("create . Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
+        self.assertIn("Debug|x86", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        pref = PackageReference.loads("Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1")
+        build_folder = client.client_cache.build(pref)
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "myprops.props")))
+
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def reuse_msbuild_object_test(self):
         # https://github.com/conan-io/conan/issues/2865

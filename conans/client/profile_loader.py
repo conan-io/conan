@@ -3,11 +3,9 @@ from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues, unquote
-from conans.model.info import ConanInfo
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 
@@ -67,18 +65,6 @@ class ProfileParser(object):
         for repl_key, repl_value in repl_vars.items():
             tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
         return tmp_text
-
-
-def read_conaninfo_profile(current_path):
-    conan_info_path = os.path.join(current_path, CONANINFO)
-    if not os.path.exists(conan_info_path):
-        return None
-    existing_info = ConanInfo.load_file(conan_info_path)
-    profile = Profile()
-    profile.settings = OrderedDict(existing_info.full_settings.as_list())
-    profile.options = existing_info.full_options
-    profile.env_values = existing_info.env_values
-    return profile
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
@@ -232,16 +218,16 @@ def profile_from_args(profile, settings, options, env, cwd, client_cache):
     default_profile = client_cache.default_profile  # Ensures a default profile creating
 
     if profile is None:
-        file_profile = default_profile
+        result = default_profile
     else:
-        file_profile, _ = read_profile(profile, cwd, client_cache.profiles_path)
+        result, _ = read_profile(profile, cwd, client_cache.profiles_path)
     args_profile = _profile_parse_args(settings, options, env)
 
-    if file_profile:
-        file_profile.update(args_profile)
-        return file_profile
+    if result:
+        result.update(args_profile)
     else:
-        return args_profile
+        result = args_profile
+    return result
 
 
 def _profile_parse_args(settings, options, envs):

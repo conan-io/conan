@@ -3,13 +3,14 @@ import shutil
 import unittest
 
 from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.loader import ConanFileLoader
 from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.test_files import hello_source_files
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_processed_profile
+
 
 myconan1 = """
 from conans import ConanFile
@@ -80,7 +81,7 @@ class ExporterTest(unittest.TestCase):
 
         output = ScopedOutput("", TestBufferConanOutput())
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        conanfile = loader.load_conanfile(conanfile_path, None, ProcessedProfile())
+        conanfile = loader.load_conanfile(conanfile_path, None, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
                        output, client.hook_manager, conanfile_path, conan_ref, copy_info=True)

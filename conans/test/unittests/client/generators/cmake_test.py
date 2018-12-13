@@ -54,7 +54,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
         conanfile.initialize(settings_mock("Release", None, None,
-                                           lambda x, raise_undefined_field: x), EnvValues())
+                                           lambda x: x), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -73,7 +73,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def paths_cmake_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock(None, None, None, lambda x, raise_undefined_field: x,
+        conanfile.initialize(settings_mock(None, None, None, lambda x: x,
                                            lambda: {}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
@@ -93,7 +93,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x, raise_undefined_field: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
@@ -108,7 +108,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def variables_cmake_multi_user_vars_escape_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x, raise_undefined_field: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'

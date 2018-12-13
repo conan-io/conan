@@ -6,13 +6,13 @@ from parameterized import parameterized
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver, satisfying
-from conans.client.loader import ConanFileLoader, ProcessedProfile
+from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.paths import SimplePaths
 from conans.test.unittests.model.fake_retriever import Retriever
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, test_processed_profile
 
 
 def _clear_revs(reqs):
@@ -182,7 +182,7 @@ class SayConan(ConanFile):
             self.retriever.conan(say_ref, say_content)
 
     def root(self, content, update=False):
-        processed_profile = ProcessedProfile()
+        processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
         self.output.write("\n".join(self.resolver.output))

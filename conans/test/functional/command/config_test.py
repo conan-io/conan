@@ -60,6 +60,12 @@ class ConfigTest(unittest.TestCase):
         conf_file = load(self.client.paths.conan_conf_path)
         self.assertIn("https = myurl", conf_file.splitlines())
 
+    def set_with_weird_path_test(self):
+        # https://github.com/conan-io/conan/issues/4110
+        self.client.run("config set log.trace_file=/recipe-release%2F0.6.1")
+        self.client.run("config get log.trace_file")
+        self.assertIn("/recipe-release%2F0.6.1", self.client.out)
+
     def remove_test(self):
         self.client.run('config set proxies.https=myurl')
         self.client.run('config rm proxies.https')
