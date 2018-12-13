@@ -5,7 +5,6 @@ from collections import OrderedDict
 import requests
 
 import conans
-from build.lib.conans.util.log import logger
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.client_cache import ClientCache
