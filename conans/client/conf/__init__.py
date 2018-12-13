@@ -261,7 +261,12 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("You can't set a full section, please specify a key=value")
 
         key = tokens[1]
-        super(ConanClientConfigParser, self).set(section_name, key, value)
+        try:
+            super(ConanClientConfigParser, self).set(section_name, key, value)
+        except ValueError:
+            # https://github.com/conan-io/conan/issues/4110
+            value = value.replace("%", "%%")
+            super(ConanClientConfigParser, self).set(section_name, key, value)
 
         with open(self.filename, "w") as f:
             self.write(f)
@@ -300,8 +305,8 @@ class ConanClientConfigParser(ConfigParser, object):
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 
             if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                                     "an existing profile file.")
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
+                                     "must point to an existing profile file.")
             return ret
         else:
             try:
