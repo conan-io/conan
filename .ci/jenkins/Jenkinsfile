@@ -23,6 +23,7 @@ if (env.BRANCH_NAME =~ /(^PR-.*)/) {
 }
 
 
+def slaves = ['Linux', 'Windows', 'Macos']
 def pyvers
 if (full_py_vers){
     pyvers = ["Macos": ['py37', 'py36', 'py34', 'py27'],
@@ -46,7 +47,10 @@ if(is_pr){ // Read the PR body to
                     sh(script: "python .ci/jenkins/pr_tags.py out.json ${env.BRANCH_NAME}")
                     def info = readJSON file: 'out.json'
                     excluded_tags.removeAll(info["tags"] as Object[])
-                    pyvers.removeAll(info["pyvers"][slave] as Object[])
+                    for (x in slaves) {
+                        def slave = x
+                        pyvers[slave].removeAll(info["pyvers"][slave] as Object[])
+                    }
 
                     if(info["revisions"]){
                         test_revisions = true
@@ -82,7 +86,7 @@ if(excluded_tags){
 }
 
 
-def slaves = ['Linux', 'Windows', 'Macos']
+
 try{
     for (flavor in flavors){
         def builders = [:]
