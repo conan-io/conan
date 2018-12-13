@@ -41,7 +41,7 @@ else{
 
 
 if(is_pr){ // Read the PR body to
-    node("linux") {
+    node("Linux") {
         stage("Check PR tags"){
             sh(script: "python pr_tags.py out.json")
             def info = readJSON file: 'out.json'
