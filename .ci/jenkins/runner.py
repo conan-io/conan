@@ -2,7 +2,7 @@ import os
 import platform
 
 from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
-    winpylocation
+    winpylocation, win_msbuilds_logs_folder
 
 pylocations = {"Windows": winpylocation,
                "Linux": linuxpylocation,
