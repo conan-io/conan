@@ -1938,6 +1938,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -1960,6 +1961,7 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, url):
@@ -1991,6 +1993,7 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
