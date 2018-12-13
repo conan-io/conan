@@ -18,7 +18,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
 if (env.BRANCH_NAME =~ /(^PR-.*)/) {
     full_py_vers = false
     test_revisions = false
-    is_pr = true
+    is_pr = false
     excluded_tags = ["slow", "svn"]
 }
 
