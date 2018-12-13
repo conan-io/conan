@@ -49,7 +49,12 @@ if(is_pr){ // Read the PR body to
                     excluded_tags.removeAll(info["tags"] as Object[])
                     for (x in slaves) {
                         def sl = x
-                        all_pyvers[sl].removeAll(info["pyvers"][sl] as Object[])
+                        for (p in info["pyvers"][sl]){
+                            def new_py = p
+                            if(!all_pyvers[sl].contains(new_py)){
+                                all_pyvers[sl].push(new_py)
+                            }
+                        }
                     }
 
                     if(info["revisions"]){
