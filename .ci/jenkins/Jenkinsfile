@@ -2,6 +2,9 @@
 def full_py_vers = false
 def test_revisions = false
 // ###########################################
+def is_pr = false
+def excluded_tags = []
+
 
 if(env.JOB_NAME == "ConanNightly"){
     full_py_vers = true
@@ -12,16 +15,40 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_py_vers = true
 }
 
+if (env.BRANCH_NAME =~ /(^PR-.*)/) {
+    full_py_vers = false
+    test_revisions = false
+    is_pr = true
+    excluded_tags = ["slow", "svn"]
+}
 
-def flavors = ["blocked_v2"]
+
+def flavors
 if(test_revisions){
     flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
 }
-def pyvers  = ['py36', 'py27']
-def api_confs = ["v1"]
+else{
+    flavors = ["blocked_v2"]
+}
 
+def pyvers
 if (full_py_vers){
     pyvers = ['py37', 'py36', 'py34', 'py27']
+}
+else{
+    pyvers  = ['py36', 'py27']
+}
+
+
+if(is_pr){ // Read the PR body to
+    node("linux") {
+        stage("Check PR tags"){
+            sh(script: "python pr_tags.py out.json")
+            def info = readJSON file: 'out.json'
+            echo info
+            excluded_tags.removeAll(info["tags"] as Object[])
+        }
+    }
 }
 
 

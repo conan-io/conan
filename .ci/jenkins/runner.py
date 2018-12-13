@@ -1,30 +1,15 @@
 import os
 import platform
 
-from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, \
-    macpylocation, winpylocation, win_msbuilds_logs_folder
-
-from gh_pr_reader import get_tag_from_pr
-
+from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
+    winpylocation
 
 pylocations = {"Windows": winpylocation,
                "Linux": linuxpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def get_tag_argument_value(branch):
-    """Reading the pull request body, decide which tags apply to nosetests"""
-    if not branch.startswith("PR-"):
-        return '' # By default all the branches runs all
-    pr_number = branch.split("PR-")[1]
-    line = get_tag_from_pr(int(pr_number), "CI:")
-    if line is None: # By default
-        return '-A "not slow"'
-    # If the tag is specify use it, if not, by default run only the not slow
-    return '-A "%s"' % line if line else ""
-
-
-def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, branch_name,
+def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_tags,
               num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
@@ -34,7 +19,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, branch_name
     venv_exe = os.path.join(venv_dest,
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
-    tags_argument = get_tag_argument_value(branch_name)
+
+    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
+
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
     # Prevent OSX to lock when no output is received
@@ -59,14 +46,14 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, branch_name
               "{pip_installs} " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} {tags_argument} --verbosity={verbosity} " \
+              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} " \
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
-                                       "tags_argument": tags_argument,
+                                       "excluded_tags": exluded_tags_str,
                                        "venv_dest": venv_dest,
                                        "verbosity": verbosity,
                                        "venv_exe": venv_exe,
@@ -81,13 +68,10 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, branch_name
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
     env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
-    env["GH_TOKEN"] = ""  # Security, clear the token
     # Try to specify a known folder to keep there msbuild failure logs
     env["MSBUILDDEBUGPATH"] = win_msbuilds_logs_folder
 
     with chdir(source_folder):
-        if os.path.exists("setup.cfg"):
-            os.rename("setup.cfg", "setup.cfg_INVALID")  # Do not use default test launch
         with environment_append(env):
             run(command)
 
@@ -114,8 +98,9 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
+    parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
+                        help='Tags to exclude from testing, e.g.: rest_api')
     parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
-    parser.add_argument('--branch', '-b', help='branch being built. PR-XXX for PRs')
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
