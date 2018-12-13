@@ -49,7 +49,6 @@ if(is_pr){ // Read the PR body to
                 docker.image('conanio/conantests').inside("-e GH_TOKEN=${GH_TOKEN}"){
                     sh(script: "python .ci/jenkins/pr_tags.py out.json ${env.BRANCH_NAME}")
                     def info = readJSON file: 'out.json'
-                    echo info
                     excluded_tags.removeAll(info["tags"] as Object[])
                 }
             }
@@ -68,6 +67,10 @@ def runner = ".ci/jenkins/runner.py"
 def commit
 def branch
 
+def e_tags = ""
+if(excluded_tags){
+    e_tags = "-e " + excluded_tags.join(' -e ')
+}
 
 def slaves = ['Linux', 'Windows', 'Macos']
 try{
@@ -121,14 +124,14 @@ try{
                             if(slave == "Linux"){
                                 sh "docker pull conanio/conantests"
                                 docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
+                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
                                 }
                             }
                             else if(slave == "Windows"){
                                 try{
 
                                   withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
-                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
+                                    bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
                                   }
                                 }
                                 finally{
@@ -139,7 +142,7 @@ try{
                             else if(slave == "Macos"){
                                 try{
                                   withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch}")
+                                      sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} --branch ${branch} ${e_tags}")
                                   }
                                 }
                                 finally{
