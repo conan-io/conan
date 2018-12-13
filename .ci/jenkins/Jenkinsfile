@@ -45,6 +45,7 @@ if(is_pr){ // Read the PR body to
         stage("Check PR tags"){
             withCredentials([string(credentialsId: 'GH_TOKEN', variable: 'GH_TOKEN')]) {
                 checkout scm
+                sh "docker pull conanio/conantests"
                 docker.image('conanio/conantests').inside("-e GH_TOKEN=${GH_TOKEN}"){
                     sh(script: "python .ci/jenkins/pr_tags.py out.json")
                     def info = readJSON file: 'out.json'
