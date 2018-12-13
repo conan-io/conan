@@ -86,6 +86,9 @@ if(excluded_tags){
 }
 
 echo "SLAVES: ${slaves}"
+echo "PYVERS: ${all_pyvers}"
+echo "FLAVORS: ${flavors}"
+
 try{
     for (flavor in flavors){
         def builders = [:]
