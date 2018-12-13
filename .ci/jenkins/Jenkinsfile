@@ -52,9 +52,9 @@ if(is_pr){ // Read the PR body to
                         all_pyvers[sl].removeAll(info["pyvers"][sl] as Object[])
                     }
 
-                    //if(info["revisions"]){
-                    //    test_revisions = true
-                    //}
+                    if(info["revisions"]){
+                        test_revisions = true
+                    }
                 }
             }
         }
@@ -85,6 +85,7 @@ if(excluded_tags){
     e_tags = "-e " + excluded_tags.join(' -e ')
 }
 
+echo "SLAVES: ${slaves}"
 try{
     for (flavor in flavors){
         def builders = [:]
