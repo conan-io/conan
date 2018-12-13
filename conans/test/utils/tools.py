@@ -447,7 +447,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None):
+                 block_v2=None, revisions=None, cpu_count=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -480,6 +480,12 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
+        if cpu_count:
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+            # Invalidate the cached config
+            self.client_cache.invalidate()
         if self.revisions:
             # Generate base file
             self.client_cache.conan_config
