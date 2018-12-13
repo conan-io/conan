@@ -48,8 +48,8 @@ if(is_pr){ // Read the PR body to
                     def info = readJSON file: 'out.json'
                     excluded_tags.removeAll(info["tags"] as Object[])
                     for (x in slaves) {
-                        def slave = x
-                        all_pyvers[slave].removeAll(info["pyvers"][slave] as Object[])
+                        def sl = x
+                        all_pyvers[sl].removeAll(info["pyvers"][sl] as Object[])
                     }
 
                     if(info["revisions"]){
