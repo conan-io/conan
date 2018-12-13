@@ -163,7 +163,6 @@ class _ConanPackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         write_generators(self._conan_file, self.build_folder, self._out)
-        logger.debug("GENERATORS: Files copied after generators %s", os.listdir(self.build_folder))
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
