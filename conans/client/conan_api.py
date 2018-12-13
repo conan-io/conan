@@ -1013,7 +1013,7 @@ def get_graph_info(profile_name, settings, options, env, cwd, install_folder, gr
         graph_info_file = install_folder
 
     try:
-        graph_info = GraphInfo.load(install_folder)
+        graph_info = GraphInfo.load(graph_info_file)
         graph_info.profile.process_settings(client_cache, preprocess=False)
     except IOError:  # Only if file is missing
         if install_folder:

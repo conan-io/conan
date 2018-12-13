@@ -45,7 +45,8 @@ class GraphLock(object):
 
     def get_node_from_ref(self, conan_ref):
         for id_, node in self._nodes.items():
-            if node.conan_ref == conan_ref:
+            # Find it even if there are revisions
+            if str(node.conan_ref) == str(conan_ref):
                 return id_
 
     def build_order(self, node_id):
