@@ -26,11 +26,6 @@ def get_tag_from_pr(pr_number, tag):
 
 
 if __name__ == "__main__":
-    """
-    CI_PYVERS=mac@py27, windows@py36
-    CI_TAGS=svn, slow
-    CI_REVISIONS=1
-    """
 
     import argparse
 
@@ -39,9 +34,9 @@ if __name__ == "__main__":
     parser.add_argument('branch_name', help='e.g.: PR-23')
     args = parser.parse_args()
 
-    TAG_PYVERS = "#PYVERS:"
-    TAG_TAGS = "#TAGS:"
-    TAG_REVISIONS = "#REVISIONS:"
+    TAG_PYVERS = "@PYVERS:"
+    TAG_TAGS = "@TAGS:"
+    TAG_REVISIONS = "@REVISIONS:"
 
     out_file = args.output_file
     branch = args.branch_name
