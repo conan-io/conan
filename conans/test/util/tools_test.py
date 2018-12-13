@@ -30,7 +30,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.model.version import Version
-from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.functional.build_helpers import ConanFileMock
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
