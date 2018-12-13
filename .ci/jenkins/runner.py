@@ -104,4 +104,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              args.branch, num_cores=args.num_cores)
+              num_cores=args.num_cores)

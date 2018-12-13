@@ -23,20 +23,16 @@ if (env.BRANCH_NAME =~ /(^PR-.*)/) {
 }
 
 
-def flavors
-if(test_revisions){
-    flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
-}
-else{
-    flavors = ["blocked_v2"]
-}
-
-def pyvers
+def all_pyvers
 if (full_py_vers){
-    pyvers = ['py37', 'py36', 'py34', 'py27']
+    all_pyvers = ["Macos": ['py37', 'py36', 'py34', 'py27'],
+                  "Linux": ['py37', 'py36', 'py34', 'py27'],
+                  "Windows": ['py37', 'py36', 'py34', 'py27']]
 }
 else{
-    pyvers  = ['py36', 'py27']
+    all_pyvers  = ["Macos": ['py36'],
+                   "Linux": ['py36', 'py27'],
+                   "Windows": ['py36']]
 }
 
 
@@ -50,10 +46,21 @@ if(is_pr){ // Read the PR body to
                     sh(script: "python .ci/jenkins/pr_tags.py out.json ${env.BRANCH_NAME}")
                     def info = readJSON file: 'out.json'
                     excluded_tags.removeAll(info["tags"] as Object[])
+                    if(info["revisions"]){
+                        test_revisions = true
+                    }
                 }
             }
         }
     }
+}
+
+def flavors
+if(test_revisions){
+    flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
+}
+else{
+    flavors = ["blocked_v2"]
 }
 
 
@@ -79,12 +86,14 @@ try{
         def builders = [:]
         for (x in slaves) {
             def slave = x
+            def pyvers = all_pyvers[slave]
+            pyvers.removeAll(info["pyvers"][slave] as Object[])
             for (y in pyvers) {
                 def pyver = y
                 if(slave != "Linux" && pyver=="py37"){
                     continue;
                 }
-                def name = "${slave} - ${flavor} - ${pyver} - ${e_tags}"
+                def name = "${slave} - ${flavor} - ${pyver} - '${e_tags}'"
                 builders[name] = {
                     node(slave) {
                         stage(name){

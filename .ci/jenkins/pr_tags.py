@@ -2,7 +2,6 @@ import argparse
 import json
 import os
 
-from collections import defaultdict
 
 from github import Github
 
@@ -62,18 +61,18 @@ if __name__ == "__main__":
     tags = clean_list(get_tag_from_pr(pr_number, TAG_TAGS))
     # Read pythons to include
     tmp = clean_list(get_tag_from_pr(pr_number, TAG_PYVERS))
-    pyvers = defaultdict(list)
+    pyvers = {"Windows": [], "Linux": [], "Macos": []}
     for t in tmp:
         if "@" in t:
             the_os, pyver = t.split("@")
-            if the_os.lower() not in ["macos", "linux", "windows"]:
+            if the_os not in ["Macos", "Linux", "Windows"]:
                 print("Invalid os: %s" % the_os)
                 exit(-1)
-            pyvers[the_os.lower()].append(pyver)
+            pyvers[the_os].append(pyver)
         else:
-            pyvers["macos"].append(t)
-            pyvers["linux"].append(t)
-            pyvers["windows"].append(t)
+            pyvers["Macos"].append(t)
+            pyvers["Linux"].append(t)
+            pyvers["Windows"].append(t)
 
     # Rest revisions?
     tmp = get_tag_from_pr(pr_number, TAG_REVISIONS)
