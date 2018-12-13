@@ -16,12 +16,12 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
-    def __init__(self, client_cache, output, remote_manager, registry):
+    def __init__(self, client_cache, output, remote_manager):
         # collaborators
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
         with self._client_cache.conanfile_write_lock(conan_reference):

@@ -505,10 +505,8 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def update_servers(self):
-
-        save(self.client_cache.registry, dump_registry({}, {}, {}))
-
-        registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
+        save(self.client_cache.registry_path, dump_registry({}, {}, {}))
+        registry = self.client_cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):

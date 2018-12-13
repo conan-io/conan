@@ -232,17 +232,15 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if not interactive:
             self._user_io.disable_input()
 
-        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager,
-                                 registry=self._registry)
+        self._proxy = ConanProxy(client_cache, self._user_io.out, remote_manager)
         resolver = RangeResolver(client_cache, self._proxy)
         python_requires = ConanPythonRequire(self._proxy, resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
 
-        self._graph_manager = GraphManager(self._user_io.out, self._client_cache, self._registry,
+        self._graph_manager = GraphManager(self._user_io.out, self._client_cache,
                                            self._remote_manager, self._loader, self._proxy,
                                            resolver)
         self._hook_manager = hook_manager
@@ -250,7 +248,7 @@ class ConanAPIV1(object):
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
         return ConanManager(self._client_cache, self._user_io,
-                            self._remote_manager, action_recorder, self._registry,
+                            self._remote_manager, action_recorder,
                             self._graph_manager, self._hook_manager)
 
     @api_method
@@ -448,7 +446,7 @@ class ConanAPIV1(object):
 
         if check_valid_ref(conan_ref, allow_pattern=False):
             recorder = ActionRecorder()
-            download(conan_ref, package, remote_name, recipe, self._registry, self._remote_manager,
+            download(conan_ref, package, remote_name, recipe, self._remote_manager,
                      self._client_cache, self._user_io.out, recorder, self._loader,
                      self._hook_manager)
         else:
@@ -723,8 +721,7 @@ class ConanAPIV1(object):
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
-        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io,
-                               self._registry)
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -737,7 +734,7 @@ class ConanAPIV1(object):
         # FIXME: conan copy does not support short-paths in Windows
         reference = ConanFileReference.loads(str(reference))
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, self._registry, self._loader, force=force)
+                 self._user_io, self._remote_manager, self._loader, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name):
@@ -770,7 +767,7 @@ class ConanAPIV1(object):
     @api_method
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         recorder = SearchRecorder()
-        search = Search(self._client_cache, self._remote_manager, self._registry)
+        search = Search(self._client_cache, self._remote_manager)
 
         try:
             references = search.search_recipes(pattern, remote_name, case_sensitive)
@@ -787,7 +784,7 @@ class ConanAPIV1(object):
     @api_method
     def search_packages(self, reference, query=None, remote_name=None, outdated=False):
         recorder = SearchRecorder()
-        search = Search(self._client_cache, self._remote_manager, self._registry)
+        search = Search(self._client_cache, self._remote_manager)
 
         try:
             reference = ConanFileReference.loads(str(reference))
@@ -818,7 +815,7 @@ class ConanAPIV1(object):
 
         recorder = UploadRecorder()
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             self._registry, self._loader, self._hook_manager)
+                             self._loader, self._hook_manager)
         try:
             uploader.upload(recorder, pattern, package, all_packages, confirm, retry,
                             retry_wait, integrity_check, policy, remote_name, query=query)
@@ -830,48 +827,48 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._registry.remotes.list
+        return self._client_cache.registry.remotes.list
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        return self._registry.remotes.add(remote_name, url, verify_ssl, insert, force)
+        return self._client_cache.registry.remotes.add(remote_name, url, verify_ssl, insert, force)
 
     @api_method
     def remote_remove(self, remote_name):
-        return self._registry.remotes.remove(remote_name)
+        return self._client_cache.registry.remotes.remove(remote_name)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
-        return self._registry.remotes.update(remote_name, url, verify_ssl, insert)
+        return self._client_cache.registry.remotes.update(remote_name, url, verify_ssl, insert)
 
     @api_method
     def remote_rename(self, remote_name, new_new_remote):
-        return self._registry.remotes.rename(remote_name, new_new_remote)
+        return self._client_cache.registry.remotes.rename(remote_name, new_new_remote)
 
     @api_method
     def remote_list_ref(self):
-        return {r: remote_name for r, remote_name in self._registry.refs.list.items()}
+        return {r: remote_name for r, remote_name in self._client_cache.registry.refs.list.items()}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.set(reference, remote_name, check_exists=True)
+        return self._client_cache.registry.refs.set(reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.remove(reference)
+        return self._client_cache.registry.refs.remove(reference)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         reference = ConanFileReference.loads(str(reference), validate=True)
-        return self._registry.refs.update(reference, remote_name)
+        return self._client_cache.registry.refs.update(reference, remote_name)
 
     @api_method
     def remote_list_pref(self, reference):
         reference = ConanFileReference.loads(str(reference), validate=True)
         ret = {}
-        tmp = self._registry.prefs.list
+        tmp = self._client_cache.registry.prefs.list
         for r, remote in tmp.items():
             pref = PackageReference.loads(r)
             if pref.conan == reference:
@@ -881,20 +878,20 @@ class ConanAPIV1(object):
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
         p_reference = PackageReference.loads(str(package_reference), validate=True)
-        return self._registry.prefs.set(p_reference, remote_name, check_exists=True)
+        return self._client_cache.registry.prefs.set(p_reference, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_pref(self, package_reference):
         p_reference = PackageReference.loads(str(package_reference), validate=True)
-        return self._registry.prefs.remove(p_reference)
+        return self._client_cache.registry.prefs.remove(p_reference)
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
         p_reference = PackageReference.loads(str(package_reference), validate=True)
-        return self._registry.prefs.update(p_reference, remote_name)
+        return self._client_cache.registry.prefs.update(p_reference, remote_name)
 
     def remote_clean(self):
-        return self._registry.remotes.clean()
+        return self._client_cache.registry.remotes.clean()
 
     @api_method
     def profile_list(self):
@@ -943,11 +940,11 @@ class ConanAPIV1(object):
 
     @api_method
     def get_default_remote(self):
-        return self._registry.remotes.default
+        return self._client_cache.registry.remotes.default
 
     @api_method
     def get_remote_by_name(self, remote_name):
-        return self._registry.remotes.get(remote_name)
+        return self._client_cache.registry.remotes.get(remote_name)
 
 
 Conan = ConanAPIV1

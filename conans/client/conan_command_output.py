@@ -2,7 +2,6 @@ import json
 import os
 
 from conans.client.printer import Printer
-from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.unicode import get_cwd
 from conans.util.files import save
@@ -81,11 +80,12 @@ class CommandOutputer(object):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def info(self, deps_graph, only, package_filter, show_paths):
-        registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
+        registry = self.client_cache.registry
         Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.client_cache, package_filter=package_filter,
+                                             path_resolver=self.client_cache,
+                                             package_filter=package_filter,
                                              show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
