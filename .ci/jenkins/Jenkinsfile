@@ -61,6 +61,10 @@ if(is_pr){ // Read the PR body to
                         test_revisions = true
                     }
                 }
+                echo "SLAVES: ${slaves}"
+                echo "PYVERS: ${all_pyvers}"
+                echo "FLAVORS: ${flavors}"
+                echo "EXCLUDED TAGS: ${excluded_tags}"
             }
         }
     }
@@ -89,10 +93,6 @@ def e_tags = ""
 if(excluded_tags){
     e_tags = "-e " + excluded_tags.join(' -e ')
 }
-
-echo "SLAVES: ${slaves}"
-echo "PYVERS: ${all_pyvers}"
-echo "FLAVORS: ${flavors}"
 
 try{
     for (flavor in flavors){
