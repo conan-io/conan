@@ -191,7 +191,6 @@ class ConanAPIV1(object):
         try:
             user_home = get_conan_user_home()
             client_cache = migrate_and_get_client_cache(user_home, out)
-            logger.debug("INIT: Using config '%s'" % client_cache.conan_conf_path)
             sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))
@@ -200,6 +199,7 @@ class ConanAPIV1(object):
         with tools.environment_append(client_cache.conan_config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
+            conans.util.log.logger.debug("INIT: Using config '%s'" % client_cache.conan_conf_path)
 
             # Create Hook Manager
             hook_manager = HookManager(client_cache.hooks_path, get_env("CONAN_HOOKS", list()),
