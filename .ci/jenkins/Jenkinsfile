@@ -61,10 +61,6 @@ if(is_pr){ // Read the PR body to
                         test_revisions = true
                     }
                 }
-                echo "SLAVES: ${slaves}"
-                echo "PYVERS: ${all_pyvers}"
-                echo "FLAVORS: ${flavors}"
-                echo "EXCLUDED TAGS: ${excluded_tags}"
             }
         }
     }
@@ -77,7 +73,6 @@ if(test_revisions){
 else{
     flavors = ["blocked_v2"]
 }
-
 
 def module = "\"conans.test\""
 def numcores = "--num_cores=3"
@@ -93,6 +88,12 @@ def e_tags = ""
 if(excluded_tags){
     e_tags = "-e " + excluded_tags.join(' -e ')
 }
+
+
+echo "SLAVES: ${slaves}"
+echo "STAGES: ${flavors}"
+echo "PYVERS: ${all_pyvers}"
+echo "EXCLUDED TAGS: ${excluded_tags}"
 
 try{
     for (flavor in flavors){
