@@ -8,12 +8,11 @@ from mock import patch
 from conans.client import tools
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
-from conans.client.remote_registry import Remote, RemoteRegistry
+from conans.client.remote_registry import Remote
 from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir, save, save_files
-from conans.model.ref import ConanFileReference
 
 win_profile = """[settings]
     os: Windows
@@ -79,7 +78,7 @@ class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         # Save to the old registry, it has to be migrated
-        registry_path = self.client.client_cache.registry
+        registry_path = self.client.client_cache.registry_path
 
         save(registry_path, """
 {
@@ -104,10 +103,6 @@ class ConfigInstallTest(unittest.TestCase):
         save(os.path.join(self.client.client_cache.profiles_path, "default"),
              "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
-        self.client.client_cache.set_ref_remote(ConanFileReference.loads("MyPkg/0.1@user/channel"),
-                                                "my-repo-2")
-        self.client.client_cache.set_ref_remote(ConanFileReference.loads("Other/1.2@user/channel"),
-                                                "conan-center")
 
         self.old_env = dict(os.environ)
 
@@ -136,14 +131,12 @@ class ConfigInstallTest(unittest.TestCase):
     def _check(self, install_path):
         settings_path = self.client.client_cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        registry_path = self.client.client_cache.registry
-        registry = RemoteRegistry(registry_path, TestBufferConanOutput())
+        registry = self.client.client_cache.registry
         self.assertEqual(registry.remotes.list,
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
-        self.assertEqual(self.client.client_cache.ref_list(),
-                         {"MyPkg/0.1@user/channel": "my-repo-2"})
+        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),

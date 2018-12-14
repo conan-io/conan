@@ -31,8 +31,7 @@ lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io        
 """)
         client = TestClient(base_folder=tmp, servers=False)
-        new_path = client.client_cache.registry
-        registry = RemoteRegistry(new_path, TestBufferConanOutput())
+        registry = client.client_cache.registry
         self.assertEqual(registry.remotes.list, [("conan.io", "https://server.conan.io", True)])
         expected = {'lib/1.0@conan/stable': 'conan.io',
                     'other/1.0@lasote/testing': 'conan.io'}

@@ -4,11 +4,12 @@ from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
+def download(reference, package_ids, remote_name, recipe, remote_manager,
              client_cache, out, recorder, loader, hook_manager):
 
     assert(isinstance(reference, ConanFileReference))
     output = ScopedOutput(str(reference), out)
+    registry = client_cache.registry
     remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
 
     hook_manager.execute("pre_download", reference=reference, remote=remote)
@@ -17,13 +18,13 @@ def download(reference, package_ids, remote_name, recipe, registry, remote_manag
         remote_manager.get_recipe(reference, remote)
     except NotFoundException:
         raise NotFoundException("'%s' not found in remote '%s'" % (str(reference), remote.name))
-    client_cache.set_ref_remote(reference, remote.name)
+    registry.refs.set(reference, remote.name)
     conan_file_path = client_cache.conanfile(reference)
     conanfile = loader.load_class(conan_file_path)
 
     if not recipe:  # Not only the recipe
         # Download the sources too, don't be lazy
-        complete_recipe_sources(remote_manager, client_cache, registry, conanfile, reference)
+        complete_recipe_sources(remote_manager, client_cache, conanfile, reference)
 
         if not package_ids:  # User didnt specify a specific package binary
             output.info("Getting the complete package list from '%s'..." % str(reference))

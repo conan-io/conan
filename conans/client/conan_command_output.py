@@ -80,8 +80,9 @@ class CommandOutputer(object):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def info(self, deps_graph, only, package_filter, show_paths):
+        registry = self.client_cache.registry
         Printer(self.user_io.out).print_info(deps_graph,
-                                             only, self.client_cache,
+                                             only, registry,
                                              node_times=self._read_dates(deps_graph),
                                              path_resolver=self.client_cache,
                                              package_filter=package_filter,

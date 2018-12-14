@@ -44,7 +44,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        registry = RemoteRegistry(client2.client_cache.registry, client2.out)
+        registry = RemoteRegistry(client2.client_cache, client2.out)
         installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager,
                                registry=registry)
 
@@ -56,7 +56,7 @@ class DownloadTest(unittest.TestCase):
                 return Response(False, 500)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        registry = RemoteRegistry(client2.client_cache.registry, client2.out)
+        registry = RemoteRegistry(client2.client_cache, client2.out)
         installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager,
                                registry=registry)
 

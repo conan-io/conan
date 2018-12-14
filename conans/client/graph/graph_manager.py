@@ -43,12 +43,11 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, client_cache, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
         self._client_cache = client_cache
-        self._registry = registry
         self._remote_manager = remote_manager
         self._loader = loader
 
@@ -226,7 +225,7 @@ class GraphManager(object):
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, self._registry, workspace)
+                                                  self._remote_manager, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,

@@ -220,7 +220,7 @@ class HelloConan(ConanFile):
         self.client.run("info %s" % str(self.ref))
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
-        self.client.set_ref_remote(self.ref, None)
+        self.client.remote_registry.refs.remove(self.ref)
         # Upload to a non-revisions server, the revision should be always there in the registry
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))

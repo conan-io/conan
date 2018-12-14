@@ -80,7 +80,8 @@ def migrate_registry_file(path, new_path):
 
 class _Registry(object):
 
-    def __init__(self, filename, lockfile, output):
+    def __init__(self, client_cache, filename, lockfile, output):
+        self._client_cache = client_cache
         self._filename = filename
         self._lockfile = lockfile
         self._output = output
@@ -143,26 +144,41 @@ class _GenericReferencesRegistry(_Registry):
 
 class _ReferencesRegistry(_GenericReferencesRegistry):
 
-    def _partial_load(self):
-        """Loads only references for recipes"""
-        remotes, rrefs, _ = self._load()
-        return remotes, rrefs
+    def get(self, ref):
+        assert(isinstance(ref, ConanFileReference))
+        remote_name = self._client_cache.load_metadata(ref).recipe.remote
+        if not remote_name:
+            return None
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, _, _ = self._load()
+        return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
 
-    def _partial_save(self, refs):
-        """Saves only modified references for recipes"""
-        remotes, _, prefs = self._load()
-        self._save(remotes, refs, prefs)
+    def set(self, ref, remote_name, check_exists=False):
+        assert(isinstance(ref, ConanFileReference))
+        with fasteners.InterProcessLock(self._lockfile, logger=logger):
+            remotes, _, _ = self._load()
+
+        if remote_name not in remotes:
+            raise ConanException("%s not in remotes" % remote_name)
+        with self._client_cache.update_metadata(ref) as metadata:
+            if check_exists and metadata.recipe.remote:
+                raise ConanException("%s already exists. Use update" % str(ref))
+            metadata.recipe.remote = remote_name
+
+    @property
+    def list(self):
+        return {ref: self.get(ref) for ref in self._client_cache.list_refs()}
 
     def update(self, ref, remote_name):
         assert(isinstance(ref, ConanFileReference))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, rrefs, prefs = self._load()
-            if self._key(ref) not in rrefs:
+            remotes, _, _ = self._load()
+        if remote_name not in remotes:
+            raise ConanException("%s not in remotes" % remote_name)
+        with self.client_cache.update_metadata(ref) as metadata:
+            if not metadata.remote:
                 raise ConanException("%s does not exist. Use add" % str(ref))
-            if remote_name not in remotes:
-                raise ConanException("%s not in remotes" % remote_name)
-            rrefs[self._key(ref)] = remote_name
-            self._save(remotes, rrefs, prefs)
+            metadata.recipe.remote = remote_name
 
 
 class _PackageReferencesRegistry(_GenericReferencesRegistry):
@@ -333,19 +349,21 @@ class _RemotesRegistry(_Registry):
 
 class RemoteRegistry(object):
 
-    def __init__(self, filename, output):
-        self._filename = filename
-        self._lockfile = filename + ".lock"
+    def __init__(self, client_cache, output):
+        self._client_cache = client_cache
+        self._filename = client_cache.registry_path
+        self._lockfile = self._filename + ".lock"
         self._output = output
 
     @property
     def remotes(self):
-        return _RemotesRegistry(self._filename, self._lockfile, self._output)
+        return _RemotesRegistry(self._client_cache, self._filename, self._lockfile, self._output)
 
     @property
     def refs(self):
-        return _ReferencesRegistry(self._filename, self._lockfile, self._output)
+        return _ReferencesRegistry(self._client_cache, self._filename, self._lockfile, self._output)
 
     @property
     def prefs(self):
-        return _PackageReferencesRegistry(self._filename, self._lockfile, self._output)
+        return _PackageReferencesRegistry(self._client_cache, self._filename, self._lockfile,
+                                          self._output)

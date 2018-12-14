@@ -17,11 +17,11 @@ UPLOAD_POLICY_SKIP = "skip-upload"
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, registry, loader, hook_manager):
+    def __init__(self, client_cache, user_io, remote_manager, loader, hook_manager):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._loader = loader
         self._hook_manager = hook_manager
 
@@ -34,7 +34,8 @@ class CmdUpload(object):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
         t1 = time.time()
-        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):  # Upload package
+        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):
+            # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             references = [ref, ]
             confirm = True
@@ -75,7 +76,7 @@ class CmdUpload(object):
         """Uploads the recipes and binaries identified by conan_ref"""
 
         default_remote = self._registry.remotes.default
-        cur_recipe_remote = self._client_cache.get_ref_remote(conan_ref)
+        cur_recipe_remote = self._registry.refs.get(conan_ref)
         if remote_name:  # If remote_name is given, use it
             recipe_remote = self._registry.remotes.get(remote_name)
         else:
@@ -132,18 +133,18 @@ class CmdUpload(object):
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._client_cache.conanfile(conan_reference)
-        current_remote = self._client_cache.get_ref_remote(conan_reference)
+        current_remote = self._registry.refs.get(conan_reference)
 
         if remote != current_remote:
             conanfile = self._loader.load_class(conan_file_path)
-            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+            complete_recipe_sources(self._remote_manager, self._client_cache,
                                     conanfile, conan_reference)
         self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                            policy=policy, remote_manifest=remote_manifest)
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote and policy != UPLOAD_POLICY_SKIP:
-            self._client_cache.set_ref_remote(conan_reference, remote.name)
+            self._registry.refs.set(conan_reference, remote.name)
 
         return conan_reference
 
@@ -184,7 +185,8 @@ class CmdUpload(object):
 
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
-            self._print_manifest_information(remote_recipe_manifest, local_manifest, conan_ref, remote)
+            self._print_manifest_information(remote_recipe_manifest, local_manifest, conan_ref,
+                                             remote)
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))
@@ -200,8 +202,7 @@ class CmdUpload(object):
             self._user_io.out.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = load(os.path.join(self._client_cache.export(conan_ref),
-                                                   "conanfile.py"))
+                contents = load(os.path.join(self._client_cache.export(conan_ref), "conanfile.py"))
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_path(conan_ref, package_id=None,

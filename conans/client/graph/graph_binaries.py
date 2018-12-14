@@ -12,11 +12,11 @@ from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, registry, workspace):
+    def __init__(self, client_cache, output, remote_manager, workspace):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
@@ -99,8 +99,7 @@ class GraphBinariesAnalyzer(object):
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            remote = (self._registry.prefs.get(package_ref) or
-                      self._client_cache.get_ref_remote(conan_ref))
+            remote = self._registry.prefs.get(package_ref) or self._registry.refs.get(conan_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):

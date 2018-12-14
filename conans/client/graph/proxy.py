@@ -16,12 +16,12 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
-    def __init__(self, client_cache, output, remote_manager, registry):
+    def __init__(self, client_cache, output, remote_manager):
         # collaborators
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
         with self._client_cache.conanfile_write_lock(conan_reference):
@@ -59,7 +59,7 @@ class ConanProxy(object):
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
             new_ref = self._remote_manager.get_recipe(reference, update_remote)
-            self._client_cache.set_ref_remote(new_ref, update_remote.name)
+            self._registry.refs.set(new_ref, update_remote.name)
             status = RECIPE_UPDATED
             return conanfile_path, status, update_remote, new_ref
 
@@ -90,7 +90,7 @@ class ConanProxy(object):
                     DiskRemover(self._client_cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(reference, update_remote)
-                    self._client_cache.set_ref_remote(new_ref, update_remote.name)
+                    self._registry.refs.set(new_ref, update_remote.name)
                     status = RECIPE_UPDATED
                     return conanfile_path, status, update_remote, new_ref
                 else:
@@ -107,7 +107,7 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             _new_ref = self._remote_manager.get_recipe(conan_reference, the_remote)
-            self._client_cache.set_ref_remote(new_ref, the_remote.name)
+            self._registry.refs.set(_new_ref, the_remote.name)
             recorder.recipe_downloaded(conan_reference, the_remote.url)
             return _new_ref
 
@@ -115,7 +115,7 @@ class ConanProxy(object):
             output.info("Not found, retrieving from server '%s' " % remote_name)
             remote = self._registry.remotes.get(remote_name)
         else:
-            remote = self._client_cache.get_ref_remote(conan_reference)
+            remote = self._registry.refs.get(conan_reference)
             if remote:
                 output.info("Retrieving from predefined remote '%s'" % remote.name)
 

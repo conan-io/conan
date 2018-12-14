@@ -8,7 +8,8 @@ from conans.client.conf import ConanClientConfigParser, default_client_conf, def
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file
+from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file,\
+    RemoteRegistry
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -51,6 +52,7 @@ class ClientCache(SimplePaths):
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
+        self.registry = RemoteRegistry(self, self._output)
 
         super(ClientCache, self).__init__(self._store_folder)
 
@@ -109,7 +111,7 @@ class ClientCache(SimplePaths):
             raise ConanException("Invalid %s file!" % self.put_headers_path)
 
     @property
-    def registry(self):
+    def registry_path(self):
         reg_json_path = join(self.conan_folder, REGISTRY_JSON)
         if not os.path.exists(reg_json_path):
             # Load the txt if exists and convert to json
@@ -304,21 +306,6 @@ class ClientCache(SimplePaths):
     def list_refs(self):
         subdirs = list_folder_subdirs(basedir=self.store, level=4)
         return [ConanFileReference(*f.split("/")) for f in subdirs]
-
-    def ref_list(self):
-        result = {}
-        for ref in self.list_refs():
-            result[ref] = self.get_ref_remote(ref)
-        return result
-
-    def get_ref_remote(self, ref):
-        return self.load_metadata(ref).recipe.remote
-
-    def set_ref_remote(self, ref, remote, check_exists=False):
-        with self.update_metadata(ref) as metadata:
-            if check_exists and metadata.remote:
-                raise ConanException("%s already exists. Use update" % str(ref))
-            metadata.recipe.remote = remote
 
     @contextmanager
     def update_metadata(self, conan_reference):
