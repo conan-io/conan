@@ -27,12 +27,12 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t.run('install --editable=. {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
-    def test_remove_editable(self):
+    def test_install_override(self):
         self.t.run('install {}'.format(self.reference), ignore_error=True)
         self.assertIn("Removed '{}' as editable package".format(self.reference), self.t.out)
 
     @unittest.expectedFailure
-    def test_export_editable(self):
+    def test_export_override(self):
         # TODO: What is the behavior for 'export' when the package is already editable.
         self.t.run('export . {}'.format(self.reference), ignore_error=True)
         self.assertIn("Removed '{}' as editable package".format(self.reference), self.t.out)
