@@ -54,7 +54,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build")
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        source_path = self.client.paths.source(ref)
+        source_path = self.client.client_cache.source(ref)
         file_open = os.path.join(source_path, "main.cpp")
 
         self.f = open(file_open, 'wb')

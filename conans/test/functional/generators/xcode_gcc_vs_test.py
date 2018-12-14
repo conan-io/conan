@@ -75,9 +75,9 @@ xcode
         lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
         libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
 
-        package_id = os.listdir(client.paths.packages(conan_ref))[0]
+        package_id = os.listdir(client.client_cache.packages(conan_ref))[0]
         package_ref = PackageReference(conan_ref, package_id)
-        package_path = client.paths.package(package_ref).replace("\\", "/")
+        package_path = client.client_cache.package(package_ref).replace("\\", "/")
 
         replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
                                "$(USERPROFILE)", package_path, flags=re.I)
