@@ -10,6 +10,9 @@ class ClientBaseRouterBuilder(object):
     def __init__(self, base_url):
         self.routes = RestRoutes(base_url)
 
+    def ping(self):
+        return self.routes.ping
+
     @staticmethod
     def format_ref(url, ref):
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
@@ -120,11 +123,11 @@ class ClientSearchRouterBuilder(ClientBaseRouterBuilder):
             if not ignorecase:
                 params["ignorecase"] = "False"
             query = "?%s" % urlencode(params)
-        return "%s%s" % (self.common_search, query)
+        return "%s%s" % (self.routes.common_search, query)
 
     def search_packages(self, ref, query=None):
         """URL search packages for a recipe"""
-        url = self.format_ref(self.common_search_packages, ref.copy_clear_rev())
+        url = self.format_ref(self.routes.common_search_packages, ref.copy_clear_rev())
         if query:
             url += "?%s" % urlencode({"q": query})
         return url
@@ -170,27 +173,27 @@ class ClientV1ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def recipe_manifest(self, ref):
         """get recipe manifest url"""
-        return self.format_ref(self.v1_recipe_digest, ref.copy_clear_rev())
+        return self.format_ref(self.routes.v1_recipe_digest, ref.copy_clear_rev())
 
     def package_manifest(self, pref):
         """get manifest url"""
-        return self.format_pref(self.v1_package_digest, pref.copy_clear_rev())
+        return self.format_pref(self.routes.v1_package_digest, pref.copy_clear_rev())
 
     def recipe_download_urls(self, ref):
         """ urls to download the recipe"""
-        return self.format_ref(self.v1_recipe_download_urls, ref.copy_clear_rev())
+        return self.format_ref(self.routes.v1_recipe_download_urls, ref.copy_clear_rev())
 
     def package_download_urls(self, pref):
         """ urls to download the package"""
-        return self.format_pref(self.v1_package_download_urls, pref.copy_clear_rev())
+        return self.format_pref(self.routes.v1_package_download_urls, pref.copy_clear_rev())
 
     def recipe_upload_urls(self, ref):
         """ urls to upload the recipe"""
-        return self.format_ref(self.v1_recipe_upload_urls, ref.copy_clear_rev())
+        return self.format_ref(self.routes.v1_recipe_upload_urls, ref.copy_clear_rev())
 
     def package_upload_urls(self, pref):
         """ urls to upload the package"""
-        return self.format_pref(self.v1_package_upload_urls, pref.copy_clear_rev())
+        return self.format_pref(self.routes.v1_package_upload_urls, pref.copy_clear_rev())
 
 
 class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):

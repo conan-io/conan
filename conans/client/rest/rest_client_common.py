@@ -96,7 +96,7 @@ class RestCommonMethods(object):
     def authenticate(self, user, password):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
-        url = self.users_router.common_authenticate
+        url = self.users_router.common_authenticate()
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -111,14 +111,14 @@ class RestCommonMethods(object):
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
-        url = self.users_router.common_check_credentials
+        url = self.users_router.common_check_credentials()
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
 
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
-        url = self.base_router.ping
+        url = self.base_router.ping()
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
