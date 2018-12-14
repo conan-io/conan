@@ -30,7 +30,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.model.version import Version
-from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.test.utils.conanfile import ConanFileMock
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
@@ -1838,8 +1838,11 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
 
 @attr("slow")
 @attr('svn')
-@unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION, "SVN::is_pristine not implemented")
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
+
+    def setUp(self):
+        unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION,
+                            "SVN::is_pristine not implemented")
 
     def test_checkout(self):
         svn = SVN(folder=self.gimme_tmp())
@@ -1935,6 +1938,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -1957,6 +1961,7 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, url):
@@ -1988,6 +1993,7 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
+@attr("svn")
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):

@@ -9,6 +9,7 @@ from conans.model.settings import Settings
 
 
 class SConsGeneratorTest(unittest.TestCase):
+
     def variables_setup_test(self):
         conanfile = ConanFile(None, None)
         conanfile.initialize(Settings({}), EnvValues())
