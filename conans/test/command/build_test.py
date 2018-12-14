@@ -1,8 +1,9 @@
-from conans.test.utils.tools import TestClient
-import unittest
-from conans.paths import CONANFILE, BUILD_INFO
-from conans.model.ref import PackageReference
 import os
+import unittest
+
+from conans.model.ref import PackageReference
+from conans.paths import BUILD_INFO, CONANFILE
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load, mkdir
 
 conanfile_scope_env = """
@@ -19,9 +20,9 @@ class AConan(ConanFile):
 """
 
 conanfile_dep = """
+import os
 from conans import ConanFile
 from conans.tools import mkdir
-import os
 
 class AConan(ConanFile):
     name = "Hello"
@@ -122,8 +123,7 @@ class AConan(ConanFile):
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py")
-        ref = PackageReference.loads("Hello/0.1@lasote/testing:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         package_folder = client.paths.package(ref).replace("\\", "/")
         self.assertIn("Project: INCLUDE PATH: %s/include" % package_folder, client.user_io.out)
         self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
@@ -194,9 +194,10 @@ class AConan(ConanFile):
         # Try different source
         with client.chdir("other/build"):
             client.run("install ../..")
-        error = client.run("build . --source-folder '%s' --build-folder other/build" %
-                           os.path.join(client.current_folder, "mysrc"), ignore_error=True)
-        self.assertTrue(error)  # src is not created automatically, it makes no sense
+        # src is not created automatically, it makes no sense
+        client.run("build . --source-folder '%s' --build-folder other/build" %
+                   os.path.join(client.current_folder, "mysrc"), assert_error=True)
+
         mkdir(os.path.join(client.current_folder, "mysrc"))
 
         client.run("build . --source-folder '%s' --build-folder other/build"

@@ -1,14 +1,14 @@
 import os
 import unittest
 
-from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
-from conans.client.profile_loader import read_profile, ProfileParser
+from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
+from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conans.util.files import load, save
 
 
 def create_profile(folder, name, settings=None, package_settings=None, env=None,

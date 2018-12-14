@@ -1,8 +1,8 @@
 
 import unittest
 
-from conans.test.utils.tools import TestClient
 from conans.client.command import ERROR_INVALID_CONFIGURATION
+from conans.test.utils.tools import TestClient
 
 
 class InvalidConfigurationTest(unittest.TestCase):
@@ -15,7 +15,7 @@ from conans.errors import ConanInvalidConfiguration
 
 class MyPkg(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    
+
     def configure(self):
         if self.settings.compiler.version == "12":
             raise ConanInvalidConfiguration("user says that compiler.version=12 is invalid")
@@ -28,7 +28,7 @@ class MyPkg(ConanFile):
     def test_install_method(self):
         self.client.run("install . %s" % self.settings_msvc15)
 
-        error = self.client.run("install . %s" % self.settings_msvc12, ignore_error=True)
+        error = self.client.run("install . %s" % self.settings_msvc12, assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("Invalid configuration: user says that compiler.version=12 is invalid",
                       self.client.out)
@@ -37,7 +37,7 @@ class MyPkg(ConanFile):
         self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc15)
 
         error = self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc12,
-                                ignore_error=True)
+                                assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
                       "compiler.version=12 is invalid", self.client.out)
@@ -55,7 +55,7 @@ class MyPkg(ConanFile):
         self.client.run("create other/ other/ver@jgsogo/test %s" % self.settings_msvc15)
 
         error = self.client.run("create other/ other/ver@jgsogo/test %s" % self.settings_msvc12,
-                                ignore_error=True)
+                                assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
                       "compiler.version=12 is invalid", self.client.out)

@@ -1,24 +1,24 @@
 import os
 import shutil
-from os.path import join, normpath
 from collections import OrderedDict
+from contextlib import contextmanager
+from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
+from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case,\
-    CONAN_MANIFEST
-from conans.util.files import save, load, normalize, list_folder_subdirs
-from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS, SimplePaths, check_ref_case
 from conans.unicode import get_cwd
-
+from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -26,7 +26,7 @@ LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
-PLUGINS_FOLDER = "plugins"
+HOOKS_FOLDER = "hooks"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -156,11 +156,11 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
-    def plugins_path(self):
+    def hooks_path(self):
         """
-        :return: Plugins folder in client cache
+        :return: Hooks folder in client cache
         """
-        return join(self.conan_folder, PLUGINS_FOLDER)
+        return join(self.conan_folder, HOOKS_FOLDER)
 
     @property
     def default_profile(self):
@@ -210,13 +210,13 @@ class ClientCache(SimplePaths):
         return self._settings
 
     @property
-    def plugins(self):
-        """Returns a list of plugins inside the plugins folder"""
-        plugins = []
-        for plugin_name in os.listdir(self.plugins_path):
-            if os.path.isfile(plugin_name) and plugin_name.endswith(".py"):
-                plugins.append(plugin_name[:-3])
-        return plugins
+    def hooks(self):
+        """Returns a list of hooks inside the hooks folder"""
+        hooks = []
+        for hook_name in os.listdir(self.hooks_path):
+            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
+                hooks.append(hook_name[:-3])
+        return hooks
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
@@ -292,6 +292,26 @@ class ClientCache(SimplePaths):
         self._settings = None
         self._default_profile = None
         self._no_lock = None
+
+    # Metadata
+    def load_metadata(self, conan_reference):
+        try:
+            text = load(self.package_metadata(conan_reference))
+            return PackageMetadata.loads(text)
+        except IOError:
+            return PackageMetadata()
+
+    @contextmanager
+    def update_metadata(self, conan_reference):
+        metadata = self.load_metadata(conan_reference)
+        yield metadata
+        save(self.package_metadata(conan_reference), metadata.dumps())
+
+    # Revisions
+    def package_summary_hash(self, package_ref):
+        package_folder = self.package(package_ref, short_paths=None)
+        readed_digest = FileTreeManifest.load(package_folder)
+        return readed_digest.summary_hash
 
 
 def _mix_settings_with_env(settings):

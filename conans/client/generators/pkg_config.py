@@ -1,4 +1,5 @@
 import os
+
 from conans.client.build.compiler_flags import rpath_flags
 from conans.model import Generator
 

@@ -1,12 +1,13 @@
 import os
 import unittest
 
-from conans import tools
+from parameterized import parameterized
+
+from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
-from parameterized import parameterized
 
 
 class PackageLocalCommandTest(unittest.TestCase):
@@ -21,7 +22,8 @@ class PackageLocalCommandTest(unittest.TestCase):
             # don't need build method
             tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                                   "def build",
-                                  "def skip_build")
+                                  "def skip_build",
+                                  output=the_client.out)
             the_client.run("install . --install-folder build")
             mkdir(os.path.join(client.current_folder, "build2"))
 
@@ -33,7 +35,8 @@ class PackageLocalCommandTest(unittest.TestCase):
 
         # In current dir subdir with conanfile path
         prepare_for_package(client)
-        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package-folder=subdir")
+        client.run("package ./conanfile.py --build-folder build2 --install-folder build "
+                   "--package-folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path
@@ -67,24 +70,22 @@ class PackageLocalCommandTest(unittest.TestCase):
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
-        error = client.run("package conanfile.txt --build-folder build2 --install-folder build",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("package conanfile.txt --build-folder build2 --install-folder build",
+                   assert_error=True)
         self.assertIn(
             "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
             client.out)
 
         # Path with wrong conanfile path
-        error = client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
+                   assert_error=True)
+
         self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
                                                                  "conanfile.py"), client.out)
 
     def package_with_reference_errors_test(self):
         client = TestClient()
-        error = client.run("package MyLib/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("package MyLib/0.1@lasote/stable", assert_error=True)
         self.assertIn("conan package' doesn't accept a reference anymore",
                       client.out)
 

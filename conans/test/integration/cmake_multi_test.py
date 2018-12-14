@@ -1,11 +1,12 @@
+import os
+import platform
 import unittest
 
-from conans import tools
-from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
-import platform
-import os
+
+from conans.client import tools
 from conans.test.utils.multi_config import multi_config_files
+from conans.test.utils.tools import TestClient
 
 conanfile_py = """
 from conans import ConanFile, CMake

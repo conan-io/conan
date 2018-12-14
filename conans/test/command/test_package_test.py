@@ -1,8 +1,9 @@
-import unittest
 import os
-from conans import tools
+import unittest
+
+from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 conanfile = '''
 from conans import ConanFile
@@ -46,7 +47,7 @@ class TestConanLib(ConanFile):
 
         self.assertNotIn("Exporting package recipe", client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
-        self.assertNotIn("Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created", client.out)
+        self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
@@ -107,16 +108,14 @@ class ConanLib(ConanFile):
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
-        error = client.run("test conanfile.txt other/0.2@user2/channel2", ignore_error=True)
-        self.assertTrue(error)
+        client.run("test conanfile.txt other/0.2@user2/channel2", assert_error=True)
+
         self.assertIn(
             "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
             client.out)
 
         # Path with wrong conanfile path
-        error = client.run("test not_real_dir/conanfile.py other/0.2@user2/channel2",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("test not_real_dir/conanfile.py other/0.2@user2/channel2", assert_error=True)
         self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
                                                                  "conanfile.py"), client.out)
 

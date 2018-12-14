@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient, TestRequester
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
 import os
+import unittest
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 
 
@@ -23,7 +24,7 @@ class BrokenDownloadTest(unittest.TestCase):
         path = server.test_server.server_store.export(ref)
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
-        client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
+        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("ERROR: Error while downloading/extracting files to", client.user_io.out)
         self.assertFalse(os.path.exists(client.paths.export(ref)))
 

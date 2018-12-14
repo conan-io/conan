@@ -1,11 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from nose.plugins.attrib import attr
-from conans.util.files import load
-from conans.model.ref import PackageReference
 import os
+import unittest
+
+from nose.plugins.attrib import attr
+
+from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import load
 
 
 @attr("slow")
@@ -111,8 +113,7 @@ class HelloReuseConan(ConanFile):
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
         client.run("test test Hello/0.1@lasote/stable")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})

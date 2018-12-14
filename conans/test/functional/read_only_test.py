@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import save
 import os
+import unittest
+
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import save
 
 
 class ReadOnlyTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class MyPkg(ConanFile):
 
     def basic_test(self):
         ref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
-                               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                               NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(self.client.client_cache.package(ref), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
@@ -51,7 +52,7 @@ class MyPkg(ConanFile):
                             users={"default": [("lasote", "mypass")]})
         client.run("install Pkg/0.1@lasote/channel")
         ref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
-                               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                               NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.client_cache.package(ref), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")

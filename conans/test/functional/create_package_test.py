@@ -1,15 +1,15 @@
-import unittest
 import os
 import shutil
+import unittest
 
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.test.utils.test_files import hello_source_files
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANINFO, CONANFILE
-from conans.client.packager import create_package
-from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.client.output import ScopedOutput
 from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.loader import ConanFileLoader
+from conans.client.output import ScopedOutput
+from conans.client.packager import create_package
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.test_files import hello_source_files
+from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_processed_profile
 
 
 myconan1 = """
@@ -45,7 +45,7 @@ class ExporterTest(unittest.TestCase):
         client.init_dynamic_vars()
         files = hello_source_files()
 
-        conan_ref = ConanFileReference.loads("Hello/1.2.1/frodo/stable")
+        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = client.paths.export(conan_ref)
 
         client.save(files, path=reg_folder)
@@ -81,10 +81,10 @@ class ExporterTest(unittest.TestCase):
 
         output = ScopedOutput("", TestBufferConanOutput())
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        conanfile = loader.load_conanfile(conanfile_path, None, ProcessedProfile())
+        conanfile = loader.load_conanfile(conanfile_path, None, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       output, client.plugin_manager, conanfile_path, conan_ref, copy_info=True)
+                       output, client.hook_manager, conanfile_path, conan_ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

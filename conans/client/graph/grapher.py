@@ -1,7 +1,7 @@
-from conans.util.files import save
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
+    BINARY_UPDATE
 from conans.client.installer import build_id
-from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
-    BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
+from conans.util.files import save
 from conans.client.graph.grapher_resources import visjs
 
 
@@ -52,7 +52,7 @@ class ConanHTMLGrapher(object):
                                    ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
                                    ("license", conanfile.license),
                                    ("author", conanfile.author),
-                                   ("topics", conanfile.topics)]:
+                                   ("topics", str(conanfile.topics))]:
                     if data:
                         data = data.replace("'", '"')
                         fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))

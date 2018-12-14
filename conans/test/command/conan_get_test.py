@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.utils.tools import TestServer, TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class ConanGetTest(unittest.TestCase):
@@ -53,7 +53,7 @@ class HelloConan(ConanFile):
         self.assertIn(self.conanfile, self.client.user_io.out)
 
         # Local search print package info
-        self.client.run('get Hello0/0.1@lasote/channel -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw')
+        self.client.run('get Hello0/0.1@lasote/channel -p %s --raw' % NO_SETTINGS_PACKAGE_ID)
         self.assertIn("""
 [requires]
 
@@ -76,7 +76,7 @@ class HelloConan(ConanFile):
 """, self.client.user_io.out)
 
         # List package dir
-        self.client.run('get Hello0/0.1@lasote/channel "." -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw')
+        self.client.run('get Hello0/0.1@lasote/channel "." -p %s --raw' % NO_SETTINGS_PACKAGE_ID)
         self.assertEquals("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
 
     def test_get_remote(self):
@@ -93,16 +93,15 @@ class HelloConan(ConanFile):
 
         # List package dir
         self.client.run('get Hello0/0.1@lasote/channel "." '
-                        '  -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw -r default')
+                        '  -p %s --raw -r default' % NO_SETTINGS_PACKAGE_ID)
         self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
                           self.client.user_io.out)
 
     def test_not_found(self):
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default', ignore_error=True)
+        self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
         self.assertIn("Recipe Hello0/0.1@lasote/channel not found", self.client.user_io.out)
 
-        error = self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
+                        assert_error=True)
         self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found",
                       self.client.user_io.out)

@@ -1,9 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.util.files import load
+import unittest
 
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import load
 
 base_conanfile = '''
 from conans import ConanFile
@@ -76,17 +76,17 @@ class SystemReqsTest(unittest.TestCase):
         client.run("install Test/0.1@user/testing -o myopt=False --build missing")
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         self.assertFalse(os.path.exists(client.paths.system_reqs(conan_ref)))
-        package_ref2 = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_ref2 = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
         load_file = load(client.paths.system_reqs_package(package_ref2))
         self.assertIn("Installed my stuff", load_file)
 
         # remove packages
-        client.run("remove Test* -f -p 544", ignore_error=True)
+        client.run("remove Test* -f -p 544")
         self.assertTrue(os.path.exists(client.paths.system_reqs_package(package_ref)))
         client.run("remove Test* -f -p f0ba3ca2c218df4a877080ba99b65834b9413798")
         self.assertFalse(os.path.exists(client.paths.system_reqs_package(package_ref)))
         self.assertTrue(os.path.exists(client.paths.system_reqs_package(package_ref2)))
-        client.run("remove Test* -f -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        client.run("remove Test* -f -p %s" % NO_SETTINGS_PACKAGE_ID)
         self.assertFalse(os.path.exists(client.paths.system_reqs_package(package_ref)))
         self.assertFalse(os.path.exists(client.paths.system_reqs_package(package_ref2)))
 

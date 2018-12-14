@@ -1,11 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import unittest
+
 from conans.client.importer import IMPORTS_MANIFESTS
-from conans.util.files import load, mkdir
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
-
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, mkdir
 
 conanfile = """
 from conans import ConanFile
@@ -110,8 +110,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
-        error = self.client.run("imports .")  # Automatic conanbuildinfo.txt
-        self.assertFalse(error)
+        self.client.run("imports .")  # Automatic conanbuildinfo.txt
         self.assertNotIn("conanbuildinfo.txt file not found", self.client.user_io.out)
 
     def install_manifest_test(self):
@@ -124,7 +123,7 @@ class ConanLib(ConanFile):
 
     def install_manifest_without_install_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run('imports . ', ignore_error=True)
+        self.client.run('imports . ', assert_error=True)
         self.assertIn("You can generate it using 'conan install'", self.client.user_io.out)
 
     def install_dest_test(self):

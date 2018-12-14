@@ -2,9 +2,9 @@ import os
 import platform
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save, mkdir
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, mkdir, save
 
 conanfile = """
 from conans import ConanFile
@@ -74,8 +74,7 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, ref)
 
@@ -105,8 +104,7 @@ class TestConan(ConanFile):
         os.symlink("version1", latest)
         os.symlink("latest", edge)
         client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, ref, build=False)
 
@@ -128,10 +126,8 @@ class TestConan(ConanFile):
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
-        package_ref = PackageReference(conan_ref,
-                                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        team_package_ref = PackageReference(team_ref,
-                                            "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
+        team_package_ref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
 
         for folder in [client.paths.export(conan_ref), client.paths.source(conan_ref),
                        client.paths.build(package_ref), client.paths.package(package_ref),
@@ -155,8 +151,7 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         client.run("upload Hello/0.1@lasote/stable --all")
         client.run('remove "*" -f')
@@ -225,7 +220,7 @@ class ConanSymlink(ConanFile):
         cache_other_dir = os.path.join(client.paths.export_sources(ref),
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
-        pkg_ref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pkg_ref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_file = os.path.join(client.paths.package(pkg_ref), "another_directory",
                                     "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))

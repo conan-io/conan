@@ -1,13 +1,13 @@
+import os
 import platform
 import unittest
-import os
+
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.model.version import Version
 from conans.client.build.cmake import CMake
+from conans.model.version import Version
 from conans.test.utils.tools import TestClient
-
 
 conanfile_py = """
 from conans import ConanFile
@@ -279,7 +279,7 @@ class MyLib(ConanFile):
         """
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
-        client.run("build .", ignore_error=True)
+        client.run("build .", assert_error=True)
 
         self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
 
@@ -321,8 +321,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
 
         if platform.system() != "Windows":
             client.run("install . --install-folder=build -s cppstd=gnu98")
-            error = client.run("build . --build-folder=build", ignore_error=True)
-            self.assertTrue(error)
+            client.run("build . --build-folder=build", assert_error=True)
             self.assertIn("Error in build()", client.out)
 
             # Now specify c++14

@@ -1,15 +1,14 @@
-import re
 import os
-
+import re
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.util.log import logger
-from conans.search.query_parse import infix_to_postfix, evaluate_postfix
+from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import list_folder_subdirs, load
+from conans.util.log import logger
 
 
 def filter_outdated(packages_infos, recipe_hash):
@@ -66,7 +65,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
 
-    if prop_name in ["os", "compiler", "arch", "build_type"] or prop_name.startswith("compiler."):
+    if prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or prop_name.startswith("compiler."):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
@@ -109,7 +108,7 @@ def _partial_match(pattern, conan_ref):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(paths, reference, query):
+def search_packages(client_cache, reference, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -117,26 +116,32 @@ def search_packages(paths, reference, query):
                            settings: {os: Windows}}}
     param conan_ref: ConanFileReference object
     """
-    if not os.path.exists(paths.conan(reference)):
+    if not os.path.exists(client_cache.conan(reference)):
         raise NotFoundException("Recipe not found: %s" % str(reference))
-    infos = _get_local_infos_min(paths, reference)
+    infos = _get_local_infos_min(client_cache, reference)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(paths, reference):
+def _get_local_infos_min(client_cache, reference):
     result = {}
-    packages_path = paths.packages(reference)
+    packages_path = client_cache.packages(reference)
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
         try:
             package_reference = PackageReference(reference, package_id)
-            info_path = os.path.join(paths.package(package_reference,
-                                                   short_paths=None), CONANINFO)
+            info_path = os.path.join(client_cache.package(package_reference,
+                                                          short_paths=None), CONANINFO)
             if not os.path.exists(info_path):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
-            conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+
+            metadata = client_cache.load_metadata(package_reference.conan)
+            recipe_revision = metadata.packages[package_id].recipe_revision
+            info = ConanInfo.loads(conan_info_content)
+            if reference.revision and recipe_revision and recipe_revision != reference.revision:
+                continue
+            conan_vars_info = info.serialize_min()
             result[package_id] = conan_vars_info
 
         except Exception as exc:

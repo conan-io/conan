@@ -1,14 +1,13 @@
 # coding=utf-8
-import unittest
 import os
-
+import shutil
+import unittest
 from os.path import join
 
 from conans import load
 from conans.client.source import merge_directories
-from conans.util.files import save, mkdir
 from conans.test.utils.test_files import temp_folder
-import shutil
+from conans.util.files import mkdir, save
 
 
 class MergeDirectoriesTest(unittest.TestCase):

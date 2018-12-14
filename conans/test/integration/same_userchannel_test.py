@@ -1,6 +1,7 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
+import unittest
+
+from conans.test.utils.tools import TestClient
 
 
 class UserChannelTestPackage(unittest.TestCase):
@@ -92,15 +93,13 @@ class HelloReuseConan(ConanFile):
         self.assertNotIn("lasote/stable", self.client.user_io.out)
 
     def test_local_commands(self):
-        error = self.client.run("install .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: Hello/0.1@PROJECT: Error in requirements() method, line 10", self.client.out)
         self.assertIn("ConanException: CONAN_USERNAME environment variable not defined, but self.user is used",
                       self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
-        error = self.client.run("install .", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: Hello/0.1@PROJECT: Error in requirements() method, line 10", self.client.out)
         self.assertIn("ConanException: CONAN_CHANNEL environment variable not defined, but self.channel is used",
                       self.client.out)

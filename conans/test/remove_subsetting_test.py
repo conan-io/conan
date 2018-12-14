@@ -1,7 +1,8 @@
+import os
 import unittest
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
-import os
 
 
 class RemoveSubsettingTest(unittest.TestCase):
@@ -25,8 +26,7 @@ class Pkg(ConanFile):
         mkdir(build_folder)
         client.current_folder = build_folder
         client.run("install ..")
-        error = client.run("build ..", ignore_error=True)
-        self.assertTrue(error)
+        client.run("build ..", assert_error=True)
         self.assertIn("ConanException: 'options.opt2' doesn't exist", client.out)
         self.assertIn("Possible options are ['opt1']", client.out)
 
@@ -46,14 +46,12 @@ class Pkg(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run("source ..")  # Without install you can access build_type, no one has removed it
-        client.run("install ..")
-        # This raised an error because build_type wasn't defined
-        client.run("build ..")
 
-        error = client.run("source ..", ignore_error=True)
-        self.assertTrue(error)
+        client.run("source ..", assert_error=True)
         self.assertIn("'settings.build_type' doesn't exist", client.user_io.out)
+        # This doesn't fail, it doesn't access build_type
+        client.run("install ..")
+        client.run("build ..")
 
     def remove_runtime_test(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -75,8 +73,9 @@ class Pkg(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 -s arch=x86')
-        # This raised an error because build_type wasn't defined
+        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+                   '-s arch=x86')
+        # Before fixing #2327 this raised an error because build_type wasn't defined
         client.run("build ..")
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
         self.assertNotIn("CONAN_LINK_RUNTIME", client.out)

@@ -1,8 +1,8 @@
-import os
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
+
 from bottle import request
 
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 
 conanfile = """
@@ -60,7 +60,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        if not get_env("CONAN_TESTING_SERVER_V2_ENABLED", False):
+        if get_env("CONAN_API_V2_BLOCKED", True):
             expected_calls = [('ping', None),
                               ('get_conan_manifest_url', None),
                               ('check_credentials', None),
@@ -83,7 +83,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipIf(get_env("CONAN_TESTING_SERVER_V2_ENABLED", False), "ApiV1 test")
+    @unittest.skipUnless(get_env("CONAN_API_V2_BLOCKED", True), "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()
@@ -93,7 +93,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         # Upload will fail, as conan_server is expecting a signed URL
-        errors = client.run("upload Hello/0.1@lasote/stable", ignore_error=True)
+        errors = client.run("upload Hello/0.1@lasote/stable", assert_error=True)
         self.assertTrue(errors)
 
         expected_calls = [('ping', None),

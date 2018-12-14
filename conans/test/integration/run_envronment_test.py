@@ -1,12 +1,11 @@
+import platform
+import subprocess
 import unittest
 
+from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-import platform
-from conans.build_info import command
-import subprocess
-from conans import tools
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class RunEnvironmentTest(unittest.TestCase):

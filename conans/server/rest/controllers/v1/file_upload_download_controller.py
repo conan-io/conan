@@ -2,7 +2,7 @@ import os
 from unicodedata import normalize
 
 import six
-from bottle import request, static_file, FileUpload, cached_property
+from bottle import FileUpload, cached_property, request, static_file
 
 from conans.server.rest.controllers.controller import Controller
 from conans.server.service.mime import get_mime_type

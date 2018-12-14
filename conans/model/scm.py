@@ -1,8 +1,14 @@
 import json
-import sys
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+
+
+def get_scm_data(conanfile):
+    try:
+        return SCMData(conanfile)
+    except ConanException:
+        return None
 
 
 class SCMData(object):
@@ -29,6 +35,12 @@ class SCMData(object):
     def capture_revision(self):
         return self.revision == "auto"
 
+    @property
+    def recipe_revision(self):
+        if self.type in ["git", "svn"]:
+            return self.revision
+        raise ConanException("Not implemented recipe revision for %s" % self.type)
+
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
@@ -38,8 +50,9 @@ class SCMData(object):
 
 
 class SCM(object):
-    def __init__(self, data, repo_folder):
+    def __init__(self, data, repo_folder, output):
         self._data = data
+        self._output = output
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
@@ -50,7 +63,8 @@ class SCM(object):
             raise ConanException("SCM not supported: %s" % self._data.type)
 
         return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
-                          username=self._data.username, password=self._data.password)
+                          username=self._data.username, password=self._data.password,
+                          output=self._output)
 
     @property
     def excluded_files(self):

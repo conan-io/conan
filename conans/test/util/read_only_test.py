@@ -1,7 +1,8 @@
-import unittest
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import make_read_only, save, load
 import os
+import unittest
+
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import load, make_read_only, save
 
 
 class ReadOnlyTest(unittest.TestCase):

@@ -1,9 +1,9 @@
+import json
 import os
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-import json
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -84,8 +84,7 @@ class Pkg(ConanFile):
         client.run("inspect . -a=settings")
         self.assertIn("settings: ('os', 'compiler', 'arch')", client.out)
 
-        error = client.run("inspect . -a=unexisting_attr", ignore_error=True)
-        self.assertTrue(error)
+        client.run("inspect . -a=unexisting_attr", assert_error=True)
         self.assertIn("ERROR: 'Pkg' object has no attribute 'unexisting_attr'", client.out)
 
     def options_test(self):
@@ -98,12 +97,15 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect . -a=options -a=default_options")
-        self.assertEquals(client.out, """options
+        self.assertEqual(client.out, """options:
     option1: [True, False]
     option2: [1, 2, 3]
     option3: ANY
     option4: [1, 2]
-default_options: ('option1=False', 'option2=2', 'option3=randomANY')
+default_options:
+    option1: False
+    option2: 2
+    option3: randomANY
 """)
 
         client.run("inspect . -a=version -a=name -a=options -a=default_options --json=file.json")
@@ -131,7 +133,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertIn("""name: MyPkg
+        self.assertEqual("""name: MyPkg
 version: 1.2.3
 url: None
 homepage: None
@@ -145,6 +147,9 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+settings: None
+options: None
+default_options: None
 """, client.out)
 
     def test_inspect_filled_attributes(self):
@@ -159,24 +164,149 @@ class Pkg(ConanFile):
     license = "MIT"
     description = "Yet Another Test"
     generators = "cmake"
-    topics = ["foo", "bar", "qux"]
+    topics = ("foo", "bar", "qux")
+    settings = "os", "arch", "build_type", "compiler"
+    options = {"foo": [True, False], "bar": [True, False]}
+    default_options = {"foo": True, "bar": False}
     _private = "Nothing"
     def build(self):
         pass
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertIn("""name: MyPkg
+        self.assertEqual("""name: MyPkg
 version: 1.2.3
 url: https://john.doe.com
 homepage: https://john.company.site
 license: MIT
 author: John Doe
 description: Yet Another Test
-topics: ['foo', 'bar', 'qux']
+topics: ('foo', 'bar', 'qux')
 generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
 apply_env: True
-build_policy: None""", client.out)
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options:
+    bar: [True, False]
+    foo: [True, False]
+default_options:
+    bar: False
+    foo: True
+""", client.out)
+
+    def test_default_options_list(self):
+        client = TestClient()
+        conanfile = r"""from conans import ConanFile
+class OpenSSLConan(ConanFile):
+    name = "OpenSSL"
+    version = "1.0.2o"
+    settings = "os", "compiler", "arch", "build_type"
+    url = "http://github.com/lasote/conan-openssl"
+    license = "The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html"
+    description = "OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured " \
+                  "toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols"
+    options = {"shared": [True, False],
+               "no_asm": [True, False],
+               "386": [True, False]}
+    default_options = "=False\n".join(options.keys()) + '=False'
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertEqual("""name: OpenSSL
+version: 1.0.2o
+url: http://github.com/lasote/conan-openssl
+homepage: None
+license: The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html
+author: None
+description: OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols
+topics: None
+generators: ['txt']
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'compiler', 'arch', 'build_type')
+options:
+    386: [True, False]
+    no_asm: [True, False]
+    shared: [True, False]
+default_options:
+    386: False
+    no_asm: False
+    shared: False
+""", client.out)
+
+    def test_mixed_options_instances(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    name = "MyPkg"
+    version = "1.2.3"
+    author = "John Doe"
+    url = "https://john.doe.com"
+    homepage = "https://john.company.site"
+    license = "MIT"
+    description = "Yet Another Test"
+    generators = "cmake"
+    topics = ("foo", "bar", "qux")
+    settings = "os", "arch", "build_type", "compiler"
+    options = {"foo": [True, False], "bar": [True, False]}
+    default_options = "foo=True", "bar=True"
+    _private = "Nothing"
+    def build(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect .")
+        self.assertEqual("""name: MyPkg
+version: 1.2.3
+url: https://john.doe.com
+homepage: https://john.company.site
+license: MIT
+author: John Doe
+description: Yet Another Test
+topics: ('foo', 'bar', 'qux')
+generators: cmake
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options:
+    bar: [True, False]
+    foo: [True, False]
+default_options:
+    bar: True
+    foo: True
+""", client.out)
+
+        client.save({"conanfile.py": conanfile.replace("\"foo=True\", \"bar=True\"",
+                                                       "[\"foo=True\", \"bar=True\"]")})
+        client.run("inspect .")
+        self.assertEqual("""name: MyPkg
+version: 1.2.3
+url: https://john.doe.com
+homepage: https://john.company.site
+license: MIT
+author: John Doe
+description: Yet Another Test
+topics: ('foo', 'bar', 'qux')
+generators: cmake
+exports: None
+exports_sources: None
+short_paths: False
+apply_env: True
+build_policy: None
+settings: ('os', 'arch', 'build_type', 'compiler')
+options:
+    bar: [True, False]
+    foo: [True, False]
+default_options:
+    bar: True
+    foo: True
+""", client.out)

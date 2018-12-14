@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import json
 import os
 import sys
 from argparse import ArgumentError
@@ -7,22 +8,19 @@ from argparse import ArgumentError
 import six
 
 from conans import __version__ as client_version
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
+    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-
-from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
-from conans.model.ref import ConanFileReference
-from conans.util.config_parser import get_bool_from_text
-from conans.util.log import logger
-from conans.util.files import exception_message_safe
-from conans.unicode import get_cwd
-from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
-    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-import json
-from conans.tools import save
 from conans.client.printer import Printer
-
+from conans.client.tools.files import save
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
+from conans.model.ref import ConanFileReference
+from conans.unicode import get_cwd
+from conans.util.config_parser import get_bool_from_text
+from conans.util.files import exception_message_safe
+from conans.util.log import logger
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)
@@ -142,7 +140,7 @@ class Command(object):
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
         parser.add_argument("-b", "--bare", action='store_true', default=False,
-                            help='Create the minimum package recipe, without build() method'
+                            help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -431,7 +429,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                if "plugins." in args.item:
+                if "hooks." in args.item:
                     key, value = args.item.split("=", 1)[0], None
                 else:
                     raise ConanException("Please specify 'key=value'")
@@ -753,24 +751,37 @@ class Command(object):
         parser.add_argument("-s", "--settings", nargs=1, action=Extender,
                             help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information will be '
+                            'written')
         args = parser.parse_args(*args)
+
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
-        return self._conan.export_pkg(conanfile_path=args.path,
-                                      name=name,
-                                      version=version,
-                                      source_folder=args.source_folder,
-                                      build_folder=args.build_folder,
-                                      package_folder=args.package_folder,
-                                      install_folder=args.install_folder,
-                                      profile_name=args.profile,
-                                      env=args.env,
-                                      settings=args.settings,
-                                      options=args.options,
-                                      force=args.force,
-                                      user=user,
-                                      channel=channel)
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            info = self._conan.export_pkg(conanfile_path=args.path,
+                                          name=name,
+                                          version=version,
+                                          source_folder=args.source_folder,
+                                          build_folder=args.build_folder,
+                                          package_folder=args.package_folder,
+                                          install_folder=args.install_folder,
+                                          profile_name=args.profile,
+                                          env=args.env,
+                                          settings=args.settings,
+                                          options=args.options,
+                                          force=args.force,
+                                          user=user,
+                                          channel=channel)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def export(self, *args):
         """Copies the recipe (conanfile.py & associated files) to your local cache.
@@ -990,7 +1001,8 @@ class Command(object):
 
         try:
             if reference:
-                info = self._conan.search_packages(reference, query=args.query,
+
+                info = self._conan.search_packages(reference.full_repr(), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
@@ -1204,7 +1216,7 @@ class Command(object):
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
             refs = self._conan.remote_list_pref(reference)
-            self._outputer.remote_ref_list(refs)
+            self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)
         elif args.subcommand == "remove_pref":
@@ -1450,7 +1462,11 @@ def get_reference_fields(arg_reference):
 
     try:
         name_version, user_channel = arg_reference.split("@")
-        name, version = name_version.split("/")
+        name_version = name_version.split("/")
+        try:
+            name, version = name_version
+        except ValueError:
+            name, version = None, name_version[0]
         user, channel = user_channel.split("/")
     except ValueError:
         name, version = None, None
