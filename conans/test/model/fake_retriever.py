@@ -20,7 +20,7 @@ class Retriever(object):
         save(conan_path, content)
         conanfile = self.loader.load_conanfile(conan_path, self.output, processed_profile,
                                                consumer=True)
-        return Node(None, conanfile)
+        return Node(None, conanfile, "rootpath")
 
     def conan(self, conan_ref, content):
         if isinstance(conan_ref, str):

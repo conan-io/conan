@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_SKIP
+from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER
 from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.workspace import WORKSPACE_FILE
@@ -20,7 +20,7 @@ def print_graph(deps_graph, out):
     python_requires = set()
     for node in sorted(deps_graph.nodes):
         python_requires.update(_get_python_requires(node.conanfile))
-        if not node.conan_ref:
+        if node.recipe == RECIPE_CONSUMER:
             continue
         package_id = PackageReference(node.conan_ref, node.conanfile.info.package_id())
         if node.build_require:

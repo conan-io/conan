@@ -1,6 +1,7 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE,\
+    RECIPE_CONSUMER
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -241,7 +242,8 @@ class DepsGraphBuilder(object):
                 result = self._proxy.get_recipe(requirement.conan_reference,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                base_ref = str(current_node.conan_ref or "PROJECT")
+                base_ref = str(current_node.conan_ref if current_node.recipe != RECIPE_CONSUMER
+                               else "PROJECT")
                 self._output.error("Failed requirement '%s' from '%s'"
                                    % (requirement.conan_reference, base_ref))
                 raise e

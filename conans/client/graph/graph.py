@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.errors import conanfile_exception_formatter
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
+import os
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -12,6 +13,7 @@ RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_WORKSPACE = "Workspace"
+RECIPE_CONSUMER = "Consumer"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -23,17 +25,26 @@ BINARY_WORKSPACE = "Workspace"
 
 
 class Node(object):
-    def __init__(self, conan_ref, conanfile):
+    def __init__(self, conan_ref, conanfile, local_path=None, recipe=None):
+        self.local_path = local_path
         self.conan_ref = conan_ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None
-        self.recipe = None
+        self.recipe = recipe
         self.remote = None
         self.binary_remote = None
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
+
+    @property
+    def name(self):
+        if self.local_path:
+            name = os.path.basename(self.local_path)
+            return "%s (%s)" % (name, str(self.conan_ref))
+        else:
+            return str(self.conan_ref)
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)
@@ -251,7 +262,7 @@ class DepsGraph(object):
         # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
         # without Edges
         for node in self.nodes:
-            if not node.conan_ref:
+            if node.recipe == RECIPE_CONSUMER:
                 continue
             package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
             if package_ref not in unique_nodes:
@@ -282,7 +293,8 @@ class DepsGraph(object):
         closure = new_graph._inverse_closure(references)
         result = []
         for level in reversed(levels):
-            new_level = [n.conan_ref for n in level if (n in closure and n.conan_ref)]
+            new_level = [n.conan_ref for n in level
+                         if (n in closure and n.recipe != RECIPE_CONSUMER)]
             if new_level:
                 result.append(new_level)
         return result

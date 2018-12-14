@@ -1,7 +1,8 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE)
+                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+    RECIPE_CONSUMER)
 from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
@@ -157,7 +158,7 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:  # Only value should be SKIP
+            if node.recipe == RECIPE_CONSUMER or node.binary:  # Only value should be SKIP
                 continue
             private_neighbours = node.private_neighbors()
             if private_neighbours:
@@ -170,6 +171,6 @@ class GraphBinariesAnalyzer(object):
                             n.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:
+            if node.recipe == RECIPE_CONSUMER or node.binary:
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)

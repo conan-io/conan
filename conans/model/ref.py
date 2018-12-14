@@ -89,22 +89,19 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        version = Version(version)
+        version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
-            obj.validate()
+            obj._validate()
         return obj
 
-    def validate(self):
+    def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
         ConanName.validate_name(self.user, reference_token="user name")
         ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
-
-    def __hash__(self):
-        return hash((self.name, self.version, self.user, self.channel, self.revision))
 
     @staticmethod
     def loads(text, validate=True):

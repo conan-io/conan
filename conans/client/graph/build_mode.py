@@ -51,7 +51,7 @@ class BuildMode(object):
             out.info("Building package from source as defined by build_policy='always'")
             return True
 
-        ref = reference.name
+        ref = reference.name or ""
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
             if fnmatch.fnmatch(ref, pattern):

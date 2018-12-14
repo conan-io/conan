@@ -1,6 +1,7 @@
 import json
 import os
 
+from conans.client.graph.graph import RECIPE_CONSUMER
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference, PackageReference
@@ -72,7 +73,7 @@ class CommandOutputer(object):
         ret = {}
         for node in sorted(deps_graph.nodes):
             ref = node.conan_ref
-            if ref:
+            if node.recipe != RECIPE_CONSUMER:
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
         return ret

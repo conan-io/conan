@@ -159,7 +159,7 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
-                    ref = d.conan_ref if d.conan_ref else str(d.conanfile)
+                    ref = d.conan_ref
                     self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):

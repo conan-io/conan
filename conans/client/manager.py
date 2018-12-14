@@ -14,6 +14,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
+from conans.client.graph.graph import RECIPE_CONSUMER
 
 
 class ConanManager(object):
@@ -104,7 +105,7 @@ class ConanManager(object):
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                                client_cache=self._client_cache)
             for node in deps_graph.nodes:
-                if not node.conan_ref:
+                if node.recipe == RECIPE_CONSUMER:
                     continue
                 complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
                                         node.conanfile, node.conan_ref)
