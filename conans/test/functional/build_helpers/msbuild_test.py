@@ -92,7 +92,8 @@ class HelloConan(ConanFile):
         client.run("create . Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
-        pref = PackageReference.loads("Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1")
+        full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
+        pref = PackageReference.loads(full_ref)
         build_folder = client.client_cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "myprops.props")))
 
