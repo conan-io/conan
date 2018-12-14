@@ -1,7 +1,7 @@
-from conans.model.rest_routes import RestRouteBuilder
+from conans.model.rest_routes import RestRoutes
 
 
-class BottleRoutes(RestRouteBuilder):
+class BottleRoutes(RestRoutes):
 
     def __getattribute__(self, item):
         tmp = super(BottleRoutes, self).__getattribute__(item)

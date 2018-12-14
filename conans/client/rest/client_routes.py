@@ -1,11 +1,14 @@
 from six.moves.urllib.parse import urlencode
 
 from conans.model.ref import ConanFileReference
-from conans.model.rest_routes import RestRouteBuilder
+from conans.model.rest_routes import RestRoutes
 from conans.paths import CONAN_MANIFEST, CONANINFO
 
 
-class _ClientRouterBuilder(RestRouteBuilder):
+class ClientBaseRouterBuilder(object):
+
+    def __init__(self, base_url):
+        self.routes = RestRoutes(base_url)
 
     @staticmethod
     def format_ref(url, ref):
@@ -38,79 +41,74 @@ class _ClientRouterBuilder(RestRouteBuilder):
     def for_recipe(self, ref):
         """url for a recipe with or without revisions"""
         if not ref.revision:
-            tmp = super(_ClientRouterBuilder, self).recipe
+            tmp = self.routes.recipe
         else:
-            tmp = super(_ClientRouterBuilder, self).recipe_revision
+            tmp = self.routes.recipe_revision
         return self.format_ref(tmp, ref)
 
     def for_packages(self, ref):
         """url for a recipe with or without revisions"""
         if not ref.revision:
-            tmp = super(_ClientRouterBuilder, self).packages
+            tmp = self.routes.packages
         else:
-            tmp = super(_ClientRouterBuilder, self).packages_revision
+            tmp = self.routes.packages_revision
         return self.format_ref(tmp, ref)
 
     def for_recipe_file(self, ref, path):
         """url for a recipe file, with or without revisions"""
         if not ref.revision:
-            tmp = super(_ClientRouterBuilder, self).recipe_file
+            tmp = self.routes.recipe_file
         else:
-            tmp = super(_ClientRouterBuilder, self).recipe_revision_file
+            tmp = self.routes.recipe_revision_file
         return self.format_ref_path(tmp, ref, path)
 
     def for_recipe_files(self, ref):
         """url for getting the recipe list"""
         if not ref.revision:
-            tmp = super(_ClientRouterBuilder, self).recipe_files
+            tmp = self.routes.recipe_files
         else:
-            tmp = super(_ClientRouterBuilder, self).recipe_revision_files
+            tmp = self.routes.recipe_revision_files
         return self.format_ref(tmp, ref)
 
     def for_package(self, pref):
         """url for the package with or without revisions"""
         if not pref.conan.revision:
-            tmp = super(_ClientRouterBuilder, self).package
+            tmp = self.routes.package
         elif not pref.revision:
-            tmp = super(_ClientRouterBuilder, self).package_recipe_revision
+            tmp = self.routes.package_recipe_revision
         else:
-            tmp = super(_ClientRouterBuilder, self).package_revision
+            tmp = self.routes.package_revision
 
         return self.format_pref(tmp, pref)
 
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
         if not pref.conan.revision:
-            tmp = super(_ClientRouterBuilder, self).package_file
+            tmp = self.routes.package_file
         elif not pref.revision:
-            tmp = super(_ClientRouterBuilder, self).package_recipe_revision_file
+            tmp = self.routes.package_recipe_revision_file
         else:
-            tmp = super(_ClientRouterBuilder, self).package_revision_file
+            tmp = self.routes.package_revision_file
 
         return self.format_pref_path(tmp, pref, path)
 
     def for_package_files(self, pref):
         """url for getting the recipe list"""
         if not pref.conan.revision:
-            tmp = super(_ClientRouterBuilder, self).package_files
+            tmp = self.routes.package_files
         elif not pref.revision:
-            tmp = super(_ClientRouterBuilder, self).package_recipe_revision_files
+            tmp = self.routes.package_recipe_revision_files
         else:
-            tmp = super(_ClientRouterBuilder, self).package_revision_files
+            tmp = self.routes.package_revision_files
 
         return self.format_pref(tmp, pref)
-
-
-class ClientBaseRouterBuilder(_ClientRouterBuilder):
-    """Base urls, e.j:  /ping"""
-    pass
 
 
 class ClientSearchRouterBuilder(ClientBaseRouterBuilder):
     """Search urls shared between v1 and v2"""
 
     def __init__(self, base_url):
-        self.base_url = base_url + "/conans"
+        super(ClientSearchRouterBuilder, self).__init__(base_url + "/conans")
 
     def search(self, pattern, ignorecase):
         """URL search recipes"""
@@ -135,14 +133,20 @@ class ClientSearchRouterBuilder(ClientBaseRouterBuilder):
 class ClientUsersRouterBuilder(ClientBaseRouterBuilder):
     """Builds urls for users endpoint (shared v1 and v2)"""
     def __init__(self, base_url):
-        self.base_url = base_url + "/users"
+        super(ClientUsersRouterBuilder, self).__init__(base_url + "/users")
+
+    def common_authenticate(self):
+        return self.routes.common_authenticate
+
+    def common_check_credentials(self):
+        return self.routes.common_check_credentials
 
 
 class ClientV1ConanRouterBuilder(ClientBaseRouterBuilder):
     """Builds urls for v1"""
 
     def __init__(self, base_url):
-        self.base_url = base_url + "/conans"
+        super(ClientV1ConanRouterBuilder, self).__init__(base_url + "/conans")
 
     def remove_recipe(self, ref):
         """Remove recipe"""
@@ -193,7 +197,7 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
     """Builds urls for v2"""
 
     def __init__(self, base_url):
-        self.base_url = base_url + "/conans"
+        super(ClientV2ConanRouterBuilder, self).__init__(base_url + "/conans")
 
     def recipe_file(self, ref, path):
         """Recipe file url"""
