@@ -36,10 +36,10 @@ def get_exception_from_error(error_code):
     try:
         tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
         if error_code in tmp:
-            logger.debug("From server: %s" % str(tmp[error_code]))
+            logger.debug("REST ERROR: %s" % str(tmp[error_code]))
             return tmp[error_code]
         else:
-            logger.debug("From server: %s" % str(_base_error(error_code)))
+            logger.debug("REST ERROR: %s" % str(_base_error(error_code)))
             return tmp[_base_error(error_code)]
     except KeyError:
         return None
@@ -84,6 +84,7 @@ class RestCommonMethods(object):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
         url = "%s/users/authenticate" % self.remote_api_url
+        logger.debug("REST: Authenticate: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -99,6 +100,7 @@ class RestCommonMethods(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self.remote_api_url
+        logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
@@ -106,6 +108,7 @@ class RestCommonMethods(object):
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
         url = "%s/ping" % self.remote_api_url
+        logger.debug("REST: ping: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
@@ -124,11 +127,13 @@ class RestCommonMethods(object):
             headers.update({'Content-type': 'application/json',
                             'Accept': 'text/plain',
                             'Accept': 'application/json'})
+            logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
+            logger.debug("REST: get: %s" % url)
             response = self.requester.get(url, auth=self.auth, headers=headers,
                                           verify=self.verify_ssl,
                                           stream=True)
@@ -230,7 +235,7 @@ class RestCommonMethods(object):
                             "in local package present in remote: %s.\n Please, report it at "
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         return files_to_upload or deleted, package_reference, rev_time
 
     def search(self, pattern=None, ignorecase=True):
@@ -276,6 +281,7 @@ class RestCommonMethods(object):
         """ Remove a recipe and packages """
         self.check_credentials()
         url = self._recipe_url(conan_reference)
+        logger.debug("REST: remove: %s" % url)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
@@ -283,6 +289,7 @@ class RestCommonMethods(object):
         return response
 
     def _post_json(self, url, payload):
+        logger.debug("REST: post: %s" % url)
         response = self.requester.post(url,
                                        auth=self.auth,
                                        headers=self.custom_headers,

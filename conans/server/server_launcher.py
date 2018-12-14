@@ -45,6 +45,13 @@ class ServerLauncher(object):
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
                               server_capabilities)
 
+        print("***********************")
+        print("Using config: %s" % server_config.config_filename)
+        print("Storage: %s" % server_config.disk_storage_path)
+        print("Public URL: %s" % server_config.public_url)
+        print("PORT: %s" % server_config.port)
+        print("***********************")
+
     def launch(self):
         self.ra.run(host="0.0.0.0")
 
