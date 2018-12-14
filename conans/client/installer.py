@@ -14,11 +14,13 @@ from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.tools import load
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
+from conans.model.conan_file import parse_editable_cpp_info
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -483,9 +485,6 @@ class ConanInstaller(object):
                     if hasattr(conanfile, '_cpp_info_layout_file'):
                         # It is installed as editable
                         cpp_info = conanfile.cpp_info
-
-                        from conans.client.tools import load
-                        from conans.model.conan_file import parse_editable_cpp_info
 
                         content = load(conanfile._cpp_info_layout_file)
                         base_path = os.path.dirname(conanfile._cpp_info_layout_file)
