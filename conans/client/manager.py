@@ -19,14 +19,13 @@ from conans.client.graph.graph import RECIPE_CONSUMER
 
 class ConanManager(object):
     def __init__(self, client_cache, user_io, remote_manager,
-                 recorder, registry, graph_manager, hook_manager):
+                 recorder, graph_manager, hook_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._recorder = recorder
-        self._registry = registry
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
 
@@ -41,7 +40,7 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=workspace,
+                                   recorder=self._recorder, workspace=workspace,
                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
         workspace.generate()
@@ -97,7 +96,7 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                   self._registry, recorder=self._recorder, workspace=None,
+                                   recorder=self._recorder, workspace=None,
                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
 
@@ -107,7 +106,7 @@ class ConanManager(object):
             for node in deps_graph.nodes:
                 if node.recipe == RECIPE_CONSUMER:
                     continue
-                complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+                complete_recipe_sources(self._remote_manager, self._client_cache,
                                         node.conanfile, node.conan_ref)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
