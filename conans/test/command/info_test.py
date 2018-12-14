@@ -199,13 +199,17 @@ class MyTest(ConanFile):
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
-        save(os.path.join(client.client_cache.conan_folder, "vis.min.js"), "")
-        save(os.path.join(client.client_cache.conan_folder, "vis.min.css"), "")
+        visjs_path = os.path.join(client.client_cache.conan_folder, "vis.min.js")
+        viscss_path = os.path.join(client.client_cache.conan_folder, "vis.min.css")
+        save(visjs_path, "")
+        save(viscss_path, "")
         client.save({"conanfile.txt": ""})
         client.run("info . --graph=file.html")
         html = load(os.path.join(client.current_folder, "file.html"))
         self.assertIn("<body>", html)
         self.assertNotIn("cloudflare", html)
+        self.assertIn(visjs_path, html)
+        self.assertIn(viscss_path, html)
 
     def info_build_requires_test(self):
         client = TestClient()
