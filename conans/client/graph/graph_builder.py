@@ -4,12 +4,11 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE, RECIPE_
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.conan_file import get_env_context_manager, ConanFileEditable
+from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.model.workspace import WORKSPACE_FILE
 from conans.util.log import logger
-
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
 
@@ -255,7 +254,7 @@ class DepsGraphBuilder(object):
                                                     reference=requirement.conan_reference)
 
         if editable:
-            dep_conanfile = ConanFileEditable(dep_conanfile)
+            setattr(dep_conanfile, '_cpp_info_layout_file', None)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile

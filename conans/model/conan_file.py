@@ -1,9 +1,9 @@
 import configparser
+import ntpath
 import os
+import posixpath
 import re
 from contextlib import contextmanager
-import ntpath
-import posixpath
 
 from conans.client import tools
 from conans.client.output import Color
@@ -16,7 +16,6 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.files import load
 
 
 def create_options(conanfile):
@@ -292,44 +291,7 @@ class ConanFile(object):
             return "PROJECT"
 
 
-class ConanFileEditable(object):
-    """ Wrapper over a ConanFile object to handle an editable package """
-
-    def __init__(self, conanfile):
-        assert isinstance(conanfile, ConanFile)
-        self._conanfile = conanfile
-        self._package_layout_file = None
-
-    def __getattr__(self, item):
-        if item == 'package_info':
-            def package_info():
-                self._conanfile.package_info()
-                cpp_info = self._conanfile.cpp_info
-
-                content = load(self._package_layout_file)
-                base_path = os.path.dirname(self._package_layout_file)
-                data = parse_package_layout_content(content=content, base_path=base_path,
-                                                    settings=self.settings, options=self.options)
-
-                 # Replace directories with those in 'data'
-                for key, items in data.items():
-                    setattr(cpp_info, key, items)
-
-            return package_info
-
-        return getattr(self._conanfile, item)
-
-    def __setattr__(self, key, value):
-        if key == '_conanfile' or key == '_package_layout_file':
-            self.__dict__[key] = value
-            return
-        setattr(self._conanfile, key, value)
-
-    def set_package_layout_file(self, filepath):
-        self._package_layout_file = filepath
-
-
-def parse_package_layout_content(content, base_path, settings=None, options=None):
+def parse_editable_cpp_info(content, base_path, settings=None, options=None):
     """ Returns a dictionary containing information about paths for a CppInfo object: includes,
     libraries, resources, binaries,... """
     ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}

@@ -480,3 +480,20 @@ class ConanInstaller(object):
                     conanfile.build_folder = None
                     conanfile.install_folder = None
                     conanfile.package_info()
+                    if hasattr(conanfile, '_cpp_info_layout_file'):
+                        # It is installed as editable
+                        cpp_info = conanfile.cpp_info
+
+                        from conans.client.tools import load
+                        from conans.model.conan_file import parse_editable_cpp_info
+
+                        content = load(conanfile._cpp_info_layout_file)
+                        base_path = os.path.dirname(conanfile._cpp_info_layout_file)
+                        data = parse_editable_cpp_info(content=content, base_path=base_path,
+                                                       settings=conanfile.settings,
+                                                       options=conanfile.options)
+
+                        # Replace directories with those in 'data'
+                        for key, items in data.items():
+                            setattr(cpp_info, key, items)
+
