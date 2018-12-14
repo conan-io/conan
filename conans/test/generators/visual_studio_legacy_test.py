@@ -1,15 +1,14 @@
+import os
 import unittest
 import xml.etree.ElementTree
 
 from conans.client.generators import VisualStudioLegacyGenerator
-
-from conans.model.settings import Settings
-from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
-import os
+from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.test.utils.test_files import temp_folder
 
 
 class VisualStudioLegacyGeneratorTest(unittest.TestCase):

@@ -1,17 +1,17 @@
 import os
 import platform
-import unittest
-import tempfile
 import shutil
-from parameterized import parameterized
-from mock import mock
+import tempfile
+import unittest
 
-from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, conan_expand_user,
-                          SimplePaths)
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.test_files import temp_folder
+from mock import mock
+from parameterized import parameterized
+
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import save
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import (BUILD_FOLDER, EXPORT_FOLDER, PACKAGES_FOLDER, SimplePaths,
+                          conan_expand_user)
+from conans.test.utils.test_files import temp_folder
 from conans.util.windows import path_shortener
 
 

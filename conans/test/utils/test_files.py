@@ -1,14 +1,15 @@
-from conans.test.utils.cpp_test_files import cpp_hello_source_files, cpp_hello_conan_files
-from conans.test.utils.go_test_files import go_hello_source_files, go_hello_conan_files
 import os
-from conans.paths import PACKAGE_TGZ_NAME
-import tempfile
-from conans.test import CONAN_TEST_FOLDER
-from conans.tools import untargz
-from conans.errors import ConanException
-import time
-import shutil
 import platform
+import shutil
+import tempfile
+import time
+
+from conans.client.tools.files import untargz
+from conans.errors import ConanException
+from conans.paths import PACKAGE_TGZ_NAME
+from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.utils.go_test_files import go_hello_conan_files, go_hello_source_files
 
 
 def wait_until_removed(folder):

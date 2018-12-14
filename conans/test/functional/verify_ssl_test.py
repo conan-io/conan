@@ -1,7 +1,8 @@
 import unittest
-from conans.test.utils.tools import TestClient
+
 from requests.models import Response
 
+from conans.test.utils.tools import TestClient
 
 resp = Response()
 resp._content = b'{"results": []}'

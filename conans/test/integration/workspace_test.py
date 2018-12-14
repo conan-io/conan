@@ -1,17 +1,16 @@
-import unittest
 import os
 import platform
+import re
 import shutil
+import time
+import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from conans.client import tools
 from conans.model.workspace import WORKSPACE_FILE
-from conans import tools
-import time
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import re
-
 
 conanfile = """from conans import ConanFile
 import os
@@ -204,9 +203,9 @@ name: MyProject
         TIME_DELAY = 1
         time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Release', cwd=base_folder)
         time.sleep(TIME_DELAY)
@@ -227,7 +226,7 @@ name: MyProject
         self.assertIn("Hello World A Debug!", client.out)
 
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Bye Moon", "Bye! Mars")
+                              "Bye Moon", "Bye! Mars", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         time.sleep(TIME_DELAY)

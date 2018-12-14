@@ -1,13 +1,12 @@
+import os
 import unittest
 
-import os
-
+from conans.client import tools
+from conans.client.client_cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import save
-from conans import tools
-from conans.client.client_cache import PROFILES_FOLDER
 
 
 class DefaultProfileTest(unittest.TestCase):
@@ -23,8 +22,8 @@ class MyConanfile(ConanFile):
 
         client.save({CONANFILE: conanfile})
         client.run("create . Pkg/0.1@lasote/stable")
-        self.assertIn("Pkg/0.1@lasote/stable: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' "
-                      "created", client.out)
+        self.assertIn("Pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
 
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')
@@ -176,7 +175,7 @@ class MyConanfile(ConanFile):
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
         with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': profile_path}):
-            client.run("create . name/version@user/channel", ignore_error=True)
+            client.run("create . name/version@user/channel", assert_error=True)
             self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                           "an existing profile file.", client.out)
 

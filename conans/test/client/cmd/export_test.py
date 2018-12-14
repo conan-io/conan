@@ -1,17 +1,16 @@
-
 import os
 import shutil
 import unittest
 from collections import namedtuple
 
+from conans.client.cmd.export import _replace_scm_data_in_conanfile
+from conans.client.loader import _parse_conanfile
 from conans.client.tools import chdir
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TestClient
-from conans.util.files import save, load
-from conans.client.cmd.export import _replace_scm_data_in_conanfile
-from conans.client.loader import _parse_file
-from conans.test.utils.test_files import temp_folder
 from conans.model.scm import SCMData
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class ReplaceSCMDataInConanfileTest(unittest.TestCase):
@@ -24,7 +23,7 @@ class ConanLib(ConanFile):
     scm = {{"revision": "{revision}",
            "type": "git",
            "url": "{url}"}}
-    
+
     {after_scm}
 
 {after_recipe}
@@ -49,7 +48,7 @@ class ConanLib(ConanFile):
         scm_data = SCMData(conanfile=namedtuple('_', 'scm')(scm=scm_data))
         _replace_scm_data_in_conanfile(self.conanfile_path, scm_data)
         self.assertEqual(load(self.conanfile_path), target_conanfile)
-        _parse_file(self.conanfile_path)  # Check that the resulting file is valid python code.
+        _parse_conanfile(conan_file_path=self.conanfile_path)  # Check that the resulting file is valid python code.
 
     def test_conanfile_after_scm(self):
         scm_data = {'type': 'git',
@@ -126,4 +125,6 @@ class TestConan(ConanFile):
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
+        export_sources_path = os.path.join(servers["upload_repo"].paths.export(conan_ref),
+                                           "conan_sources.tgz")
         self.assertFalse(os.path.exists(export_sources_path))

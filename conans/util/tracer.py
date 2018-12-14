@@ -1,14 +1,15 @@
-import os
-from conans.errors import ConanException
-import fasteners
-
-from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
+import copy
 import json
-from conans.model.ref import PackageReference, ConanFileReference
+import os
 import time
 from os.path import isdir
-import copy
+
+import fasteners
+
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import md5sum, sha1sum
+from conans.util.log import logger
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",
@@ -108,7 +109,6 @@ def log_recipe_sources_download(conan_reference, duration, remote_name, files_do
 
 
 def log_package_download(package_ref, duration, remote, files_downloaded):
-    assert(isinstance(package_ref, PackageReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_PACKAGE", {"_id": str(package_ref),
@@ -147,6 +147,8 @@ def log_command(name, parameters):
         parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
+    logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
+                                                       for k,v in parameters.items())))
 
 
 def log_exception(exc, message):

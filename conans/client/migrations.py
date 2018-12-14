@@ -2,11 +2,12 @@ import os
 import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
-from conans.migrations import Migrator
-from conans.paths import EXPORT_SOURCES_DIR_OLD
-from conans.util.files import load, save, list_folder_subdirs
-from conans.model.version import Version
+from conans.client.tools import replace_in_file
 from conans.errors import ConanException
+from conans.migrations import Migrator
+from conans.model.version import Version
+from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.util.files import list_folder_subdirs, load, save
 
 
 class ClientMigrator(Migrator):
@@ -42,15 +43,17 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("1.6.0"):
+        if old_version < Version("1.9.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
 arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
 arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
 # - For building cross compilation tools: Where the cross compiler will run.
@@ -92,17 +95,22 @@ compiler:
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
-        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]
+        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
+                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp, 
+                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp, 
+                  LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0", "7.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
+            migrate_plugins_to_hooks(self.client_cache)
 
         if old_version < Version("1.0"):
             _migrate_lock_files(self.client_cache, self.out)
@@ -116,7 +124,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
                 conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
 
-                migrate_to_default_profile(conf_path, default_profile_path)
+                migrate_to_default_profile(conf_path, default_profile_path, output=self.out)
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.client_cache, self.out)
@@ -180,3 +188,11 @@ def migrate_c_src_export_source(client_cache, out):
             except Exception:
                 out.warn("Migration: Can't remove the '%s' directory, "
                          "remove it manually" % package_folder)
+
+
+def migrate_plugins_to_hooks(client_cache, output=None):
+    plugins_path = os.path.join(client_cache.conan_folder, "plugins")
+    if os.path.exists(plugins_path) and not os.path.exists(client_cache.hooks_path):
+        os.rename(plugins_path, client_cache.hooks_path)
+    conf_path = client_cache.conan_conf_path
+    replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)

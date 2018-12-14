@@ -1,12 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.test.utils.context_manager import CustomEnvPath
 import platform
-from conans.test.utils.test_files import scan_folder
-from conans.test.utils.test_files import uncompress_packaged_files
+import unittest
+
 from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.context_manager import CustomEnvPath
+from conans.test.utils.test_files import scan_folder, uncompress_packaged_files
+from conans.test.utils.tools import TestClient, TestServer
 
 stringutil_conanfile = '''
 from conans import ConanFile

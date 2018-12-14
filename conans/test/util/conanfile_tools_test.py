@@ -1,13 +1,16 @@
-import unittest
 import os
-from conans.util.files import save, load
-from conans.client.loader import ConanFileLoader, ProcessedProfile
-from conans.test.utils.test_files import temp_folder
-from conans import tools
-from parameterized.parameterized import parameterized
-from conans.test.utils.tools import TestClient
-from conans.client.graph.python_requires import ConanPythonRequire
+import sys
+import unittest
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.loader import ConanFileLoader
+from conans.client.output import ConanOutput
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, test_processed_profile
+from conans.util.files import load, save
 
 base_conanfile = '''
 from conans import ConanFile
@@ -52,7 +55,7 @@ class Pkg(ConanFile):
         finally:
             os.chdir(old_path)
         output_dir = os.path.join(tmp_dir, "output_dir")
-        tools.unzip(tar_path, output_dir)
+        tools.unzip(tar_path, output_dir, output=ConanOutput(stream=sys.stdout))
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 
@@ -144,8 +147,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": file_content})
         client.run("install .")
-        error = client.run("build .", ignore_error=True)
-        self.assertTrue(error)
+        client.run("build .", assert_error=True)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
         self.assertIn("ERROR: test/1.9.10@PROJECT: Error in build() method, line 12",
                       client.user_io.out)
@@ -161,7 +163,7 @@ class Pkg(ConanFile):
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        ret = loader.load_conanfile(file_path, None, ProcessedProfile())
+        ret = loader.load_conanfile(file_path, None, test_processed_profile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

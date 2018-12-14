@@ -1,6 +1,7 @@
 import unittest
-from conans.test.utils.tools import TestClient
+
 from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient
 
 
 class ExitWithCodeTest(unittest.TestCase):
@@ -23,6 +24,6 @@ class HelloConan(ConanFile):
         files = {CONANFILE: base}
         client.save(files)
         client.run("install .")
-        error_code = client.run("build .", ignore_error=True)
+        error_code = client.run("build .", assert_error=True)
         self.assertEquals(error_code, 34)
         self.assertIn("Exiting with code: 34", client.user_io.out)

@@ -1,7 +1,9 @@
-import unittest
 import os
-from conans.test.utils.tools import TestClient, TestServer
+import unittest
+from collections import OrderedDict
+
 from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
@@ -13,9 +15,9 @@ class DownloadTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
 
         # Test argument --package and --recipe cannot be together
-        error = client.run("download eigen/3.3.4@conan/stable --recipe --package fake_id",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("download eigen/3.3.4@conan/stable --recipe --package fake_id",
+                   assert_error=True)
+
         self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
 
         # Test download of the recipe only
@@ -50,8 +52,9 @@ class Pkg(ConanFile):
 
     def download_with_sources_test(self):
         server = TestServer()
-        servers = {"default": server,
-                   "other": TestServer()}
+        servers = OrderedDict()
+        servers["default"] = server
+        servers["other"] = TestServer()
 
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
                                                     "other": [("lasote", "mypass")]})
@@ -123,7 +126,8 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.paths.conanfile(ref)))
 
-        package_folder = os.path.join(client.paths.conan(ref), "package", os.listdir(client.paths.packages(ref))[0])
+        package_folder = os.path.join(client.paths.conan(ref), "package",
+                                      os.listdir(client.paths.packages(ref))[0])
 
         client.run("upload pkg/0.1@lasote/stable --all")
         client.run("remove pkg/0.1@lasote/stable -f")
@@ -150,12 +154,11 @@ class Pkg(ConanFile):
         client.run("upload pkg/0.1@lasote/stable")
         client.run("remove pkg/0.1@lasote/stable -f")
 
-        error = client.run("download pkg/0.1@lasote/stable -p=wrong", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR: Package binary 'pkg/0.1@lasote/stable:wrong' not found in 'default'", client.out)
+        client.run("download pkg/0.1@lasote/stable -p=wrong", assert_error=True)
+        self.assertIn("ERROR: Package binary 'pkg/0.1@lasote/stable:wrong' not found in 'default'",
+                      client.out)
 
     def test_download_pattern(self):
         client = TestClient()
-        error = client.run("download pkg/*@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("download pkg/*@user/channel", assert_error=True)
         self.assertIn("Provide a valid full reference without wildcards", client.out)

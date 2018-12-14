@@ -1,17 +1,18 @@
 import json
-
 import time
+
 from requests.auth import AuthBase, HTTPBasicAuth
 from six.moves.urllib.parse import urlencode
 
-from conans import COMPLEX_SEARCH_CAPABILITY
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
-from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
-                           AuthenticationException)
+from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_NO_OVERWRITE, \
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE
+from conans.errors import (AuthenticationException, ConanException, EXCEPTION_CODE_MAPPING,
+                           NotFoundException)
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.search import filter_packages
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
 
@@ -35,10 +36,10 @@ def get_exception_from_error(error_code):
     try:
         tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
         if error_code in tmp:
-            logger.debug("From server: %s" % str(tmp[error_code]))
+            logger.debug("REST ERROR: %s" % str(tmp[error_code]))
             return tmp[error_code]
         else:
-            logger.debug("From server: %s" % str(_base_error(error_code)))
+            logger.debug("REST ERROR: %s" % str(_base_error(error_code)))
             return tmp[_base_error(error_code)]
     except KeyError:
         return None
@@ -83,6 +84,7 @@ class RestCommonMethods(object):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
         url = "%s/users/authenticate" % self.remote_api_url
+        logger.debug("REST: Authenticate: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -98,6 +100,7 @@ class RestCommonMethods(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self.remote_api_url
+        logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
@@ -105,6 +108,7 @@ class RestCommonMethods(object):
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
         url = "%s/ping" % self.remote_api_url
+        logger.debug("REST: ping: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
@@ -123,11 +127,13 @@ class RestCommonMethods(object):
             headers.update({'Content-type': 'application/json',
                             'Accept': 'text/plain',
                             'Accept': 'application/json'})
+            logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
+            logger.debug("REST: get: %s" % url)
             response = self.requester.get(url, auth=self.auth, headers=headers,
                                           verify=self.verify_ssl,
                                           stream=True)
@@ -148,15 +154,28 @@ class RestCommonMethods(object):
         """
         self.check_credentials()
 
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if not revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
+                                                UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
+            # Check if the latest revision is not the one we are uploading, with the compatibility
+            # mode this is supposed to fail if someone tries to upload a different recipe
+            latest_ref = conan_reference.copy_clear_rev()
+            latest_snapshot, ref_latest_snapshot, _ = self._get_recipe_snapshot(latest_ref)
+            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
+            if latest_snapshot and server_with_revisions and \
+                    ref_latest_snapshot.revision != conan_reference.revision:
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbidden overwrite")
+
         # Get the remote snapshot
-        remote_snapshot, conan_reference = self._get_recipe_snapshot(conan_reference)
+        remote_snapshot, ref_snapshot, rev_time = self._get_recipe_snapshot(conan_reference)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = remote_manifest or self.get_conan_manifest(conan_reference)
+            remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, conan_reference
+                return False, rev_time
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -171,7 +190,7 @@ class RestCommonMethods(object):
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-        return (files_to_upload or deleted), conan_reference
+        return (files_to_upload or deleted), rev_time
 
     def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
         """
@@ -180,15 +199,28 @@ class RestCommonMethods(object):
         """
         self.check_credentials()
 
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if not revisions_enabled and policy == UPLOAD_POLICY_NO_OVERWRITE:
+            # Check if the latest revision is not the one we are uploading, with the compatibility
+            # mode this is supposed to fail if someone tries to upload a different recipe
+            latest_pref = PackageReference(package_reference.conan, package_reference.package_id)
+            latest_snapshot, ref_latest_snapshot, _ = self._get_package_snapshot(latest_pref)
+            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
+            if latest_snapshot and server_with_revisions and \
+                    ref_latest_snapshot.revision != package_reference.revision:
+                raise ConanException("Local package is different from the remote package. "
+                                     "Forbidden overwrite")
         t1 = time.time()
         # Get the remote snapshot
-        remote_snapshot, package_reference = self._get_package_snapshot(package_reference)
+        pref = package_reference
+        remote_snapshot, pref_snapshot, rev_time = self._get_package_snapshot(pref)
+
         if remote_snapshot:
-            remote_manifest = self.get_package_manifest(package_reference)
+            remote_manifest = self.get_package_manifest(pref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False
+                return False, pref_snapshot, rev_time
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
@@ -203,8 +235,8 @@ class RestCommonMethods(object):
                             "in local package present in remote: %s.\n Please, report it at "
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-        return files_to_upload or deleted
+        logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
+        return files_to_upload or deleted, package_reference, rev_time
 
     def search(self, pattern=None, ignorecase=True):
         """
@@ -212,6 +244,8 @@ class RestCommonMethods(object):
         """
         query = ''
         if pattern:
+            if isinstance(pattern, ConanFileReference):
+                pattern = pattern.full_repr()
             params = {"q": pattern}
             if not ignorecase:
                 params["ignorecase"] = "False"
@@ -247,33 +281,18 @@ class RestCommonMethods(object):
         """ Remove a recipe and packages """
         self.check_credentials()
         url = self._recipe_url(conan_reference)
+        logger.debug("REST: remove: %s" % url)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
                                          verify=self.verify_ssl)
         return response
 
-    @handle_return_deserializer()
-    def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any packages specified by package_ids"""
-        self.check_credentials()
-        payload = {"package_ids": package_ids}
-        url = self._recipe_url(conan_reference) + "/packages/delete"
-        return self._post_json(url, payload)
-
-    @handle_return_deserializer()
-    def _remove_conanfile_files(self, conan_reference, files):
-        """ Remove recipe files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = self._recipe_url(conan_reference) + "/remove_files"
-        return self._post_json(url, payload)
-
     def _post_json(self, url, payload):
+        logger.debug("REST: post: %s" % url)
         response = self.requester.post(url,
                                        auth=self.auth,
                                        headers=self.custom_headers,
                                        verify=self.verify_ssl,
                                        json=payload)
         return response
-

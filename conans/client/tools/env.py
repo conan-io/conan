@@ -2,9 +2,9 @@ import os
 import sys
 from contextlib import contextmanager
 
-from conans.client.tools.files import which, _path_equals
-from conans.errors import ConanException
 from conans.client.run_environment import RunEnvironment
+from conans.client.tools.files import _path_equals, which
+from conans.errors import ConanException
 
 
 @contextmanager

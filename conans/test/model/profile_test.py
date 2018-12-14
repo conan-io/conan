@@ -1,10 +1,9 @@
 import os
 import unittest
+from collections import OrderedDict
 
 from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
-from collections import OrderedDict
-
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 

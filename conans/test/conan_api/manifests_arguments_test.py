@@ -1,7 +1,10 @@
-from conans.client.conan_api import _parse_manifests_arguments, ConanException, default_manifest_folder
-import unittest
-from parameterized.parameterized import parameterized
 import os
+import unittest
+
+from parameterized.parameterized import parameterized
+
+from conans.client.conan_api import ConanException, _parse_manifests_arguments, \
+    default_manifest_folder
 
 
 class ArgumentsTest(unittest.TestCase):

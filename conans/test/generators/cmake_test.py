@@ -1,18 +1,22 @@
+import os
 import re
 import unittest
 from collections import namedtuple
 
-from conans.client.generators.cmake_multi import CMakeMultiGenerator
-from conans.model.settings import Settings
-from conans.model.conan_file import ConanFile
-from conans.client.generators.cmake import CMakeGenerator
-from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
+from nose.plugins.attrib import attr
+
 from conans.client.conf import default_settings_yml
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
-import os
+from conans.client.generators.cmake import CMakeGenerator
+from conans.client.generators.cmake_multi import CMakeMultiGenerator
+from conans.client.tools import replace_in_file
+from conans.model.build_info import CppInfo
+from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -51,7 +55,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
         conanfile.initialize(settings_mock("Release", None, None,
-                                           lambda x, raise_undefined_field: x), EnvValues())
+                                           lambda x: x), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -70,9 +74,8 @@ class CMakeGeneratorTest(unittest.TestCase):
     def paths_cmake_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock(None, None, None,
-                                                        lambda x, raise_undefined_field: x,
-                                                        lambda: {}), EnvValues())
+        conanfile.initialize(settings_mock(None, None, None, lambda x: x,
+                                           lambda: {}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -91,7 +94,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x, raise_undefined_field: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
@@ -106,7 +109,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def variables_cmake_multi_user_vars_escape_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         conanfile = ConanFile(None, None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x, raise_undefined_field: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
@@ -170,10 +173,10 @@ class CMakeGeneratorTest(unittest.TestCase):
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
-        message(STATUS "Conan: called by CMake conan helper")
+        conan_message(STATUS "Conan: called by CMake conan helper")
     endif()
     if(CONAN_IN_LOCAL_CACHE)
-        message(STATUS "Conan: called inside local cache")
+        conan_message(STATUS "Conan: called inside local cache")
     endif()
     conan_check_compiler()
     if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
@@ -181,23 +184,23 @@ class CMakeGeneratorTest(unittest.TestCase):
     endif()
     conan_set_find_library_paths()
     if(NOT ARGUMENTS_TARGETS)
-        message(STATUS "Conan: Using cmake global configuration")
+        conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
-        message(STATUS "Conan: Using cmake targets configuration")
+        conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
     if(ARGUMENTS_SKIP_RPATH)
         # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
-        message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
+        conan_message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        message(STATUS "Conan: Adjusting default RPATHs Conan policies")
+        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
     if(NOT ARGUMENTS_SKIP_STD)
-        message(STATUS "Conan: Adjusting language standard")
+        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
     if(NOT ARGUMENTS_SKIP_FPIC)
@@ -263,3 +266,33 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_VERSION "12")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
+
+    @attr('slow')
+    def no_output_test(self):
+        client = TestClient()
+        client.run("new Test/1.0 --sources")
+        cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
+
+        # Test output works as expected
+        client.run("create . danimtb/testing")
+        self.assertIn("Conan: Using cmake global configuration", client.out)
+        self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+        self.assertIn("Conan: Adjusting language standard", client.out)
+
+        # Silence output
+        replace_in_file(cmakelists_path,
+                        "conan_basic_setup()",
+                        "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
+                        output=client.user_io.out)
+        client.run("create . danimtb/testing")
+        self.assertNotIn("Conan: Using cmake global configuration", client.out)
+        self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+        self.assertNotIn("Conan: Adjusting language standard", client.out)
+
+        # Use TARGETS
+        replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
+                        output=client.user_io.out)
+        client.run("create . danimtb/testing")
+        self.assertNotIn("Conan: Using cmake targets configuration", client.out)
+        self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+        self.assertNotIn("Conan: Adjusting language standard", client.out)

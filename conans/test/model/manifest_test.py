@@ -1,8 +1,9 @@
-import unittest
-from conans.util.files import save, load, md5
 import os
+import unittest
+
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import load, md5, save
 
 
 class ManifestTest(unittest.TestCase):

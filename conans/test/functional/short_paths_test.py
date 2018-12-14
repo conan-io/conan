@@ -3,7 +3,7 @@ import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 class ShortPathsTest(unittest.TestCase):
@@ -42,9 +42,9 @@ class TestConan(ConanFile):
         conan_ref = ConanFileReference("test", "1.0", "danimtb", "testing")
         source_folder = os.path.join(client.client_cache.conan(conan_ref), "source")
         build_folder = os.path.join(client.client_cache.conan(conan_ref), "build",
-                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                    NO_SETTINGS_PACKAGE_ID)
         package_folder = os.path.join(client.client_cache.conan(conan_ref), "package",
-                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertIn("SOURCE: source_file.cpp", client.out)
         self.assertEqual(["source_file.cpp"], os.listdir(source_folder))
         self.assertIn("BUILD: source_file.cpp", client.out)
@@ -86,7 +86,7 @@ class TestConan(ConanFile):
         client.run("create . danimtb/testing")
         self.assertNotIn("test/1.0@danimtb/testing: Package '1' created", client.out)
         self.assertIn(
-            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            "test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
             client.out)
 
         # try local flow still works, but no pkg id available
@@ -98,17 +98,17 @@ class TestConan(ConanFile):
         client.run("remove test/1.0@danimtb/testing --force")
         client.run("export-pkg . test/1.0@danimtb/testing --package-folder package")
         self.assertIn(
-            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            "test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
             client.out)
 
         # try export-pkg without package folder
         client.run("remove test/1.0@danimtb/testing --force")
         client.run("export-pkg . test/1.0@danimtb/testing --install-folder .")
         self.assertIn(
-            "test/1.0@danimtb/testing: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
+            "test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
             client.out)
 
         # try conan get
-        client.run("get test/1.0@danimtb/testing . -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        client.run("get test/1.0@danimtb/testing . -p %s" % NO_SETTINGS_PACKAGE_ID)
         self.assertIn("conaninfo.txt", client.out)
         self.assertIn("conanmanifest.txt", client.out)

@@ -1,18 +1,18 @@
 import os
+import shutil
 import unittest
 import zipfile
 
-import shutil
 from mock import patch
 
-from conans import tools
+from conans.client import tools
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
-from conans.client.remote_registry import RemoteRegistry, Remote
+from conans.client.remote_registry import Remote, RemoteRegistry
 from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.util.files import load, save_files, save, mkdir
+from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.util.files import load, mkdir, save, save_files
 
 win_profile = """[settings]
     os: Windows
@@ -219,15 +219,13 @@ class Pkg(ConanFile):
     def failed_install_repo_test(self):
         """ should install from a git repo
         """
-        error = self.client.run('config install notexistingrepo.git', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config install notexistingrepo.git', assert_error=True)
         self.assertIn("ERROR: config install error. Can't clone repo", self.client.out)
 
     def failed_install_http_test(self):
         """ should install from a http zip
         """
-        error = self.client.run('config install httpnonexisting', ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting",
                       self.client.out)
 
@@ -278,8 +276,7 @@ class Pkg(ConanFile):
 
     def force_git_type_test(self):
         client = TestClient()
-        error = client.run('config install httpnonexisting --type=git', ignore_error=True)
-        self.assertTrue(error)
+        client.run('config install httpnonexisting --type=git', assert_error=True)
         self.assertIn("Can't clone repo", client.out)
 
     def reinstall_test(self):
@@ -293,8 +290,7 @@ class Pkg(ConanFile):
     def reinstall_error_test(self):
         """ should use configured URL in conan.conf
         """
-        error = self.client.run("config install", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("config install", assert_error=True)
         self.assertIn("Called config install without arguments", self.client.out)
 
     def removed_credentials_from_url_unit_test(self):

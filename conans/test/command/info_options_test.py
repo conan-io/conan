@@ -1,4 +1,5 @@
 import unittest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -21,9 +22,9 @@ class InfoOptionsTest(unittest.TestCase):
         self.assertIn("My-Package/1.3@PROJECT", client.user_io.out)
 
         # errors
-        client.run("info . -o shared2=True", ignore_error=True)
+        client.run("info . -o shared2=True", assert_error=True)
         self.assertIn("'options.shared2' doesn't exist", client.user_io.out)
-        client.run("info . -o My-Package:shared2=True", ignore_error=True)
+        client.run("info . -o My-Package:shared2=True", assert_error=True)
         self.assertIn("'options.shared2' doesn't exist", client.user_io.out)
 
     def info_wrong_options_test(self):
@@ -38,6 +39,6 @@ class Pkg(ConanFile):
         client.run("create . PkgA/0.1@user/testing")
         client.save({"conanfile.py": conanfile.format("B")})
         client.run("install .")
-        client.run("info PkgA@0.1@user/testing")
+        client.run("info PkgA/0.1@user/testing")
         self.assertIn("PkgA/0.1@user/testing", client.out)
         self.assertIn("BuildID: None", client.out)

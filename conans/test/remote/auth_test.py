@@ -1,11 +1,12 @@
+import os
 import unittest
 
-from conans import tools
-from conans.test.utils.tools import TestServer, TestClient
-from conans.paths import CONANFILE
-from conans.util.files import save
+from conans.client import tools
+from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference
-import os
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import save
 
 conan_content = """
 from conans import ConanFile
@@ -88,11 +89,12 @@ class AuthorizeTest(unittest.TestCase):
                                                                          ("baduser3", "badpass3")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)
+        errors = self.conan.run("upload %s" % str(self.conan_reference), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
-        self.assertFalse(os.path.exists(self.test_server.paths.export(self.conan_reference)))
+        with self.assertRaises(NotFoundException):
+            self.test_server.paths.export(self.conan_reference)
 
         # Check that login failed all times
         self.assertEquals(self.conan.user_io.login_index["default"], 3)
@@ -107,10 +109,8 @@ class AuthorizeTest(unittest.TestCase):
                                         ]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)
+        self.conan.run("upload %s" % str(self.conan_reference))
 
-        # Check that return was ok
-        self.assertFalse(errors)
         # Check that upload was granted
         self.assertTrue(os.path.exists(self.test_server.paths.export(self.conan_reference)))
 

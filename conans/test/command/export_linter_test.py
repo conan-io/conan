@@ -1,10 +1,11 @@
+import os
 import unittest
+
+import six
+
+from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-import six
-import os
-from conans import tools
-
 
 conanfile = """
 from conans import ConanFile, tools
@@ -133,8 +134,7 @@ class BaseConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("config set general.pylint_werr=True")
-        error = client.run("export . lasote/stable", ignore_error=True)
-        self.assertTrue(error)
+        client.run("export . lasote/stable", assert_error=True)
         self._check_linter(client.user_io.out)
         self.assertIn("ERROR: Package recipe has linter errors. Please fix them",
                       client.user_io.out)
