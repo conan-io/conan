@@ -22,22 +22,21 @@ class MSBuildTest(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def build_vs_project_test(self):
         conan_build_vs = """
-    from conans import ConanFile, MSBuild
+from conans import ConanFile, MSBuild
 
-    class HelloConan(ConanFile):
-        name = "Hello"
-        version = "1.2.1"
-        exports = "*"
-        settings = "os", "build_type", "arch", "compiler", "cppstd"
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2.1"
+    exports = "*"
+    settings = "os", "build_type", "arch", "compiler", "cppstd"
 
-        def build(self):
-            msbuild = MSBuild(self)
-            msbuild.build("MyProject.sln")
+    def build(self):
+        msbuild = MSBuild(self)
+        msbuild.build("MyProject.sln")
 
-        def package(self):
-            self.copy(pattern="*.exe")
-
-    """
+    def package(self):
+        self.copy(pattern="*.exe")
+"""
         client = TestClient()
 
         # Test cpp standard stuff
