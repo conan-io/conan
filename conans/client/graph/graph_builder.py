@@ -174,7 +174,7 @@ class DepsGraphBuilder(object):
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
                     if not conanref:
-                        output = ScopedOutput(str("PROJECT"), self._output)
+                        output = ScopedOutput(node.name, self._output)
                         output.warn("config() has been deprecated."
                                     " Use config_options and configure")
                     with conanfile_exception_formatter(str(conanfile), "config"):

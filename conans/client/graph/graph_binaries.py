@@ -2,7 +2,7 @@ import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
-    RECIPE_CONSUMER)
+                                       RECIPE_CONSUMER)
 from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo

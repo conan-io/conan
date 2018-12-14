@@ -140,6 +140,8 @@ class GraphManager(object):
         root_node = Node(ConanFileReference(conanfile.name, conanfile.version, None, None,
                                             validate=False),
                          conanfile, local_path, recipe=RECIPE_CONSUMER)
+        # A bit dirty, but lets at least make consumer naming uniform
+        conanfile.output = ScopedOutput(root_node.name, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,

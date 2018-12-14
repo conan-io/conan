@@ -12,7 +12,6 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
