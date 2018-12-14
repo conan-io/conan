@@ -161,3 +161,4 @@ class ConanManager(object):
 
         if editable:
             self._client_cache.install_as_editable(reference, os.path.dirname(editable))
+            self._user_io.out.writeln("Installed as editable!", Color.BRIGHT_MAGENTA)

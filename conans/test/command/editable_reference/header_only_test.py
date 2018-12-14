@@ -120,6 +120,9 @@ int main() {
 
         # Build consumer project
         client.run("create . pkg/0.0@user/testing")
+        self.assertIn("    MyLib/0.1@user/editable from local cache - Editable", client.out)
+        self.assertIn("    MyLib/0.1@user/editable:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
         self.assertIn("Hello EDITABLE!", client.out)
 
         # Modify editable and build again

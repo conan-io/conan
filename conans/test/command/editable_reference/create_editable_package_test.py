@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class CreateEditablePackageTests(unittest.TestCase):
+class CreateEditablePackageTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""\
         from conans import ConanFile
@@ -28,13 +28,12 @@ class CreateEditablePackageTests(unittest.TestCase):
         t.save(files={os.path.join(localpath_to_editable, 'conanfile.py'): self.conanfile})
         t.run('create  "{}" {}'.format(localpath_to_editable, reference))  # TODO: Need to create first!!
         t.run('install --editable="{}" {}'.format(localpath_to_editable, reference))
+        self.assertIn("Installed as editable!", t.out)
 
         self.assertTrue(t.client_cache.installed_as_editable(reference))
         layout = t.client_cache.package_layout(reference)
         self.assertTrue(layout.installed_as_editable())
         self.assertEqual(layout.conan(), localpath_to_editable)
-
-        self.assertIn("Installed as editable!", t.out)
 
     def test_install_not_existing(self):
         pass
