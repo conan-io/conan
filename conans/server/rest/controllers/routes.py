@@ -14,12 +14,16 @@ class Router(object):
         return '%s/revisions/<revision>' % self.recipe
 
     @property
+    def recipe_revisions(self):
+        return '%s/revisions' % self.recipe
+
+    @property
     def recipe_file(self):
-        return '%s/<the_path:path>' % self.recipe
+        return '%s/files/<the_path:path>' % self.recipe
 
     @property
     def recipe_revision_file(self):
-        return '%s/<the_path:path>' % self.recipe_revision
+        return '%s/files/<the_path:path>' % self.recipe_revision
 
     @property
     def packages(self):
@@ -39,17 +43,20 @@ class Router(object):
         return '%s/<package_id>' % self.packages_revision
 
     @property
-    def package_revision(self):
-        return '%s/<package_id>/revisions/<p_revision>' % self.packages_revision
+    def package_revisions(self):
+        return '%s/revisions/' % self.package_recipe_revision
 
     @property
+    def package_revision(self):
+        return '%s/<p_revision>' % self.package_revisions
+    @property
     def package_file(self):
-        return '%s/<the_path:path>' % self.package
+        return '%s/files/<the_path:path>' % self.package
 
     @property
     def package_revision_file(self):
-        return '%s/<the_path:path>' % self.package_revision
+        return '%s/files/<the_path:path>' % self.package_revision
 
     @property
     def package_recipe_revision_file(self):
-        return '%s/<the_path:path>' % self.package_recipe_revision
+        return '%s/files/<the_path:path>' % self.package_recipe_revision
