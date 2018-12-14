@@ -1,4 +1,9 @@
+import os
+from collections import namedtuple
+
+from conans import ConanFile, Options
 from conans.model.conan_file import ConanFile
+from conans.model.options import PackageOptions
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -83,3 +88,34 @@ class %sConan(ConanFile):
         if self.package_id:
             base += "    def package_id(self):\n        %s\n" % self.package_id
         return base
+
+
+class ConanFileMock(ConanFile):
+
+    def __init__(self, shared=None, options=None, options_values=None):
+        options = options or ""
+        self.command = None
+        self.path = None
+        self.source_folder = self.build_folder = "."
+        self.settings = None
+        self.options = Options(PackageOptions.loads(options))
+        if options_values:
+            for var, value in options_values.items():
+                self.options._data[var] = value
+        self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.output = TestBufferConanOutput()
+        self.in_local_cache = False
+        self.install_folder = "myinstallfolder"
+        if shared is not None:
+            self.options = namedtuple("options", "shared")(shared)
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
+        self.should_test = True
+        self.generators = []
+        self.captured_env = {}
+
+    def run(self, command):
+        self.command = command
+        self.path = os.environ["PATH"]
+        self.captured_env = {key: value for key, value in os.environ.items()}

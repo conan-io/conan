@@ -13,7 +13,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
-from conans.test.model.fake_retriever import Retriever
+from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
     test_processed_profile
 
