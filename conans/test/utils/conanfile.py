@@ -1,5 +1,5 @@
 import os
-from collections.__init__ import namedtuple
+from collections import namedtuple
 
 from conans import ConanFile, Options
 from conans.model.conan_file import ConanFile
