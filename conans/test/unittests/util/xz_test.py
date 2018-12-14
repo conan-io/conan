@@ -22,8 +22,8 @@ class XZTest(TestCase):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
         ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        export = server.paths.export(ref)
-        server.paths.update_last_revision(ref)
+        export = server.server_store.export(ref)
+        server.server_store.update_last_revision(ref)
         save_files(export, {"conanfile.py": "#",
                             "conanmanifest.txt": "#",
                             "conan_export.txz": "#"})
@@ -39,8 +39,8 @@ class XZTest(TestCase):
         ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
-        server.paths.update_last_revision(ref)
-        export = server.paths.export(ref)
+        server.server_store.update_last_revision(ref)
+        export = server.server_store.export(ref)
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     exports_sources = "*"
@@ -58,8 +58,8 @@ class Pkg(ConanFile):
         ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
-        server.paths.update_last_revision(ref)
-        export = server.paths.export(ref)  # *1 the path can't be known before upload a revision
+        server.server_store.update_last_revision(ref)
+        export = server.server_store.export(ref)  # *1 the path can't be known before upload a revision
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     exports_sources = "*"
@@ -67,10 +67,10 @@ class Pkg(ConanFile):
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
         pkg_ref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        server.paths.update_last_package_revision(pkg_ref.copy_with_revs(DEFAULT_REVISION_V1,
+        server.server_store.update_last_package_revision(pkg_ref.copy_with_revs(DEFAULT_REVISION_V1,
                                                                          DEFAULT_REVISION_V1))
 
-        package = server.paths.package(pkg_ref)
+        package = server.server_store.package(pkg_ref)
         save_files(package, {"conaninfo.txt": "#",
                              "conanmanifest.txt": "1",
                              "conan_package.txz": "#"})

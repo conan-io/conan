@@ -46,7 +46,7 @@ class ExporterTest(unittest.TestCase):
         files = hello_source_files()
 
         conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.paths.export(conan_ref)
+        reg_folder = client.client_cache.export(conan_ref)
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
@@ -73,8 +73,8 @@ class ExporterTest(unittest.TestCase):
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
         package_ref = PackageReference(conan_ref, "myfakeid")
-        build_folder = client.paths.build(package_ref)
-        package_folder = client.paths.package(package_ref)
+        build_folder = client.client_cache.build(package_ref)
+        package_folder = client.client_cache.package(package_ref)
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)

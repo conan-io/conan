@@ -21,7 +21,7 @@ class CollectLibsTest(unittest.TestCase):
         client.run("install %s --build missing" % str(conan_reference))
 
         # Check compilation ok
-        package_ids = client.paths.conan_packages(conan_reference)
+        package_ids = client.client_cache.conan_packages(conan_reference)
         self.assertEquals(len(package_ids), 1)
 
         # Reuse them
