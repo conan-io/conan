@@ -297,9 +297,7 @@ class ConanInstaller(object):
                     continue
 
                 if node.binary == BINARY_EDITABLE:
-                    # TODO: I need a valid 'package_folder', but I'm not going to use it
-                    package_folder = self._client_cache.conan(node.conan_ref)
-                    self._call_package_info(node.conanfile, package_folder=package_folder)
+                    self._handle_node_editable(node)
                     continue
 
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
@@ -320,6 +318,24 @@ class ConanInstaller(object):
             read_manifest = FileTreeManifest.load(package_folder)
             if node.update_manifest == read_manifest:
                 return True
+
+    def _handle_node_editable(self, node):
+        # TODO: I need a valid 'package_folder', but I'm not going to use it
+        package_folder = self._client_cache.conan(node.conan_ref)
+        self._call_package_info(node.conanfile, package_folder=package_folder)
+
+        package_layout = self._client_cache.package_layout(node.conan_ref)
+        package_layout_file = package_layout.editable_package_layout_file()
+        content = load(package_layout_file)
+        base_path = os.path.dirname(package_layout_file)
+        data = parse_editable_cpp_info(content=content, base_path=base_path,
+                                       settings=node.conanfile.settings,
+                                       options=node.conanfile.options)
+
+        # Replace directories with those in 'data'
+        cpp_info = node.conanfile.cpp_info
+        for key, items in data.items():
+            setattr(cpp_info, key, items)
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_ref, conan_file = node.conan_ref, node.conanfile
@@ -482,17 +498,3 @@ class ConanInstaller(object):
                     conanfile.build_folder = None
                     conanfile.install_folder = None
                     conanfile.package_info()
-                    if hasattr(conanfile, '_cpp_info_layout_file'):
-                        # It is installed as editable
-                        cpp_info = conanfile.cpp_info
-
-                        content = load(conanfile._cpp_info_layout_file)
-                        base_path = os.path.dirname(conanfile._cpp_info_layout_file)
-                        data = parse_editable_cpp_info(content=content, base_path=base_path,
-                                                       settings=conanfile.settings,
-                                                       options=conanfile.options)
-
-                        # Replace directories with those in 'data'
-                        for key, items in data.items():
-                            setattr(cpp_info, key, items)
-

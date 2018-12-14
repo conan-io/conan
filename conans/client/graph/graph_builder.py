@@ -248,13 +248,8 @@ class DepsGraphBuilder(object):
             conanfile_path, recipe_status, remote, new_ref = result
 
         output = ScopedOutput(str(requirement.conan_reference), self._output)
-        editable = recipe_status == RECIPE_EDITABLE
-
         dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
                                                     reference=requirement.conan_reference)
-
-        if editable:
-            setattr(dep_conanfile, '_cpp_info_layout_file', None)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
