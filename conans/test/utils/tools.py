@@ -45,9 +45,9 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.model.version import Version
-from conans.test.unittests.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
-                                                                TESTING_REMOTE_PRIVATE_USER,
-                                                                TestServerLauncher)
+from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                               TESTING_REMOTE_PRIVATE_USER,
+                                               TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
