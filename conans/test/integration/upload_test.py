@@ -77,10 +77,10 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertNotIn("Compressing recipe", str(self.client.user_io.out))
 
         # Check that conans exists on server
-        server_paths = self.servers["default"].paths
+        server_paths = self.servers["default"].server_store
         conan_path = server_paths.export(conan_reference)
         self.assertTrue(os.path.exists(conan_path))
-        package_ids = self.client.paths.conan_packages(conan_reference)
+        package_ids = self.client.client_cache.conan_packages(conan_reference)
         package_ref = PackageReference(conan_reference, package_ids[0])
 
         # Upload package

@@ -264,7 +264,7 @@ class TestServer(object):
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
-    def paths(self):
+    def server_store(self):
         return self.test_server.server_store
 
     def __repr__(self):
@@ -533,10 +533,6 @@ servers["r2"] = TestServer()
     @property
     def remote_registry(self):
         return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-
-    @property
-    def paths(self):
-        return self.client_cache
 
     @property
     def default_compiler_visual_studio(self):
