@@ -93,7 +93,7 @@ class CommandOutputer(object):
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph, self.client_cache.conan_folder)
         else:
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(deps_graph)
