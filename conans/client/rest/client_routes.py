@@ -20,7 +20,7 @@ class _ClientRouterBuilder(RestRouteBuilder):
         return url
 
     @staticmethod
-    def _format_pref(url, pref):
+    def format_pref(url, pref):
         ref = pref.conan
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
                          channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
@@ -28,7 +28,7 @@ class _ClientRouterBuilder(RestRouteBuilder):
         return url
 
     @staticmethod
-    def _format_pref_path(url, pref, path):
+    def format_pref_path(url, pref, path):
         ref = pref.conan
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
                          channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
@@ -76,7 +76,7 @@ class _ClientRouterBuilder(RestRouteBuilder):
         else:
             tmp = super(_ClientRouterBuilder, self).package_revision
 
-        return self._format_pref(tmp, pref)
+        return self.format_pref(tmp, pref)
 
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
@@ -87,7 +87,7 @@ class _ClientRouterBuilder(RestRouteBuilder):
         else:
             tmp = super(_ClientRouterBuilder, self).package_revision_file
 
-        return self._format_pref_path(tmp, pref, path)
+        return self.format_pref_path(tmp, pref, path)
 
     def for_package_files(self, pref):
         """url for getting the recipe list"""
@@ -98,7 +98,7 @@ class _ClientRouterBuilder(RestRouteBuilder):
         else:
             tmp = super(_ClientRouterBuilder, self).package_revision_files
 
-        return self._format_pref(tmp, pref)
+        return self.format_pref(tmp, pref)
 
 
 class ClientBaseRouterBuilder(_ClientRouterBuilder):
