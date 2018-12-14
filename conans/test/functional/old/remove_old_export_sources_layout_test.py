@@ -30,7 +30,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("There are no packages", client.user_io.out)
         conan_reference = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        path = test_server.paths.export(conan_reference)
+        path = test_server.server_store.export(conan_reference)
         sources_tgz = os.path.join(path, "conan_sources.tgz")
         self.assertTrue(os.path.exists(sources_tgz))
         folder = temp_folder()
