@@ -2,7 +2,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_UPDATE
 from conans.client.installer import build_id
 from conans.util.files import save
-from conans.client.graph.grapher_resources import visjs
+import os
 
 
 class ConanGrapher(object):
@@ -27,11 +27,20 @@ class ConanGrapher(object):
 
 
 class ConanHTMLGrapher(object):
-    def __init__(self, deps_graph):
+    def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph
+        self._cache_folder = cache_folder
+
+    def _visjs_paths(self):
+        visjs = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"
+        viscss = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css"
+        visjs_path = os.path.join(self._cache_folder, "vis.min.js")
+        visjs = visjs_path if os.path.exists(visjs_path) else visjs
+        viscss_path = os.path.join(self._cache_folder, "vis.min.css")
+        viscss = viscss_path if os.path.exists(viscss_path) else viscss
+        return visjs, viscss
 
     def graph_file(self, filename):
-        save("vis.min.js", visjs)
         save(filename, self.graph())
 
     def graph(self):
@@ -49,7 +58,8 @@ class ConanHTMLGrapher(object):
                 for name, data in [("id", conanfile.info.package_id()),
                                    ("build_id", build_id(conanfile)),
                                    ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
-                                   ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
+                                   ("homepage",
+                                    '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
                                    ("license", conanfile.license),
                                    ("author", conanfile.author),
                                    ("topics", str(conanfile.topics))]:
@@ -70,7 +80,8 @@ class ConanHTMLGrapher(object):
                      BINARY_BUILD: "Khaki",
                      BINARY_MISSING: "OrangeRed",
                      BINARY_UPDATE: "SeaGreen"}.get(node.binary, "White")
-            nodes.append("{id: %d, label: '%s', shape: '%s', color: {background: '%s'}, fulllabel: '%s'}"
+            nodes.append("{id: %d, label: '%s', shape: '%s', "
+                         "color: {background: '%s'}, fulllabel: '%s'}"
                          % (i, label, shape, color, fulllabel))
         nodes = ",\n".join(nodes)
 
@@ -82,13 +93,15 @@ class ConanHTMLGrapher(object):
                 edges.append("{ from: %d, to: %d }" % (src, dst))
         edges = ",\n".join(edges)
 
-        return self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        result = self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        visjs, viscss = self._visjs_paths()
+        return result.replace("%VISJS%", visjs).replace("%VISCSS%", viscss)
 
     _template = """<html>
 
 <head>
-  <script type="text/javascript" src="vis.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="%VISJS%"></script>
+  <link href="%VISCSS%" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -121,7 +134,9 @@ class ConanHTMLGrapher(object):
     <div id="mynetwork" style="float:left; width: 75%;"></div>
     <div style="float:right;width:25%;">
       <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
-      <button onclick="javascript:showhideclass('controls')" class="button noPrint">Show / hide graph controls.</button>
+      <button onclick="javascript:showhideclass('controls')" class="button noPrint">
+          Show / hide graph controls
+      </button>
       <div id="controls" class="controls" style="padding:5; display:none"></div>
     </div>
   </div>
