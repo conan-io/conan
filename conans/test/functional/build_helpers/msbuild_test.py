@@ -2,16 +2,12 @@ import os
 import platform
 import unittest
 
-import mock
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.client.build.msbuild import MSBuild
-from conans.errors import ConanException
-from conans.model.version import Version
+from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import MockConanfile, MockSettings
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
 
