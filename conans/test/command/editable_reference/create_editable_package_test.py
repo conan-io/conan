@@ -5,41 +5,62 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer
+from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
+from conans.test.utils.tools import TestClient
 
 
 class CreateEditablePackageTest(unittest.TestCase):
 
-    conanfile = textwrap.dedent("""\
+    conanfile_base = textwrap.dedent("""\
         from conans import ConanFile
         
         class APck(ConanFile):
-            pass
+            {body}
+        """)
+    conanfile = conanfile_base.format(body="pass")
+
+    conan_package_layout = textwrap.dedent("""\
+        [includedirs]
+        src/include
         """)
 
     def test_install_existing(self):
-        test_server = TestServer()
-        servers = {"default": test_server}
-        t = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-
-        localpath_to_editable = os.path.join(t.current_folder, 'local', 'path')
         reference = ConanFileReference.loads('lib/version@user/name')
 
-        t.save(files={os.path.join(localpath_to_editable, 'conanfile.py'): self.conanfile})
-        t.run('create  "{}" {}'.format(localpath_to_editable, reference))  # TODO: Need to create first!!
-        t.run('install --editable="{}" {}'.format(localpath_to_editable, reference))
-        self.assertIn("Installed as editable!", t.out)
+        t = TestClient()
+        t.save(files={'conanfile.py': self.conanfile,
+                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+        t.run('export  . {}'.format(reference))
+        t.run('install --editable=. {}'.format(reference))
 
+        self.assertIn("Installed as editable!", t.out)
         self.assertTrue(t.client_cache.installed_as_editable(reference))
         layout = t.client_cache.package_layout(reference)
         self.assertTrue(layout.installed_as_editable())
-        self.assertEqual(layout.conan(), localpath_to_editable)
+        self.assertEqual(layout.conan(), t.current_folder)
 
-    def test_install_not_existing(self):
-        pass
+    def test_install_without_package_layout_file(self):
+        reference = ConanFileReference.loads('lib/version@user/name')
 
-    def test_install_with_deps(self):
-        pass
+        t = TestClient()
+        t.save(files={os.path.join('conanfile.py'): self.conanfile})
+        t.run('export  . {}'.format(reference))
+        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+
+        self.assertFalse(os.path.exists(CONAN_PACKAGE_LAYOUT_FILE))
+        self.assertIn("ERROR: In order to link a package in editable mode, it is required a", t.out)
+
+    def test_install_failed_deps(self):
+        reference = ConanFileReference.loads('lib/version@user/name')
+
+        t = TestClient()
+        t.save(files={'conanfile.py': self.conanfile_base.format(body='requires = "aa/bb@cc/dd"'),
+                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+        t.run('export  . {}'.format(reference))
+        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+
+        self.assertIn("ERROR: Failed requirement 'aa/bb@cc/dd'", t.out)
+        self.assertFalse(t.client_cache.installed_as_editable(reference))  # Remove editable
 
     def test_editable_over_editable(self):
         pass
