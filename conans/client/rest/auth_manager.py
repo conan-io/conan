@@ -72,7 +72,7 @@ def input_credentials_if_unauthorized(func):
                     self._user_io.out.info(
                         'You can change username with "conan user <username>"')
             else:
-                logger.debug("Got token: %s" % str(token))
+                logger.debug("Got token")
                 self._rest_client.token = token
                 self.user = user
                 # Set custom headers of mac_digest and username

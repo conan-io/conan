@@ -194,7 +194,7 @@ try{
             node("Windows"){
                 stage("REST tests Windows ${pyver}"){
                     try{
-                      bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
+                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
                     }
                     finally{
                       bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
@@ -206,7 +206,7 @@ try{
             node("Linux"){
                 stage("REST tests Linux ${pyver}"){
                     docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
+                        sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
                     }
                 }
             }
@@ -215,7 +215,7 @@ try{
             node("Macos"){
                 stage("REST tests Windows ${pyver}"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.functional.remote.rest_api_test")
                     }
                 }
             }

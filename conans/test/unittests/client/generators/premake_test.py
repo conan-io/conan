@@ -12,6 +12,7 @@ from conans.util.files import save
 
 
 class PremakeGeneratorTest(unittest.TestCase):
+
     def variables_setup_test(self):
         tmp_folder1 = temp_folder()
         tmp_folder2 = temp_folder()
