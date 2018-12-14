@@ -7,7 +7,7 @@ import six
 from parameterized import parameterized
 
 from conans.client.conf import default_settings_yml
-from conans.model.conan_file import parse_package_layout_content
+from conans.model.conan_file import parse_editable_cpp_info
 from conans.model.settings import Settings
 
 
@@ -35,14 +35,14 @@ class ParseContentExplicitTestCase(unittest.TestCase):
         base_path = os.path.dirname(__file__) if make_abs else None
         expected = {'includedirs': [], 'libdirs': [], 'resdirs': [], 'bindirs': []}
 
-        data = parse_package_layout_content(content=u"", base_path=base_path)
+        data = parse_editable_cpp_info(content=u"", base_path=base_path)
         self.assertDictEqual(data, expected)
 
-        data = parse_package_layout_content(content=self.content.format(includedirs_pack=""),
-                                            base_path=base_path)
+        data = parse_editable_cpp_info(content=self.content.format(includedirs_pack=""),
+                                       base_path=base_path)
         self.assertDictEqual(data, expected)
 
-        data = parse_package_layout_content(content=u"[other_section]\nvalue", base_path=base_path)
+        data = parse_editable_cpp_info(content=u"[other_section]\nvalue", base_path=base_path)
         self.assertDictEqual(data, expected)
 
     @parameterized.expand([(False, ), (True, )])
@@ -58,7 +58,7 @@ ending-slash/include/
         content = self.content.format(includedirs_pack=basic_pack)
         base_path = os.path.dirname(__file__) if make_abs else None
 
-        data = parse_package_layout_content(content, base_path=base_path)
+        data = parse_editable_cpp_info(content, base_path=base_path)
         self.assertFalse(data['libdirs'])
         self.assertFalse(data['resdirs'])
         self.assertFalse(data['bindirs'])
@@ -80,7 +80,7 @@ D:\\Windows-double-slash\\include
         content = self.content.format(includedirs_pack=windows_pack)
         base_path = os.path.dirname(__file__) if make_abs else None
 
-        data = parse_package_layout_content(content, base_path=base_path)
+        data = parse_editable_cpp_info(content, base_path=base_path)
         self.assertFalse(data['libdirs'])
         self.assertFalse(data['resdirs'])
         self.assertFalse(data['bindirs'])
@@ -97,7 +97,7 @@ D:\\Windows-double-slash\\include
         content = self.content.format(includedirs_pack=unix_pack)
         base_path = os.path.dirname(__file__) if make_abs else None
 
-        data = parse_package_layout_content(content, base_path=base_path)
+        data = parse_editable_cpp_info(content, base_path=base_path)
         self.assertFalse(data['libdirs'])
         self.assertFalse(data['resdirs'])
         self.assertFalse(data['bindirs'])
@@ -123,7 +123,7 @@ C:\\{settings.compiler}\\include\\
         settings.compiler.version = '14'
         settings.build_type = 'Debug'
 
-        data = parse_package_layout_content(content, base_path=base_path, settings=settings)
+        data = parse_editable_cpp_info(content, base_path=base_path, settings=settings)
         includedirs = data['includedirs']
         self.assertIn(_make_abs(base_path, 'src', 'Visual Studio14', 'Debug', 'include'),
                       includedirs)

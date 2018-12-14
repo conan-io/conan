@@ -5,7 +5,7 @@ import unittest
 import tempfile
 
 from conans.test.utils.tools import TestClient
-from conans.paths.package_layouts.package_user_layout import CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test import CONAN_TEST_FOLDER
 from conans.util.files import save
 from conans.paths import LINKED_FOLDER_SENTINEL
