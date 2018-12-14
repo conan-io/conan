@@ -77,11 +77,6 @@ class GraphBinariesAnalyzer(object):
         output = ScopedOutput(str(conan_ref), self._out)
 
         if self._client_cache.installed_as_editable(conan_ref):
-            assert hasattr(conanfile, '_cpp_info_layout_file')
-            # Gather directories from CONAN_PACKAGE_LAYOUT_FILE
-            package_layout = self._client_cache.package_layout(conan_ref)
-            package_layout_file = package_layout.editable_package_layout_file()
-            setattr(conanfile, '_cpp_info_layout_file', package_layout_file)
             node.binary = BINARY_EDITABLE
             return
 
