@@ -8,6 +8,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
+from conans.util.log import logger
 
 
 class ProfileParser(object):
@@ -100,6 +101,7 @@ def read_profile(profile_name, cwd, default_folder):
         return None, None
 
     profile_path = get_profile_path(profile_name, default_folder, cwd)
+    logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
 
     try:

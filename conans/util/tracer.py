@@ -147,6 +147,8 @@ def log_command(name, parameters):
         parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
+    logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
+                                                       for k,v in parameters.items())))
 
 
 def log_exception(exc, message):

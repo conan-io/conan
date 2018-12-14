@@ -37,10 +37,10 @@ class DepsGraphBuilder(object):
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
                         loop_ancestors, aliased, check_updates, update, remote_name,
                         processed_profile)
-        logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
+        logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.compute_package_ids()
-        logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
+        logger.debug("GRAPH: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update, remote_name):
@@ -261,6 +261,7 @@ class DepsGraphBuilder(object):
                                          remote_name, processed_profile,
                                          alias_ref=alias_reference)
 
+        logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
         new_node.revision_pinned = requirement.conan_reference.revision is not None
         new_node.recipe = recipe_status
