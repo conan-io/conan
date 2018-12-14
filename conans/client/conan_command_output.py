@@ -4,6 +4,7 @@ import os
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.files import save
 
@@ -85,13 +86,14 @@ class CommandOutputer(object):
         Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.client_cache, package_filter=package_filter,
+                                             path_resolver=self.client_cache,
+                                             package_filter=package_filter,
                                              show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph, self.client_cache.conan_folder)
         else:
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(deps_graph)
@@ -106,9 +108,8 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table,
-                                outdated=False):
+                              outdated=False):
         if table:
-            from conans.client.graph.grapher import html_binary_graph
             html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self.user_io.out)
