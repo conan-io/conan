@@ -46,6 +46,7 @@ from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
+from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
@@ -56,7 +57,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 
 default_manifest_folder = '.conan_manifests'
 
@@ -199,6 +199,7 @@ class ConanAPIV1(object):
         with tools.environment_append(client_cache.conan_config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
+            conans.util.log.logger.debug("INIT: Using config '%s'" % client_cache.conan_conf_path)
 
             # Create Hook Manager
             hook_manager = HookManager(client_cache.hooks_path, get_env("CONAN_HOOKS", list()),
