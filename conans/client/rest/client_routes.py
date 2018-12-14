@@ -170,7 +170,7 @@ class ClientV1ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def package_manifest(self, pref):
         """get manifest url"""
-        return self.format_ref(self.v1_package_digest, pref.copy_clear_rev())
+        return self.format_pref(self.v1_package_digest, pref.copy_clear_rev())
 
     def recipe_download_urls(self, ref):
         """ urls to download the recipe"""
