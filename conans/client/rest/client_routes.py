@@ -157,11 +157,11 @@ class ClientV1ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def remove_recipe_files(self, ref):
         """Removes files from the recipe"""
-        return self.format_ref(self.v1_remove_recipe_files, ref.copy_clear_rev())
+        return self.format_ref(self.routes.v1_remove_recipe_files, ref.copy_clear_rev())
 
     def remove_packages(self, ref):
         """Remove files from a package"""
-        return self.format_ref(self.v1_remove_packages, ref.copy_clear_rev())
+        return self.format_ref(self.routes.v1_remove_packages, ref.copy_clear_rev())
 
     def recipe_snapshot(self, ref):
         """get recipe manifest url"""
