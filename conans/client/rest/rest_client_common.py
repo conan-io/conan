@@ -1,8 +1,13 @@
 import json
+
 import time
+from requests.auth import AuthBase, HTTPBasicAuth
+
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
+from conans.client.rest.client_routes import ClientUsersRouterBuilder, \
+    ClientSearchRouterBuilder, ClientBaseRouterBuilder
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException)
 from conans.model.manifest import FileTreeManifest
@@ -11,8 +16,6 @@ from conans.search.search import filter_packages
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
-from requests.auth import AuthBase, HTTPBasicAuth
-from six.moves.urllib.parse import urlencode
 
 
 class JWTAuth(AuthBase):
@@ -77,11 +80,23 @@ class RestCommonMethods(object):
     def auth(self):
         return JWTAuth(self.token)
 
+    @property
+    def users_router(self):
+        return ClientUsersRouterBuilder(self.remote_api_url)
+
+    @property
+    def search_router(self):
+        return ClientSearchRouterBuilder(self.remote_api_url)
+
+    @property
+    def base_router(self):
+        return ClientBaseRouterBuilder(self.remote_api_url)
+
     @handle_return_deserializer()
     def authenticate(self, user, password):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
-        url = "%s/users/authenticate" % self.remote_api_url
+        url = self.users_router.common_authenticate
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -96,14 +111,14 @@ class RestCommonMethods(object):
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
-        url = "%s/users/check_credentials" % self.remote_api_url
+        url = self.users_router.common_check_credentials
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
 
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
-        url = "%s/ping" % self.remote_api_url
+        url = self.base_router.ping
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
@@ -235,23 +250,14 @@ class RestCommonMethods(object):
         """
         the_files: dict with relative_path: content
         """
-        query = ''
-        if pattern:
-            if isinstance(pattern, ConanFileReference):
-                pattern = pattern.full_repr()
-            params = {"q": pattern}
-            if not ignorecase:
-                params["ignorecase"] = "False"
-            query = "?%s" % urlencode(params)
-
-        url = "%s/conans/search%s" % (self.remote_api_url, query)
+        url = self.search_router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
-        url = "%s/search?" % self._recipe_url(reference)
 
         if not query:
+            url = self.search_router.search_packages(reference)
             package_infos = self.get_json(url)
             return package_infos
 
@@ -262,10 +268,11 @@ class RestCommonMethods(object):
             capabilities = []
 
         if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url += urlencode({"q": query})
+            url = self.search_router.search_packages(reference, query)
             package_infos = self.get_json(url)
             return package_infos
         else:
+            url = self.search_router.search_packages(reference)
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
 
@@ -273,7 +280,7 @@ class RestCommonMethods(object):
     def remove_conanfile(self, conan_reference):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = self._recipe_url(conan_reference)
+        url = self.conans_router.remove_recipe(conan_reference)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
