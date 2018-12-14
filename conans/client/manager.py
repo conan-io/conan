@@ -86,11 +86,10 @@ class ConanManager(object):
             if not os.path.exists(package_layout_file):
                 raise ConanException("In order to link a package in editable mode, it is required "
                                      "a '{}' file next to the 'conanfile.py'. Find more info "
-                                     "at https://". # TODO: Add URL to docs
+                                     "at https://".  # TODO: Add URL to docs
                                      format(CONAN_PACKAGE_LAYOUT_FILE))
             # Mark it as editable, so it won't care about binaries being available or not
             self._client_cache.install_as_editable(reference, os.path.dirname(editable))
-            self._user_io.out.writeln("Installed as editable!", Color.BRIGHT_MAGENTA)
         else:
             try:
                 ref = ConanFileReference.loads(reference, validate=True) \
@@ -170,7 +169,7 @@ class ConanManager(object):
                     deploy_conanfile = neighbours[0].conanfile
                     if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                         run_deploy(deploy_conanfile, install_folder, output)
-                        
+
         except Exception:
             if editable:
                 self._client_cache.remove_editable(reference)
