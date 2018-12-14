@@ -8,7 +8,8 @@ from conans.client.conf import ConanClientConfigParser, default_client_conf, def
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file
+from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file,\
+    RemoteRegistry
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -51,8 +52,15 @@ class ClientCache(SimplePaths):
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
+        self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def registry(self):
+        if not self._registry:
+            self._registry = RemoteRegistry(self.registry_path, self._output)
+        return self._registry
 
     @property
     def cacert_path(self):
@@ -109,7 +117,7 @@ class ClientCache(SimplePaths):
             raise ConanException("Invalid %s file!" % self.put_headers_path)
 
     @property
-    def registry(self):
+    def registry_path(self):
         reg_json_path = join(self.conan_folder, REGISTRY_JSON)
         if not os.path.exists(reg_json_path):
             # Load the txt if exists and convert to json

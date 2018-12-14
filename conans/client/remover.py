@@ -83,11 +83,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io):
         self._user_io = user_io
         self._client_cache = client_cache
         self._remote_manager = remote_manager
-        self._registry = remote_registry
+        self._registry = client_cache.registry
 
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
