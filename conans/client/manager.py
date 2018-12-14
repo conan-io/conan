@@ -97,7 +97,9 @@ class ConanManager(object):
             except (ValueError, ConanException):
                 pass  # Keep previous behavior (do nothing)
             else:
-                self._client_cache.remove_editable(ref)
+                if self._client_cache.installed_as_editable(ref):
+                    self._client_cache.remove_editable(ref)
+                    self._user_io.out.info("Removed '{}' as editable package".format(ref))
 
         if generators is not False:
             generators = set(generators) if generators else set()
