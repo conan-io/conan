@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class InfoTest(unittest.TestCase):
@@ -196,6 +196,20 @@ class MyTest(ConanFile):
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
+
+    def graph_html_embedded_visj_test(self):
+        client = TestClient()
+        visjs_path = os.path.join(client.client_cache.conan_folder, "vis.min.js")
+        viscss_path = os.path.join(client.client_cache.conan_folder, "vis.min.css")
+        save(visjs_path, "")
+        save(viscss_path, "")
+        client.save({"conanfile.txt": ""})
+        client.run("info . --graph=file.html")
+        html = load(os.path.join(client.current_folder, "file.html"))
+        self.assertIn("<body>", html)
+        self.assertNotIn("cloudflare", html)
+        self.assertIn(visjs_path, html)
+        self.assertIn(viscss_path, html)
 
     def info_build_requires_test(self):
         client = TestClient()
