@@ -52,9 +52,15 @@ class ClientCache(SimplePaths):
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
-        self.registry = RemoteRegistry(self, self._output)
+        self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def registry(self):
+        if not self._registry:
+            self._registry = RemoteRegistry(self, self._output)
+        return self._registry
 
     @property
     def cacert_path(self):

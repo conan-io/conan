@@ -2,7 +2,6 @@ import unittest
 
 from conans.client.graph.proxy import ConanProxy
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.remote_registry import RemoteRegistry
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
@@ -44,9 +43,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        registry = RemoteRegistry(client2.client_cache, client2.out)
-        installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager,
-                               registry=registry)
+        installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager)
 
         with self.assertRaises(NotFoundException):
             installer.get_recipe(conan_ref, False, False, None, ActionRecorder())
@@ -56,9 +53,7 @@ class DownloadTest(unittest.TestCase):
                 return Response(False, 500)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        registry = RemoteRegistry(client2.client_cache, client2.out)
-        installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager,
-                               registry=registry)
+        installer = ConanProxy(client2.paths, client2.user_io.out, client2.remote_manager)
 
         try:
             installer.get_recipe(conan_ref, False, False, None, ActionRecorder())

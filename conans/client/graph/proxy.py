@@ -47,7 +47,7 @@ class ConanProxy(object):
 
         metadata = self._client_cache.load_metadata(reference)
         cur_revision = metadata.recipe.revision
-        remote = metadata.recipe.remote
+        remote = self._client_cache.registry.refs.get(reference)
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
         update_remote = named_remote or remote
 
