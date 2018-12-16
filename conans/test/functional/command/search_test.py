@@ -166,24 +166,24 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/linx64/%s" % (root_folder_tool,
                                                PACKAGES_FOLDER,
                                                CONANINFO): conan_vars_tool_linx64},
-                         self.client.paths.store)
+                         self.client.client_cache.store)
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder1, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder2, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder3, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder4, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder5, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder11, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder12, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.paths.store, root_folder_tool, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder2, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder3, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder4, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder11, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder12, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder_tool, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
-        os.rmdir(self.servers["local"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["local"].paths)
-        os.rmdir(self.servers["search_able"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
 
         def check():
             for remote in ("local", "search_able"):
@@ -300,10 +300,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
 
     def search_html_table_all_test(self):
-        os.rmdir(self.servers["local"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["local"].paths)
-        os.rmdir(self.servers["search_able"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
         html = load(os.path.join(self.client.current_folder, "table.html"))
@@ -344,8 +344,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
         # Now search with a remote
-        os.rmdir(self.servers["local"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["local"].paths)
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
@@ -361,8 +361,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
         # Now search in all remotes
-        os.rmdir(self.servers["search_able"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
@@ -403,8 +403,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         def test_cases(remote=None):
 
             if remote:  # Simulate upload to remote
-                os.rmdir(self.servers[remote].paths.store)
-                self._copy_to_server(self.client.paths, self.servers[remote].paths)
+                os.rmdir(self.servers[remote].server_store.store)
+                self._copy_to_server(self.client.client_cache, self.servers[remote].server_store)
 
             q = ''
             self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
@@ -503,10 +503,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 server_store.update_last_package_revision(pid)
 
     def package_search_all_remotes_test(self):
-        os.rmdir(self.servers["local"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["local"].paths)
-        os.rmdir(self.servers["search_able"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all")
         self.assertIn("Existing recipe in remote 'local':", self.client.out)
@@ -694,10 +694,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(expected_output, output)
 
         # Test search recipes all remotes
-        os.rmdir(self.servers["local"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["local"].paths)
-        os.rmdir(self.servers["search_able"].paths.store)
-        self._copy_to_server(self.client.paths, self.servers["search_able"].paths)
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello* -r=all --json search.json")
         self.assertTrue(os.path.exists(json_path))

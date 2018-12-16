@@ -179,8 +179,8 @@ class RemoveTest(unittest.TestCase):
                             {"H1": True, "H2": True, "B": True, "O": True})
 
     def assert_folders(self, local_folders, remote_folders, build_folders, src_folders):
-        for base_path, folders in [(self.client.paths, local_folders),
-                                   (self.server.paths, remote_folders)]:
+        for base_path, folders in [(self.client.client_cache, local_folders),
+                                   (self.server.server_store, remote_folders)]:
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
@@ -220,7 +220,7 @@ class RemoveTest(unittest.TestCase):
                         else:
                             self.assertFalse(os.path.exists(package_folder))
 
-        root_folder = self.client.paths.store
+        root_folder = self.client.client_cache.store
         for k, shas in build_folders.items():
             folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
             if shas is None:

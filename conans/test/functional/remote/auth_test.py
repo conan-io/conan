@@ -43,7 +43,7 @@ class AuthorizeTest(unittest.TestCase):
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
-        self.assertTrue(os.path.exists(self.test_server.paths.export(self.conan_reference)))
+        self.assertTrue(os.path.exists(self.test_server.server_store.export(self.conan_reference)))
 
         # Check that login failed two times before ok
         self.assertEquals(self.conan.user_io.login_index["default"], 3)
@@ -94,7 +94,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(errors)
         # Check that upload was not granted
         with self.assertRaises(NotFoundException):
-            self.test_server.paths.export(self.conan_reference)
+            self.test_server.server_store.export(self.conan_reference)
 
         # Check that login failed all times
         self.assertEquals(self.conan.user_io.login_index["default"], 3)
@@ -112,7 +112,7 @@ class AuthorizeTest(unittest.TestCase):
         self.conan.run("upload %s" % str(self.conan_reference))
 
         # Check that upload was granted
-        self.assertTrue(os.path.exists(self.test_server.paths.export(self.conan_reference)))
+        self.assertTrue(os.path.exists(self.test_server.server_store.export(self.conan_reference)))
 
         # Check that login failed once before ok
         self.assertEquals(self.conan.user_io.login_index["default"], 2)
