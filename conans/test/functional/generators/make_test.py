@@ -109,7 +109,7 @@ $(SHARED_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
 $(STATIC_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
 	$(CREATE_STATIC_LIB_COMMAND)
 
-%.o                     :   $(CXX_SRCS)
+$(CXX_OBJ_FILES)        :   $(CXX_SRCS)
 	$(COMPILE_CXX_COMMAND)
 """
         conanfile = """
@@ -210,7 +210,7 @@ exe                     :   $(EXE_FILENAME)
 $(EXE_FILENAME)         :   $(CXX_OBJ_FILES)
 	$(CREATE_EXE_COMMAND)
 
-%.o                     :   $(CXX_SRCS)
+$(CXX_OBJ_FILES)        :   $(CXX_SRCS)
 	$(COMPILE_CXX_COMMAND)
 """
         conanfile_txt = """
