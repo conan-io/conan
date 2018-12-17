@@ -115,14 +115,14 @@ class ConanManager(object):
                 tmp = list(conanfile.generators)  # Add the command line specified generators
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
-                write_generators(conanfile, install_folder, conanfile.output)
+                write_generators(conanfile, install_folder, self._user_io.out)
             if not isinstance(reference, ConanFileReference):
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
-                conanfile.output.info("Generated %s" % CONANINFO)
+                self._user_io.out.info("Generated %s" % CONANINFO)
                 graph_info.save(install_folder)
-                conanfile.output.info("Generated graphinfo")
+                self._user_io.out.info("Generated graphinfo")
             if not no_imports:
                 run_imports(conanfile, install_folder)
             call_system_requirements(conanfile, conanfile.output)
