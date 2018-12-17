@@ -312,7 +312,8 @@ class Pkg(ConanFile):
     def change_option_txt_test(self):
         self._create("Hello0", "0.1")
 
-        client = TestClient(base_folder=self.client.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
         files = {CONANFILE_TXT: """[requires]
         Hello0/0.1@lasote/stable
 
