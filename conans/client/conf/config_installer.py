@@ -1,15 +1,15 @@
 import os
 import shutil
 import subprocess
+
 from six.moves.urllib.parse import urlparse
 
-from conans.client.tools.files import unzip
-from conans.client import tools
 from conans import load
-from conans.client.remote_registry import RemoteRegistry, load_registry_txt
-from conans.errors import ConanException
-from conans.util.files import rmdir, mkdir, walk
+from conans.client import tools
+from conans.client.remote_registry import load_registry_txt
 from conans.client.tools.files import unzip
+from conans.errors import ConanException
+from conans.util.files import mkdir, rmdir, walk
 
 
 def _hide_password(resource):
@@ -23,10 +23,10 @@ def _hide_password(resource):
     return resource.replace(password, "<hidden>") if password else resource
 
 
-def _handle_remotes(registry_path, remote_file, output):
+def _handle_remotes(client_cache, remote_file):
     # FIXME: Should we encourage to pass the remotes in json?
     remotes, _ = load_registry_txt(load(remote_file))
-    registry = RemoteRegistry(registry_path, output)
+    registry = client_cache.registry
     registry.remotes.define(remotes)
 
 
@@ -48,7 +48,8 @@ def _process_git_repo(repo_url, client_cache, output, tmp_folder, verify_ssl, ar
     with tools.chdir(tmp_folder):
         try:
             args = args or ""
-            subprocess.check_output('git -c http.sslVerify=%s %s clone "%s" config' % (verify_ssl, args, repo_url),
+            subprocess.check_output('git -c http.sslVerify=%s %s clone "%s" config'
+                                    % (verify_ssl, args, repo_url),
                                     shell=True)
             output.info("Repo cloned")
         except Exception as e:
@@ -84,8 +85,7 @@ def _process_folder(folder, client_cache, output):
                 _handle_conan_conf(conan_conf, os.path.join(root, f))
             elif f == "remotes.txt":
                 output.info("Defining remotes")
-                registry_path = client_cache.registry
-                _handle_remotes(registry_path, os.path.join(root, f), output)
+                _handle_remotes(client_cache, os.path.join(root, f))
             else:
                 relpath = os.path.relpath(root, folder)
                 target_folder = os.path.join(client_cache.conan_folder, relpath)

@@ -2,14 +2,14 @@ import os
 import shutil
 
 from conans.client import tools
-from conans.util.files import mkdir, save, rmdir
-from conans.util.log import logger
-from conans.paths import CONANINFO
+from conans.client.file_copier import FileCopier
+from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
-from conans.client.output import ScopedOutput
-from conans.client.file_copier import FileCopier
+from conans.paths import CONANINFO
+from conans.util.files import mkdir, rmdir, save
+from conans.util.log import logger
 
 
 def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, hook_manager,
@@ -103,7 +103,7 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-    logger.debug("Creating config files to %s" % package_folder)
+    logger.debug("PACKAGE: Creating config files to %s" % package_folder)
     if copy_info:
         try:
             shutil.copy(os.path.join(install_folder, CONANINFO), package_folder)

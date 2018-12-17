@@ -1,15 +1,15 @@
 import os
 import unittest
+
 from parameterized import parameterized
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, BUILD_INFO
+from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, create_local_git_repo, \
-    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    create_local_git_repo
 from conans.util.files import load, save
-
 
 conanfile = """from conans import ConanFile
 
@@ -150,12 +150,75 @@ class PkgTest(ConanFile):
 """
 
         client.save({"conanfile.py": reuse})
-        error = client.run("create . Pkg/0.1@lasote/testing", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4", client.out)
         self.assertIn('base = python_requires("MyConanfileBase/1.0@lasote/testing', client.out)
-        self.assertIn("Invalid use of python_requires(MyConanfileBase/1.0@lasote/testing)",
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid2_test(self):
+        client = TestClient()
+        reuse = """import conans
+class PkgTest(conans.ConanFile):
+    def source(self):
+        base = conans.python_requires("MyConanfileBase/1.0@lasote/testing")
+"""
+
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 4",
                       client.out)
+        self.assertIn('base = conans.python_requires("MyConanfileBase/1.0@lasote/testing',
+                      client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid3_test(self):
+        client = TestClient()
+        reuse = """from conans import ConanFile
+from helpers import my_print
+
+class PkgTest(ConanFile):
+    exports = "helpers.py"
+    def source(self):
+        my_print()
+"""
+        base = """from conans import python_requires
+
+def my_print():
+    base = python_requires("MyConanfileBase/1.0@lasote/testing")
+        """
+
+        client.save({"conanfile.py": reuse, "helpers.py": base})
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
+                      client.out)
+        self.assertIn('my_print()', client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
+
+    def invalid4_test(self):
+        client = TestClient()
+        reuse = """from conans import ConanFile
+from helpers import my_print
+
+class PkgTest(ConanFile):
+    exports = "helpers.py"
+    def source(self):
+        my_print()
+    """
+        base = """import conans
+def my_print():
+    base = conans.python_requires("MyConanfileBase/1.0@lasote/testing")
+            """
+
+        client.save({"conanfile.py": reuse, "helpers.py": base})
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        self.assertIn("ERROR: Pkg/0.1@lasote/testing: Error in source() method, line 7",
+                      client.out)
+        self.assertIn('my_print()', client.out)
+        self.assertIn("ConanException: Invalid use of python_requires"
+                      "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
     def transitive_multiple_reuse_test(self):
         client = TestClient()
@@ -579,7 +642,7 @@ class ToolsTest(ConanFile):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run("install Consumer/0.1@lasote/stable --build", ignore_error=True)
+        client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
@@ -607,7 +670,7 @@ class ToolsTest(ConanFile):
         client.run("install .")
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
-        client.run("source .", ignore_error=True)
+        client.run("source .", assert_error=True)
         # Output in py3 is different, uses single quote
         # Now it works automatically without the env generator file
         self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))

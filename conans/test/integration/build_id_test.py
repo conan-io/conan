@@ -3,7 +3,7 @@ import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -276,22 +276,18 @@ class MyTest(ConanFile):
         client = TestClient()
         # NORMAL case, every create fails
         client.save({"conanfile.py": conanfile})
-        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
                       client.out)
-        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
                       client.out)
         # now test with build_id
         client.save({"conanfile.py": conanfile +
                      "    def build_id(self): self.info_build.settings.os = 'any'"})
-        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
                       client.out)
-        error = client.run("create . pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
                       client.out)

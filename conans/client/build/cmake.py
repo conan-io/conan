@@ -1,20 +1,18 @@
 import os
 import platform
-from itertools import chain
 import subprocess
+from itertools import chain
 
-from conans.client import defs_to_string, join_arguments
-from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
-    get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
-    cmake_install_prefix_var_name, get_toolset, build_type_definition, runtime_definition_var_name, \
-    cmake_in_local_cache_var_name
+from conans.client import defs_to_string, join_arguments, tools
+from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, build_type_definition, \
+    cmake_in_local_cache_var_name, cmake_install_prefix_var_name, get_generator, get_toolset, \
+    is_multi_configuration, runtime_definition_var_name, verbose_definition, verbose_definition_name
+from conans.client.tools.oss import args_to_string, cpu_count
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.client.tools.oss import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
-from conans.client import tools
-from conans.util.files import mkdir, get_abs_path, walk, decode_text
+from conans.util.files import decode_text, get_abs_path, mkdir, walk
 
 
 class CMake(object):

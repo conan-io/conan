@@ -1,6 +1,6 @@
-from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
+from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.tools.win import vcvars_dict
 
 

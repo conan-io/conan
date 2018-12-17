@@ -1,7 +1,9 @@
-from bottle import request, response, HTTPResponse
-from conans.util.log import logger
 import traceback
+
+from bottle import HTTPResponse, request, response
+
 from conans.model.version import Version
+from conans.util.log import logger
 
 
 class VersionCheckerPlugin(object):

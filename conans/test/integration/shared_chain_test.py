@@ -1,11 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
-from nose.plugins.attrib import attr
-from conans.util.files import rmdir
-import shutil
 import os
+import shutil
+import unittest
+
+from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import rmdir
 
 
 @attr("slow")
@@ -27,7 +29,7 @@ class SharedChainTest(unittest.TestCase):
         conan.run("install '%s' --build missing" % str(conan_ref))
         conan.run("upload %s --all" % str(conan_ref))
         rmdir(conan.current_folder)
-        shutil.rmtree(conan.paths.store, ignore_errors=True)
+        shutil.rmtree(conan.client_cache.store, ignore_errors=True)
 
     def uploaded_chain_test(self):
         self._export_upload("Hello0", "0.1")

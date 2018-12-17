@@ -1,14 +1,14 @@
 
 import os
 import platform
-import xml.etree.ElementTree as ET
-
 import re
 import subprocess
-from six.moves.urllib.parse import urlparse, quote_plus, unquote
+import xml.etree.ElementTree as ET
 from subprocess import CalledProcessError, PIPE, STDOUT
 
-from conans.client.tools.env import no_op, environment_append
+from six.moves.urllib.parse import quote_plus, unquote, urlparse
+
+from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version

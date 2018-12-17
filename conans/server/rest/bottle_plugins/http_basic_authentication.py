@@ -1,6 +1,8 @@
-from bottle import HTTPResponse
 import base64
 from collections import namedtuple
+
+from bottle import HTTPResponse
+
 from conans.server.rest.bottle_plugins.authorization_header import AuthorizationHeader
 from conans.util.files import decode_text
 

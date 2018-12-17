@@ -1,6 +1,6 @@
+import re
 from collections import namedtuple
 
-import re
 from six import string_types
 
 from conans.errors import ConanException, InvalidNameException

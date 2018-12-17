@@ -1,8 +1,8 @@
 import os
 
+from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.util.files import save
-from conans.model.options import OptionsValues
 
 
 def create_profile(folder, name, settings=None, package_settings=None, env=None,
