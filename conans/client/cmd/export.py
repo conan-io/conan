@@ -42,7 +42,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=reference)
-    logger.debug("Exporting %s" % conanfile_path)
+    logger.debug("EXPORT: %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)

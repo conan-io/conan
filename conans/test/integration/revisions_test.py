@@ -43,7 +43,7 @@ class HelloConan(ConanFile):
     def test_revisions_recipes_without_scm(self):
 
         self._create_and_upload(self.conanfile, self.ref)
-        rev = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
         # Create a new revision and upload
@@ -94,18 +94,18 @@ class HelloConan(ConanFile):
 '''
         with environment_append({"PACKAGE_CONTENTS": "1"}):
             self._create_and_upload(conanfile, self.ref)
-        rev = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertEquals(rev, "202f9ce41808083a0f0c0d071fb5f398")
 
         self.ref = self.ref.copy_with_rev(rev)
         p_ref = PackageReference(self.ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        pkg_rev = self.servers["remote0"].paths.get_last_package_revision(p_ref).revision
+        pkg_rev = self.servers["remote0"].server_store.get_last_package_revision(p_ref).revision
         self.assertEquals(pkg_rev, "15ab113a16e2ac8c9ecffb4ba48306b2")
 
         # Create new package revision for the same recipe
         with environment_append({"PACKAGE_CONTENTS": "2"}):
             self._create_and_upload(conanfile, self.ref.copy_clear_rev())
-        pkg_rev = self.servers["remote0"].paths.get_last_package_revision(p_ref).revision
+        pkg_rev = self.servers["remote0"].server_store.get_last_package_revision(p_ref).revision
         self.assertEquals(pkg_rev, "8e54c6ea967722f2f9bdcbacb21792f5")
 
         # Delete all from local
@@ -115,13 +115,13 @@ class HelloConan(ConanFile):
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "8e54c6ea967722f2f9bdcbacb21792f5" % self.ref.full_repr())
 
-        contents = load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
+        contents = load(os.path.join(self.client.client_cache.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "2")
 
         # Download previous package revision
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "15ab113a16e2ac8c9ecffb4ba48306b2" % self.ref.full_repr())
-        contents = load(os.path.join(self.client.paths.package(p_ref), "myfile.txt"))
+        contents = load(os.path.join(self.client.client_cache.package(p_ref), "myfile.txt"))
         self.assertEquals(contents, "1")
 
         # Specify a package revision without a recipe revision
@@ -141,9 +141,9 @@ class HelloConan(ConanFile):
         self.output.warn("Revision 1")
 '''
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux")
-        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev1 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self._create_and_upload(conanfile.replace('"os"', '"arch"'), self.ref, args="-s arch=x86")
-        rev2 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev2 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertNotEqual(rev1, rev2)
 
         # Search every package in local cache (we get both binary packages)
@@ -196,7 +196,7 @@ class HelloConan(ConanFile):
         self.client.current_folder = path
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev_server = self.servers["remote0"].paths.get_last_revision(self.ref)
+        rev_server = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEqual(commit, rev_server.revision)
 
         self.client.run("remove %s -f" % str(self.ref))
@@ -220,7 +220,7 @@ class HelloConan(ConanFile):
         self.client.run("info %s" % str(self.ref))
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
-        self.client.remote_registry.refs.remove(self.ref)
+        self.client.client_cache.registry.refs.remove(self.ref)
         # Upload to a non-revisions server, the revision should be always there in the registry
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))
@@ -277,14 +277,14 @@ class HelloConan(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev = self.client.get_revision(self.ref)
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev2 = self.client.get_revision(self.ref)
-        remote_rev2 = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev2 = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev2.revision, rev2)
         self.assertNotEquals(rev, rev2)
 
@@ -354,9 +354,9 @@ class HelloConan(ConanFile):
 '''
         ref_a = ConanFileReference.loads("libA/1.0@lasote/testing")
         self._create_and_upload(conanfile, ref_a)
-        rev = self.servers["remote0"].paths.get_last_revision(ref_a).revision
+        rev = self.servers["remote0"].server_store.get_last_revision(ref_a).revision
         self._create_and_upload(conanfile + " ", ref_a)  # New revision
-        rev2 = self.servers["remote0"].paths.get_last_revision(ref_a).revision
+        rev2 = self.servers["remote0"].server_store.get_last_revision(ref_a).revision
 
         ref_b = ConanFileReference.loads("libB/1.0@lasote/testing")
         req = "%s#%s" % (ref_a, rev)
@@ -441,7 +441,7 @@ class AliasConanfile(ConanFile):
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         self.client.run("remove %s -r remote0 -f" % str(self.ref))
 
-        last_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        last_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertIsNone(last_rev)
 
     def test_recipe_revision_delete_one(self):
@@ -450,7 +450,7 @@ class AliasConanfile(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev = self.client.get_revision(self.ref)
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
         # Upload revision2
@@ -458,12 +458,12 @@ class AliasConanfile(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev2 = self.client.get_revision(self.ref)
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev2)
 
         # Remove revision2
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev2))
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
         # Upload revision3
@@ -472,12 +472,12 @@ class AliasConanfile(ConanFile):
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
         rev3 = self.client.get_revision(self.ref)
         self.assertNotEquals(rev3, rev2)
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev3)
 
         # Remove revision 3, remote is rev1
         self.client.run("remove %s#%s -r remote0 -f" % (str(self.ref), rev3))
-        remote_rev = self.servers["remote0"].paths.get_last_revision(self.ref)
+        remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
     def test_remote_search(self):
@@ -494,12 +494,12 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s -s os=Windows" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev1 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         # Create other recipe revision with a different binary package
         self.client.save({"conanfile.py": conanfile + " "})
         self.client.run("create . %s -s os=Linux" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev2 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev2 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         # Search with revision1 (only win package available)
         self.client.run("search %s#%s -r remote0" % (str(self.ref), rev1))
         self.assertIn("Existing recipe in remote 'remote0'", self.client.out)
@@ -538,13 +538,13 @@ class HelloConan(ConanFile):
 
         # If I specify rev2 only rev2 is removed
         self.client.run("remove %s#%s -f -r remote0" % (str(ref), rev2))
-        latestrev = self.servers["remote0"].paths.get_last_revision(ref).revision
+        latestrev = self.servers["remote0"].server_store.get_last_revision(ref).revision
         self.assertEquals(latestrev, rev1)
 
         self._upload_two_revisions(ref)
         # If I don't specify revision all the revisions are removed
         self.client.run("remove %s -f -r remote0" % str(ref))
-        latestrev = self.servers["remote0"].paths.get_last_revision(ref)
+        latestrev = self.servers["remote0"].server_store.get_last_revision(ref)
         self.assertIsNone(latestrev)
 
     def test_remove_packages_v2_test(self):
@@ -555,8 +555,8 @@ class HelloConan(ConanFile):
         rev1, rev2 = self._upload_two_revisions(ref)
         full_pr1 = PackageReference(ref.copy_with_rev(rev1), pid)
         full_pr2 = PackageReference(ref.copy_with_rev(rev2), pid)
-        path1 = self.servers["remote0"].paths.package(full_pr1)
-        path2 = self.servers["remote0"].paths.package(full_pr2)
+        path1 = self.servers["remote0"].server_store.package(full_pr1)
+        path2 = self.servers["remote0"].server_store.package(full_pr2)
         self.assertTrue(os.path.exists(path1))
         self.assertTrue(os.path.exists(path2))
 
@@ -573,16 +573,16 @@ class HelloConan(ConanFile):
         # Now generate different package revisions also
         rev1, rev2 = self._upload_two_revisions(ref, different_binary=True)
         full_pr1 = PackageReference(ref.copy_with_rev(rev1), pid)
-        prevs = [el.revision for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+        prevs = [el.revision for el in self.servers["remote0"].server_store.get_package_revisions(full_pr1)]
         self.assertEquals(len(prevs), 1)
         self._upload_two_revisions(ref, different_binary=True)
-        prevs = [el.revision for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+        prevs = [el.revision for el in self.servers["remote0"].server_store.get_package_revisions(full_pr1)]
         self.assertEquals(len(prevs), 2)
 
         # Remove a concrete package reference
         self.client.run("remove %s#%s -f -r remote0 -p %s#%s" % (str(ref), rev1, pid, prevs[0]))
         prevs_now = [el.revision
-                     for el in self.servers["remote0"].paths.get_package_revisions(full_pr1)]
+                     for el in self.servers["remote0"].server_store.get_package_revisions(full_pr1)]
         self.assertEquals(len(prevs_now), 1)
         self.assertEquals(prevs_now[0], prevs[1])
 
@@ -618,7 +618,7 @@ class HelloConan(ConanFile):
 
         # First a pre-check, if I remove only the package for the rev4 the rest is there
         self.client.run("remove %s#%s -f -r remote0" % (ref, rev4))
-        latestrev = self.servers["remote0"].paths.get_last_revision(ref).revision
+        latestrev = self.servers["remote0"].server_store.get_last_revision(ref).revision
         self.assertEquals(latestrev, rev3)
         self.client.run("install %s#%s" % (self.ref, rev3))
 
@@ -653,7 +653,7 @@ class HelloConan(ConanFile):
         client_no_rev.run("create . %s" % str(self.ref))
         client_no_rev.run("upload %s -c --all -r remote0" % str(self.ref))
 
-        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev1 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertEquals(rev1, DEFAULT_REVISION_V1)
 
         # An upload from the other client with revisions puts a new revision as latest
@@ -661,7 +661,7 @@ class HelloConan(ConanFile):
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
 
-        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev1 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertNotEquals(rev1, DEFAULT_REVISION_V1)
 
         client_no_rev.run('remove "*" -f')
@@ -675,7 +675,7 @@ class HelloConan(ConanFile):
         client_no_rev.run("create . %s" % str(self.ref))
         client_no_rev.run("upload %s -c --all -r remote0" % str(self.ref))
 
-        rev1 = self.servers["remote0"].paths.get_last_revision(self.ref).revision
+        rev1 = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
         self.assertEquals(rev1, DEFAULT_REVISION_V1)
 
         # Even for the client with revision, now the latest is 0
@@ -897,7 +897,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("upload %s -r=remote0 --all" % str(ref))
         rev1 = self.client.get_revision(ref)
         package_ref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
-        prev1 = self.client.servers["remote0"].paths.get_last_package_revision(package_ref).revision
+        prev1 = self.client.servers["remote0"].server_store.get_last_package_revision(package_ref).revision
 
         # Use another client to install the only binary revision for ref
         client2 = TestClient(servers=self.servers, users=self.users)
@@ -911,7 +911,7 @@ class ConanFileToolsTest(ConanFile):
         rev1_ = self.client.get_revision(ref)
         self.assertEquals(rev1, rev1_)
         package_ref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
-        prev2 = self.client.servers["remote0"].paths.get_last_package_revision(package_ref).revision
+        prev2 = self.client.servers["remote0"].server_store.get_last_package_revision(package_ref).revision
         self.assertNotEqual(prev1, prev2)  # Verify a new package revision is uploaded
 
         # Generate another recipe revision (and also bin revision)
@@ -949,5 +949,5 @@ class HelloConan(ConanFile):
         client.run("install %s" % str(ref))
         package_ref = PackageReference(ref.copy_with_rev(DEFAULT_REVISION_V1),
                                        NO_SETTINGS_PACKAGE_ID)
-        prev2 = client.servers["old_server"].paths.get_last_package_revision(package_ref)
+        prev2 = client.servers["old_server"].server_store.get_last_package_revision(package_ref)
         self.assertEquals(prev2.revision, DEFAULT_REVISION_V1)

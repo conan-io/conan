@@ -115,14 +115,14 @@ class HelloReuseConan(ConanFile):
         client.run("test test Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
 
     def conan_test_test(self):
 
