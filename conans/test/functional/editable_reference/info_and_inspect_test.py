@@ -48,8 +48,8 @@ class CommandsOnEditablePackageTest(unittest.TestCase):
         self.assertIn("    Requires:\n        parent/version@user/name", self.t.out)
 
     def test_inspect_path(self):
-        self.t.run('inspect .')
-        self.assertTrue(True)  # To be sure it runs
+        self.t.run('inspect .', assert_error=False)
+        self.assertIn("url: None", self.t.out)  # To check anything
 
     def test_inspect_reference(self):
         self.t.run('inspect {}'.format(self.reference))
