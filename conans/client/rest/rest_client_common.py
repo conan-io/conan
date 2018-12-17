@@ -1,4 +1,5 @@
 import json
+
 import time
 
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -9,6 +10,15 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_NO_OVE
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE
 from conans.errors import (AuthenticationException, ConanException, EXCEPTION_CODE_MAPPING,
                            NotFoundException)
+from requests.auth import AuthBase, HTTPBasicAuth
+
+from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
+    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
+from conans.client.rest.client_routes import ClientUsersRouterBuilder, \
+    ClientSearchRouterBuilder, ClientBaseRouterBuilder
+from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
+                           AuthenticationException)
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.search import filter_packages
@@ -36,10 +46,10 @@ def get_exception_from_error(error_code):
     try:
         tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
         if error_code in tmp:
-            logger.debug("From server: %s" % str(tmp[error_code]))
+            logger.debug("REST ERROR: %s" % str(tmp[error_code]))
             return tmp[error_code]
         else:
-            logger.debug("From server: %s" % str(_base_error(error_code)))
+            logger.debug("REST ERROR: %s" % str(_base_error(error_code)))
             return tmp[_base_error(error_code)]
     except KeyError:
         return None
@@ -79,11 +89,24 @@ class RestCommonMethods(object):
     def auth(self):
         return JWTAuth(self.token)
 
+    @property
+    def users_router(self):
+        return ClientUsersRouterBuilder(self.remote_api_url)
+
+    @property
+    def search_router(self):
+        return ClientSearchRouterBuilder(self.remote_api_url)
+
+    @property
+    def base_router(self):
+        return ClientBaseRouterBuilder(self.remote_api_url)
+
     @handle_return_deserializer()
     def authenticate(self, user, password):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
-        url = "%s/users/authenticate" % self.remote_api_url
+        url = self.users_router.common_authenticate()
+        logger.debug("REST: Authenticate: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 401:
@@ -98,14 +121,17 @@ class RestCommonMethods(object):
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
-        url = "%s/users/check_credentials" % self.remote_api_url
+        url = self.users_router.common_check_credentials()
+        logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
 
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
-        url = "%s/ping" % self.remote_api_url
+        url = self.base_router.ping()
+        logger.debug("REST: ping: %s" % url)
+
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
@@ -124,11 +150,13 @@ class RestCommonMethods(object):
             headers.update({'Content-type': 'application/json',
                             'Accept': 'text/plain',
                             'Accept': 'application/json'})
+            logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
+            logger.debug("REST: get: %s" % url)
             response = self.requester.get(url, auth=self.auth, headers=headers,
                                           verify=self.verify_ssl,
                                           stream=True)
@@ -230,30 +258,21 @@ class RestCommonMethods(object):
                             "in local package present in remote: %s.\n Please, report it at "
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         return files_to_upload or deleted, package_reference, rev_time
 
     def search(self, pattern=None, ignorecase=True):
         """
         the_files: dict with relative_path: content
         """
-        query = ''
-        if pattern:
-            if isinstance(pattern, ConanFileReference):
-                pattern = pattern.full_repr()
-            params = {"q": pattern}
-            if not ignorecase:
-                params["ignorecase"] = "False"
-            query = "?%s" % urlencode(params)
-
-        url = "%s/conans/search%s" % (self.remote_api_url, query)
+        url = self.search_router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
-        url = "%s/search?" % self._recipe_url(reference)
 
         if not query:
+            url = self.search_router.search_packages(reference)
             package_infos = self.get_json(url)
             return package_infos
 
@@ -264,10 +283,11 @@ class RestCommonMethods(object):
             capabilities = []
 
         if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url += urlencode({"q": query})
+            url = self.search_router.search_packages(reference, query)
             package_infos = self.get_json(url)
             return package_infos
         else:
+            url = self.search_router.search_packages(reference)
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
 
@@ -275,7 +295,8 @@ class RestCommonMethods(object):
     def remove_conanfile(self, conan_reference):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = self._recipe_url(conan_reference)
+        url = self.conans_router.remove_recipe(conan_reference)
+        logger.debug("REST: remove: %s" % url)
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
@@ -283,6 +304,7 @@ class RestCommonMethods(object):
         return response
 
     def _post_json(self, url, payload):
+        logger.debug("REST: post: %s" % url)
         response = self.requester.post(url,
                                        auth=self.auth,
                                        headers=self.custom_headers,
