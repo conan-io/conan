@@ -117,6 +117,7 @@ class GraphManager(object):
         profile = graph_info.profile
         cache_settings = profile.processed_settings
         processed_profile = ProcessedProfile(profile, create_reference)
+        conan_ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
@@ -128,13 +129,13 @@ class GraphManager(object):
                 conanfile = self._loader.load_consumer(reference, processed_profile, test=test)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
+                conan_ref = ConanFileReference(conanfile.name, conanfile.version, None, None,
+                                               validate=False)
             else:
                 conanfile = self._loader.load_conanfile_txt(reference, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
-        root_node = Node(ConanFileReference(conanfile.name, conanfile.version, None, None,
-                                            validate=False),
-                         conanfile, recipe=RECIPE_CONSUMER)
+        root_node = Node(conan_ref, conanfile, recipe=RECIPE_CONSUMER)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
