@@ -30,7 +30,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile,
                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
-        # t.run('export  . {}'.format(reference))  # No need to export, will create it on the fly
+        t.run('export  . {}'.format(reference))
         t.run('install --editable=. {}'.format(reference))
 
         self.assertIn("    lib/version@user/name from local cache - Editable", t.out)
@@ -69,6 +69,17 @@ class CreateEditablePackageTest(unittest.TestCase):
 
         self.assertFalse(os.path.exists(CONAN_PACKAGE_LAYOUT_FILE))
         self.assertIn("ERROR: In order to link a package in editable mode, it is required a", t.out)
+
+    def test_install_failed_export_first(self):
+        reference = ConanFileReference.loads('lib/version@user/name')
+
+        t = TestClient()
+        t.save(files={'conanfile.py': self.conanfile,
+                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+        self.assertIn("ERROR: In order to link a package in editable mode, "
+                      "it must be already installed in the cache", t.out)
+        self.assertFalse(t.client_cache.installed_as_editable(reference))  # Remove editable
 
     def test_install_failed_deps(self):
         reference = ConanFileReference.loads('lib/version@user/name')

@@ -88,6 +88,11 @@ class ConanManager(object):
                                      "a '{}' file next to the 'conanfile.py'. Find more info "
                                      "at https://".  # TODO: Add URL to docs
                                      format(CONAN_PACKAGE_LAYOUT_FILE))
+
+            if not os.path.exists(self._client_cache.conan(reference)):
+                raise ConanException("In order to link a package in editable mode, it must be "
+                                     "already installed in the cache")
+
             # Mark it as editable, so it won't care about binaries being available or not
             self._client_cache.install_as_editable(reference, os.path.dirname(editable))
         else:
