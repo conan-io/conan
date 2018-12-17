@@ -71,7 +71,6 @@ class EditableReferenceTest(unittest.TestCase):
         # Editable project
         client_editable = HeaderOnlyLibTestClient(base_folder=base_folder)
         client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
-        # client_editable.run("editable . MyLib/0.1@user/editable")  # 'Install' as editable
 
         # Consumer project
         client = TestClient(base_folder=base_folder)
