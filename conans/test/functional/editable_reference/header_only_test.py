@@ -75,7 +75,7 @@ class EditableReferenceTest(unittest.TestCase):
 
         # Consumer project
         client = TestClient(base_folder=base_folder)
-        conanfile_txt = """
+        conanfile_py = """
 import os
 from conans import ConanFile, CMake
 
@@ -114,7 +114,7 @@ int main() {
 }
 """
 
-        client.save({"conanfile.py": conanfile_txt,
+        client.save({"conanfile.py": conanfile_py,
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp})
 
