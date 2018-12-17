@@ -1,16 +1,20 @@
 #!/usr/bin/python
 import os
 
-from conans import REVISIONS, SERVER_CAPABILITIES, __version__ as SERVER_VERSION
+from conans import SERVER_CAPABILITIES
+from conans import __version__ as SERVER_VERSION, REVISIONS
 from conans.model.version import Version
 from conans.paths import conan_expand_user
-from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION, get_server_store
+from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
+from conans.server.conf import get_server_store
+
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.migrate import migrate_and_get_server_config
 from conans.server.plugin_loader import load_authentication_plugin
 from conans.server.rest.server import ConanServer
-from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
+
+from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 
 class ServerLauncher(object):
