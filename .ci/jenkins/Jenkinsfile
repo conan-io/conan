@@ -15,7 +15,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
 def slaves = ['Linux', 'Windows', 'Macos']
 def flavors = ["blocked_v2"]
 if(test_revisions){
-    flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
+    flavors = ["enabled_revisions", "disabled_revisions",  "blocked_v2"]
 }
 def pyvers  = ['py36', 'py27']
 def api_confs = ["v1"]
