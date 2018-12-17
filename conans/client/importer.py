@@ -82,7 +82,7 @@ def run_imports(conanfile, dest_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
-    import_output = ScopedOutput("%s imports()" % conanfile.output.scope, conanfile.output)
+    import_output = ScopedOutput("%s imports()" % conanfile.display_name, conanfile.output)
     _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
 
@@ -97,7 +97,7 @@ def remove_imports(conanfile, copied_files, output):
 
 
 def run_deploy(conanfile, install_folder):
-    deploy_output = ScopedOutput("%s deploy()" % conanfile.output.scope, conanfile.output)
+    deploy_output = ScopedOutput("%s deploy()" % conanfile.display_name, conanfile.output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 

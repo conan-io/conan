@@ -48,7 +48,7 @@ class DepsGraphBuilder(object):
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RangeResolver are also done in new_reqs, and then propagated!
         conanfile = node.conanfile
-        scope = conanfile.output.scope
+        scope = conanfile.display_name
         for _, require in conanfile.requires.items():
             self._resolver.resolve(require, scope, update, remote_name)
 
@@ -241,9 +241,7 @@ class DepsGraphBuilder(object):
                 result = self._proxy.get_recipe(requirement.conan_reference,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                if current_node.conanfile.display_name != "virtual":
-                    self._output.error("Failed requirement '%s'" % str(requirement.conan_reference))
-                else:
+                if current_node.conan_ref:
                     self._output.error("Failed requirement '%s' from '%s'"
                                        % (requirement.conan_reference,
                                           current_node.conanfile.display_name))

@@ -145,9 +145,9 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
 
                 if client_cache:
                     _get_sources_from_exports(conanfile, src_folder, export_folder,
-                                              export_source_folder, output, client_cache)
+                                              export_source_folder, client_cache)
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(conanfile.output.scope, "source"):
+                with conanfile_exception_formatter(conanfile.display_name, "source"):
                     conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
@@ -160,7 +160,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
 
 
 def _get_sources_from_exports(conanfile, src_folder, export_folder, export_source_folder,
-                              output, client_cache):
+                              client_cache):
     # Files from python requires are obtained before the self files
     from conans.client.cmd.export import export_source
     for python_require in conanfile.python_requires:
