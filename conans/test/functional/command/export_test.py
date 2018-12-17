@@ -338,8 +338,8 @@ class OpenSSLConan(ConanFile):
     def test_export_the_same_code(self):
         file_list = self._create_packages_and_builds()
         # Export the same conans
-
-        conan2 = TestClient(self.conan.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        conan2 = TestClient(self.conan.base_folder, cpu_count=False)
         files2 = cpp_hello_conan_files("Hello0", "0.1")
         conan2.save(files2)
         conan2.run("export . lasote/stable")
@@ -373,7 +373,8 @@ class OpenSSLConan(ConanFile):
         self._create_packages_and_builds()
         # Export an update of the same conans
 
-        conan2 = TestClient(self.conan.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        conan2 = TestClient(self.conan.base_folder, cpu_count=False)
         files2 = cpp_hello_conan_files("Hello0", "0.1")
         files2[CONANFILE] = "# insert comment\n %s" % files2[CONANFILE]
         conan2.save(files2)
