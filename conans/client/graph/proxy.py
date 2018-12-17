@@ -16,12 +16,12 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
-    def __init__(self, client_cache, output, remote_manager, registry):
+    def __init__(self, client_cache, output, remote_manager):
         # collaborators
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
         with self._client_cache.conanfile_write_lock(conan_reference):
@@ -138,7 +138,6 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
-            logger.debug("Trying with remote %s" % remote.name)
             try:
                 new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
@@ -147,7 +146,6 @@ class ConanProxy(object):
                 pass
         else:
             msg = "Unable to find '%s' in remotes" % str(conan_reference)
-            logger.debug("Not found in any remote")
             recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
                                           msg, None)
             raise NotFoundException(msg)
