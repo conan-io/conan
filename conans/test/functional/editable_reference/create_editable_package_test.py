@@ -105,7 +105,7 @@ class CreateEditablePackageTest(unittest.TestCase):
                 version = "version"
             """)})
         t.run('export  . {}'.format(reference))
-        t.run('install --editable=. wrong/version@user/channel'.format(reference), assert_error=True)
+        t.run('install --editable=. wrong/version@user/channel', assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)
 
