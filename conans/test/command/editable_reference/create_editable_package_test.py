@@ -78,7 +78,7 @@ class CreateEditablePackageTest(unittest.TestCase):
                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         t.run('install --editable=. {}'.format(reference), ignore_error=True)
         self.assertIn("ERROR: In order to link a package in editable mode, "
-                      "it must be already installed in the cache", t.out)
+                      "its recipe must be already exported to the cache", t.out)
         self.assertFalse(t.client_cache.installed_as_editable(reference))  # Remove editable
 
     def test_install_failed_deps(self):
