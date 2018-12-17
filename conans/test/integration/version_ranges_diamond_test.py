@@ -5,8 +5,8 @@ from collections import OrderedDict
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer, \
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.files import load
 
 
@@ -255,9 +255,8 @@ class HelloReuseConan(ConanFile):
                       "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
 
         self.client.run("remove '*' -f")
-        error = self.client.run("install Project/1.0.0@lasote/stable --build missing",
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
+
         self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
                       "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
 

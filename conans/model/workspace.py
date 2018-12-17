@@ -1,12 +1,12 @@
-import platform
 import os
-import yaml
-
+import platform
 from collections import OrderedDict
 
+import yaml
+
 from conans.errors import ConanException
-from conans.util.files import load, save, mkdir
 from conans.model.ref import ConanFileReference
+from conans.util.files import load, mkdir, save
 
 
 class LocalPackage(object):

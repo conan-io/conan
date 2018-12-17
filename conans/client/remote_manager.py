@@ -1,32 +1,29 @@
 import os
+import shutil
 import stat
 import tarfile
+import time
 import traceback
 
-import shutil
-import time
 from requests.exceptions import ConnectionError
 
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.remote_registry import Remote
 from conans.client.source import merge_directories
-from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.errors import ConanConnectionError, ConanException, NotFoundException
 from conans.model.manifest import gather_files
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
+from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
+    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import gzopen_without_timestamps, is_dirty, \
-    make_read_only, set_dirty, clean_dirty
-from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
-from conans.util.files import touch_folder
+from conans.util.files import clean_dirty, exception_message_safe, gzopen_without_timestamps, \
+    is_dirty, make_read_only, mkdir, rmdir, set_dirty, tar_extract, touch_folder
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
-from conans.util.tracer import (log_package_upload, log_recipe_upload,
-                                log_recipe_sources_download,
-                                log_uncompressed_file, log_compressed_files, log_recipe_download,
-                                log_package_download)
+from conans.util.tracer import (log_compressed_files, log_package_download, log_package_upload,
+                                log_recipe_download, log_recipe_sources_download, log_recipe_upload,
+                                log_uncompressed_file)
 
 
 class RemoteManager(object):
@@ -139,11 +136,11 @@ class RemoteManager(object):
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         if integrity_check:
             self._package_integrity_check(package_reference, files, package_folder)
-            logger.debug("====> Time remote_manager check package integrity : %f"
+            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
@@ -159,7 +156,7 @@ class RemoteManager(object):
 
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
-        logger.debug("====> Time remote_manager upload_package: %f" % duration)
+        logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
         if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")

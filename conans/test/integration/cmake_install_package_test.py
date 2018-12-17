@@ -1,4 +1,5 @@
 import unittest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -38,8 +39,7 @@ class AConan(ConanFile):
         self.assertIn("Pkg/0.1@user/channel: RESULT2: FOLDER ${CONAN_PKG_ROOT}", client.out)
 
         client.run("install .")
-        error = client.run("build .", ignore_error=True)
-        self.assertTrue(error)
+        client.run("build .", assert_error=True)
         self.assertIn("ConanException: cmake.patch_config_paths() can't work without package name",
                       client.out)
 

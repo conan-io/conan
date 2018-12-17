@@ -1,8 +1,8 @@
 import re
+
+from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.cmd.new_ci import ci_get_files
-
 
 conanfile = """from conans import ConanFile, CMake, tools
 
