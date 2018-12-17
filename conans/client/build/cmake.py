@@ -1,9 +1,9 @@
 import os
 import platform
-from itertools import chain
 import subprocess
+from itertools import chain
 
-from conans.client import defs_to_string, join_arguments
+from conans.client import defs_to_string, join_arguments, tools
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \

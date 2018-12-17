@@ -1,15 +1,14 @@
-import re
 import os
-
+import re
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.util.log import logger
-from conans.search.query_parse import infix_to_postfix, evaluate_postfix
+from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import list_folder_subdirs, load
+from conans.util.log import logger
 
 
 def filter_outdated(packages_infos, recipe_hash):
@@ -66,7 +65,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
 
-    if prop_name in ["os", "compiler", "arch", "build_type"] or prop_name.startswith("compiler."):
+    if prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or prop_name.startswith("compiler."):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)

@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+
 import six
 
 from conans.client.cmd.export_linter import conan_linter
@@ -9,9 +10,9 @@ from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
 
 
@@ -41,7 +42,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=reference)
-    logger.debug("Exporting %s" % conanfile_path)
+    logger.debug("EXPORT: %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
@@ -73,7 +74,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
         return None, captured_revision
 
-    scm = SCM(scm_data, conanfile_dir)
+    scm = SCM(scm_data, conanfile_dir, output)
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url()

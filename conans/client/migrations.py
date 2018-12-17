@@ -3,11 +3,11 @@ import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
-from conans.migrations import Migrator
-from conans.paths import EXPORT_SOURCES_DIR_OLD
-from conans.util.files import load, save, list_folder_subdirs
-from conans.model.version import Version
 from conans.errors import ConanException
+from conans.migrations import Migrator
+from conans.model.version import Version
+from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.util.files import list_folder_subdirs, load, save
 
 
 class ClientMigrator(Migrator):

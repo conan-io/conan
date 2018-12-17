@@ -1,21 +1,20 @@
-import os
 import fnmatch
+import os
 from collections import OrderedDict
 
-from conans.model.ref import ConanFileReference
-from conans.errors import conanfile_exception_formatter, ConanException
-from conans.model.conan_file import get_env_context_manager
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
-from conans.client import settings_preprocessor
-from conans.client.output import ScopedOutput
+from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.profile_loader import read_conaninfo_profile
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.loader import ProcessedProfile
+from conans.client.output import ScopedOutput
+from conans.errors import ConanException, conanfile_exception_formatter
+from conans.model.conan_file import get_env_context_manager
+from conans.model.graph_info import GraphInfo
+from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.client.generators.text import TXTGenerator
-from conans.client.loader import ProcessedProfile
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -44,12 +43,11 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, registry, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, client_cache, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
         self._client_cache = client_cache
-        self._registry = registry
         self._remote_manager = remote_manager
         self._loader = loader
 
@@ -57,15 +55,29 @@ class GraphManager(object):
                                 deps_info_required=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
-        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        # We are recovering state from captured profile from conaninfo, remove not defined
-        cache_settings.remove_undefined()
-        processed_profile = ProcessedProfile(cache_settings, profile, None)
+        try:
+            graph_info = GraphInfo.load(info_folder)
+        except IOError:  # Only if file is missing
+            # This is very dirty, should be removed for Conan 2.0 (source() method only)
+            profile = self._client_cache.default_profile
+            profile.process_settings(self._client_cache)
+        else:
+            profile = graph_info.profile
+            profile.process_settings(self._client_cache, preprocess=False)
+            # This is the hack of recovering the options from the graph_info
+            profile.options.update(graph_info.options)
+        processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,
-                                                    local=True, processed_profile=processed_profile)
+                                                    processed_profile=processed_profile)
+            with get_env_context_manager(conanfile, without_python=True):
+                with conanfile_exception_formatter(str(conanfile), "config_options"):
+                    conanfile.config_options()
+                with conanfile_exception_formatter(str(conanfile), "configure"):
+                    conanfile.configure()
+
+                conanfile.settings.validate()  # All has to be ok!
+                conanfile.options.validate()
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
 
@@ -79,17 +91,14 @@ class GraphManager(object):
         # # https://github.com/conan-io/conan/issues/3432
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    workspace=None, recorder=recorder)
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        settings_preprocessor.preprocess(cache_settings)
-        processed_profile = ProcessedProfile(cache_settings, profile, create_reference=None)
+        processed_profile = ProcessedProfile(profile, create_reference=None)
         conanfile = self._loader.load_virtual([reference], processed_profile)
         root_node = Node(None, conanfile)
         graph = builder.load_graph(root_node, check_updates=False, update=False, remote_name=None,
                                    processed_profile=processed_profile)
         return graph
 
-    def load_graph(self, reference, create_reference, profile, build_mode, check_updates, update,
+    def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
         def _inject_require(conanfile, reference):
@@ -105,10 +114,9 @@ class GraphManager(object):
             conanfile._conan_channel = reference.channel
 
         # Computing the full dependency graph
-        cache_settings = self._client_cache.settings.copy()
-        cache_settings.values = profile.settings_values
-        settings_preprocessor.preprocess(cache_settings)
-        processed_profile = ProcessedProfile(cache_settings, profile, create_reference)
+        profile = graph_info.profile
+        cache_settings = profile.processed_settings
+        processed_profile = ProcessedProfile(profile, create_reference)
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
@@ -131,6 +139,18 @@ class GraphManager(object):
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder, workspace=workspace,
                                       processed_profile=processed_profile)
+
+        # THIS IS NECESSARY to store dependencies options in profile, for consumer
+        # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
+        graph_info.options = root_node.conanfile.options.values
+
+        version_ranges_output = self._resolver.output
+        if version_ranges_output:
+            self._output.success("Version ranges solved")
+            for msg in version_ranges_output:
+                self._output.info("    %s" % msg)
+            self._output.writeln("")
+
         build_mode.report_matches()
         return deps_graph, conanfile, cache_settings
 
@@ -205,7 +225,7 @@ class GraphManager(object):
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, self._registry, workspace)
+                                                  self._remote_manager, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,

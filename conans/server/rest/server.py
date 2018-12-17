@@ -1,8 +1,7 @@
 import bottle
 
-from conans import REVISIONS
-from conans.server.rest.api_v1 import ApiV1
 from conans.model.version import Version
+from conans.server.rest.api_v1 import ApiV1
 from conans.server.rest.api_v2 import ApiV2
 
 

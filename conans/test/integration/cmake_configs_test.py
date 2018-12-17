@@ -1,8 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from nose.plugins.attrib import attr
 import os
+import unittest
+
+from nose.plugins.attrib import attr
+
 from conans.test.utils.multi_config import multi_config_files
+from conans.test.utils.tools import TestClient
 
 
 @attr("slow")

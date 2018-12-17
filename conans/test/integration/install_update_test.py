@@ -1,15 +1,13 @@
 import os
+import time
 import unittest
 from collections import OrderedDict
-
-import time
 from time import sleep
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load, save
 
 
@@ -250,8 +248,8 @@ class Pkg(ConanFile):
 
         client2.run("install Hello0/1.0@lasote/stable --update")
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-        package_ids = client2.paths.conan_packages(ref)
-        package_path = client2.paths.package(PackageReference(ref, package_ids[0]))
+        package_ids = client2.client_cache.conan_packages(ref)
+        package_path = client2.client_cache.package(PackageReference(ref, package_ids[0]))
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 

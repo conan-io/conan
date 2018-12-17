@@ -2,20 +2,19 @@ import json
 import os
 import platform
 import re
-import deprecation
-
 import subprocess
-
 from contextlib import contextmanager
 
+import deprecation
+
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import detected_architecture, OSInfo
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text, save, mkdir_tmp
-from conans.unicode import get_cwd
 from conans.model.version import Version
+from conans.unicode import get_cwd
+from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
+from conans.util.files import decode_text, mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -569,22 +568,30 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         env_vars = {}
 
     with environment_append(env_vars):
+
         hack_env = ""
+        # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
         if subsystem != WSL:
-            # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
-            inherited_path = conanfile.env.get("PATH", None)
-            if isinstance(inherited_path, list):
-                paths = [unix_path(path, path_flavor=subsystem) for path in inherited_path]
-                inherited_path = ":".join(paths)
-            else:
-                inherited_path = unix_path(inherited_path, path_flavor=subsystem)
 
-            if "PATH" in env:
-                tmp = unix_path(env["PATH"].replace(";", ":"), path_flavor=subsystem)
-                inherited_path = "%s:%s" % (tmp, inherited_path) if inherited_path else tmp
+            def get_path_value(container, subsystem_name):
+                """Gets the path from the container dict and returns a string with the path for the subsystem_name"""
+                _path_key = next((name for name in container.keys() if "path" == name.lower()), None)
+                if _path_key:
+                    _path_value = container.get(_path_key)
+                    if isinstance(_path_value, list):
+                        return ":".join([unix_path(path, path_flavor=subsystem_name) for path in _path_value])
+                    else:
+                        return unix_path(_path_value, path_flavor=subsystem_name)
 
+            # First get the PATH from the conanfile.env
+            inherited_path = get_path_value(conanfile.env, subsystem)
+            # Then get the PATH from the real env
+            env_path = get_path_value(env, subsystem)
+
+            # Both together
+            full_env = ":".join(v for v in [env_path, inherited_path] if v)
             # Put the build_requires and requires path at the first place inside the shell
-            hack_env = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
+            hack_env = ' && PATH="%s:$PATH"' % full_env if full_env else ""
 
         for var_name, value in env.items():
             if var_name == "PATH":

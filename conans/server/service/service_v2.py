@@ -1,5 +1,6 @@
 import os
-from bottle import static_file, FileUpload
+
+from bottle import FileUpload, static_file
 
 from conans.errors import NotFoundException
 from conans.server.service.mime import get_mime_type

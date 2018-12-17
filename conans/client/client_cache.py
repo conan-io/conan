@@ -1,27 +1,25 @@
 import os
+import shutil
 from collections import OrderedDict
 from contextlib import contextmanager
 from os.path import join, normpath
 
-import shutil
-
-from conans import DEFAULT_REVISION_V1
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import migrate_registry_file, dump_registry, default_remotes
+from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file,\
+    RemoteRegistry
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import SimplePaths, PUT_HEADERS, check_ref_case, \
-    CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS, SimplePaths, check_ref_case
 from conans.unicode import get_cwd
-from conans.util.files import save, load, normalize, list_folder_subdirs
-from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock, Lock
+from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -54,8 +52,15 @@ class ClientCache(SimplePaths):
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
+        self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def registry(self):
+        if not self._registry:
+            self._registry = RemoteRegistry(self.registry_path, self._output)
+        return self._registry
 
     @property
     def cacert_path(self):
@@ -112,7 +117,7 @@ class ClientCache(SimplePaths):
             raise ConanException("Invalid %s file!" % self.put_headers_path)
 
     @property
-    def registry(self):
+    def registry_path(self):
         reg_json_path = join(self.conan_folder, REGISTRY_JSON)
         if not os.path.exists(reg_json_path):
             # Load the txt if exists and convert to json

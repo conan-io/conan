@@ -1,14 +1,13 @@
 import multiprocessing
+import os
 import platform
 import subprocess
 import sys
 
-import os
-
+from conans.client.tools import which
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.client.tools import which
 from conans.util.fallbacks import default_output
 
 
