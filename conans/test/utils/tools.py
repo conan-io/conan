@@ -22,6 +22,7 @@ from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
+
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
@@ -29,6 +30,7 @@ from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
+from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
@@ -39,17 +41,20 @@ from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.settings import Settings
 from conans.model.version import Version
-from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
-                                                      TESTING_REMOTE_PRIVATE_USER,
-                                                      TestServerLauncher)
+from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                               TESTING_REMOTE_PRIVATE_USER,
+                                               TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -68,6 +73,14 @@ def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
+
+
+def test_processed_profile(profile=None, settings=None):
+    if profile is None:
+        profile = Profile()
+    if profile.processed_settings is None:
+        profile.processed_settings = settings or Settings()
+    return ProcessedProfile(profile=profile)
 
 
 class TestingResponse(object):
@@ -251,7 +264,7 @@ class TestServer(object):
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
-    def paths(self):
+    def server_store(self):
         return self.test_server.server_store
 
     def __repr__(self):
@@ -339,12 +352,15 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             os.makedirs(tmp)
         return tmp
 
-    def create_project(self, files, rel_project_path=None, commit_msg='default commit message', delete_checkout=True):
+    def create_project(self, files, rel_project_path=None, commit_msg='default commit message',
+                       delete_checkout=True):
         tmp_dir = self.gimme_tmp()
         try:
             rel_project_path = rel_project_path or str(uuid.uuid4())
             # Do not use SVN class as it is what we will be testing
-            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url, path=tmp_dir), shell=True)
+            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url,
+                                                                     path=tmp_dir),
+                                    shell=True)
             tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
             os.makedirs(tmp_project_dir)
             save_files(tmp_project_dir, files)
@@ -352,7 +368,8 @@ class SVNLocalRepoTestCase(unittest.TestCase):
                 subprocess.check_output("svn add .", shell=True)
                 subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
                 if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                    rev = subprocess.check_output("svn info --show-item revision", shell=True).decode().strip()
+                    rev = subprocess.check_output("svn info --show-item revision",
+                                                  shell=True).decode().strip()
                 else:
                     import xml.etree.ElementTree as ET
                     output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
@@ -367,7 +384,8 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     def run(self, *args, **kwargs):
         tmp_folder = tempfile.mkdtemp(suffix='_conans')
         try:
-            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces' if self.path_with_spaces else 'pathwithoutspaces')
+            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces'
+                                            if self.path_with_spaces else 'pathwithoutspaces')
             os.makedirs(self._tmp_folder)
             self.repo_url = self._create_local_svn_repo()
             super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
@@ -429,7 +447,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None):
+                 block_v2=None, revisions=None, cpu_count=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -456,11 +474,18 @@ class TestClient(object):
 
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
+        self.client_cache = ClientCache(self.base_folder, self.storage_folder,
+                                        TestBufferConanOutput())
 
         self.requester_class = requester_class
         self.conan_runner = runner
 
+        if cpu_count:
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+            # Invalidate the cached config
+            self.client_cache.invalidate()
         if self.revisions:
             # Generate base file
             self.client_cache.conan_config
@@ -470,7 +495,7 @@ class TestClient(object):
             self.client_cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g: 
+            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
 servers = OrderedDict()
 servers["r1"] = server
 servers["r2"] = TestServer()
@@ -486,10 +511,8 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def update_servers(self):
-
-        save(self.client_cache.registry, dump_registry({}, {}, {}))
-
-        registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
+        save(self.client_cache.registry_path, dump_registry({}, {}, {}))
+        registry = self.client_cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
@@ -504,14 +527,6 @@ servers["r2"] = TestServer()
         for name, server in self.servers.items():
             if name != "default":
                 add_server_to_registry(name, server)
-
-    @property
-    def remote_registry(self):
-        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-
-    @property
-    def paths(self):
-        return self.client_cache
 
     @property
     def default_compiler_visual_studio(self):
@@ -560,8 +575,8 @@ servers["r2"] = TestServer()
                                             get_request_timeout())
 
             self.hook_manager = HookManager(self.client_cache.hooks_path,
-                                              get_env("CONAN_HOOKS", list()),
-                                              self.user_io.out)
+                                            get_env("CONAN_HOOKS", list()),
+                                            self.user_io.out)
 
             self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                             self.requester, self.client_cache,
@@ -579,7 +594,7 @@ servers["r2"] = TestServer()
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, ignore_error=False, should_error=False):
+    def run(self, command_line, user_io=None, assert_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
@@ -611,18 +626,19 @@ servers["r2"] = TestServer()
             for added in added_modules:
                 sys.modules.pop(added, None)
 
-        if not ignore_error and error and not should_error:
-            exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
-                command_header='{:-^80}'.format(" Command failed: "),
+        if (assert_error and not error) or (not assert_error and error):
+            if assert_error:
+                msg = " Command succeeded (failure expected): "
+            else:
+                msg = " Command failed (unexpectedly): "
+            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
+                header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
-                command=command_line,
+                cmd=command_line,
                 output=self.user_io.out
             )
             raise Exception(exc_message)
-
-        if should_error and not error:
-            raise Exception("This command should have failed: %s" % command_line)
 
         self.all_output += str(self.user_io.out)
         return error

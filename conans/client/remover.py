@@ -14,7 +14,7 @@ class DiskRemover(object):
 
     def _remove(self, path, conan_ref, msg=""):
         try:
-            logger.debug("Removing folder %s" % path)
+            logger.debug("REMOVE: folder %s" % path)
             rm_conandir(path)
         except OSError:
             error_msg = "Folder busy (open or some file open): %s" % path
@@ -23,7 +23,7 @@ class DiskRemover(object):
 
     def _remove_file(self, path, conan_ref, msg=""):
         try:
-            logger.debug("Removing file %s" % path)
+            logger.debug("REMOVE: file %s" % path)
             if os.path.exists(path):
                 os.remove(path)
         except OSError:
@@ -83,11 +83,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io):
         self._user_io = user_io
         self._client_cache = client_cache
         self._remote_manager = remote_manager
-        self._registry = remote_registry
+        self._registry = client_cache.registry
 
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))

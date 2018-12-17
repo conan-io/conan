@@ -54,13 +54,13 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings, local):
+def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current, raise_undefined_field=not local)
+        settings.constraint(current)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -127,13 +127,13 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
-    def initialize(self, settings, env, local=None):
+    def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings, local)
+        self.settings = create_settings(self, settings)
         try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)

@@ -20,12 +20,8 @@ from conans.util.files import load
 
 
 class ProcessedProfile(object):
-    def __init__(self, settings=None, profile=None, create_reference=None):
-        settings = settings or Settings()
-        profile = profile or Profile()
-        assert isinstance(settings, Settings)
-        # assert package_settings is None or isinstance(package_settings, dict)
-        self._settings = settings
+    def __init__(self, profile, create_reference=None):
+        self._settings = profile.processed_settings
         self._user_options = profile.options.copy()
 
         self._package_settings = profile.package_settings_values
@@ -39,10 +35,12 @@ class ConanFileLoader(object):
         self._runner = runner
         self._output = output
         self._python_requires = python_requires
-        sys.modules["conans"].python_requires = python_requires
+        sys.modules["conans"].python_requires = self._python_requires
 
     def load_class(self, conanfile_path):
+        self._python_requires.valid = True
         _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+        self._python_requires.valid = False
         return conanfile
 
     def load_name_version(self, conanfile_path, name, version):
@@ -90,7 +88,7 @@ class ConanFileLoader(object):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     def load_conanfile(self, conanfile_path, output, processed_profile,
-                       consumer=False, reference=None, local=False):
+                       consumer=False, reference=None):
         """ loads a ConanFile object from the given file
         """
         conanfile = self.load_basic(conanfile_path, output, reference)
@@ -106,12 +104,12 @@ class ConanFileLoader(object):
                 values_tuple = processed_profile._package_settings[conanfile.name]
                 tmp_settings.values = Values.from_list(values_tuple)
 
-            conanfile.initialize(tmp_settings, processed_profile._env_values, local)
+            conanfile.initialize(tmp_settings, processed_profile._env_values)
 
             if consumer:
                 conanfile.develop = True
                 processed_profile._user_options.descope_options(conanfile.name)
-                conanfile.options.initialize_upstream(processed_profile._user_options, local=local,
+                conanfile.options.initialize_upstream(processed_profile._user_options,
                                                       name=conanfile.name)
                 processed_profile._user_options.clear_unscoped_options()
 
@@ -165,7 +163,7 @@ class ConanFileLoader(object):
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, processed_profile._settings.copy())
+        conanfile = ConanFile(None, self._runner)
         conanfile.initialize(processed_profile._settings.copy(), processed_profile._env_values)
         conanfile.settings = processed_profile._settings.copy_values()
 
@@ -212,10 +210,6 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def _invalid_python_requires(require):
-    raise ConanException("Invalid use of python_requires(%s)" % require)
-
-
 def parse_conanfile(conanfile_path, python_requires):
     with python_requires.capture_requires() as py_requires:
         module, filename = _parse_conanfile(conanfile_path)
@@ -242,7 +236,6 @@ def _parse_conanfile(conan_file_path):
         with chdir(current_dir):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
-            loaded.python_requires = _invalid_python_requires
             sys.dont_write_bytecode = False
 
         # These lines are necessary, otherwise local conanfile imports with same name
