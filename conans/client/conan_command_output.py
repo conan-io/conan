@@ -6,6 +6,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.unicode import get_cwd
 from conans.util.files import save
+from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class CommandOutputer(object):
@@ -72,7 +73,7 @@ class CommandOutputer(object):
         ret = {}
         for node in sorted(deps_graph.nodes):
             ref = node.conan_ref
-            if ref:
+            if ref and not node.recipe == RECIPE_EDITABLE:
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
         return ret
