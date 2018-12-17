@@ -483,7 +483,7 @@ class TestClient(object):
         if cpu_count:
             self.client_cache.conan_config
             replace_in_file(os.path.join(self.client_cache.conan_conf_path),
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count, strict=False)
             # Invalidate the cached config
             self.client_cache.invalidate()
         if self.revisions:
