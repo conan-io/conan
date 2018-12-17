@@ -128,6 +128,10 @@ class RestRoutes(object):
         return "%s/search" % self.recipe
 
     @property
+    def common_search_packages_revision(self):
+        return "%s/search" % self.recipe_revision
+
+    @property
     def common_authenticate(self):
         return "%s/authenticate" % self.base_url
 

@@ -1,11 +1,14 @@
 from six.moves.urllib.parse import urlencode
 
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
 from conans.paths import CONAN_MANIFEST, CONANINFO
 
 
 class ClientBaseRouterBuilder(object):
+    bad_package_revision = "It is needed to specify the recipe revision if you " \
+                           "specify a package revision"
 
     def __init__(self, base_url):
         self.routes = RestRoutes(base_url)
@@ -76,6 +79,8 @@ class ClientBaseRouterBuilder(object):
     def for_package(self, pref):
         """url for the package with or without revisions"""
         if not pref.conan.revision:
+            if pref.revision:
+                raise ConanException(self.bad_package_revision)
             tmp = self.routes.package
         elif not pref.revision:
             tmp = self.routes.package_recipe_revision
@@ -87,6 +92,8 @@ class ClientBaseRouterBuilder(object):
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
         if not pref.conan.revision:
+            if pref.revision:
+                raise ConanException(self.bad_package_revision)
             tmp = self.routes.package_file
         elif not pref.revision:
             tmp = self.routes.package_recipe_revision_file
@@ -98,6 +105,8 @@ class ClientBaseRouterBuilder(object):
     def for_package_files(self, pref):
         """url for getting the recipe list"""
         if not pref.conan.revision:
+            if pref.revision:
+                raise ConanException(self.bad_package_revision)
             tmp = self.routes.package_files
         elif not pref.revision:
             tmp = self.routes.package_recipe_revision_files
@@ -127,7 +136,9 @@ class ClientSearchRouterBuilder(ClientBaseRouterBuilder):
 
     def search_packages(self, ref, query=None):
         """URL search packages for a recipe"""
-        url = self.format_ref(self.routes.common_search_packages, ref.copy_clear_rev())
+        route = self.routes.common_search_packages_revision \
+            if ref.revision else self.routes.common_search_packages
+        url = self.format_ref(route, ref)
         if query:
             url += "?%s" % urlencode({"q": query})
         return url
@@ -212,11 +223,11 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def remove_recipe(self, ref):
         """Remove recipe url"""
-        return self.for_recipe(ref.copy_clear_rev())
+        return self.for_recipe(ref)
 
     def remove_package(self, pref):
         """Remove package url"""
-        return self.for_package(pref.copy_clear_rev())
+        return self.for_package(pref)
 
     def remove_all_packages(self, ref):
         """Remove package url"""
@@ -236,8 +247,8 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def recipe_snapshot(self, ref):
         """get recipe manifest url"""
-        return self.for_recipe_files(ref.copy_clear_rev())
+        return self.for_recipe_files(ref)
 
     def package_snapshot(self, pref):
         """get recipe manifest url"""
-        return self.for_package_files(pref.copy_clear_rev())
+        return self.for_package_files(pref)
