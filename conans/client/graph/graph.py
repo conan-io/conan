@@ -3,7 +3,6 @@ from collections import OrderedDict
 from conans.errors import conanfile_exception_formatter
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
-import os
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -99,7 +98,7 @@ class Node(object):
         if self.conan_ref.revision is not None and other.conan_ref.revision is None:
             return -1
 
-        if self.conan_ref < other.conan_ref:
+        if str(self.conan_ref) < str(other.conan_ref):
             return -1
 
         return 1
