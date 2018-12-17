@@ -97,7 +97,8 @@ class Pkg(ConanFile):
 
         # Remove all, install a package for debug
         client.run('remove -f "*"')
-        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', assert_error=True)
+        # If revision it is able to fetch the binary from server2
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', assert_error=not client.revisions)
         # Force binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 
