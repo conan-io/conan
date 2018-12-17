@@ -90,8 +90,8 @@ class ConanManager(object):
                                      format(CONAN_PACKAGE_LAYOUT_FILE))
 
             if not os.path.exists(self._client_cache.conan(reference)):
-                raise ConanException("In order to link a package in editable mode, it must be "
-                                     "already installed in the cache")
+                raise ConanException("In order to link a package in editable mode, its recipe must "
+                                     "be already exported to the cache")
 
             # Mark it as editable, so it won't care about binaries being available or not
             self._client_cache.install_as_editable(reference, os.path.dirname(editable))
