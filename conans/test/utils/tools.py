@@ -529,10 +529,6 @@ servers["r2"] = TestServer()
                 add_server_to_registry(name, server)
 
     @property
-    def remote_registry(self):
-        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-
-    @property
     def default_compiler_visual_studio(self):
         settings = self.client_cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
