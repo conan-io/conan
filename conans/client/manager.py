@@ -111,18 +111,19 @@ class ConanManager(object):
 
         if install_folder:
             # Write generators
+            output = conanfile.output if conanfile.display_name != "virtual" else self._user_io.out
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
-                write_generators(conanfile, install_folder, self._user_io.out)
+                write_generators(conanfile, install_folder, output)
             if not isinstance(reference, ConanFileReference):
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
-                self._user_io.out.info("Generated %s" % CONANINFO)
+                output.info("Generated %s" % CONANINFO)
                 graph_info.save(install_folder)
-                self._user_io.out.info("Generated graphinfo")
+                output.info("Generated graphinfo")
             if not no_imports:
                 run_imports(conanfile, install_folder)
             call_system_requirements(conanfile, conanfile.output)
