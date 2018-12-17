@@ -1,16 +1,20 @@
 #!/usr/bin/python
 import os
 
-from conans import REVISIONS, SERVER_CAPABILITIES, __version__ as SERVER_VERSION
+from conans import SERVER_CAPABILITIES
+from conans import __version__ as SERVER_VERSION, REVISIONS
 from conans.model.version import Version
 from conans.paths import conan_expand_user
-from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION, get_server_store
+from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
+from conans.server.conf import get_server_store
+
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.migrate import migrate_and_get_server_config
 from conans.server.plugin_loader import load_authentication_plugin
 from conans.server.rest.server import ConanServer
-from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
+
+from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 
 class ServerLauncher(object):
@@ -44,6 +48,13 @@ class ServerLauncher(object):
                               authorizer, authenticator, server_store,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
                               server_capabilities)
+
+        print("***********************")
+        print("Using config: %s" % server_config.config_filename)
+        print("Storage: %s" % server_config.disk_storage_path)
+        print("Public URL: %s" % server_config.public_url)
+        print("PORT: %s" % server_config.port)
+        print("***********************")
 
     def launch(self):
         self.ra.run(host="0.0.0.0")

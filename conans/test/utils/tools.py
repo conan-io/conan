@@ -22,6 +22,7 @@ from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
+
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
@@ -29,6 +30,7 @@ from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
+from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.remote_registry import RemoteRegistry, dump_registry
 from conans.client.rest.conan_requester import ConanRequester
@@ -39,17 +41,20 @@ from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.settings import Settings
 from conans.model.version import Version
-from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
-                                                      TESTING_REMOTE_PRIVATE_USER,
-                                                      TestServerLauncher)
+from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                               TESTING_REMOTE_PRIVATE_USER,
+                                               TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -68,6 +73,14 @@ def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
+
+
+def test_processed_profile(profile=None, settings=None):
+    if profile is None:
+        profile = Profile()
+    if profile.processed_settings is None:
+        profile.processed_settings = settings or Settings()
+    return ProcessedProfile(profile=profile)
 
 
 class TestingResponse(object):
@@ -251,7 +264,7 @@ class TestServer(object):
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
-    def paths(self):
+    def server_store(self):
         return self.test_server.server_store
 
     def __repr__(self):
@@ -434,7 +447,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None):
+                 block_v2=None, revisions=None, cpu_count=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -467,6 +480,12 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
+        if cpu_count:
+            self.client_cache.conan_config
+            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+            # Invalidate the cached config
+            self.client_cache.invalidate()
         if self.revisions:
             # Generate base file
             self.client_cache.conan_config
@@ -492,10 +511,8 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def update_servers(self):
-
-        save(self.client_cache.registry, dump_registry({}, {}, {}))
-
-        registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
+        save(self.client_cache.registry_path, dump_registry({}, {}, {}))
+        registry = self.client_cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
@@ -510,14 +527,6 @@ servers["r2"] = TestServer()
         for name, server in self.servers.items():
             if name != "default":
                 add_server_to_registry(name, server)
-
-    @property
-    def remote_registry(self):
-        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-
-    @property
-    def paths(self):
-        return self.client_cache
 
     @property
     def default_compiler_visual_studio(self):

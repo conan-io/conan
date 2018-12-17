@@ -5,10 +5,10 @@ from conans.search.search import filter_outdated, search_packages, search_recipe
 
 
 class Search(object):
-    def __init__(self, client_cache, remote_manager, remote_registry):
+    def __init__(self, client_cache, remote_manager):
         self._client_cache = client_cache
         self._remote_manager = remote_manager
-        self._registry = remote_registry
+        self._registry = client_cache.registry
 
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         ignorecase = not case_sensitive

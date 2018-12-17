@@ -150,6 +150,7 @@ class Downloader(object):
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
+            logger.debug("DOWNLOAD: %s" % url)
             data = self._download_data(response, file_path)
             duration = time.time() - t1
             log_download(url, duration)
