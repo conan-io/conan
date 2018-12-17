@@ -71,11 +71,11 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 shutil.copy2(src_file, dst_file)
 
 
-def config_source_local(src_folder, conanfile, output, conanfile_path, hook_manager):
+def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
     conanfile_folder = os.path.dirname(conanfile_path)
-    _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference=None,
+    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None,
                 client_cache=None, export_folder=None, export_source_folder=None,
                 local_sources_path=conanfile_folder)
 
@@ -115,12 +115,12 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
     if not os.path.exists(src_folder):  # No source folder, need to get it
         set_dirty(src_folder)
         mkdir(src_folder)
-        _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference,
+        _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                     client_cache, export_folder, export_source_folder, local_sources_path)
         clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference,
+def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                 client_cache, export_folder, export_source_folder, local_sources_path):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
@@ -139,6 +139,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, ref
                 hook_manager.execute("pre_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
                                      reference=reference)
+                output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
                 _run_scm(conanfile, src_folder, local_sources_path, output, cache=client_cache)
 
@@ -146,7 +147,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, ref
                     _get_sources_from_exports(conanfile, src_folder, export_folder,
                                               export_source_folder, output, client_cache)
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(str(conanfile), "source"):
+                with conanfile_exception_formatter(conanfile.output.scope, "source"):
                     conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,

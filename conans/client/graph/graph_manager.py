@@ -52,8 +52,8 @@ class GraphManager(object):
         self._remote_manager = remote_manager
         self._loader = loader
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder, output,
-                                deps_info_required=False):
+    def load_consumer_conanfile(self, conanfile_path, info_folder,
+                                deps_info_required=False, test=None):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
@@ -69,8 +69,8 @@ class GraphManager(object):
             profile.options.update(graph_info.options)
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
-            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,
-                                                    processed_profile=processed_profile)
+            conanfile = self._loader.load_consumer(conanfile_path,
+                                                   processed_profile=processed_profile, test=test)
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
@@ -80,7 +80,7 @@ class GraphManager(object):
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -126,14 +126,12 @@ class GraphManager(object):
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
             local_path = reference
-            output = ScopedOutput("PROJECT", self._output)
             if reference.endswith(".py"):
-                conanfile = self._loader.load_conanfile(reference, output, processed_profile,
-                                                        consumer=True)
+                conanfile = self._loader.load_consumer(reference, processed_profile)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
-                conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(reference, processed_profile)
 
         build_mode = BuildMode(build_mode, self._output)
         root_node = Node(ConanFileReference(conanfile.name, conanfile.version, None, None,

@@ -128,7 +128,7 @@ class ConanManager(object):
                 graph_info.save(install_folder)
                 output.info("Generated graphinfo")
             if not no_imports:
-                run_imports(conanfile, install_folder, output)
+                run_imports(conanfile, install_folder)
             call_system_requirements(conanfile, output)
 
             if not create_reference and isinstance(reference, ConanFileReference):

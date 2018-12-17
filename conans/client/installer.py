@@ -138,7 +138,7 @@ class _ConanPackageBuilder(object):
             conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out, self._hook_manager,
+                           self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._conan_ref)
 
         p_hash = self._client_cache.package_summary_hash(self._package_reference)
@@ -167,7 +167,7 @@ class _ConanPackageBuilder(object):
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import run_imports
-        copied_files = run_imports(self._conan_file, self.build_folder, self._out)
+        copied_files = run_imports(self._conan_file, self.build_folder)
 
         try:
             # This is necessary because it is different for user projects
@@ -313,8 +313,8 @@ class ConanInstaller(object):
                 return True
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput(str(conan_ref), self._out)
+        conan_file = node.conanfile
+        output = conan_file.output
         package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):

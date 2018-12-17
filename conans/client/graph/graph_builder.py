@@ -229,7 +229,6 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
 
         if workspace_package:
@@ -249,8 +248,8 @@ class DepsGraphBuilder(object):
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
 
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
-                                                    reference=requirement.conan_reference)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
+                                                    ref=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile

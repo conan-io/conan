@@ -154,8 +154,8 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
 
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
     origin_folder = os.path.dirname(conanfile_path)
-    export_recipe(conanfile, origin_folder, exports_folder, output)
-    export_source(conanfile, origin_folder, exports_source_folder, output)
+    export_recipe(conanfile, origin_folder, exports_folder)
+    export_source(conanfile, origin_folder, exports_source_folder)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
     scm_data, captured_revision = _capture_export_scm_data(conanfile,
@@ -234,7 +234,7 @@ def _classify_patterns(patterns):
     return included, excluded
 
 
-def export_source(conanfile, origin_folder, destination_source_folder, output):
+def export_source(conanfile, origin_folder, destination_source_folder):
     if isinstance(conanfile.exports_sources, str):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
@@ -242,11 +242,12 @@ def export_source(conanfile, origin_folder, destination_source_folder, output):
     copier = FileCopier(origin_folder, destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
+    output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
 
 
-def export_recipe(conanfile, origin_folder, destination_folder, output):
+def export_recipe(conanfile, origin_folder, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
 
@@ -260,5 +261,6 @@ def export_recipe(conanfile, origin_folder, destination_folder, output):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
+    output = conanfile.output
     package_output = ScopedOutput("%s exports" % output.scope, output)
     copier.report(package_output)
