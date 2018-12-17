@@ -116,7 +116,9 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 Running the tests
 =================
 
-** Using tox **
+Using tox
+---------
+
 
 .. code-block:: bash
 
@@ -130,6 +132,10 @@ If you want to run the full test suite:
 
     $ tox -e full
 
+
+
+Without tox
+-----------
 
 **Install python requirements**
 
