@@ -116,6 +116,27 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 Running the tests
 =================
 
+Using tox
+---------
+
+
+.. code-block:: bash
+
+    $ tox
+
+
+It will install the needed requirements and launch `nose` skipping some heavy and slow test.
+If you want to run the full test suite:
+
+.. code-block:: bash
+
+    $ tox -e full
+
+
+
+Without tox
+-----------
+
 **Install python requirements**
 
 .. code-block:: bash
