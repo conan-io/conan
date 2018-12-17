@@ -1,6 +1,5 @@
 # coding=utf-8
 
-import os
 import textwrap
 import unittest
 
@@ -28,6 +27,6 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
     def test_install_override(self):
-        self.t.run('install {}'.format(self.reference), ignore_error=True)
+        self.t.run('install {}'.format(self.reference), assert_error=True)
         self.assertIn("Removed '{}' as editable package".format(self.reference), self.t.out)
 

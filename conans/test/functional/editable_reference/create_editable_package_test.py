@@ -65,7 +65,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t = TestClient()
         t.save(files={os.path.join('conanfile.py'): self.conanfile})
         t.run('export  . {}'.format(reference))
-        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+        t.run('install --editable=. {}'.format(reference), assert_error=True)
 
         self.assertFalse(os.path.exists(CONAN_PACKAGE_LAYOUT_FILE))
         self.assertIn("ERROR: In order to link a package in editable mode, it is required a", t.out)
@@ -76,7 +76,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile,
                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
-        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+        t.run('install --editable=. {}'.format(reference), assert_error=True)
         self.assertIn("ERROR: In order to link a package in editable mode, "
                       "its recipe must be already exported to the cache", t.out)
         self.assertFalse(t.client_cache.installed_as_editable(reference))  # Remove editable
@@ -88,7 +88,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.save(files={'conanfile.py': self.conanfile_base.format(body='requires = "aa/bb@cc/dd"'),
                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         t.run('export  . {}'.format(reference))
-        t.run('install --editable=. {}'.format(reference), ignore_error=True)
+        t.run('install --editable=. {}'.format(reference), assert_error=True)
 
         self.assertIn("ERROR: Failed requirement 'aa/bb@cc/dd'", t.out)
         self.assertFalse(t.client_cache.installed_as_editable(reference))  # Remove editable
@@ -105,7 +105,7 @@ class CreateEditablePackageTest(unittest.TestCase):
                 version = "version"
             """)})
         t.run('export  . {}'.format(reference))
-        t.run('install --editable=. wrong/version@user/channel'.format(reference), ignore_error=True)
+        t.run('install --editable=. wrong/version@user/channel'.format(reference), assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)
 
