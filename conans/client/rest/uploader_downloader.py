@@ -25,7 +25,7 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
-            if response.status_code != 404:
+            if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
         headers = headers or {}
@@ -150,6 +150,7 @@ class Downloader(object):
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
+            logger.debug("DOWNLOAD: %s" % url)
             data = self._download_data(response, file_path)
             duration = time.time() - t1
             log_download(url, duration)

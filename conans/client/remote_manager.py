@@ -136,11 +136,11 @@ class RemoteManager(object):
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         if integrity_check:
             self._package_integrity_check(package_reference, files, package_folder)
-            logger.debug("====> Time remote_manager check package integrity : %f"
+            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
@@ -156,7 +156,7 @@ class RemoteManager(object):
 
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
-        logger.debug("====> Time remote_manager upload_package: %f" % duration)
+        logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
         if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")
