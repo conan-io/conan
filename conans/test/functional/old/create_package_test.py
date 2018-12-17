@@ -4,7 +4,6 @@ import unittest
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
-from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
@@ -79,12 +78,11 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        output = ScopedOutput("", TestBufferConanOutput())
-        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        conanfile = loader.load_conanfile(conanfile_path, None, test_processed_profile())
+        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       output, client.hook_manager, conanfile_path, conan_ref, copy_info=True)
+                       client.hook_manager, conanfile_path, conan_ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

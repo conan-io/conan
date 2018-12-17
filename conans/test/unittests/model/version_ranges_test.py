@@ -162,8 +162,8 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        self.retriever = Retriever(self.loader, self.output)
+        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.retriever = Retriever(self.loader)
         self.remote_search = MockSearchRemote()
         paths = SimplePaths(self.retriever.folder)
         self.resolver = RangeResolver(paths, self.remote_search)

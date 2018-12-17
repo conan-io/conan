@@ -165,7 +165,7 @@ def _get_sources_from_exports(conanfile, src_folder, export_folder, export_sourc
     from conans.client.cmd.export import export_source
     for python_require in conanfile.python_requires:
         src = client_cache.export_sources(python_require.conan_ref)
-        export_source(conanfile, src, src_folder, output)
+        export_source(conanfile, src, src_folder)
 
     # so self exported files have precedence over python_requires ones
     merge_directories(export_folder, src_folder)

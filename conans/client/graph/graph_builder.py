@@ -48,9 +48,10 @@ class DepsGraphBuilder(object):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RangeResolver are also done in new_reqs, and then propagated!
-        conanfile, conanref = node.conanfile, node.conan_ref
+        conanfile = node.conanfile
+        scope = conanfile.output.scope
         for _, require in conanfile.requires.items():
-            self._resolver.resolve(require, conanref, update, remote_name)
+            self._resolver.resolve(require, scope, update, remote_name)
 
         # After resolving ranges,
         for req in conanfile.requires.values():
@@ -65,7 +66,7 @@ class DepsGraphBuilder(object):
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile._conan_evaluated_requires.values()),
+                                 % (scope, list(conanfile._conan_evaluated_requires.values()),
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
@@ -174,7 +175,7 @@ class DepsGraphBuilder(object):
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
                     if not conanref:
-                        output = ScopedOutput(node.name, self._output)
+                        output = ScopedOutput(conanfile.display_name, self._output)
                         output.warn("config() has been deprecated."
                                     " Use config_options and configure")
                     with conanfile_exception_formatter(str(conanfile), "config"):
@@ -241,10 +242,12 @@ class DepsGraphBuilder(object):
                 result = self._proxy.get_recipe(requirement.conan_reference,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                base_ref = str(current_node.conan_ref if current_node.recipe != RECIPE_CONSUMER
-                               else "PROJECT")
-                self._output.error("Failed requirement '%s' from '%s'"
-                                   % (requirement.conan_reference, base_ref))
+                if current_node.conanfile.display_name != "virtual":
+                    self._output.error("Failed requirement '%s'" % str(requirement.conan_reference))
+                else:
+                    self._output.error("Failed requirement '%s' from '%s'"
+                                       % (requirement.conan_reference,
+                                          current_node.conanfile.display_name))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
 

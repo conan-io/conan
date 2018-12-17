@@ -6,7 +6,6 @@ import uuid
 
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.client.output import ScopedOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
@@ -63,8 +62,7 @@ class ConanFileLoader(object):
         else:
             conanfile.version = version
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        output = ScopedOutput(str(ref), self._output)
-        return conanfile(output, self._runner, user, channel)
+        return conanfile(self._output, self._runner, str(ref), user, channel)
 
     @staticmethod
     def _initialize_conanfile(conanfile, processed_profile):
@@ -86,16 +84,15 @@ class ConanFileLoader(object):
         conanfile_class.name = name or conanfile_class.name
         conanfile_class.version = version or conanfile_class.version
         if test:
-            scope = "%s (test package)" % test
+            display_name = "%s (test package)" % test
         else:
             ref = ConanFileReference(conanfile_class.name, conanfile_class.version, user, channel,
                                      validate=False)
             if ref.name or ref.version or ref.user or ref.channel:
-                scope = "%s (%s)" % (os.path.basename(conanfile_path), ref)
+                display_name = "%s (%s)" % (os.path.basename(conanfile_path), ref)
             else:
-                scope = os.path.basename(conanfile_path)
-        output = ScopedOutput(scope, self._output)
-        conanfile = conanfile_class(output, self._runner, user, channel)
+                display_name = os.path.basename(conanfile_path)
+        conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, processed_profile)
@@ -115,8 +112,7 @@ class ConanFileLoader(object):
         conanfile_class = self.load_class(conanfile_path)
         conanfile_class.name = ref.name
         conanfile_class.version = ref.version
-        output = ScopedOutput(str(ref), self._output)
-        conanfile = conanfile_class(output, self._runner, ref.user, ref.channel)
+        conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
         if processed_profile._dev_reference and processed_profile._dev_reference == ref:
             conanfile.develop = True
         try:
@@ -131,12 +127,11 @@ class ConanFileLoader(object):
 
         contents = load(conan_txt_path)
         path, basename = os.path.split(conan_txt_path)
-        output = ScopedOutput(basename, self._output)
-        conanfile = self._parse_conan_txt(contents, path, output, processed_profile)
+        conanfile = self._parse_conan_txt(contents, path, basename, processed_profile)
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, output, processed_profile):
-        conanfile = ConanFile(output, self._runner)
+    def _parse_conan_txt(self, contents, path, display_name, processed_profile):
+        conanfile = ConanFile(self._output, self._runner, display_name)
         conanfile.initialize(Settings(), processed_profile._env_values)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
@@ -171,7 +166,7 @@ class ConanFileLoader(object):
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner)
+        conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(processed_profile._settings.copy(), processed_profile._env_values)
         conanfile.settings = processed_profile._settings.copy_values()
 
@@ -188,7 +183,6 @@ class ConanFileLoader(object):
             conanfile.options.initialize_upstream(processed_profile._user_options)
 
         conanfile.generators = []  # remove the default txt generator
-
         return conanfile
 
 

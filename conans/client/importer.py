@@ -96,8 +96,8 @@ def remove_imports(conanfile, copied_files, output):
                 output.warn("Unable to remove imported file from build: %s" % f)
 
 
-def run_deploy(conanfile, install_folder, output):
-    deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
+def run_deploy(conanfile, install_folder):
+    deploy_output = ScopedOutput("%s deploy()" % conanfile.output.scope, conanfile.output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 
@@ -165,6 +165,8 @@ class _FileImporter(object):
         each dependency
         """
         if not pattern:
-            return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
-        return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
+            return {pkg: cpp_info.rootpath
+                    for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: cpp_info.rootpath
+                for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                 if fnmatch.fnmatch(pkg, pattern)}

@@ -88,15 +88,13 @@ class Printer(object):
             node = list_nodes[0]
             conan = node.conanfile
             if node.recipe == RECIPE_CONSUMER:
-                # ref is only None iff info is being printed for a project directory, and
-                # not a passed in reference
-                if conan.output is None:  # Identification of "virtual" node
+                if node.conanfile.display_name == "virtual":
                     continue
                 ref = str(conan)
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 
-            self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
+            self._out.writeln("%s" % node.conanfile.display_name, Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
                 reg_remote = registry.refs.get(ref)
@@ -161,7 +159,7 @@ class Printer(object):
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
                     ref = d.conan_ref
-                    self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
+                    self._out.writeln("        %s" % d.conanfile.display_name, Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 depends = node.neighbors()

@@ -492,5 +492,6 @@ class TestConanLib(ConanFile):
         # Test if the specified build folder is respected also when the use of
         # temporary test folders is enabled in the config file.
         client.run("create -tbf=test_package/build_folder . lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
+                                                    "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))

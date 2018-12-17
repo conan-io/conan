@@ -3,7 +3,6 @@ import os
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
                                        RECIPE_CONSUMER)
-from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -74,7 +73,7 @@ class GraphBinariesAnalyzer(object):
             return
         evaluated_references[package_ref] = node
 
-        output = ScopedOutput(str(conan_ref), self._out)
+        output = conanfile.output
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD

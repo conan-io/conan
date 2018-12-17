@@ -134,15 +134,16 @@ class MyTest(ConanFile):
         def check_digraph_line(line):
             self.assertTrue(dot_regex.match(line))
 
-            # root node (current project) is special case
-            line = line.replace("@PROJECT", "@lasote/stable")
-
             node_matches = node_regex.findall(line)
 
-            parent = ConanFileReference.loads(node_matches[0])
+            parent = node_matches[0]
             deps = [ConanFileReference.loads(ref) for ref in node_matches[1:]]
 
-            check_conan_ref(parent)
+            if parent == "conanfile.py (Hello0/0.1@None/None)":
+                parent = ConanFileReference("Hello0", None, None, None, validate=False)
+            else:
+                parent = ConanFileReference.loads(parent)
+                check_conan_ref(parent)
             for dep in deps:
                 check_conan_ref(dep)
                 self.assertIn(dep.name, test_deps[parent.name])
@@ -160,7 +161,6 @@ class MyTest(ConanFile):
         node_regex = re.compile(r'"([^"]+)"')
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
 
-        # default case - file will be named graph.dot
         self.client.run("info . --graph", assert_error=True)
 
         # arbitrary case - file will be named according to argument
@@ -195,7 +195,7 @@ class MyTest(ConanFile):
         html = load(arg_filename)
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
-        self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
+        self.assertIn("id: 0, label: 'Hello0/0.1'", html)
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
@@ -248,13 +248,15 @@ class AConan(ConanFile):
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
         self.client.run("info . --only None")
-        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
-                          "Hello1/0.1@lasote/stable"], str(self.client.out).splitlines()[-3:])
+        self.assertEqual(["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable",
+                          "conanfile.py (Hello2/0.1@None/None)"],
+                         str(self.client.out).splitlines()[-3:])
         self.client.run("info . --only=date")
         lines = [(line if "date" not in line else "Date")
                  for line in str(self.client.out).splitlines()]
-        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
-                          "Hello1/0.1@lasote/stable", "Date"], lines)
+        self.assertEqual(["Hello0/0.1@lasote/stable", "Date",
+                          "Hello1/0.1@lasote/stable", "Date",
+                          "conanfile.py (Hello2/0.1@None/None)"], lines)
 
         self.client.run("info . --only=invalid", assert_error=True)
         self.assertIn("Invalid --only value", self.client.out)
@@ -279,7 +281,7 @@ class MyTest(ConanFile):
         self.client.run("export ./subfolder lasote/testing")
 
         self.client.run("info ./subfolder")
-        self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
+        self.assertIn("conanfile.py (Pkg/0.1@None/None)", self.client.user_io.out)
 
         self.client.run("info ./subfolder --build-order "
                         "Pkg/0.1@lasote/testing --json=jsonfile.txt")
@@ -300,11 +302,6 @@ class MyTest(ConanFile):
 
         expected_output = textwrap.dedent(
             """\
-            Hello2/0.1@PROJECT
-                URL: myurl
-                Licenses: MIT, GPL
-                Requires:
-                    Hello1/0.1@lasote/stable
             Hello0/0.1@lasote/stable
                 Remote: None
                 URL: myurl
@@ -322,9 +319,14 @@ class MyTest(ConanFile):
                 Binary: Missing
                 Binary remote: None
                 Required by:
-                    Hello2/0.1@PROJECT
+                    conanfile.py (Hello2/0.1@None/None)
                 Requires:
-                    Hello0/0.1@lasote/stable""")
+                    Hello0/0.1@lasote/stable
+            conanfile.py (Hello2/0.1@None/None)
+                URL: myurl
+                Licenses: MIT, GPL
+                Requires:
+                    Hello1/0.1@lasote/stable""")
 
         if self.client.revisions:
             expected_output = expected_output % (
@@ -350,26 +352,27 @@ class MyTest(ConanFile):
         self.client.run("info . -u --only=url")
         expected_output = textwrap.dedent(
             """\
-            Hello2/0.1@PROJECT
-                URL: myurl
             Hello0/0.1@lasote/stable
                 URL: myurl
             Hello1/0.1@lasote/stable
+                URL: myurl
+            conanfile.py (Hello2/0.1@None/None)
                 URL: myurl""")
 
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
         self.client.run("info . -u --only=url --only=license")
         expected_output = textwrap.dedent(
             """\
-            Hello2/0.1@PROJECT
-                URL: myurl
-                Licenses: MIT, GPL
             Hello0/0.1@lasote/stable
                 URL: myurl
                 License: MIT
             Hello1/0.1@lasote/stable
                 URL: myurl
-                License: MIT""")
+                License: MIT
+            conanfile.py (Hello2/0.1@None/None)
+                URL: myurl
+                Licenses: MIT, GPL""")
+
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
     def build_order_test(self):
@@ -514,7 +517,7 @@ class MyTest(ConanFile):
 
         self.client.run("info ./subfolder")
 
-        self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
+        self.assertIn("conanfile.py (Pkg/0.1@None/None)", self.client.user_io.out)
         self.assertNotIn("License:", self.client.user_io.out)
         self.assertNotIn("Author:", self.client.user_io.out)
         self.assertNotIn("Topics:", self.client.user_io.out)
@@ -541,7 +544,7 @@ class MyTest(ConanFile):
         client.run("export ./subfolder lasote/testing")
         client.run("info ./subfolder")
 
-        self.assertIn("Pkg/0.2@PROJECT", client.out)
+        self.assertIn("conanfile.py (Pkg/0.2@None/None)", client.out)
         self.assertIn("License: MIT", client.out)
         self.assertIn("Author: John Doe", client.out)
         self.assertIn("Topics: foo, bar, qux", client.out)

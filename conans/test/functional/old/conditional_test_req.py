@@ -36,5 +36,5 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/testing -s os=Windows -s product=onion -s build_type=Release")
-        self.assertIn("PROJECT: Conditional test requirement: Windows, Release, onion",
-                      client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/testing (test package): Conditional test requirement: "
+                      "Windows, Release, onion", client.out)

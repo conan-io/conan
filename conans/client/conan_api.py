@@ -29,7 +29,7 @@ from conans.client.importer import run_imports, undo_imports
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput, ScopedOutput
+from conans.client.output import ConanOutput
 from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.recorder.search_recorder import SearchRecorder
@@ -285,7 +285,7 @@ class ConanAPIV1(object):
             cwd = get_cwd()
             conanfile_path = _get_conanfile_path(path, cwd, py=True)
             conanfile_class = self._loader.load_class(conanfile_path)
-            conanfile = conanfile_class(None, None)
+            conanfile = conanfile_class(self._user_io.out, None, os.path.basename(conanfile_path))
         else:
             update = True if remote_name else False
             result = self._proxy.get_recipe(reference, update, update, remote_name,
@@ -294,7 +294,7 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(conanfile_path)
             conanfile_class.name = reference.name
             conanfile_class.version = reference.version
-            conanfile = conanfile_class(None, None)
+            conanfile = conanfile_class(self._user_io.out, None, str(reference))
 
         result = OrderedDict()
         if not attributes:

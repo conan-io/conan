@@ -9,7 +9,6 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node,\
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
-from conans.client.output import ScopedOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
@@ -118,16 +117,15 @@ class GraphManager(object):
         profile = graph_info.profile
         cache_settings = profile.processed_settings
         processed_profile = ProcessedProfile(profile, create_reference)
-        local_path = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
         else:
-            local_path = reference
             if reference.endswith(".py"):
-                conanfile = self._loader.load_consumer(reference, processed_profile)
+                test = str(create_reference) if create_reference else None
+                conanfile = self._loader.load_consumer(reference, processed_profile, test=test)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
             else:
@@ -136,9 +134,7 @@ class GraphManager(object):
         build_mode = BuildMode(build_mode, self._output)
         root_node = Node(ConanFileReference(conanfile.name, conanfile.version, None, None,
                                             validate=False),
-                         conanfile, local_path, recipe=RECIPE_CONSUMER)
-        # A bit dirty, but lets at least make consumer naming uniform
-        conanfile.output = ScopedOutput(root_node.name, self._output)
+                         conanfile, recipe=RECIPE_CONSUMER)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
@@ -174,17 +170,17 @@ class GraphManager(object):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
-            if node.conanfile.output is None:
+            if node.conanfile.display_name == "virtual":
                 continue
             if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.recipe != RECIPE_CONSUMER:
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
-            str_ref = str(node.conan_ref) if node.recipe != RECIPE_CONSUMER else ""
+            str_ref = str(node.conan_ref)
             new_profile_build_requires = OrderedDict()
             profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
-                if ((not str_ref and pattern == "&") or
-                        (str_ref and pattern == "&!") or
+                if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
+                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
                                 if build_require.name in package_build_requires:  # Override existing

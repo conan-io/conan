@@ -118,6 +118,7 @@ consumer*: mingw/0.1@myuser/stable
         app = """from conans import ConanFile
 import os
 class App(ConanFile):
+    name = "consumer"
     def build(self):
         self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
@@ -126,8 +127,10 @@ class App(ConanFile):
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("install . -pr=myprofile")
-        print client.out
-        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
+        self.assertIn("conanfile.py (consumer/None@None/None): Applying build-requirement: "
+                      "mingw/0.1@myuser/stable", client.out)
+        client.run("build .")
+        self.assertIn("conanfile.py (consumer/None@None/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 
     def test_transitive(self):

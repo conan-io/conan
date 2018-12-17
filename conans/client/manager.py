@@ -77,14 +77,10 @@ class ConanManager(object):
                                                 self._recorder, None)
         deps_graph, conanfile, cache_settings = result
 
-        if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s (test package)" % str(create_reference))
-                                  if create_reference else "PROJECT",
-                                  self._user_io.out)
-            output.highlight("Installing %s" % reference)
+        if conanfile.display_name == "virtual":
+            self._user_io.out.highlight("Installing package: %s" % str(reference))
         else:
-            output = ScopedOutput(str(reference), self._user_io.out)
-            output.highlight("Installing package")
+            conanfile.output.highlight("Installing package")
         print_graph(deps_graph, self._user_io.out)
 
         try:
@@ -95,7 +91,7 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
-        installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+        installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
                                    recorder=self._recorder, workspace=None,
                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
@@ -119,21 +115,21 @@ class ConanManager(object):
                 tmp = list(conanfile.generators)  # Add the command line specified generators
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
-                write_generators(conanfile, install_folder, output)
+                write_generators(conanfile, install_folder, conanfile.output)
             if not isinstance(reference, ConanFileReference):
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
-                output.info("Generated %s" % CONANINFO)
+                conanfile.output.info("Generated %s" % CONANINFO)
                 graph_info.save(install_folder)
-                output.info("Generated graphinfo")
+                conanfile.output.info("Generated graphinfo")
             if not no_imports:
                 run_imports(conanfile, install_folder)
-            call_system_requirements(conanfile, output)
+            call_system_requirements(conanfile, conanfile.output)
 
             if not create_reference and isinstance(reference, ConanFileReference):
                 # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                    run_deploy(deploy_conanfile, install_folder, output)
+                    run_deploy(deploy_conanfile, install_folder)

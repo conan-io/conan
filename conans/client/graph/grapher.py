@@ -13,11 +13,10 @@ class ConanGrapher(object):
         graph_lines = ['digraph {\n']
 
         for node in self._deps_graph.nodes:
-            ref = node.conan_ref
             depends = node.neighbors()
             if depends:
                 depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (str(ref), depends))
+                graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
@@ -53,7 +52,7 @@ class ConanHTMLGrapher(object):
             nodes_map[node] = i
 
             label = "%s/%s" % (ref.name, ref.version)
-            fulllabel = ["<h3>%s</h3>" % str(ref)]
+            fulllabel = ["<h3>%s</h3>" % conanfile.display_name]
             fulllabel.append("<ul>")
             for name, data in [("id", conanfile.info.package_id()),
                                ("build_id", build_id(conanfile)),

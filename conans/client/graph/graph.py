@@ -25,8 +25,7 @@ BINARY_WORKSPACE = "Workspace"
 
 
 class Node(object):
-    def __init__(self, conan_ref, conanfile, local_path=None, recipe=None):
-        self.local_path = local_path
+    def __init__(self, conan_ref, conanfile, recipe=None):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
@@ -37,14 +36,6 @@ class Node(object):
         self.binary_remote = None
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
-
-    @property
-    def name(self):
-        if self.local_path:
-            name = os.path.basename(self.local_path)
-            return "%s (%s)" % (name, str(self.conan_ref))
-        else:
-            return str(self.conan_ref)
 
     def partial_copy(self):
         result = Node(self.conan_ref, self.conanfile)

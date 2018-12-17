@@ -128,7 +128,7 @@ class Pkg(ConanFile):
 """})
         client.run("install .")
         self.assertNotIn("Hello", client.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
@@ -466,7 +466,7 @@ class Pkg(ConanFile):
         # If it was associated, it has to be desasociated
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
+        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable'",
                       client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
