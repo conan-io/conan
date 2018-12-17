@@ -288,15 +288,14 @@ class ConanInstaller(object):
                     raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node, inverse_levels, deps_graph)
-                if node.binary == BINARY_SKIP:  # Privates not necessary
-                    continue
-
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
                 if workspace_package:
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
                                                 graph_info)
                 else:
+                    self._propagate_info(node, inverse_levels, deps_graph)
+                    if node.binary == BINARY_SKIP:  # Privates not necessary
+                        continue
                     package_ref = PackageReference(conan_ref, package_id)
                     _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
                     self._handle_node_cache(node, package_ref, keep_build, processed_package_refs)
@@ -343,8 +342,8 @@ class ConanInstaller(object):
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph, graph_info):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
+        conan_file = node.conanfile
+        output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
         include_dirs = workspace_package.includedirs
         lib_dirs = workspace_package.libdirs
         self._call_package_info(conan_file, workspace_package.package_folder)

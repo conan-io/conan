@@ -1,7 +1,6 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE,\
-    RECIPE_CONSUMER
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
