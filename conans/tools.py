@@ -177,7 +177,6 @@ vs_installation_path = tools_win.vs_installation_path
 vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
 find_windows_10_sdk = tools_win.find_windows_10_sdk
-vcvars_dict = tools_win.vcvars_dict
 vcvars = tools_win.vcvars
 escape_windows_cmd = tools_win.escape_windows_cmd
 get_cased_path = tools_win.get_cased_path
@@ -196,6 +195,10 @@ def build_sln_command(*args, **kwargs):
 
 def vcvars_command(*args, **kwargs):
     return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
+
+
+def vcvars_dict(*args, **kwargs):
+    return tools_win.vcvars_dict(output=_global_output, *args, **kwargs)
 
 
 def latest_vs_version_installed(*args, **kwargs):

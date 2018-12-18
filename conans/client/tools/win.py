@@ -409,11 +409,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True):
+                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}

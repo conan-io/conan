@@ -81,7 +81,8 @@ the old general
                                                         "attribute_checker.py")
             save(old_conf_path, "\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
             save(old_attribute_checker_plugin, "")
-            client_cache = TestClient(base_folder=old_user_home).client_cache
+            # Do not adjust cpu_count, it is reusing a cache
+            client_cache = TestClient(base_folder=old_user_home, cpu_count=False).client_cache
             assert old_conan_folder == client_cache.conan_folder
             return old_user_home, old_conan_folder, old_conf_path, old_attribute_checker_plugin,\
                    client_cache

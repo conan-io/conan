@@ -32,7 +32,7 @@ class BasicBuildTest(unittest.TestCase):
 
 
 def build(tester, cmd, static, pure_c, use_cmake, lang):
-    client = TestClient(cpu_count=1)
+    client = TestClient()
     dll_export = client.default_compiler_visual_studio and not static
     files = cpp_hello_conan_files("Hello0", "0.1", dll_export=dll_export,
                                   pure_c=pure_c, use_cmake=use_cmake)
