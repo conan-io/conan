@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-from conans.client.tools.files import dot_clean, save
+from conans.client.tools.files import dot_clean, save, chdir
 
 
 class DotCleanTest(unittest.TestCase):
@@ -20,13 +20,14 @@ class DotCleanTest(unittest.TestCase):
         self.tmp_folder = tmp_folder
 
     def _run_test(self, tuples):
-        for f, _ in tuples:
-            save(f, "")
+        with chdir(self.tmp_folder):
+            for f, _ in tuples:
+                save(f, "")
 
-        dot_clean(".")
+            dot_clean(".")
 
-        for f, expected_after in tuples:
-            self.assertEqual(expected_after, os.path.exists(f))
+            for f, expected_after in tuples:
+                self.assertEqual(expected_after, os.path.exists(f))
 
     def test_removal_normal(self):
         files = [("file.txt", True),
