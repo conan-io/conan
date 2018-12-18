@@ -434,7 +434,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     return tgz_path
 
 
-def unzip_and_get_files(files, destination_dir, tgz_name, output, clean_macos_dot_files=False):
+def unzip_and_get_files(files, destination_dir, tgz_name, output):
     """Moves all files from package_files, {relative_name: tmp_abs_path}
     to destination_dir, unzipping the "tgz_name" if found"""
 
@@ -442,19 +442,16 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output, clean_macos_do
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir,
-                        output=output, clean_macos_dot_files=clean_macos_dot_files)
+                        output=output)
         os.remove(tgz_file)
 
 
-def uncompress_file(src_path, dest_folder, output, clean_macos_dot_files=False):
+def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
         with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
                                       output=output) as file_handler:
             tar_extract(file_handler, dest_folder)
-
-        if clean_macos_dot_files:
-            dot_clean(dest_folder)
 
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
@@ -469,14 +466,3 @@ def uncompress_file(src_path, dest_folder, output, clean_macos_dot_files=False):
 
     duration = time.time() - t1
     log_uncompressed_file(src_path, duration, dest_folder)
-
-
-def dot_clean(folder):
-    files = os.listdir(folder)
-    for f in files:
-        full_name = os.path.join(folder, f)
-        if os.path.isdir(full_name):
-            dot_clean(full_name)
-        elif f.startswith("._"):
-            if os.path.exists(os.path.join(folder, f[2:])):
-                os.remove(full_name)

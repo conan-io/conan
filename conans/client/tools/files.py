@@ -363,3 +363,14 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def dot_clean(folder):
+    files = os.listdir(folder)
+    for f in files:
+        full_name = os.path.join(folder, f)
+        if os.path.isdir(full_name):
+            dot_clean(full_name)
+        elif f.startswith("._"):
+            if os.path.exists(os.path.join(folder, f[2:])):
+                os.remove(full_name)
