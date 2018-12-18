@@ -466,8 +466,6 @@ class Pkg(ConanFile):
         # If it was associated, it has to be desasociated
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable'",
-                      client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 

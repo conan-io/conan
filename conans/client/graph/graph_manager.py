@@ -171,7 +171,7 @@ class GraphManager(object):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
-            if not node.conan_ref:  # virtual
+            if node.conanfile.display_name == "virtual":
                 continue
             if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.recipe != RECIPE_CONSUMER:
                 continue
