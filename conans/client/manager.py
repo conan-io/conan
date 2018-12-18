@@ -48,7 +48,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False, editable=None):
+                keep_build=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -64,46 +64,7 @@ class ConanManager(object):
         written
         @param no_imports: Install specified packages but avoid running imports
         @param inject_require: Reference to add as a requirement to the conanfile
-        @param editable: Path to conanfile in the working copy to be linked as editable package
         """
-
-        # Ensure some consistency for editable packages
-        if editable:
-            # TODO: Should we make all checks closer to the command line parameters?
-            if not isinstance(reference, ConanFileReference):
-                raise ConanException("In order to link one package as editable, you should "
-                                     "provide a full reference (a path is not valid).")
-            target_conanfile = self._graph_manager._loader.load_basic(editable, output=self._user_io)
-            if (target_conanfile.name and target_conanfile.name != reference.name) or \
-               (target_conanfile.version and target_conanfile.version != reference.version):
-                raise ConanException("Name and version from reference ({}) and target "
-                                     "conanfile.py ({}/{}) must match".
-                                     format(reference, target_conanfile.name,
-                                            target_conanfile.version))
-
-            package_layout_file = os.path.join(os.path.dirname(editable), CONAN_PACKAGE_LAYOUT_FILE)
-            if not os.path.exists(package_layout_file):
-                raise ConanException("In order to link a package in editable mode, it is required "
-                                     "a '{}' file next to the 'conanfile.py'. Find more info "
-                                     "at https://".  # TODO: Add URL to docs
-                                     format(CONAN_PACKAGE_LAYOUT_FILE))
-
-            if not os.path.exists(self._client_cache.conan(reference)):
-                raise ConanException("In order to link a package in editable mode, its recipe must "
-                                     "be already exported to the cache")
-
-            # Mark it as editable, so it won't care about binaries being available or not
-            self._client_cache.install_as_editable(reference, os.path.dirname(editable))
-        else:
-            try:
-                ref = ConanFileReference.loads(reference, validate=True) \
-                    if not isinstance(reference, ConanFileReference) else reference
-            except (ValueError, ConanException):
-                pass  # Keep previous behavior (do nothing)
-            else:
-                if self._client_cache.installed_as_editable(ref):
-                    self._client_cache.remove_editable(ref)
-                    self._user_io.out.info("Removed '{}' as editable package".format(ref))
 
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -111,75 +72,68 @@ class ConanManager(object):
 
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(graph_info.profile.dumps())
+        result = self._graph_manager.load_graph(reference, create_reference, graph_info,
+                                                build_modes, False, update, remote_name,
+                                                self._recorder, None)
+        deps_graph, conanfile, cache_settings = result
+
+        if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput(("%s (test package)" % str(create_reference))
+                                  if create_reference else "PROJECT",
+                                  self._user_io.out)
+            output.highlight("Installing %s" % reference)
+        else:
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.highlight("Installing package")
+        print_graph(deps_graph, self._user_io.out)
 
         try:
-            result = self._graph_manager.load_graph(reference, create_reference, graph_info,
-                                                    build_modes, False, update, remote_name,
-                                                    self._recorder, None)
-            deps_graph, conanfile, cache_settings = result
+            if cross_building(cache_settings):
+                b_os, b_arch, h_os, h_arch = get_cross_building_settings(cache_settings)
+                message = "Cross-build from '%s:%s' to '%s:%s'" % (b_os, b_arch, h_os, h_arch)
+                self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
+        except ConanException:  # Setting os doesn't exist
+            pass
 
+        installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+                                   recorder=self._recorder, workspace=None,
+                                   hook_manager=self._hook_manager)
+        installer.install(deps_graph, keep_build)
+
+        if manifest_folder:
+            manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
+                                               client_cache=self._client_cache)
+            for node in deps_graph.nodes:
+                if not node.conan_ref:
+                    continue
+                complete_recipe_sources(self._remote_manager, self._client_cache,
+                                        node.conanfile, node.conan_ref)
+            manifest_manager.check_graph(deps_graph,
+                                         verify=manifest_verify,
+                                         interactive=manifest_interactive)
+            manifest_manager.print_log()
+
+        if install_folder:
+            # Write generators
+            if generators is not False:
+                tmp = list(conanfile.generators)  # Add the command line specified generators
+                tmp.extend([g for g in generators if g not in tmp])
+                conanfile.generators = tmp
+                write_generators(conanfile, install_folder, output)
             if not isinstance(reference, ConanFileReference):
-                output = ScopedOutput(("%s (test package)" % str(create_reference))
-                                      if create_reference else "PROJECT",
-                                      self._user_io.out)
-                output.highlight("Installing %s" % reference)
-            else:
-                output = ScopedOutput(str(reference), self._user_io.out)
-                output.highlight("Installing package")
-            print_graph(deps_graph, self._user_io.out)
+                # Write conaninfo
+                content = normalize(conanfile.info.dumps())
+                save(os.path.join(install_folder, CONANINFO), content)
+                output.info("Generated %s" % CONANINFO)
+                graph_info.save(install_folder)
+                output.info("Generated graphinfo")
+            if not no_imports:
+                run_imports(conanfile, install_folder, output)
+            call_system_requirements(conanfile, output)
 
-            try:
-                if cross_building(cache_settings):
-                    b_os, b_arch, h_os, h_arch = get_cross_building_settings(cache_settings)
-                    message = "Cross-build from '%s:%s' to '%s:%s'" % (b_os, b_arch, h_os, h_arch)
-                    self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
-            except ConanException:  # Setting os doesn't exist
-                pass
-
-            installer = ConanInstaller(self._client_cache, output, self._remote_manager,
-                                       recorder=self._recorder, workspace=None,
-                                       hook_manager=self._hook_manager)
-            installer.install(deps_graph, keep_build)
-
-            if manifest_folder:
-                manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
-                                                   client_cache=self._client_cache)
-                for node in deps_graph.nodes:
-                    if not node.conan_ref:
-                        continue
-                    complete_recipe_sources(self._remote_manager, self._client_cache,
-                                            node.conanfile, node.conan_ref)
-                manifest_manager.check_graph(deps_graph,
-                                             verify=manifest_verify,
-                                             interactive=manifest_interactive)
-                manifest_manager.print_log()
-
-            if install_folder:
-                # Write generators
-                if generators is not False:
-                    tmp = list(conanfile.generators)  # Add the command line specified generators
-                    tmp.extend([g for g in generators if g not in tmp])
-                    conanfile.generators = tmp
-                    write_generators(conanfile, install_folder, output)
-                if not isinstance(reference, ConanFileReference):
-                    # Write conaninfo
-                    content = normalize(conanfile.info.dumps())
-                    save(os.path.join(install_folder, CONANINFO), content)
-                    output.info("Generated %s" % CONANINFO)
-                    graph_info.save(install_folder)
-                    output.info("Generated graphinfo")
-                if not no_imports:
-                    run_imports(conanfile, install_folder, output)
-                call_system_requirements(conanfile, output)
-
-                if not create_reference and isinstance(reference, ConanFileReference):
-                    # The conanfile loaded is a virtual one. The one w deploy is the first level one
-                    neighbours = deps_graph.root.neighbors()
-                    deploy_conanfile = neighbours[0].conanfile
-                    if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                        run_deploy(deploy_conanfile, install_folder, output)
-
-        except Exception:
-            if editable:
-                self._client_cache.remove_editable(reference)
-            raise
+            if not create_reference and isinstance(reference, ConanFileReference):
+                # The conanfile loaded is a virtual one. The one w deploy is the first level one
+                neighbours = deps_graph.root.neighbors()
+                deploy_conanfile = neighbours[0].conanfile
+                if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                    run_deploy(deploy_conanfile, install_folder, output)

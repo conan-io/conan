@@ -457,8 +457,7 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generators=None, install_folder=None, cwd=None,
-                          editable=None):
+                          update=False, generators=None, install_folder=None, cwd=None):
 
         try:
             recorder = ActionRecorder()
@@ -481,7 +480,7 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators, editable=editable)
+                            generators=generators)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
@@ -492,8 +491,7 @@ class ConanAPIV1(object):
     def install(self, path="", settings=None, options=None, env=None,
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
-                update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                editable=None):
+                update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
 
         try:
             recorder = ActionRecorder()
@@ -532,8 +530,7 @@ class ConanAPIV1(object):
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
                             generators=generators,
-                            no_imports=no_imports,
-                            editable=editable)
+                            no_imports=no_imports)
             return recorder.get_info()
         except ConanException as exc:
             recorder.error = True

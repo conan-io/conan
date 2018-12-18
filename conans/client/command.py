@@ -372,9 +372,6 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("--editable", default=None, action=ConanFilePath,
-                            help="Path to the working copy of the package to install "
-                                 "in editable mode")
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
@@ -395,8 +392,7 @@ class Command(object):
                                            build=args.build, profile_name=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
-                                           install_folder=args.install_folder,
-                                           editable=args.editable)
+                                           install_folder=args.install_folder)
             else:
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
@@ -407,8 +403,7 @@ class Command(object):
                                                      build=args.build, profile_name=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder,
-                                                     editable=args.editable)
+                                                     install_folder=args.install_folder)
         except ConanException as exc:
             info = exc.info
             raise
