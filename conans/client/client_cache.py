@@ -321,6 +321,15 @@ class ClientCache(SimplePaths):
         readed_digest = FileTreeManifest.load(package_folder)
         return readed_digest.summary_hash
 
+    def install_as_editable(self, conan_reference, target_path):
+        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+        save(linked_folder_sentinel, content=target_path)
+
+    def remove_editable(self, conan_reference):
+        if self.installed_as_editable(conan_reference):
+            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+            os.remove(linked_folder_sentinel)
+
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment

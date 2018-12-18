@@ -104,15 +104,6 @@ class SimplePaths(object):
     def package_metadata(self, conan_reference):
         return self.package_layout(conan_reference).package_metadata()
 
-    def install_as_editable(self, conan_reference, target_path):
-        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
-        save(linked_folder_sentinel, content=target_path)
-
-    def remove_editable(self, conan_reference):
-        if self.installed_as_editable(conan_reference):
-            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
-            os.remove(linked_folder_sentinel)
-
     def installed_as_editable(self, conan_reference):
         return self.package_layout(conan_reference).installed_as_editable()
 
