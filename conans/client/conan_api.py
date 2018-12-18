@@ -556,14 +556,11 @@ class ConanAPIV1(object):
         self._client_cache.invalidate()
 
     @api_method
-    def config_install(self, item, verify_ssl, config_type=None, args=None):
-        # _make_abs_path, but could be not a path at all
-        if item is not None and os.path.exists(item) and not os.path.isabs(item):
-            item = os.path.abspath(item)
+    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None):
 
         from conans.client.conf.config_installer import configuration_install
         requester = self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
-        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl,
+        return configuration_install(path_or_url, self._client_cache, self._user_io.out, verify_ssl,
                                      requester=requester, config_type=config_type, args=args)
 
     def _info_args(self, reference, install_folder, profile_name, settings, options, env):
