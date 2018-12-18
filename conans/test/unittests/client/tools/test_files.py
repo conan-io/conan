@@ -1,30 +1,21 @@
 # coding=utf-8
 
 import os
-import shutil
-import tempfile
 import unittest
 
-from conans.client.tools.files import dot_clean, save, chdir
+from conans.client.tools.files import mac_dot_clean, save, chdir
+from conans.test.utils.test_files import temp_folder
 
 
 class DotCleanTest(unittest.TestCase):
 
-    def setUp(self):
-        tmp_folder = tempfile.mkdtemp()
-
-        def cleanup():
-            shutil.rmtree(tmp_folder)
-
-        self.addCleanup(cleanup)
-        self.tmp_folder = tmp_folder
-
     def _run_test(self, tuples):
-        with chdir(self.tmp_folder):
+        tmp_folder = temp_folder()
+        with chdir(tmp_folder):
             for f, _ in tuples:
                 save(f, "")
 
-            dot_clean(".")
+            mac_dot_clean(".")
 
             for f, expected_after in tuples:
                 self.assertEqual(expected_after, os.path.exists(f))
