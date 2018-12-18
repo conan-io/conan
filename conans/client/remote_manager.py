@@ -441,8 +441,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     tgz_file = files.pop(tgz_name, None)
     check_compressed_files(tgz_name, files)
     if tgz_file:
-        uncompress_file(tgz_file, destination_dir,
-                        output=output)
+        uncompress_file(tgz_file, destination_dir, output=output)
         os.remove(tgz_file)
 
 
@@ -452,7 +451,6 @@ def uncompress_file(src_path, dest_folder, output):
         with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
                                       output=output) as file_handler:
             tar_extract(file_handler, dest_folder)
-
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
         # try to remove the files
