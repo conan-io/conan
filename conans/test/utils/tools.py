@@ -447,7 +447,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None, cpu_count=None):
+                 block_v2=None, revisions=None, cpu_count=1):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
