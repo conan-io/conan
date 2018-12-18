@@ -6,7 +6,7 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class CreateEditablePackageTest(unittest.TestCase):
@@ -58,6 +58,30 @@ class CreateEditablePackageTest(unittest.TestCase):
         layout = t.client_cache.package_layout(reference)
         self.assertTrue(layout.installed_as_editable())
         self.assertEqual(layout.conan(), t.current_folder)
+
+    def test_install_with_deps_non_local(self):
+        ref_parent = ConanFileReference.loads("parent/version@lasote/name")
+        reference = ConanFileReference.loads('lib/version@lasote/name')
+
+        servers = {"default": TestServer()}
+        t1 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        t2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        t1.save(files={'conanfile.py': self.conanfile})
+        t1.run('create . {}'.format(ref_parent))
+        t1.run('upload {}'.format(ref_parent))
+
+        t2.save(files={'conanfile.py':
+                          self.conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
+                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+        t2.run('export . {}'.format(reference))
+        t2.run('install --editable=. {} --build=missing'.format(reference))
+
+        self.assertIn("    lib/version@lasote/name from local cache - Editable", t2.out)
+        self.assertTrue(t2.client_cache.installed_as_editable(reference))
+        layout = t2.client_cache.package_layout(reference)
+        self.assertTrue(layout.installed_as_editable())
+        self.assertEqual(layout.conan(), t2.current_folder)
 
     def test_install_without_package_layout_file(self):
         reference = ConanFileReference.loads('lib/version@user/name')
