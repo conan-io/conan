@@ -2,6 +2,7 @@ import os
 import shutil
 import unittest
 import zipfile
+from time import sleep
 
 from mock import patch
 
@@ -379,6 +380,7 @@ class Pkg(ConanFile):
 
         # Without checkout
         self.client.run('config install "%s/.git"' % folder)
+        sleep(1)
         check_path = os.path.join(folder, ".git")
         self._check("git:[%s, None]" % check_path)
         file_path = os.path.join(self.client.client_cache.conan_folder, "hooks", "cust", "cust.py")
