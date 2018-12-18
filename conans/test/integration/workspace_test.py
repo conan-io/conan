@@ -214,6 +214,7 @@ name: MyProject
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(TIME_DELAY)  # Try to avoid windows errors in CI  (The directory is not empty)
         shutil.rmtree(os.path.join(client.current_folder, "build"))
         client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
