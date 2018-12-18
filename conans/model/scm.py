@@ -71,7 +71,7 @@ class SCM(object):
         return self.repo.excluded_files()
 
     def checkout(self):
-        output= ""
+        output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
             output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
@@ -99,4 +99,3 @@ class SCM(object):
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
-

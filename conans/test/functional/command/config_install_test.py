@@ -381,7 +381,7 @@ class Pkg(ConanFile):
         self.client.run('config install "%s/.git"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
-        file_path = os.path.join(self.client.client_cache.conan_folder, "hooks", "cust", "cust.py")
+        file_path = os.path.join(self.client.client_cache.hooks_path, "cust", "cust.py")
         self.assertFalse(os.path.exists(file_path))
         # With checkout tag and reuse url
         self.client.run('config install --args="-b 0.0.1"')

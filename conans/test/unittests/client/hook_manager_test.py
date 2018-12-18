@@ -82,7 +82,7 @@ class HookManagerTest(unittest.TestCase):
         methods = hook_manager.hooks.keys()
         for method in methods:
             hook_manager.execute(method)
-            self.assertIn("[HOOK - my_hook] %s(): %s()" % (method, method), output)
+            self.assertIn("[HOOK - my_hook.py] %s(): %s()" % (method, method), output)
 
     def no_error_with_no_method_test(self):
         hook_manager, output, hook_path = self._init()
@@ -110,4 +110,4 @@ def pre_build(output, **kwargs):
         try:
             hook_manager.execute("pre_build")
         except ConanException as e:
-            self.assertIn("[HOOK - my_hook] pre_build(): My custom exception", str(e))
+            self.assertIn("[HOOK - my_hook.py] pre_build(): My custom exception", str(e))
