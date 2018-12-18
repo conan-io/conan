@@ -483,14 +483,14 @@ def get_revision():
     here = os.path.dirname(__file__)
     git = Git(here)
     return git.get_commit()
-    
+
 def get_url():
     def nested_url():
         here = os.path.dirname(__file__)
         git = Git(here)
         return git.get_remote_url()
     return nested_url()
-    
+
 class MyLib(ConanFile):
     name = "issue"
     version = "3831"
@@ -508,34 +508,45 @@ class MyLib(ConanFile):
         self.assertIn(commit, content)
 
     def test_delegated_python_code(self):
-        conanfile = """
-from conans import ConanFile
-from recipe_code import get_commit
-
-class MyLib(ConanFile):
-    name = "issue"
-    version = "3831"
-    scm = {'type': 'git', 'url': 'url', 'revision': get_commit()}
-"""
-
+        client = TestClient()
         code_file = """
 import os
-from conans.client.tools.scm import Git
+from conans.tools import Git
+from conans import ConanFile
 
 def get_commit():
-    here = os.path.dirname(__file__)
+    here = os.getcwd()
     git = Git(here)
     return git.get_commit()
-"""
-        self.client.save({"conanfile.py": conanfile, "recipe_code/__init__.py": code_file})
-        path, commit = create_local_git_repo(folder=self.client.current_folder)
-        self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
 
-        self.client.run("export . user/channel")
-        reference = ConanFileReference.loads("issue/3831@user/channel")
-        exported_conanfile = self.client.client_cache.conanfile(reference)
+class MyLib(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": code_file})
+        client.run("export . tool/0.1@user/testing")
+
+        conanfile = """from conans import ConanFile, python_requires
+from conans.tools import load
+tool = python_requires("tool/0.1@user/testing")
+
+class MyLib(ConanFile):
+    scm = {'type': 'git', 'url': '%s', 'revision': tool.get_commit()}
+    def build(self):
+        self.output.info("File: {}".format(load("file.txt")))
+""" % client.current_folder.replace("\\", "/")
+
+        client.save({"conanfile.py": conanfile, "file.txt": "hello!"})
+        path, commit = create_local_git_repo(folder=client.current_folder)
+        client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
+
+        client.run("export . pkg/0.1@user/channel")
+        reference = ConanFileReference.loads("pkg/0.1@user/channel")
+        exported_conanfile = client.client_cache.conanfile(reference)
         content = load(exported_conanfile)
         self.assertIn(commit, content)
+        # Check that everything works and is usable
+        client.run("install pkg/0.1@user/channel --build=missing")
+        self.assertIn("pkg/0.1@user/channel: File: hello!", client.out)
 
 
 @attr('svn')
