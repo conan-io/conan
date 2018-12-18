@@ -189,6 +189,15 @@ def _process_config_install_item(item):
 
 
 def _handle_hooks(src_hooks_path, dst_hooks_path, output):
+    """
+    Copies files to the hooks folder overwriting the files that are in the same path
+    (shutil.copytree fails on doing this), skips git related files (.git, .gitmodule...) and outputs
+    the copied files
+
+    :param src_hooks_path: Folder where the hooks come from
+    :param dst_hooks_path:  Folder where the hooks should finally go
+    :param output: Output to indicate the files copied
+    """
     hooks_dirs = []
     for root, dirs, files in walk(src_hooks_path):
         if root == src_hooks_path:
