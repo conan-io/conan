@@ -107,7 +107,7 @@ class CMakeDefinitionsBuilder(object):
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
-        self._generator = generator or get_generator(self._conanfile.settings)
+        self._generator = generator
         self._set_cmake_flags = set_cmake_flags
         self._forced_build_type = forced_build_type
         self._output = output
