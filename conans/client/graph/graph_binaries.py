@@ -9,7 +9,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, is_dirty
+from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
@@ -76,7 +76,7 @@ class GraphBinariesAnalyzer(object):
 
         output = ScopedOutput(str(conan_ref), self._out)
 
-        if self._client_cache.installed_as_editable(conan_ref):
+        if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
             return
 
@@ -121,7 +121,6 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.warn("Can't update, no remote defined")
             if not node.binary:
-                assert node.recipe != RECIPE_EDITABLE, "Unexpected editable recipe here"
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 

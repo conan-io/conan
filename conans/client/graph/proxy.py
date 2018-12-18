@@ -9,10 +9,9 @@ from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
-from conans.util.env_reader import get_env
-from conans.util.log import logger
-from conans.util.tracer import log_recipe_got_from_local_cache
 from conans.model.manifest import FileTreeManifest
+from conans.util.env_reader import get_env
+from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
