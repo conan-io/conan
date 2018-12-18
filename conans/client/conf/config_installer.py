@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 
 from six.moves.urllib.parse import urlparse
 
