@@ -62,5 +62,5 @@ class ConfigInstallerTests(unittest.TestCase):
         # Test wrong input
         for item in ["git@github.com:conan-io/conan.git, None"
                      "file/not/exists.zip"]:
-            with self.assertRaisesRegex(ConanException, "Unable to process config install"):
+            with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
