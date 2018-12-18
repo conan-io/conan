@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import os
 import subprocess
 
 
@@ -131,3 +131,14 @@ class XCRun(object):
     def libtool(self):
         """path to libtool"""
         return self.find('libtool')
+
+
+def apple_dot_clean(folder):
+    files = os.listdir(folder)
+    for f in files:
+        full_name = os.path.join(folder, f)
+        if os.path.isdir(full_name):
+            apple_dot_clean(full_name)
+        elif f.startswith("._"):
+            if os.path.exists(os.path.join(folder, f[2:])):
+                os.remove(full_name)
