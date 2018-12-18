@@ -94,13 +94,11 @@ def _process_folder(folder, client_cache, output):
                 output.info("Installing profiles:")
                 profiles_path = client_cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
-                break
             elif d == "hooks" and ".git" not in root:  # Avoid git hooks
                 output.info("Installing hooks:")
                 src_hooks_path = os.path.join(root, d)
                 dst_hooks_path = client_cache.hooks_path
                 _handle_hooks(src_hooks_path, dst_hooks_path, output)
-                break
         dirs[:] = [d for d in dirs if d not in ("profiles", ".git", "hooks")]
 
 
