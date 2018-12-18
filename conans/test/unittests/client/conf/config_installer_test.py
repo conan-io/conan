@@ -12,7 +12,7 @@ class ConfigInstallerTests(unittest.TestCase):
 
     def process_config_install_item_test(self):
         config_type, url_or_path, verify_ssl, args = _process_config_install_item(
-                "git:[whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4]")
+                "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertFalse(verify_ssl)
@@ -25,35 +25,35 @@ class ConfigInstallerTests(unittest.TestCase):
         self.assertIsNone(args)
 
         dir_path = temp_folder()
-        for dir_item in ["dir:[%s, True, None]" % dir_path, dir_path]:
+        for dir_item in ["dir, %s, True, None" % dir_path, dir_path]:
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(dir_item)
             self.assertEqual("dir", config_type)
             self.assertEqual(dir_path, url_or_path)
-            self.assertTrue(verify_ssl) if dir_item.startswith("dir:")\
+            self.assertTrue(verify_ssl) if dir_item.startswith("dir,")\
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
         file_path = os.path.join(dir_path, "file.zip")
         save(file_path, "")
-        for file_item in ["file:[%s, True, None]" % file_path, file_path]:
+        for file_item in ["file, %s, True, None" % file_path, file_path]:
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(file_item)
             self.assertEqual("file", config_type)
             self.assertEqual(file_path, url_or_path)
-            self.assertTrue(verify_ssl) if file_item.startswith("file:") \
+            self.assertTrue(verify_ssl) if file_item.startswith("file,") \
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
-        for url_item in ["url:[http://is/an/absloute/path with spaces/here/file.zip, True, None]",
+        for url_item in ["url, http://is/an/absloute/path with spaces/here/file.zip, True, None",
                          "http://is/an/absloute/path with spaces/here/file.zip"]:
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(url_item)
             self.assertEqual("url", config_type)
             self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url_or_path)
-            self.assertTrue(verify_ssl) if url_item.startswith("url:") \
+            self.assertTrue(verify_ssl) if url_item.startswith("url,") \
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
         config_type, url, verify_ssl, args = _process_config_install_item(
-                "url:[http://is/an/absloute/path with spaces/here/file.zip, False, --option]")
+                "url,   http://is/an/absloute/path with spaces/here/file.zip,False, --option  ")
         self.assertEqual("url", config_type)
         self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url)
         self.assertFalse(verify_ssl)

@@ -111,7 +111,6 @@ def _process_download(item, client_cache, output, tmp_folder, verify_ssl, reques
 
 def configuration_install(path_or_url, client_cache, output, verify_ssl, requester,
                           config_type=None, args=None):
-    print(type(verify_ssl), verify_ssl)
     if path_or_url is None:
         try:
             item = client_cache.conan_config.get_item("general.config_install")
@@ -151,7 +150,7 @@ def configuration_install(path_or_url, client_cache, output, verify_ssl, request
             raise ConanException("Unable to process config install: %s" % path_or_url)
     finally:
         if config_type is not None and path_or_url is not None:
-            value = "%s:[%s, %s, %s]" % (config_type, path_or_url, verify_ssl, args)
+            value = "%s, %s, %s, %s" % (config_type, path_or_url, verify_ssl, args)
             client_cache.conan_config.set_item("general.config_install", value)
         rmdir(tmp_folder)
 
@@ -167,7 +166,7 @@ def _process_config_install_item(item):
     additional arguments
     """
     config_type, path_or_url, verify_ssl, args = None, None, None, None
-    if not item.startswith(("git:", "dir:", "url:", "file:")):
+    if not item.startswith(("git,", "dir,", "url,", "file,")):
         path_or_url = item
         if path_or_url.endswith(".git"):
             config_type = "git"
@@ -180,8 +179,7 @@ def _process_config_install_item(item):
         else:
             raise ConanException("Unable to process config install: %s" % path_or_url)
     else:
-        config_type, rest = item.split(":", 1)
-        path_or_url, verify_ssl, args = [item.strip() for item in rest[1:-1].rstrip().split(",", 2)]
+        config_type, path_or_url, verify_ssl, args = [r.strip() for r in item.split(",")]
         verify_ssl = "true" in verify_ssl.lower()
         args = None if "none" in args.lower() else args
     return config_type, path_or_url, verify_ssl, args
