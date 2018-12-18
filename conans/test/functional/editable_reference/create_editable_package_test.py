@@ -72,8 +72,8 @@ class CreateEditablePackageTest(unittest.TestCase):
         t1.run('upload {}'.format(ref_parent))
 
         t2.save(files={'conanfile.py':
-                          self.conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+                           self.conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
+                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         t2.run('export . {}'.format(reference))
         t2.run('install --editable=. {} --build=missing'.format(reference))
 

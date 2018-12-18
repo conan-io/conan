@@ -14,13 +14,12 @@ from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
-from conans.client.tools import load
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
-from conans.model.conan_file import parse_editable_cpp_info
+from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -325,16 +324,11 @@ class ConanInstaller(object):
 
         package_layout = self._client_cache.package_layout(node.conan_ref)
         package_layout_file = package_layout.editable_package_layout_file()
-        content = load(package_layout_file)
         base_path = os.path.dirname(package_layout_file)
-        data = parse_editable_cpp_info(content=content, base_path=base_path,
-                                       settings=node.conanfile.settings,
-                                       options=node.conanfile.options)
-
-        # Replace directories with those in 'data'
-        cpp_info = node.conanfile.cpp_info
-        for key, items in data.items():
-            setattr(cpp_info, key, items)
+        editable_cpp_info = EditableCppInfo.create(package_layout_file, base_path=base_path,
+                                                   settings=node.conanfile.settings,
+                                                   options=node.conanfile.options)
+        editable_cpp_info.apply_to(node.conanfile.cpp_info)
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_ref, conan_file = node.conan_ref, node.conanfile

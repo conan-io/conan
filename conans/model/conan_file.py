@@ -1,8 +1,4 @@
-import configparser
-import ntpath
 import os
-import posixpath
-import re
 from contextlib import contextmanager
 
 from conans.client import tools
@@ -291,26 +287,3 @@ class ConanFile(object):
             return "PROJECT"
 
 
-def parse_editable_cpp_info(content, base_path, settings=None, options=None):
-    """ Returns a dictionary containing information about paths for a CppInfo object: includes,
-    libraries, resources, binaries,... """
-    ret = {k: [] for k in ['includedirs', 'libdirs', 'resdirs', 'bindirs']}
-
-    def _work_on_value(value, base_path_, settings_, options_):
-        value = re.sub(r'\\\\+', r'\\', value)
-        value = value.replace('\\', '/')
-        isabs = ntpath.isabs(value) or posixpath.isabs(value)
-        if base_path_ and not isabs:
-            value = os.path.abspath(os.path.join(base_path_, value))
-        value = os.path.normpath(value)
-        value = value.format(settings=settings_, options=options_)
-        return value
-
-    parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
-    parser.optionxform = str
-    parser.read_string(content)
-    for section in ret.keys():
-        if section in parser:
-            ret[section] = [_work_on_value(value, base_path, settings, options)
-                            for value in parser[section]]
-    return ret
