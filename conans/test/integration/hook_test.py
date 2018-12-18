@@ -156,11 +156,11 @@ class HookTest(unittest.TestCase):
         self.assertTrue(client.client_cache.hooks_path.endswith("hooks"))
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
-        self.assertIn("[HOOK - attribute_checker/attribute_checker.py] pre_export(): "
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
                       "WARN: Conanfile doesn't have 'url'", client.out)
-        self.assertIn("[HOOK - attribute_checker/attribute_checker.py] pre_export(): "
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
                       "WARN: Conanfile doesn't have 'description'", client.out)
-        self.assertIn("[HOOK - attribute_checker/attribute_checker.py] pre_export(): "
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
                       "WARN: Conanfile doesn't have 'license'", client.out)
 
     def complete_hook_test(self):
