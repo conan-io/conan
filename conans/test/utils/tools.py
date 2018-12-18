@@ -32,10 +32,10 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.remote_registry import RemoteRegistry, dump_registry
+from conans.client.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools import replace_in_file
+from conans.client.tools.files import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -483,7 +483,8 @@ class TestClient(object):
         if cpu_count:
             self.client_cache.conan_config
             replace_in_file(os.path.join(self.client_cache.conan_conf_path),
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
+                            output=TestBufferConanOutput())
             # Invalidate the cached config
             self.client_cache.invalidate()
         if self.revisions:
