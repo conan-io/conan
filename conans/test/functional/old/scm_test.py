@@ -511,13 +511,11 @@ class MyLib(ConanFile):
     def test_delegated_python_code(self):
         client = TestClient()
         code_file = """
-import os
 from conans.tools import Git
 from conans import ConanFile
 
-def get_commit():
-    here = os.getcwd()
-    git = Git(here)
+def get_commit(repo_path):
+    git = Git(repo_path)
     return git.get_commit()
 
 class MyLib(ConanFile):
@@ -526,12 +524,13 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": code_file})
         client.run("export . tool/0.1@user/testing")
 
-        conanfile = """from conans import ConanFile, python_requires
+        conanfile = """import os
+from conans import ConanFile, python_requires
 from conans.tools import load
 tool = python_requires("tool/0.1@user/testing")
 
 class MyLib(ConanFile):
-    scm = {'type': 'git', 'url': '%s', 'revision': tool.get_commit()}
+    scm = {'type': 'git', 'url': '%s', 'revision': tool.get_commit(os.path.dirname(__file__))}
     def build(self):
         self.output.info("File: {}".format(load("file.txt")))
 """ % client.current_folder.replace("\\", "/")
