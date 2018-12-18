@@ -38,8 +38,7 @@ class HookManager(object):
         self._hook_names = hook_names
         self.hooks = defaultdict(list)
         self.output = output
-        self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker",
-                                                    "attribute_checker.py")
+        self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
 
     def create_default_hooks(self):
         save(self._attribute_checker_path, attribute_checker_hook)
