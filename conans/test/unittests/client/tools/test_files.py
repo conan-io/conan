@@ -3,7 +3,8 @@
 import os
 import unittest
 
-from conans.client.tools.files import mac_dot_clean, save, chdir
+from conans.client.tools.files import save, chdir
+from conans.client.tools import apple_dot_clean
 from conans.test.utils.test_files import temp_folder
 
 
@@ -15,7 +16,7 @@ class DotCleanTest(unittest.TestCase):
             for f, _ in tuples:
                 save(f, "")
 
-            mac_dot_clean(".")
+            apple_dot_clean(".")
 
             for f, expected_after in tuples:
                 self.assertEqual(expected_after, os.path.exists(f))
