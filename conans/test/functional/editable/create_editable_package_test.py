@@ -136,26 +136,3 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.run('link . wrong/version@user/channel', assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)
-
-
-class RemoveEditablePackageTest(unittest.TestCase):
-    conanfile = textwrap.dedent("""\
-        from conans import ConanFile
-
-        class APck(ConanFile):
-            pass
-        """)
-
-    def test_remove_editable(self):
-        reference = ConanFileReference.loads('lib/version@user/name')
-
-        t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile,
-                      CONAN_PACKAGE_LAYOUT_FILE: "", })
-        t.run('export  . {}'.format(reference))  # No need to export, will create it on the fly
-        t.run('link . {}'.format(reference))
-        self.assertTrue(t.client_cache.installed_as_editable(reference))
-
-        # Now remove editable
-
-        self.assertFalse(t.client_cache.installed_as_editable(reference))
