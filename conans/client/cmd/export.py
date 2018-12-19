@@ -59,7 +59,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
                           keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
     hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
-                           reference=reference)
+                         reference=reference)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
@@ -147,6 +147,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
     save(conanfile_path, content)
+
 
 def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source):
 

@@ -14,7 +14,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
-from conans.client.graph.graph import RECIPE_CONSUMER
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class ConanManager(object):
@@ -63,7 +63,6 @@ class ConanManager(object):
         @param generators: List of generators from command line. If False, no generator will be
         written
         @param no_imports: Install specified packages but avoid running imports
-        @param inject_require: Reference to add as a requirement to the conanfile
         """
 
         if generators is not False:
@@ -100,7 +99,7 @@ class ConanManager(object):
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                                client_cache=self._client_cache)
             for node in deps_graph.nodes:
-                if node.recipe == RECIPE_CONSUMER:
+                if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
                 complete_recipe_sources(self._remote_manager, self._client_cache,
                                         node.conanfile, node.conan_ref)

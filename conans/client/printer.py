@@ -7,7 +7,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SimplePaths
 from conans.util.env_reader import get_env
-from conans.client.graph.graph import RECIPE_CONSUMER
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class Printer(object):
@@ -87,9 +87,9 @@ class Printer(object):
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
             conan = node.conanfile
+            if node.recipe == RECIPE_VIRTUAL:
+                continue
             if node.recipe == RECIPE_CONSUMER:
-                if node.conanfile.display_name == "virtual":
-                    continue
                 ref = str(conan)
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue

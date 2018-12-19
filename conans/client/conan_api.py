@@ -281,11 +281,9 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(path)
         except ConanException:
-            reference = None
-            cwd = get_cwd()
-            conanfile_path = _get_conanfile_path(path, cwd, py=True)
+            conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
+            reference = os.path.basename(conanfile_path)
             conanfile_class = self._loader.load_class(conanfile_path)
-            conanfile = conanfile_class(self._user_io.out, None, os.path.basename(conanfile_path))
         else:
             update = True if remote_name else False
             result = self._proxy.get_recipe(reference, update, update, remote_name,
@@ -294,7 +292,7 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(conanfile_path)
             conanfile_class.name = reference.name
             conanfile_class.version = reference.version
-            conanfile = conanfile_class(self._user_io.out, None, str(reference))
+        conanfile = conanfile_class(self._user_io.out, None, str(reference))
 
         result = OrderedDict()
         if not attributes:

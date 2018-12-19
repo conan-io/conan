@@ -12,7 +12,8 @@ RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_WORKSPACE = "Workspace"
-RECIPE_CONSUMER = "Consumer"
+RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
+RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -252,7 +253,7 @@ class DepsGraph(object):
         # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
         # without Edges
         for node in self.nodes:
-            if node.recipe == RECIPE_CONSUMER:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
             if package_ref not in unique_nodes:
@@ -284,7 +285,7 @@ class DepsGraph(object):
         result = []
         for level in reversed(levels):
             new_level = [n.conan_ref for n in level
-                         if (n in closure and n.recipe != RECIPE_CONSUMER)]
+                         if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
             if new_level:
                 result.append(new_level)
         return result

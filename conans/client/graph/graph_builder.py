@@ -1,7 +1,6 @@
 import time
 
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
-from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -174,9 +173,8 @@ class DepsGraphBuilder(object):
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
                     if not conanref:
-                        output = ScopedOutput(conanfile.display_name, self._output)
-                        output.warn("config() has been deprecated."
-                                    " Use config_options and configure")
+                        conanfile.output.warn("config() has been deprecated."
+                                              " Use config_options and configure")
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
