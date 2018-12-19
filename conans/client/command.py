@@ -84,6 +84,15 @@ class ConanFilePath(argparse.Action):
                                                "a 'conanfile.py' file".format(prospective_dir))
 
 
+class ConanFilePathOptional(ConanFilePath):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if not values:
+            setattr(namespace, self.dest, None)
+        else:
+            return super(ConanFilePathOptional, self).__call__(parser, namespace, values,
+                                                               option_string=option_string)
+
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
@@ -1345,12 +1354,44 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
+    def link(self, *args):
+        """ Creates a link from a reference to a local package.
+
+        """
+        parser = argparse.ArgumentParser(description=self.link.__doc__,
+                                         prog="conan link")
+        parser.add_argument('target', help='Path to the package folder in the user workspace',
+                            nargs='?', action=ConanFilePathOptional)
+        parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
+        parser.add_argument("--remove", action='store_true', default=False,
+                            help='Remove linked reference (target not required)')
+
+        args = parser.parse_args(*args)
+        self._warn_python2()
+
+        # Args sanity check
+        if args.remove and args.target:
+            raise ConanException("Do not provide the 'target' argument for removal")
+
+        if not args.remove and not args.target:
+            raise ConanException("Argument 'target' is required to link a reference")
+
+        reference = ConanFileReference.loads(args.reference)
+
+        if not args.remove:
+            self._conan.link(args.target, reference)
+            self._outputer.writeln("Reference '{}' linked to "
+                                   "directory '{}'".format(reference, args.target))
+        else:
+            self._conan.unlink(reference)
+            self._outputer.writeln("Removed linkage for reference '{}'".format(reference))
+
     def _show_help(self):
         """Prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package")),
+                ("Package development commands", ("source", "build", "package", "link")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help"))]
 

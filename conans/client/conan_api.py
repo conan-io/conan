@@ -57,6 +57,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
 
 default_manifest_folder = '.conan_manifests'
 
@@ -946,6 +947,36 @@ class ConanAPIV1(object):
     @api_method
     def get_remote_by_name(self, remote_name):
         return self._client_cache.registry.remotes.get(remote_name)
+
+    @api_method
+    def link(self, target_path, reference):
+        assert isinstance(reference, ConanFileReference)
+
+        target_conanfile = self._graph_manager._loader.load_basic(target_path, output=self._user_io)
+        if (target_conanfile.name and target_conanfile.name != reference.name) or \
+                (target_conanfile.version and target_conanfile.version != reference.version):
+            raise ConanException("Name and version from reference ({}) and target "
+                                 "conanfile.py ({}/{}) must match".
+                                 format(reference, target_conanfile.name, target_conanfile.version))
+
+        package_layout_file = os.path.join(os.path.dirname(target_path), CONAN_PACKAGE_LAYOUT_FILE)
+        if not os.path.exists(package_layout_file):
+            raise ConanException("In order to link a package in editable mode, it is required "
+                                 "a '{}' file next to the 'conanfile.py'. Find more info "
+                                 "at https://".  # TODO: Add URL to docs
+                                 format(CONAN_PACKAGE_LAYOUT_FILE))
+
+        # TODO: Do we want to introduce this restriction?
+        #if not os.path.exists(self._client_cache.conan(reference)):
+        #    raise ConanException("In order to link a package in editable mode, its recipe must "
+        #                         "be already exported to the cache")
+
+        self._client_cache.install_as_editable(reference, os.path.dirname(target_path))
+
+    @api_method
+    def unlink(self, reference):
+        assert isinstance(reference, ConanFileReference)
+        self._client_cache.remove_editable(reference)
 
 
 Conan = ConanAPIV1

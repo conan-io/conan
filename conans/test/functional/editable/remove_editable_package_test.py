@@ -23,10 +23,10 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t.save(files={'conanfile.py': self.conanfile,
                            CONAN_PACKAGE_LAYOUT_FILE: "", })
         self.t.run('export  . {}'.format(self.reference))  # No need to export, will create it on the fly
-        self.t.run('install --editable=. {}'.format(self.reference))
+        self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
-    def test_install_override(self):
-        self.t.run('install {}'.format(self.reference), assert_error=True)
-        self.assertIn("Removed '{}' as editable package".format(self.reference), self.t.out)
+    def test_unlink(self):
+        self.t.run('link {} --remove'.format(self.reference))
+        self.assertIn("Removed linkage for reference '{}'".format(self.reference), self.t.out)
 
