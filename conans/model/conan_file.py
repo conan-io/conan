@@ -1,6 +1,9 @@
 import os
 from contextlib import contextmanager
-
+try:
+    from typing import Union, Dict, Optional, Tuple
+except ImportError: 
+    pass
 from conans.client import tools
 from conans.client.output import Color
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -81,21 +84,23 @@ class ConanFile(object):
     """ The base class for all package recipes
     """
 
-    name = None
-    version = None  # Any str, can be "1.1" or whatever
-    url = None  # The URL where this File is located, as github, to collaborate in package
-    # The license of the PACKAGE, just a shortcut, does not replace or
-    # change the actual license of the source code
-    license = None
-    author = None  # Main maintainer/responsible for the package, any format
-    description = None
-    topics = None
-    homepage = None
-    build_policy = None
+    name = None # type: str
+    version = None  # type: str
+                    # Any str, can be "1.1" or whatever
+    url = None  # type: str
+                # The URL where this File is located, as github, to collaborate in package
+                # The license of the PACKAGE, just a shortcut, does not replace or
+                # change the actual license of the source code
+    license = None # type: str
+    author = None # type: str # Main maintainer/responsible for the package, any format
+    description = None # type: str
+    topics = None # type: Tuple[str]
+    homepage = None # type: str
+    build_policy = None # type: str
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
-    exports = None
-    exports_sources = None
+    exports = None # type: List[str]
+    exports_sources = None # type: List[str]
     generators = ["txt"]
 
     # Vars to control the build steps (build(), package())
@@ -107,13 +112,15 @@ class ConanFile(object):
     develop = False
 
     # Defaulting the reference fields
-    default_channel = None
-    default_user = None
+    default_channel = None # type: Optional[str]
+    default_user = None # type: Optional[str]
 
     # Settings and Options
-    settings = None
-    options = None
-    default_options = None
+    settings = None # type: Union[Tuple,Dict]
+    options = None # type: Union[Tuple,Dict]
+    default_options = None # type: Union[Tuple,Dict]
+
+    scm = None # type: Dict[str,str]
 
     def __init__(self, output, runner, user=None, channel=None):
         # an output stream (writeln, info, warn error)
