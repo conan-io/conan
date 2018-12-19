@@ -36,10 +36,6 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.t.run('create . {}'.format(self.reference), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
 
-    def test_remove(self):
-        self.t.run('remove -f {}'.format(self.reference), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
     def test_upload(self):
         self.t.run('upload --force {}'.format(self.reference), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)

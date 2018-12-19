@@ -31,6 +31,6 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.assertIn("Removed '{}' as editable package".format(self.reference), self.t.out)
 
     def test_remove(self):
-        self.t.run('remove {} --force'.format(self.reference))
-        print(self.t.out)
-        self.fail("AAA")
+        self.t.run('remove {} --force'.format(self.reference), assert_error=True)
+        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
+                      "using command 'conan install lib/version@user/name [...]'", self.t.out)
