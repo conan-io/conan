@@ -1,6 +1,6 @@
 // ########## CONFIGURATION ##################
-def full_py_vers = false
-def test_revisions = false
+def full_py_vers = true
+def test_revisions = true
 // ###########################################
 def is_pr = false
 def excluded_tags = []
