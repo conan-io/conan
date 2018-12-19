@@ -58,7 +58,7 @@ class Git(SCMBase):
         # TODO: This should be a context manager
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, branch=None, args=""):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -75,7 +75,7 @@ class Git(SCMBase):
             output += self.run("checkout -t origin/%s" % branch)
         else:
             branch_cmd = "--branch %s" % branch if branch else ""
-            output = self.run('clone "%s" . %s' % (url, branch_cmd))
+            output = self.run('clone "%s" . %s %s' % (url, branch_cmd, args))
             output += self._configure_ssl_verify()
 
         return output

@@ -20,18 +20,16 @@ class DiamondTest(unittest.TestCase):
         self.servers = {"default": test_server}
 
     def diamond_cmake_test(self):
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
-                                 cpu_count=1)
+        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self._run(use_cmake=True, language=1)
 
     def diamond_cmake_targets_test(self):
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
-                                 cpu_count=1)
+        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self._run(use_cmake=True, cmake_targets=True)
 
     def diamond_default_test(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
-                                 path_with_spaces=False, cpu_count=1)
+                                 path_with_spaces=False)
         self._run(use_cmake=False)
 
     def _export(self, name, version=None, deps=None, use_cmake=True, cmake_targets=False):

@@ -38,9 +38,9 @@ class Pkg(ConanFile):
             self.client.run("export . lasote/stable")
             expected_output = textwrap.dedent(
                 """\
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'license'. It is recommended to add it as attribute
-                [HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'description'. It is recommended to add it as attribute
+                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute
+                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'license'. It is recommended to add it as attribute
+                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'description'. It is recommended to add it as attribute
                 """)
             self.assertIn(expected_output, self.client.user_io.out)
 
@@ -330,8 +330,8 @@ class MyTest(ConanFile):
 
         if self.client.revisions:
             expected_output = expected_output % (
-                "\n    Revision: d67a47651a0532271e0090350f024c0f",
-                "\n    Revision: 96a71455ed5d0181e6babf739e84f513")
+                "\n    Revision: cba5c22478b987899b8ca26b2c359bde",
+                "\n    Revision: c0683fc1338c11821957d21265927a7b")
 
         else:
             expected_output = expected_output % ("", "")

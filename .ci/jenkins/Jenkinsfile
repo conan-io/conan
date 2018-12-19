@@ -15,6 +15,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_py_vers = true
 }
 
+
 if (env.BRANCH_NAME =~ /(^PR-.*)/) {
     full_py_vers = false
     test_revisions = false
@@ -68,7 +69,7 @@ if(is_pr){ // Read the PR body to
 
 def flavors
 if(test_revisions){
-    flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
+    flavors = ["enabled_revisions", "disabled_revisions",  "blocked_v2"]
 }
 else{
     flavors = ["blocked_v2"]

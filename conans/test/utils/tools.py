@@ -32,10 +32,10 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.remote_registry import RemoteRegistry, dump_registry
+from conans.client.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools import replace_in_file
+from conans.client.tools.files import replace_in_file
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -447,7 +447,7 @@ class TestClient(object):
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None, cpu_count=None):
+                 block_v2=None, revisions=None, cpu_count=1):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -483,7 +483,8 @@ class TestClient(object):
         if cpu_count:
             self.client_cache.conan_config
             replace_in_file(os.path.join(self.client_cache.conan_conf_path),
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count)
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
+                            output=TestBufferConanOutput())
             # Invalidate the cached config
             self.client_cache.invalidate()
         if self.revisions:
@@ -527,10 +528,6 @@ servers["r2"] = TestServer()
         for name, server in self.servers.items():
             if name != "default":
                 add_server_to_registry(name, server)
-
-    @property
-    def remote_registry(self):
-        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
 
     @property
     def default_compiler_visual_studio(self):
@@ -579,8 +576,7 @@ servers["r2"] = TestServer()
                                             get_request_timeout())
 
             self.hook_manager = HookManager(self.client_cache.hooks_path,
-                                            get_env("CONAN_HOOKS", list()),
-                                            self.user_io.out)
+                                            get_env("CONAN_HOOKS", list()), self.user_io.out)
 
             self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
                                                             self.requester, self.client_cache,

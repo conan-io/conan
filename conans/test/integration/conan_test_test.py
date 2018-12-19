@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 from nose.plugins.attrib import attr
@@ -197,6 +198,7 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
         client.run("create . lasote/stable")
+        time.sleep(1)  # Try to avoid windows errors in CI  (Cannot change permissions)
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
 
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)

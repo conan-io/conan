@@ -1,4 +1,5 @@
 Changelog: (Feature | Fix | Bugfix): Describe here your pull request
+Docs: https://github.com/conan-io/docs/pull/XXXX
 
 - [ ] Refer to the issue that supports this Pull Request.
 - [ ] If the issue has missing info, explain the purpose/use case/pain/need that covers this Pull Request.
