@@ -71,7 +71,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
     env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
     # Related with the error: LINK : fatal error LNK1318: Unexpected PDB error; RPC (23) '(0x000006BA)'
     # More info: http://blog.peter-b.co.uk/2017/02/stop-mspdbsrv-from-breaking-ci-build.html
-    env["_MSPDBSRV_ENDPOINT_"] = str(uuid.uuid4())
+    # Update, this doesn't solve the issue, other issues arise:
+    # LINK : fatal error LNK1101: incorrect MSPDB140.DLL version; recheck installation of this product
+    #env["_MSPDBSRV_ENDPOINT_"] = str(uuid.uuid4())
     # Try to specify a known folder to keep there msbuild failure logs
     env["MSBUILDDEBUGPATH"] = win_msbuilds_logs_folder
 
