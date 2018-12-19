@@ -1,8 +1,8 @@
-from conans.model.ref import PackageReference
-from conans.model.info import ConanInfo
-from conans.errors import conanfile_exception_formatter
 from collections import OrderedDict
 
+from conans.errors import conanfile_exception_formatter
+from conans.model.info import ConanInfo
+from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used

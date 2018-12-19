@@ -1,6 +1,7 @@
 import unittest
-from conans.test.utils.tools import TestClient
+
 from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient
 
 
 class ConflictDiamondTest(unittest.TestCase):
@@ -32,7 +33,6 @@ class HelloReuseConan(ConanFile):
         self._export("Hello3", "0.1", ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"],
                      export=False)
 
-        error = self.client.run("install . --build missing", ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install . --build missing", assert_error=True)
         self.assertIn("Conflict in Hello2/0.1@lasote/stable", self.client.user_io.out)
         self.assertNotIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)

@@ -1,17 +1,16 @@
-import unittest
 import os
 import platform
+import re
 import shutil
+import time
+import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
-from conans.model.workspace import WORKSPACE_FILE
-import time
-from conans.util.files import load
-import re
 from conans.client import tools
-
+from conans.model.workspace import WORKSPACE_FILE
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 conanfile = """from conans import ConanFile
 import os
@@ -215,6 +214,7 @@ name: MyProject
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(TIME_DELAY)  # Try to avoid windows errors in CI  (The directory is not empty)
         shutil.rmtree(os.path.join(client.current_folder, "build"))
         client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)

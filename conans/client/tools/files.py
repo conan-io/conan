@@ -1,18 +1,18 @@
-import platform
 import logging
 import os
+import platform
 import sys
-import six
-
 from contextlib import contextmanager
 from fnmatch import fnmatch
+
+import six
 from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import (load, save, _generic_algorithm_sum)
 from conans.unicode import get_cwd
 from conans.util.fallbacks import default_output
+from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
 
@@ -363,3 +363,5 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+

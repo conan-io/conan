@@ -1,14 +1,15 @@
-import os
-from conans.errors import ConanException
-import fasteners
-
-from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
+import copy
 import json
-from conans.model.ref import PackageReference, ConanFileReference
+import os
 import time
 from os.path import isdir
-import copy
+
+import fasteners
+
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import md5sum, sha1sum
+from conans.util.log import logger
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",
@@ -146,6 +147,8 @@ def log_command(name, parameters):
         parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
+    logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
+                                                       for k,v in parameters.items())))
 
 
 def log_exception(exc, message):

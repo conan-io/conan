@@ -2,20 +2,19 @@ import json
 import os
 import platform
 import re
-import deprecation
-
 import subprocess
-
 from contextlib import contextmanager
 
+import deprecation
+
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import detected_architecture, OSInfo
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text, save, mkdir_tmp
-from conans.unicode import get_cwd
 from conans.model.version import Version
+from conans.unicode import get_cwd
+from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
+from conans.util.files import decode_text, mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -410,11 +409,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True):
+                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}

@@ -1,16 +1,16 @@
 import os
 import unittest
-
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
-from parameterized.parameterized import parameterized
-from conans.util.files import load, save, md5sum
-from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
-from conans.test.utils.test_files import scan_folder
-from conans.client import tools
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.test.utils.test_files import scan_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, md5sum, save
 
 conanfile_py = """
 from conans import ConanFile
@@ -118,7 +118,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                'conanmanifest.txt']
 
         server = server or self.server
-        self.assertEqual(scan_folder(server.paths.export(self.reference)), expected_server)
+        self.assertEqual(scan_folder(server.server_store.export(self.reference)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
@@ -387,7 +387,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.user_io.out)
         self._check_export_installed_folder(mode)
 
-        server_path = self.server.paths.export(self.reference)
+        server_path = self.server.server_store.export(self.reference)
         save(os.path.join(server_path, "license.txt"), "mylicense")
         manifest = FileTreeManifest.load(server_path)
         manifest.time += 1

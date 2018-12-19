@@ -3,13 +3,13 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans.client import tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import CONANFILE_TXT
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.client import tools
 
 
 class MockOut(object):
@@ -18,6 +18,9 @@ class MockOut(object):
         pass
 
     def error(self, *args, **kwargs):
+        pass
+
+    def warn(self, *args, **kwargs):
         pass
 
 
@@ -35,8 +38,7 @@ os=Windows
         client = TestClient()
         save(client.client_cache.default_profile_path, default_profile)
         client.save({CONANFILE_TXT: ""})
-        error = client.run("install Any/0.2@user/channel", ignore_error=True)
-        self.assertTrue(error)
+        client.run("install Any/0.2@user/channel", assert_error=True)
         self.assertIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
         self.assertNotIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)

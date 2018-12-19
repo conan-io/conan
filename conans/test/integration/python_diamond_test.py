@@ -1,7 +1,8 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.test.utils.python_test_files import py_hello_conan_files
 import platform
+import unittest
+
+from conans.test.utils.python_test_files import py_hello_conan_files
+from conans.test.utils.tools import TestClient
 
 
 class PythonDiamondTest(unittest.TestCase):

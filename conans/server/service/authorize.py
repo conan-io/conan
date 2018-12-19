@@ -11,9 +11,10 @@ Replace this module with other that keeps the interface or super class.
 
 
 from abc import ABCMeta, abstractmethod
-from conans.errors import ForbiddenException, InternalErrorException,\
-    AuthenticationException
+
+from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference
+
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
