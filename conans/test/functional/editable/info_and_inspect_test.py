@@ -100,6 +100,10 @@ class CommandsOnDependentPackageTest(unittest.TestCase):
         self.t.run('info {}'.format(self.ref_child))
         self.assertIn("    Requires:\n        lib/version@user/name", self.t.out)
 
+    def test_info_reference_paths(self):
+        self.t.run('info {} --paths'.format(self.ref_child))
+        self.assertIn("    Requires:\n        lib/version@user/name", self.t.out)
+
     def test_inspect_path(self):
         self.t.run('inspect .')  # Just to make sure it doesn't raise
         self.assertIn("url: None", self.t.out)
