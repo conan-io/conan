@@ -1,5 +1,6 @@
 import os
 import platform
+import uuid
 
 from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
     winpylocation, win_msbuilds_logs_folder
@@ -68,6 +69,9 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
     env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
+    # Related with the error: LINK : fatal error LNK1318: Unexpected PDB error; RPC (23) '(0x000006BA)'
+    # More info: http://blog.peter-b.co.uk/2017/02/stop-mspdbsrv-from-breaking-ci-build.html
+    env["_MSPDBSRV_ENDPOINT_"] = str(uuid.uuid4())
     # Try to specify a known folder to keep there msbuild failure logs
     env["MSBUILDDEBUGPATH"] = win_msbuilds_logs_folder
 
