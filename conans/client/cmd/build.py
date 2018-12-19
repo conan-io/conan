@@ -1,12 +1,11 @@
 import os
 
 from conans.client.output import ScopedOutput
-from conans.util.log import logger
-from conans.errors import (NotFoundException, ConanException,
-                           conanfile_exception_formatter)
+from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
+from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.util.files import mkdir
-from conans.model.conan_file import get_env_context_manager
+from conans.util.log import logger
 
 
 def build(graph_manager, hook_manager, conanfile_path, output,
@@ -16,8 +15,8 @@ def build(graph_manager, hook_manager, conanfile_path, output,
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
-    logger.debug("Building in %s" % build_folder)
-    logger.debug("Conanfile in %s" % conanfile_path)
+    logger.debug("BUILD: folder '%s'" % build_folder)
+    logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
 
     try:
         # Append env_vars to execution environment and clear when block code ends

@@ -1,7 +1,6 @@
 import json
-from collections import namedtuple
-
 import time
+from collections import namedtuple
 
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 

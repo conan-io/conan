@@ -1,8 +1,8 @@
 import os
-
-from conf import winpylocation, linuxpylocation, macpylocation, Extender, environment_append, chdir, get_environ
 import platform
 
+from conf import Extender, chdir, environment_append, get_environ, linuxpylocation, macpylocation, \
+    winpylocation, win_msbuilds_logs_folder
 
 pylocations = {"Windows": winpylocation,
                "Linux": linuxpylocation,
@@ -68,6 +68,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
     env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
     env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
+    # Try to specify a known folder to keep there msbuild failure logs
+    env["MSBUILDDEBUGPATH"] = win_msbuilds_logs_folder
 
     with chdir(source_folder):
         with environment_append(env):
@@ -96,10 +98,10 @@ if __name__ == "__main__":
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
-    parser.add_argument('--exclude_tag', '-e', nargs=1, action=Extender,
+    parser.add_argument('--exclude_tags', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
     parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              args.exclude_tag, num_cores=args.num_cores)
+              args.exclude_tags, num_cores=args.num_cores)

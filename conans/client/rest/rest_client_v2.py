@@ -6,7 +6,7 @@ from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2ConanRouterBuilder
 from conans.client.rest.rest_client_common import RestCommonMethods
 from conans.client.rest.uploader_downloader import Downloader, Uploader
-from conans.errors import NotFoundException, ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
@@ -214,7 +214,7 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
         else:
-            logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+            logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files):
         downloader = Downloader(self.requester, self._output, self.verify_ssl)

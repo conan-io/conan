@@ -1,9 +1,11 @@
+import os
 import unittest
+
+from parameterized.parameterized import parameterized
+
+from conans.client.tools.files import replace_in_file
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-import os
-from parameterized.parameterized import parameterized
-from conans.client.tools.files import replace_in_file
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -35,9 +37,7 @@ class Pkg(ConanFile):
 
     def test_alias_different_name(self):
         client = TestClient()
-        error = client.run("alias myalias/1.0@user/channel lib/1.0@user/channel",
-                           ignore_error=True)
-        self.assertTrue(error)
+        client.run("alias myalias/1.0@user/channel lib/1.0@user/channel", assert_error=True)
         self.assertIn("An alias can only be defined to a package with the same name",
                       client.out)
 

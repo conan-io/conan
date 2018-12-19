@@ -1,13 +1,12 @@
 import json
 import os
-import sys
-
 import platform
+import sys
+from subprocess import PIPE, Popen
 
+from conans import __path__ as root_path
 from conans.client.output import Color
 from conans.errors import ConanException
-from subprocess import PIPE, Popen
-from conans import __path__ as root_path
 
 
 def conan_linter(conanfile_path, out):

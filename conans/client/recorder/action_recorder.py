@@ -3,8 +3,8 @@
 # of them because it has to be called in the remote manager, not in the proxy, where we have info
 # about the downloaded files prior to unzip them
 
+from collections import OrderedDict, defaultdict, namedtuple
 from datetime import datetime
-from collections import namedtuple, OrderedDict, defaultdict
 
 # Install actions
 from conans.model.ref import ConanFileReference, PackageReference
