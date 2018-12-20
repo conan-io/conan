@@ -966,11 +966,6 @@ class ConanAPIV1(object):
                                  "at https://".  # TODO: Add URL to docs
                                  format(CONAN_PACKAGE_LAYOUT_FILE))
 
-        # TODO: Do we want to introduce this restriction?
-        #if not os.path.exists(self._client_cache.conan(reference)):
-        #    raise ConanException("In order to link a package in editable mode, its recipe must "
-        #                         "be already exported to the cache")
-
         self._client_cache.install_as_editable(reference, os.path.dirname(target_path))
 
     @api_method

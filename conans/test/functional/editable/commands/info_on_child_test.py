@@ -45,6 +45,11 @@ class InfoCommandTest(unittest.TestCase):
                           self.conanfile_base.format(body='requires = "{}"'.format(self.reference))})
         self.t.run('export . {}'.format(self.child_ref))
 
+    def tearDown(self):
+        self.t.run('link {} --remove'.format(self.reference))
+        self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
+        self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
+
     @parameterized.expand([(True, ), (False, )])
     def test_no_args(self, use_local_path):
         args = "." if use_local_path else self.child_ref

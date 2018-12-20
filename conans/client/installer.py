@@ -318,13 +318,11 @@ class ConanInstaller(object):
                 return True
 
     def _handle_node_editable(self, node):
-        # TODO: I need a valid 'package_folder', but I'm not going to use it
-        package_folder = self._client_cache.conan(node.conan_ref)
-        self._call_package_info(node.conanfile, package_folder=package_folder)
-
         package_layout = self._client_cache.package_layout(node.conan_ref)
         package_layout_file = package_layout.editable_package_layout_file()
         base_path = os.path.dirname(package_layout_file)
+
+        self._call_package_info(node.conanfile, package_folder=base_path)
         editable_cpp_info = EditableCppInfo.create(package_layout_file, base_path=base_path,
                                                    settings=node.conanfile.settings,
                                                    options=node.conanfile.options)

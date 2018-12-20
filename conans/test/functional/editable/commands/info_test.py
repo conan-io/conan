@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import os
 import textwrap
 import unittest
 
@@ -35,6 +36,11 @@ class LinkedPackageAsProject(unittest.TestCase):
                       CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
+
+    def tearDown(self):
+        self.t.run('link {} --remove'.format(self.reference))
+        self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
+        self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
 
 
 class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):

@@ -285,5 +285,3 @@ class ConanFile(object):
             return "%s/%s@PROJECT" % (self.name, self.version)
         else:
             return "PROJECT"
-
-
