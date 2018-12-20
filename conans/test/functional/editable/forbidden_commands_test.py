@@ -24,7 +24,6 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.t.save(files={'conanfile.py': self.conanfile,
                            CONAN_PACKAGE_LAYOUT_FILE: "", })
-        #self.t.run('export  . {}'.format(self.reference))
         self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
@@ -34,6 +33,10 @@ class ForbiddenCommandsTest(unittest.TestCase):
 
     def test_create(self):
         self.t.run('create . {}'.format(self.reference), assert_error=True)
+        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
+
+    def test_create_update(self):
+        self.t.run('create . {} --update'.format(self.reference), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
 
     def test_upload(self):
@@ -47,3 +50,9 @@ class ForbiddenCommandsTest(unittest.TestCase):
     def test_copy(self):
         self.t.run('copy --force {} ouser/ochannel'.format(self.reference), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
+
+    def test_remove(self):
+        self.t.run('remove {} --force'.format(self.reference), assert_error=True)
+        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
+                      "using command 'conan link lib/version@user/name --remove'", self.t.out)
+

@@ -22,7 +22,6 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile,
                            CONAN_PACKAGE_LAYOUT_FILE: "", })
-        #self.t.run('export  . {}'.format(self.reference))  # No need to export, will create it on the fly
         self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
@@ -30,8 +29,3 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t.run('link {} --remove'.format(self.reference))
         self.assertIn("Removed linkage for reference '{}'".format(self.reference), self.t.out)
         self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
-
-    def test_remove(self):
-        self.t.run('remove {} --force'.format(self.reference), assert_error=True)
-        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
-                      "using command 'conan link lib/version@user/name --remove'", self.t.out)
