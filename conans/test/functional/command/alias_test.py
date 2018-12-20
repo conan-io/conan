@@ -247,8 +247,9 @@ class Pkg(ConanFile):
         client.run("export . LibA/0.1@user/testing")
         client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
 
-        client.save({"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
-                    clean_first=True)
+        client.save(
+                {"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
+                clean_first=True)
         client.run("info conanfile.txt --graph=file.dot")
         graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"LibA/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
