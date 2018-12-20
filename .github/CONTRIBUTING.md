@@ -57,7 +57,7 @@ For any suggestion, feature request or question open an issue indicating the fol
 
 We use the following tags to control the status of the issues:
 
-- **triaging**: Issue is being considered or under discussion. Maintainers are trying to understand the use case or gather or the necessary
+- **triaging**: Issue is being considered or under discussion. Maintainers are trying to understand the use case or gathering the necessary
   information.
 - **queue**: Issue has been categorized and is ready to be done in a following release (not necessarily in the next one).
 - **in-progress**: A milestone has previously been assigned to the issue and is now under development.
