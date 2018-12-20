@@ -14,7 +14,7 @@ Dev-flow & Pull Requests
 
 Conan follows the ["GitFlow"](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model. 
 Issues are triaged and categorized mainly by type (feature, bug...) complexity (high, medium...) and priority (high, medium...) using GitHub
-labels. Then they are moved to to a stage called "queue" when they are considered to be ready for implementation.
+ labels. Then they are moved to a stage called "queue" when they are considered to be ready for implementation.
 
 To contribute follow the next steps:
 
