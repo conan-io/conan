@@ -604,7 +604,7 @@ servers["r2"] = TestServer()
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          self.hook_manager, interactive=interactive)
+                          self.hook_manager, requester, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

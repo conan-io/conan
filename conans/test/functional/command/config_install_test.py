@@ -11,7 +11,7 @@ from conans.client.conf.config_installer import _hide_password
 from conans.client.remote_registry import Remote
 from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
 
 win_profile = """[settings]
@@ -407,3 +407,19 @@ class Pkg(ConanFile):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -b other_branch" % check_path)
         self.assertTrue(os.path.exists(other_path))
+
+    def test_config_install_requester(self):
+        # https://github.com/conan-io/conan/issues/4169
+        http_server = StoppableThreadBottle()
+        path = self._create_zip()
+
+        from bottle import static_file, auth_basic
+
+        @http_server.server.get("/myconfig.zip")
+        def get_zip():
+            return static_file(os.path.basename(path), os.path.dirname(path))
+
+        http_server.run_server()
+        self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
+        self.assertIn("Unzipping", self.client.out)
+        http_server.stop()
