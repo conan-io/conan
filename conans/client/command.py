@@ -1381,7 +1381,7 @@ class Command(object):
         if not args.remove:
             self._conan.link(args.target, reference)
             self._outputer.writeln("Reference '{}' linked to "
-                                   "directory '{}'".format(reference, args.target))
+                                   "directory '{}'".format(reference, os.path.dirname(args.target)))
         else:
             self._conan.unlink(reference)
             self._outputer.writeln("Removed linkage for reference '{}'".format(reference))

@@ -24,8 +24,8 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.t.save(files={'conanfile.py': self.conanfile,
                            CONAN_PACKAGE_LAYOUT_FILE: "", })
-        self.t.run('export  . {}'.format(self.reference))
-        self.t.run('install --editable=. {}'.format(self.reference))
+        #self.t.run('export  . {}'.format(self.reference))
+        self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
     def test_export(self):
