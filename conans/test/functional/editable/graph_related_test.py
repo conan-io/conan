@@ -50,15 +50,15 @@ class ExistingCacheTestMixin(object):
         self.t.run('create . {}'.format(self.reference))
         self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
         self.assertListEqual(os.listdir(self.t.client_cache.conan(self.reference)),
-                             ["locks", "export_source", "source", "metadata.json",
-                              "build", "export", "package"])
+                             ['build', 'export', 'export_source', 'locks', 'metadata.json',
+                              'package', 'source'])
 
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.reference))
         self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
         self.assertListEqual(os.listdir(self.t.client_cache.conan(self.reference)),
-                             ["locks", "export_source", "source", "metadata.json",
-                              "build", "export", "package"])
+                             ['build', 'export', 'export_source', 'locks', 'metadata.json',
+                              'package', 'source'])
 
 
 class RelatedToGraphBehavior(object):

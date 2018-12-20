@@ -5,6 +5,8 @@ import os
 import posixpath
 import re
 
+import six
+
 
 class EditableCppInfo(object):
     cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs']
@@ -21,7 +23,7 @@ class EditableCppInfo(object):
     @classmethod
     def parse_file(cls, filepath, base_path, settings=None, options=None):
         with open(filepath, 'r') as f:
-            return cls.parse_content(content=f.read(), base_path=base_path,
+            return cls.parse_content(content=six.u(f.read()), base_path=base_path,
                                      settings=settings, options=options)
 
     @classmethod
