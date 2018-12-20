@@ -49,14 +49,14 @@ class ExistingCacheTestMixin(object):
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(self.reference))
         self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
-        self.assertListEqual(os.listdir(self.t.client_cache.conan(self.reference)),
+        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.reference))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.reference))
         self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
-        self.assertListEqual(os.listdir(self.t.client_cache.conan(self.reference)),
+        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.reference))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 
