@@ -113,7 +113,7 @@ class RelatedToGraphBehavior(object):
                                conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
                     path=path_to_lib)
-        self.t.run('link {} {}'.format(path_to_lib, self.reference))
+        self.t.run('link "{}" {}'.format(path_to_lib, self.reference))
 
         # Create a child an install it (in other folder, do not override the link!)
         path_to_child = os.path.join(self.t.current_folder, 'child')
@@ -122,13 +122,13 @@ class RelatedToGraphBehavior(object):
                     format(body='requires = "{}"'.format(self.reference)), },
                     path=path_to_child)
         if not update:
-            self.t.run("create {} {}".format(path_to_child, ref_child))
+            self.t.run('create "{}" {}'.format(path_to_child, ref_child))
             self.assertIn("    child/version@lasote/channel from local cache - Cache", self.t.out)
             self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
             self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
             self.assertTrue(os.path.exists(self.t.client_cache.conan(ref_parent)))
         else:
-            self.t.run("create {} {} --update".format(path_to_child, ref_child), assert_error=True)
+            self.t.run('create "{}" {} --update'.format(path_to_child, ref_child), assert_error=True)
             self.assertIn("ERROR: Operation not allowed on a package installed as editable",
                           self.t.out)
 

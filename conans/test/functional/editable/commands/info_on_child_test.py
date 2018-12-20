@@ -37,7 +37,7 @@ class InfoCommandTest(unittest.TestCase):
                                self.conanfile_base.format(body='requires = "{}"'.format(self.ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, },
                     path=lib_folder)
-        self.t.run('link {} {}'.format(lib_folder, self.reference))
+        self.t.run('link "{}" {}'.format(lib_folder, self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 
         # Create child
