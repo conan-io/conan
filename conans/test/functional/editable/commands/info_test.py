@@ -52,7 +52,6 @@ class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
 
     def test_only_none(self):
         self.t.run('info . --only None')
-        print(self.t.out)
         self.assertIn("PROJECT\n"
                       "parent/version@user/name", self.t.out)
 

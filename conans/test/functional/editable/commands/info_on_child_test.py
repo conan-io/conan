@@ -72,7 +72,6 @@ class InfoCommandTest(unittest.TestCase):
         project_name = "PROJECT" if use_local_path else self.child_ref
 
         self.t.run('info {} --only None'.format(args))
-        print(self.t.out)
         self.assertIn("{}\n"
                       "lib/version@user/name\n"
                       "parent/version@user/name".format(project_name), self.t.out)
