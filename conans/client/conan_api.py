@@ -221,11 +221,11 @@ class ConanAPIV1(object):
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = ConanAPIV1(client_cache, user_io, get_conan_runner(), remote_manager,
-                               hook_manager, interactive=interactive)
+                               hook_manager, requester, interactive=interactive)
 
         return conan, client_cache, user_io
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, hook_manager,
+    def __init__(self, client_cache, user_io, runner, remote_manager, hook_manager, requester,
                  interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
@@ -233,6 +233,7 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self._requester = requester
         if not interactive:
             self._user_io.disable_input()
 
@@ -559,9 +560,8 @@ class ConanAPIV1(object):
     def config_install(self, path_or_url, verify_ssl, config_type=None, args=None):
 
         from conans.client.conf.config_installer import configuration_install
-        requester = self._remote_manager._auth_manager._rest_client.requester,  # FIXME: Look out!
         return configuration_install(path_or_url, self._client_cache, self._user_io.out, verify_ssl,
-                                     requester=requester, config_type=config_type, args=args)
+                                     requester=self._requester, config_type=config_type, args=args)
 
     def _info_args(self, reference, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
