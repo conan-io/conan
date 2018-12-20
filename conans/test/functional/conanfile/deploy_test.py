@@ -10,17 +10,22 @@ from conans.util.files import load, mkdir
 
 
 class DeployTest(unittest.TestCase):
+
     @parameterized.expand([(True, ), (False, )])
     def deploy_test(self, deploy_to_abs):
         client = TestClient()
         libconanfile = """from conans import ConanFile
 from conans.tools import save
+
 class Lib(ConanFile):
     exports_sources = "*"
+
     def build(self):
         save("mylib.dll", "mydll")
+
     def package(self):
         self.copy("*")
+
     def deploy(self):
         self.output.info("Lib deploy()")
 """
@@ -37,12 +42,16 @@ class Lib(ConanFile):
             dll_folder = ""
         conanfile = """from conans import ConanFile
 from conans.tools import save
+
 class Pkg(ConanFile):
     requires = "Lib/0.1@user/testing"
+
     def build(self):
         save("myapp.exe", "myexe")
+
     def package(self):
         self.copy("*")
+
     def deploy(self):
         self.output.info("Pkg deploy()")
         self.copy("*.exe")
@@ -60,9 +69,8 @@ class Pkg(ConanFile):
                           client.out)
             self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
                           client.out)
-            deploy_manifest = FileTreeManifest.loads(load(os.path.join(client.current_folder,
-                                                                       folder,
-                                                                       "deploy_manifest.txt")))
+            deploy_manifest = FileTreeManifest.loads(
+                    load(os.path.join(client.current_folder, folder, "deploy_manifest.txt")))
 
             app = os.path.abspath(os.path.join(client.current_folder, folder, "myapp.exe"))
             if deploy_to_abs:
