@@ -945,7 +945,7 @@ class ConanAPIV1(object):
     def link(self, target_path, reference):
         assert isinstance(reference, ConanFileReference)
 
-        target_conanfile = self._graph_manager._loader.load_basic(target_path, output=self._user_io)
+        target_conanfile = self._graph_manager._loader.load_class(target_path)
         if (target_conanfile.name and target_conanfile.name != reference.name) or \
                 (target_conanfile.version and target_conanfile.version != reference.version):
             raise ConanException("Name and version from reference ({}) and target "
