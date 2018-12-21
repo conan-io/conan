@@ -30,8 +30,8 @@ class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"
         self.lib2_ref = "lib2/version@user/channel"
-        self.url, rev = self.create_project(files={'lib1/conanfile.py': self.conanfile,
-                                                   'lib1/file.txt': self.lib1_ref})
+        self.url, _ = self.create_project(files={'lib1/conanfile.py': self.conanfile,
+                                                 'lib1/file.txt': self.lib1_ref})
 
     @parameterized.expand([(True, ), (False, )])
     def test_local_workflow_root_folder(self, use_monorepo):
@@ -61,8 +61,8 @@ class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
         with environment_append({'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
             # Local workflow (from inner folder)
             lib1_path = os.path.join(t.current_folder, path_to_lib)
+            old_path = t.current_folder
             try:
-                old_path = t.current_folder
                 t.current_folder = lib1_path
                 t.run("install . -if tmp", )
                 t.run("source . -if tmp -sf src")
