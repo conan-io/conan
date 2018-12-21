@@ -5,13 +5,15 @@ import unittest
 from conans.client.remote_manager import compress_files
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import md5sum, save
+from conans.util.files import md5sum, mkdir, path_exists, save
 
 
-class TgzMd5Test(unittest.TestCase):
-    """The md5 of a tgz should be the same if the files inside are the same"""
+class FilesTest(unittest.TestCase):
 
     def test_md5_compress(self):
+        """
+        The md5 of a tgz should be the same if the files inside are the same
+        """
         folder = temp_folder()
         save(os.path.join(folder, "one_file.txt"), b"The contents")
         save(os.path.join(folder, "Two_file.txt"), b"Two contents")
@@ -36,3 +38,14 @@ class TgzMd5Test(unittest.TestCase):
         md5_b = md5sum(file_path)
 
         self.assertEquals(md5_a, md5_b)
+
+    def test_path_exists(self):
+        """
+        Unit test of path_exists
+        """
+        tmp_dir = temp_folder()
+        tmp_dir = os.path.join(tmp_dir, "WhatEver")
+        new_path = os.path.join(tmp_dir, "CapsDir")
+        mkdir(new_path)
+        self.assertTrue(path_exists(new_path, tmp_dir))
+        self.assertFalse(path_exists(os.path.join(tmp_dir, "capsdir"), tmp_dir))

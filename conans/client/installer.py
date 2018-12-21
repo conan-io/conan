@@ -139,7 +139,7 @@ class _ConanPackageBuilder(object):
             conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out, self._hook_manager,
+                           self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._conan_ref)
 
         p_hash = self._client_cache.package_summary_hash(self._package_reference)
@@ -168,7 +168,7 @@ class _ConanPackageBuilder(object):
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import run_imports
-        copied_files = run_imports(self._conan_file, self.build_folder, self._out)
+        copied_files = run_imports(self._conan_file, self.build_folder)
 
         try:
             # This is necessary because it is different for user projects
@@ -282,16 +282,12 @@ class ConanInstaller(object):
         for level in nodes_by_level:
             for node in level:
                 conan_ref, conan_file = node.conan_ref, node.conanfile
-                output = ScopedOutput(str(conan_ref), self._out)
+                output = conan_file.output
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
                     raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
-
-                self._propagate_info(node, inverse_levels, deps_graph, output)
-                if node.binary == BINARY_SKIP:  # Privates not necessary
-                    continue
 
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node)
@@ -302,12 +298,15 @@ class ConanInstaller(object):
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
                                                 graph_info)
                 else:
+                    self._propagate_info(node, inverse_levels, deps_graph)
+                    if node.binary == BINARY_SKIP:  # Privates not necessary
+                        continue
                     package_ref = PackageReference(conan_ref, package_id)
                     _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
                     self._handle_node_cache(node, package_ref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
+        self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -329,8 +328,8 @@ class ConanInstaller(object):
         editable_cpp_info.apply_to(node.conanfile.cpp_info)
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput(str(conan_ref), self._out)
+        conan_file = node.conanfile
+        output = conan_file.output
         package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):
@@ -359,8 +358,8 @@ class ConanInstaller(object):
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph, graph_info):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
+        conan_file = node.conanfile
+        output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
         include_dirs = workspace_package.includedirs
         lib_dirs = workspace_package.libdirs
         self._call_package_info(conan_file, workspace_package.package_folder)
@@ -374,7 +373,7 @@ class ConanInstaller(object):
             for p in lib_paths:
                 mkdir(p)
 
-        self._propagate_info(node, inverse_levels, deps_graph, output)
+        self._propagate_info(node, inverse_levels, deps_graph)
 
         build_folder = workspace_package.build_folder
         write_generators(conan_file, build_folder, output)
@@ -387,7 +386,7 @@ class ConanInstaller(object):
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import run_imports
-        copied_files = run_imports(conan_file, build_folder, output)
+        copied_files = run_imports(conan_file, build_folder)
         report_copied_files(copied_files, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
@@ -446,7 +445,7 @@ class ConanInstaller(object):
         self._recorder.package_built(package_ref)
 
     @staticmethod
-    def _propagate_info(node, inverse_levels, deps_graph, out):
+    def _propagate_info(node, inverse_levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
         closure = deps_graph.full_closure(node)
         node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
@@ -456,7 +455,7 @@ class ConanInstaller(object):
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
-                out.info("Applying build-requirement: %s" % str(n.conan_ref))
+                conan_file.output.info("Applying build-requirement: %s" % str(n.conan_ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info

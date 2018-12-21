@@ -22,8 +22,10 @@ class UploadRecorderTest(unittest.TestCase):
         pref1 = PackageReference(ref, "fake_package_id", "prev")
         self.recorder.add_package(pref1, "my_remote", "https://fake_url.com")
         self.recorder.add_recipe(ref2, "my_remote2", "https://fake_url2.com")
-        self.recorder.add_package(PackageReference(ref2, "fakefake_package_id1"), "my_remote", "https://fake_url.com")
-        self.recorder.add_package(PackageReference(ref2, "fakefake_package_id2"), "my_remote", "https://fake_url.com")
+        self.recorder.add_package(PackageReference(ref2, "fakefake_package_id1"), "my_remote",
+                                  "https://fake_url.com")
+        self.recorder.add_package(PackageReference(ref2, "fakefake_package_id2"), "my_remote",
+                                  "https://fake_url.com")
         info = self.recorder.get_info()
         expected_result_without_time = {
                                            "error": False,
@@ -65,7 +67,6 @@ class UploadRecorderTest(unittest.TestCase):
                                                }
                                            ]
                                       }
-
         self._check_result(expected_result_without_time, info)
 
     def unordered_test(self):
@@ -75,9 +76,12 @@ class UploadRecorderTest(unittest.TestCase):
         self.recorder.add_recipe(ref1, "my_remote1", "https://fake_url1.com")
         self.recorder.add_recipe(ref2, "my_remote2", "https://fake_url2.com")
         self.recorder.add_recipe(ref3, "my_remote3", "https://fake_url3.com")
-        self.recorder.add_package(PackageReference(ref1, "fake1_package_id1"), "my_remote1", "https://fake_url1.com")
-        self.recorder.add_package(PackageReference(ref2, "fake2_package_id1"), "my_remote2", "https://fake_url2.com")
-        self.recorder.add_package(PackageReference(ref2, "fake2_package_id2"), "my_remote2", "https://fake_url2.com")
+        self.recorder.add_package(PackageReference(ref1, "fake1_package_id1"), "my_remote1",
+                                  "https://fake_url1.com")
+        self.recorder.add_package(PackageReference(ref2, "fake2_package_id1"), "my_remote2",
+                                  "https://fake_url2.com")
+        self.recorder.add_package(PackageReference(ref2, "fake2_package_id2"), "my_remote2",
+                                  "https://fake_url2.com")
         info = self.recorder.get_info()
         expected_result_without_time = {
             "error": False,
@@ -126,7 +130,6 @@ class UploadRecorderTest(unittest.TestCase):
                 }
             ]
         }
-
         self._check_result(expected_result_without_time, info)
 
     def _check_result(self, expected, result):

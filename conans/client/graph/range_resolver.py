@@ -130,7 +130,6 @@ class RangeResolver(object):
                                 % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
-            base_conanref = base_conanref or "PROJECT"
             raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
                                  "could not be resolved" % (version_range, require, base_conanref))
 

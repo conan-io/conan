@@ -127,7 +127,8 @@ class ConanFileTest(ConanFile):
     name = "Hello2"
     version = "0.1"
 """
-        client = TestClient(base_folder=self.client.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
 

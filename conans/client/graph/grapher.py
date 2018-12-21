@@ -13,11 +13,10 @@ class ConanGrapher(object):
         graph_lines = ['digraph {\n']
 
         for node in self._deps_graph.nodes:
-            ref = node.conan_ref or str(node.conanfile)
             depends = node.neighbors()
             if depends:
                 depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (str(ref), depends))
+                graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
@@ -51,26 +50,25 @@ class ConanHTMLGrapher(object):
         for i, node in enumerate(graph_nodes):
             ref, conanfile = node.conan_ref, node.conanfile
             nodes_map[node] = i
-            if ref:
-                label = "%s/%s" % (ref.name, ref.version)
-                fulllabel = ["<h3>%s</h3>" % str(ref)]
-                fulllabel.append("<ul>")
-                for name, data in [("id", conanfile.info.package_id()),
-                                   ("build_id", build_id(conanfile)),
-                                   ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
-                                   ("homepage",
-                                    '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
-                                   ("license", conanfile.license),
-                                   ("author", conanfile.author),
-                                   ("topics", str(conanfile.topics))]:
-                    if data:
-                        data = data.replace("'", '"')
-                        fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
 
-                fulllabel.append("<ul>")
-                fulllabel = "".join(fulllabel)
-            else:
-                fulllabel = label = node.conan_ref or str(node.conanfile)
+            label = "%s/%s" % (ref.name, ref.version) if ref else conanfile.display_name
+            fulllabel = ["<h3>%s</h3>" % conanfile.display_name]
+            fulllabel.append("<ul>")
+            for name, data in [("id", conanfile.info.package_id()),
+                               ("build_id", build_id(conanfile)),
+                               ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
+                               ("homepage",
+                                '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
+                               ("license", conanfile.license),
+                               ("author", conanfile.author),
+                               ("topics", str(conanfile.topics))]:
+                if data:
+                    data = data.replace("'", '"')
+                    fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
+
+            fulllabel.append("<ul>")
+            fulllabel = "".join(fulllabel)
+
             if node.build_require:
                 shape = "ellipse"
             else:

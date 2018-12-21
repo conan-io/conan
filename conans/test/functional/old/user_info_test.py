@@ -67,5 +67,3 @@ class MyConanfile(ConanFile):
         # Now try local command with a consumer
         client.run('install . --build')
         client.run("build .")
-
-

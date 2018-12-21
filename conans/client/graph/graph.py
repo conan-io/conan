@@ -13,6 +13,8 @@ RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available 
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_WORKSPACE = "Workspace"
 RECIPE_EDITABLE = "Editable"
+RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
+RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -25,13 +27,13 @@ BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, conan_ref, conanfile):
+    def __init__(self, conan_ref, conanfile, recipe=None):
         self.conan_ref = conan_ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None
-        self.recipe = None
+        self.recipe = recipe
         self.remote = None
         self.binary_remote = None
         self.build_require = False
@@ -253,7 +255,7 @@ class DepsGraph(object):
         # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
         # without Edges
         for node in self.nodes:
-            if not node.conan_ref:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
             if package_ref not in unique_nodes:
@@ -284,7 +286,8 @@ class DepsGraph(object):
         closure = new_graph._inverse_closure(references)
         result = []
         for level in reversed(levels):
-            new_level = [n.conan_ref for n in level if (n in closure and n.conan_ref)]
+            new_level = [n.conan_ref for n in level
+                         if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
             if new_level:
                 result.append(new_level)
         return result

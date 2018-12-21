@@ -35,4 +35,4 @@ class HelloReuseConan(ConanFile):
 
         self.client.run("install . --build missing", assert_error=True)
         self.assertIn("Conflict in Hello2/0.1@lasote/stable", self.client.user_io.out)
-        self.assertNotIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+        self.assertNotIn("Generated conaninfo.txt", self.client.user_io.out)

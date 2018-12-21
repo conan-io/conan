@@ -15,6 +15,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
 from conans.util.files import normalize, save
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class ConanManager(object):
@@ -63,7 +64,6 @@ class ConanManager(object):
         @param generators: List of generators from command line. If False, no generator will be
         written
         @param no_imports: Install specified packages but avoid running imports
-        @param inject_require: Reference to add as a requirement to the conanfile
         """
 
         if generators is not False:
@@ -77,14 +77,10 @@ class ConanManager(object):
                                                 self._recorder, None)
         deps_graph, conanfile, cache_settings = result
 
-        if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s (test package)" % str(create_reference))
-                                  if create_reference else "PROJECT",
-                                  self._user_io.out)
-            output.highlight("Installing %s" % reference)
+        if conanfile.display_name == "virtual":
+            self._user_io.out.highlight("Installing package: %s" % str(reference))
         else:
-            output = ScopedOutput(str(reference), self._user_io.out)
-            output.highlight("Installing package")
+            conanfile.output.highlight("Installing package")
         print_graph(deps_graph, self._user_io.out)
 
         try:
@@ -95,7 +91,7 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
-        installer = ConanInstaller(self._client_cache, output, self._remote_manager,
+        installer = ConanInstaller(self._client_cache, self._user_io.out, self._remote_manager,
                                    recorder=self._recorder, workspace=None,
                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
@@ -104,7 +100,7 @@ class ConanManager(object):
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                                client_cache=self._client_cache)
             for node in deps_graph.nodes:
-                if not node.conan_ref:
+                if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
                 complete_recipe_sources(self._remote_manager, self._client_cache,
                                         node.conanfile, node.conan_ref)
@@ -115,6 +111,7 @@ class ConanManager(object):
 
         if install_folder:
             # Write generators
+            output = conanfile.output if conanfile.display_name != "virtual" else self._user_io.out
             if generators is not False:
                 tmp = list(conanfile.generators)  # Add the command line specified generators
                 tmp.extend([g for g in generators if g not in tmp])
@@ -128,12 +125,12 @@ class ConanManager(object):
                 graph_info.save(install_folder)
                 output.info("Generated graphinfo")
             if not no_imports:
-                run_imports(conanfile, install_folder, output)
-            call_system_requirements(conanfile, output)
+                run_imports(conanfile, install_folder)
+            call_system_requirements(conanfile, conanfile.output)
 
             if not create_reference and isinstance(reference, ConanFileReference):
                 # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                    run_deploy(deploy_conanfile, install_folder, output)
+                    run_deploy(deploy_conanfile, install_folder)

@@ -247,15 +247,16 @@ class Pkg(ConanFile):
         client.run("export . LibA/0.1@user/testing")
         client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
 
-        client.save({"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
-                    clean_first=True)
+        client.save(
+                {"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
+                clean_first=True)
         client.run("info conanfile.txt --graph=file.dot")
         graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"LibA/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibB/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibC/0.1@user/testing" -> {"LibD/0.1@user/testing"}', graphfile)
-        self.assertTrue(('"PROJECT" -> {"LibB/0.1@user/testing" "LibA/0.1@user/testing"}' in graphfile) or
-                        ('"PROJECT" -> {"LibA/0.1@user/testing" "LibB/0.1@user/testing"}' in graphfile))
+        self.assertTrue(('"conanfile.txt" -> {"LibB/0.1@user/testing" "LibA/0.1@user/testing"}' in graphfile) or
+                        ('"conanfile.txt" -> {"LibA/0.1@user/testing" "LibB/0.1@user/testing"}' in graphfile))
 
     @parameterized.expand([(True, ), (False, )])
     def double_alias_options_test(self, use_requires):
@@ -313,8 +314,8 @@ class Pkg(ConanFile):
         self.assertIn('"LibA/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibB/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibC/0.1@user/testing" -> {"LibD/0.1@user/testing"}', graphfile)
-        self.assertTrue(('"PROJECT" -> {"LibB/0.1@user/testing" "LibA/0.1@user/testing"}' in graphfile) or
-                        ('"PROJECT" -> {"LibA/0.1@user/testing" "LibB/0.1@user/testing"}' in graphfile))
+        self.assertTrue(('"conanfile.txt" -> {"LibB/0.1@user/testing" "LibA/0.1@user/testing"}' in graphfile) or
+                        ('"conanfile.txt" -> {"LibA/0.1@user/testing" "LibB/0.1@user/testing"}' in graphfile))
         client.run("install conanfile.txt --build=missing")
         self.assertIn("LibD/0.1@user/testing: MYOPTION: LibD False", client.out)
         self.assertIn("LibB/0.1@user/testing: MYOPTION: LibB True", client.out)
@@ -362,8 +363,8 @@ class Pkg(ConanFile):
         self.assertIn('"LibA/sha1@user/testing" -> {"LibC/sha1@user/testing"}', graphfile)
         self.assertIn('"LibB/sha1@user/testing" -> {"LibC/sha1@user/testing"}', graphfile)
         self.assertIn('"LibC/sha1@user/testing" -> {"LibD/sha1@user/testing"}', graphfile)
-        self.assertTrue(('"PROJECT" -> {"LibB/sha1@user/testing" "LibA/sha1@user/testing"}' in graphfile) or
-                        ('"PROJECT" -> {"LibA/sha1@user/testing" "LibB/sha1@user/testing"}' in graphfile))
+        self.assertTrue(('"conanfile.txt" -> {"LibB/sha1@user/testing" "LibA/sha1@user/testing"}' in graphfile) or
+                        ('"conanfile.txt" -> {"LibA/sha1@user/testing" "LibB/sha1@user/testing"}' in graphfile))
 
     def alias_bug_test(self):
         # https://github.com/conan-io/conan/issues/2252

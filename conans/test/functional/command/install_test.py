@@ -128,7 +128,7 @@ class Pkg(ConanFile):
 """})
         client.run("install .")
         self.assertNotIn("Hello", client.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
@@ -312,7 +312,8 @@ class Pkg(ConanFile):
     def change_option_txt_test(self):
         self._create("Hello0", "0.1")
 
-        client = TestClient(base_folder=self.client.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
         files = {CONANFILE_TXT: """[requires]
         Hello0/0.1@lasote/stable
 
@@ -466,8 +467,6 @@ class Pkg(ConanFile):
         # If it was associated, it has to be desasociated
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Failed requirement 'Hello/0.1@lasote/stable' from 'PROJECT'",
-                      client.out)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 

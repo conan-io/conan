@@ -37,7 +37,8 @@ class PythonDiamondTest(unittest.TestCase):
         self.assertNotIn("Project: Build stuff Hello3", self.client.user_io.out)
 
         self.client.run("build .")
-        self.assertIn("Project: Build stuff Hello3", self.client.user_io.out)
+        self.assertIn("conanfile.py (Hello4/0.1@None/None): Build stuff Hello3",
+                      self.client.out)
 
         if platform.system() == "Windows":
             command = "activate && python main.py"

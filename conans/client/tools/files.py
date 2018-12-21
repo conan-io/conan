@@ -363,3 +363,5 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
