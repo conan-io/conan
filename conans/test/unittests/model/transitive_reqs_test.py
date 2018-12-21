@@ -109,8 +109,8 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        self.retriever = Retriever(self.loader, self.output)
+        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver(), None, None)
 
@@ -1500,8 +1500,8 @@ class ConsumerConan(ConanFile):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        self.retriever = Retriever(self.loader, self.output)
+        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver(), None, None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
@@ -1628,8 +1628,8 @@ class CoreSettingsTest(unittest.TestCase):
         profile = Profile()
         profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        retriever = Retriever(loader, self.output)
+        loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        retriever = Retriever(loader)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
         processed_profile = test_processed_profile(profile=profile)
         root_conan = retriever.root(content, processed_profile)
@@ -1915,8 +1915,8 @@ class ChatConan(ConanFile):
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
-        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        retriever = Retriever(loader, output)
+        loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
+        retriever = Retriever(loader)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)

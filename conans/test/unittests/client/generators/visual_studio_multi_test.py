@@ -13,6 +13,7 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('visual_studio')
@@ -29,7 +30,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             settings.compiler.runtime = "MD"
             if use_toolset:
                 settings.compiler.toolset = "v110"
-            conanfile = ConanFile(None, None)
+            conanfile = ConanFile(TestBufferConanOutput(), None)
             conanfile.initialize(Settings({}), EnvValues())
 
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")

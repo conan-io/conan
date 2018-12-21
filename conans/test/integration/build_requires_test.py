@@ -103,6 +103,36 @@ class Lib(ConanFile):
         self.assertIn("LIB PATH FOR BUILD myotherpath%smyboostpath" % os.pathsep,
                       client.out)
 
+    def test_applyname(self):
+        # https://github.com/conan-io/conan/issues/4135
+        client = TestClient()
+        mingw = """from conans import ConanFile
+class Tool(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("mymingwpath")
+"""
+        myprofile = """
+[build_requires]
+consumer*: mingw/0.1@myuser/stable
+"""
+        app = """from conans import ConanFile
+import os
+class App(ConanFile):
+    name = "consumer"
+    def build(self):
+        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+"""
+        client.save({CONANFILE: mingw})
+        client.run("create . mingw/0.1@myuser/stable")
+        client.save({CONANFILE: app,
+                     "myprofile": myprofile})
+        client.run("install . -pr=myprofile")
+        self.assertIn("conanfile.py (consumer/None@None/None): Applying build-requirement: "
+                      "mingw/0.1@myuser/stable", client.out)
+        client.run("build .")
+        self.assertIn("conanfile.py (consumer/None@None/None): APP PATH FOR BUILD mymingwpath",
+                      client.out)
+
     def test_transitive(self):
         client = TestClient()
         mingw = """from conans import ConanFile
