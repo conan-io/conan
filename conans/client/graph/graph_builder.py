@@ -1,7 +1,6 @@
 import time
 
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
-from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -37,19 +36,20 @@ class DepsGraphBuilder(object):
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
                         loop_ancestors, aliased, check_updates, update, remote_name,
                         processed_profile)
-        logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
+        logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.compute_package_ids()
-        logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
+        logger.debug("GRAPH: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update, remote_name):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RangeResolver are also done in new_reqs, and then propagated!
-        conanfile, conanref = node.conanfile, node.conan_ref
+        conanfile = node.conanfile
+        scope = conanfile.display_name
         for _, require in conanfile.requires.items():
-            self._resolver.resolve(require, conanref, update, remote_name)
+            self._resolver.resolve(require, scope, update, remote_name)
 
         # After resolving ranges,
         for req in conanfile.requires.values():
@@ -64,7 +64,7 @@ class DepsGraphBuilder(object):
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile._conan_evaluated_requires.values()),
+                                 % (scope, list(conanfile._conan_evaluated_requires.values()),
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
@@ -173,9 +173,8 @@ class DepsGraphBuilder(object):
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
                     if not conanref:
-                        output = ScopedOutput(str("PROJECT"), self._output)
-                        output.warn("config() has been deprecated."
-                                    " Use config_options and configure")
+                        conanfile.output.warn("config() has been deprecated."
+                                              " Use config_options and configure")
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
@@ -228,7 +227,6 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        output = ScopedOutput(str(requirement.conan_reference), self._output)
         workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
 
         if workspace_package:
@@ -241,14 +239,15 @@ class DepsGraphBuilder(object):
                 result = self._proxy.get_recipe(requirement.conan_reference,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                base_ref = str(current_node.conan_ref or "PROJECT")
-                self._output.error("Failed requirement '%s' from '%s'"
-                                   % (requirement.conan_reference, base_ref))
+                if current_node.conan_ref:
+                    self._output.error("Failed requirement '%s' from '%s'"
+                                       % (requirement.conan_reference,
+                                          current_node.conanfile.display_name))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
 
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, output, processed_profile,
-                                                    reference=requirement.conan_reference)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
+                                                    ref=requirement.conan_reference)
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
@@ -261,6 +260,7 @@ class DepsGraphBuilder(object):
                                          remote_name, processed_profile,
                                          alias_ref=alias_reference)
 
+        logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
         new_node.revision_pinned = requirement.conan_reference.revision is not None
         new_node.recipe = recipe_status

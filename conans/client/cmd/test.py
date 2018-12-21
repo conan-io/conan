@@ -42,7 +42,6 @@ class PackageTester(object):
                                   keep_build=keep_build)
             # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
             build(self._manager._graph_manager, self._manager._hook_manager, conanfile_abs_path,
-                  self._user_io.out,
                   base_folder, test_build_folder, package_folder=None,
                   install_folder=test_build_folder, test=str(reference))
         finally:

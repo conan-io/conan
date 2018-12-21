@@ -42,7 +42,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=reference)
-    logger.debug("Exporting %s" % conanfile_path)
+    logger.debug("EXPORT: %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
@@ -59,7 +59,7 @@ def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client
                           keep_source)
     conanfile_cache_path = client_cache.conanfile(reference)
     hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
-                           reference=reference)
+                         reference=reference)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
@@ -69,12 +69,17 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         os.unlink(scm_src_file)
 
     scm_data = get_scm_data(conanfile)
-    captured_revision = scm_data.capture_revision if scm_data else False
+    if not scm_data:
+        return None, False
 
-    if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
-        return None, captured_revision
+    # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
+    captured_revision = scm_data.capture_revision
 
     scm = SCM(scm_data, conanfile_dir, output)
+    if scm_data.capture_origin or scm_data.capture_revision:
+        # Generate the scm_folder.txt file pointing to the src_path
+        src_path = scm.get_repo_root()
+        save(scm_src_file, src_path.replace("\\", "/"))
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url()
@@ -84,17 +89,14 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm_data.url = origin
+
     if scm_data.revision == "auto":
         if not scm.is_pristine():
             output.warn("Repo status is not pristine: there might be modified files")
         scm_data.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
-    # Generate the scm_folder.txt file pointing to the src_path
-    src_path = scm.get_repo_root()
-    save(scm_src_file, src_path.replace("\\", "/"))
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
-                                   scm_data)
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
     return scm_data, captured_revision
 
@@ -154,8 +156,8 @@ def _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref
 
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
     origin_folder = os.path.dirname(conanfile_path)
-    export_recipe(conanfile, origin_folder, exports_folder, output)
-    export_source(conanfile, origin_folder, exports_source_folder, output)
+    export_recipe(conanfile, origin_folder, exports_folder)
+    export_source(conanfile, origin_folder, exports_source_folder)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
     scm_data, captured_revision = _capture_export_scm_data(conanfile,
@@ -234,7 +236,7 @@ def _classify_patterns(patterns):
     return included, excluded
 
 
-def export_source(conanfile, origin_folder, destination_source_folder, output):
+def export_source(conanfile, origin_folder, destination_source_folder):
     if isinstance(conanfile.exports_sources, str):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
@@ -242,11 +244,12 @@ def export_source(conanfile, origin_folder, destination_source_folder, output):
     copier = FileCopier(origin_folder, destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
+    output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
 
 
-def export_recipe(conanfile, origin_folder, destination_folder, output):
+def export_recipe(conanfile, origin_folder, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
 
@@ -260,5 +263,6 @@ def export_recipe(conanfile, origin_folder, destination_folder, output):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
+    output = conanfile.output
     package_output = ScopedOutput("%s exports" % output.scope, output)
     copier.report(package_output)

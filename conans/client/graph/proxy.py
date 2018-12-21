@@ -138,7 +138,6 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
-            logger.debug("Trying with remote %s" % remote.name)
             try:
                 new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
@@ -147,7 +146,6 @@ class ConanProxy(object):
                 pass
         else:
             msg = "Unable to find '%s' in remotes" % str(conan_reference)
-            logger.debug("Not found in any remote")
             recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
                                           msg, None)
             raise NotFoundException(msg)

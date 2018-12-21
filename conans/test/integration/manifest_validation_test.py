@@ -126,7 +126,8 @@ class ConanFileTest(ConanFile):
     name = "Hello2"
     version = "0.1"
 """
-        client = TestClient(base_folder=self.client.base_folder)
+        # Do not adjust cpu_count, it is reusing a cache
+        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
 
@@ -224,11 +225,11 @@ class ConanFileTest(ConanFile):
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build=missing")
-        info = os.path.join(client.paths.package(package_reference), "conaninfo.txt")
+        info = os.path.join(client.client_cache.package(package_reference), "conaninfo.txt")
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        package_folder = client.paths.package(package_reference)
+        package_folder = client.client_cache.package(package_reference)
         manifest = FileTreeManifest.load(package_folder)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         manifest.save(package_folder)
@@ -269,7 +270,7 @@ class ConanFileTest(ConanFile):
         self.assertIn("ERROR: Do not specify both", self.client.user_io.out)
 
     def test_corrupted_recipe(self):
-        export_path = self.client.paths.export(self.reference)
+        export_path = self.client.client_cache.export(self.reference)
         file_path = os.path.join(export_path, "data.txt")
         save(file_path, "BAD CONTENT")
 
@@ -282,7 +283,7 @@ class ConanFileTest(ConanFile):
         self.client.run("install %s --build missing" % str(self.reference))
         package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
                                                    "%s" % NO_SETTINGS_PACKAGE_ID)
-        package_path = self.client.paths.package(package_reference)
+        package_path = self.client.client_cache.package(package_reference)
         file_path = os.path.join(package_path, "conaninfo.txt")
         save(file_path, load(file_path) + "  ")
 

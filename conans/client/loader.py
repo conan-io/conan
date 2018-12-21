@@ -6,13 +6,11 @@ import uuid
 
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
-from conans.client.output import ScopedOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
@@ -43,92 +41,97 @@ class ConanFileLoader(object):
         self._python_requires.valid = False
         return conanfile
 
-    def load_name_version(self, conanfile_path, name, version):
+    def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
-        # Do not inherit the name from python-requires
+        # Export does a check on existing name & version
         if "name" in conanfile.__dict__:
             if name and name != conanfile.name:
                 raise ConanException("Package recipe exported with name %s!=%s"
                                      % (name, conanfile.name))
-            else:
-                name = conanfile.name
         elif not name:
             raise ConanException("conanfile didn't specify name")
+        else:
+            conanfile.name = name
 
         if "version" in conanfile.__dict__:
             if version and version != conanfile.version:
                 raise ConanException("Package recipe exported with version %s!=%s"
                                      % (version, conanfile.version))
-            else:
-                version = conanfile.version
         elif not version:
             raise ConanException("conanfile didn't specify version")
-        return name, version
+        else:
+            conanfile.version = version
+        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+        return conanfile(self._output, self._runner, str(ref), user, channel)
 
-    def load_export(self, conanfile_path, ref):
-        conanfile = self.load_class(conanfile_path)
-        conanfile.name = ref.name
-        conanfile.version = ref.version
-        output = ScopedOutput(str(ref), self._output)
-        return conanfile(output, self._runner, ref.user, ref.channel)
+    @staticmethod
+    def _initialize_conanfile(conanfile, processed_profile):
+        # Prepare the settings for the loaded conanfile
+        # Mixing the global settings with the specified for that name if exist
+        tmp_settings = processed_profile._settings.copy()
+        if (processed_profile._package_settings and
+                conanfile.name in processed_profile._package_settings):
+            # Update the values, keeping old ones (confusing assign)
+            values_tuple = processed_profile._package_settings[conanfile.name]
+            tmp_settings.values = Values.from_list(values_tuple)
 
-    def load_basic(self, conanfile_path, output, reference=None):
-        result = self.load_class(conanfile_path)
-        try:
-            if reference:
-                result.name, result.version, user, channel, _ = reference
+        conanfile.initialize(tmp_settings, processed_profile._env_values)
+
+    def load_consumer(self, conanfile_path, processed_profile, name=None, version=None, user=None,
+                      channel=None, test=None):
+
+        conanfile_class = self.load_class(conanfile_path)
+        conanfile_class.name = name or conanfile_class.name
+        conanfile_class.version = version or conanfile_class.version
+        if test:
+            display_name = "%s (test package)" % test
+        else:
+            ref = ConanFileReference(conanfile_class.name, conanfile_class.version, user, channel,
+                                     validate=False)
+            if ref.name or ref.version or ref.user or ref.channel:
+                display_name = "%s (%s)" % (os.path.basename(conanfile_path), ref)
             else:
-                user, channel = None, None
-                result.in_local_cache = False
-
-            # Instance the conanfile
-            result = result(output, self._runner, user, channel)
-            return result
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
-
-    def load_conanfile(self, conanfile_path, output, processed_profile,
-                       consumer=False, reference=None):
-        """ loads a ConanFile object from the given file
-        """
-        conanfile = self.load_basic(conanfile_path, output, reference)
-        if processed_profile._dev_reference and processed_profile._dev_reference == reference:
-            conanfile.develop = True
+                display_name = os.path.basename(conanfile_path)
+        conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
+        conanfile.in_local_cache = False
         try:
-            # Prepare the settings for the loaded conanfile
-            # Mixing the global settings with the specified for that name if exist
-            tmp_settings = processed_profile._settings.copy()
-            if (processed_profile._package_settings and
-                    conanfile.name in processed_profile._package_settings):
-                # Update the values, keeping old ones (confusing assign)
-                values_tuple = processed_profile._package_settings[conanfile.name]
-                tmp_settings.values = Values.from_list(values_tuple)
+            self._initialize_conanfile(conanfile, processed_profile)
 
-            conanfile.initialize(tmp_settings, processed_profile._env_values)
-
-            if consumer:
-                conanfile.develop = True
-                processed_profile._user_options.descope_options(conanfile.name)
-                conanfile.options.initialize_upstream(processed_profile._user_options,
-                                                      name=conanfile.name)
-                processed_profile._user_options.clear_unscoped_options()
+            # The consumer specific
+            conanfile.develop = True
+            processed_profile._user_options.descope_options(conanfile.name)
+            conanfile.options.initialize_upstream(processed_profile._user_options,
+                                                  name=conanfile.name)
+            processed_profile._user_options.clear_unscoped_options()
 
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile_txt(self, conan_txt_path, output, processed_profile):
+    def load_conanfile(self, conanfile_path, processed_profile, ref):
+        conanfile_class = self.load_class(conanfile_path)
+        conanfile_class.name = ref.name
+        conanfile_class.version = ref.version
+        conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
+        if processed_profile._dev_reference and processed_profile._dev_reference == ref:
+            conanfile.develop = True
+        try:
+            self._initialize_conanfile(conanfile, processed_profile)
+            return conanfile
+        except Exception as e:  # re-raise with file name
+            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+
+    def load_conanfile_txt(self, conan_txt_path, processed_profile):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
-        path = os.path.dirname(conan_txt_path)
-
-        conanfile = self._parse_conan_txt(contents, path, output, processed_profile)
+        path, basename = os.path.split(conan_txt_path)
+        conanfile = self._parse_conan_txt(contents, path, basename, processed_profile)
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, output, processed_profile):
-        conanfile = ConanFile(output, self._runner)
+    def _parse_conan_txt(self, contents, path, display_name, processed_profile):
+        conanfile = ConanFile(self._output, self._runner, display_name)
         conanfile.initialize(Settings(), processed_profile._env_values)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
@@ -163,7 +166,7 @@ class ConanFileLoader(object):
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner)
+        conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(processed_profile._settings.copy(), processed_profile._env_values)
         conanfile.settings = processed_profile._settings.copy_values()
 
@@ -180,7 +183,6 @@ class ConanFileLoader(object):
             conanfile.options.initialize_upstream(processed_profile._user_options)
 
         conanfile.generators = []  # remove the default txt generator
-
         return conanfile
 
 

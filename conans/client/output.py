@@ -112,5 +112,6 @@ class ScopedOutput(ConanOutput):
         self._color = output._color
 
     def write(self, data, front=None, back=None, newline=False):
+        assert self.scope != "virtual", "printing with scope==virtual"
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
         super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)
