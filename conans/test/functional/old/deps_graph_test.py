@@ -3,7 +3,7 @@ import unittest
 from conans.client.graph.graph_builder import DepsGraph, Node
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
-from conans.model.settings import Settings
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class DepsGraphTest(unittest.TestCase):
@@ -16,8 +16,8 @@ class DepsGraphTest(unittest.TestCase):
         conan_ref1 = ConanFileReference.loads("Hello/0.1@user/stable")
         conan_ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
 
-        conanfile1 = ConanFile(None, None, Settings({}))
-        conanfile2 = ConanFile(None, None, Settings({}))
+        conanfile1 = ConanFile(TestBufferConanOutput(), None)
+        conanfile2 = ConanFile(TestBufferConanOutput(), None)
         n1 = Node(conan_ref1, conanfile1)
         n2 = Node(conan_ref2, conanfile2)
 

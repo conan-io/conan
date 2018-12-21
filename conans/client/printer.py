@@ -7,6 +7,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SimplePaths
 from conans.util.env_reader import get_env
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class Printer(object):
@@ -86,16 +87,14 @@ class Printer(object):
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
             conan = node.conanfile
-            if not ref:
-                # ref is only None iff info is being printed for a project directory, and
-                # not a passed in reference
-                if conan.output is None:  # Identification of "virtual" node
-                    continue
+            if node.recipe == RECIPE_VIRTUAL:
+                continue
+            if node.recipe == RECIPE_CONSUMER:
                 ref = str(conan)
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 
-            self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
+            self._out.writeln("%s" % node.conanfile.display_name, Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
                 reg_remote = registry.refs.get(ref)
@@ -159,8 +158,8 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
-                    ref = d.conan_ref if d.conan_ref else str(d.conanfile)
-                    self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
+                    ref = d.conan_ref
+                    self._out.writeln("        %s" % d.conanfile.display_name, Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 depends = node.neighbors()

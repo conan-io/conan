@@ -10,13 +10,14 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
 
 class VisualStudioGeneratorTest(unittest.TestCase):
 
     def valid_xml_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder1")
@@ -31,10 +32,11 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
         self.assertIn('<PropertyGroup Label="Conan-RootDirs">', content)
         self.assertIn("<Conan-MyPkg-Root>dummy_root_folder1</Conan-MyPkg-Root>", content)
-        self.assertIn("<Conan-My-Fancy-Pkg_2-Root>dummy_root_folder2</Conan-My-Fancy-Pkg_2-Root>", content)
+        self.assertIn("<Conan-My-Fancy-Pkg_2-Root>dummy_root_folder2</Conan-My-Fancy-Pkg_2-Root>",
+                      content)
 
     def user_profile_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         tmp_folder = temp_folder()

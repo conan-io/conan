@@ -9,18 +9,16 @@ from conans.test.utils.test_files import temp_folder
 
 
 class Retriever(object):
-    def __init__(self, loader, output):
+    def __init__(self, loader):
         self.loader = loader
-        self.output = output
         self.folder = temp_folder()
         self._client_cache = None
 
     def root(self, content, processed_profile):
         conan_path = os.path.join(self.folder, "root.py")
         save(conan_path, content)
-        conanfile = self.loader.load_conanfile(conan_path, self.output, processed_profile,
-                                               consumer=True)
-        return Node(None, conanfile)
+        conanfile = self.loader.load_consumer(conan_path, processed_profile)
+        return Node(None, conanfile, "rootpath")
 
     def conan(self, conan_ref, content):
         if isinstance(conan_ref, str):

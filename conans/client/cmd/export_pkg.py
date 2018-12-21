@@ -2,7 +2,6 @@ import os
 
 from conans.client import packager
 from conans.client.graph.graph_manager import load_deps_info
-from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
@@ -40,12 +39,11 @@ def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
     recipe_hash = client_cache.load_manifest(reference).summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
-    package_output = ScopedOutput(str(reference), output)
     if package_folder:
-        packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder, package_output,
+        packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
                             hook_manager, conan_file_path, reference)
     else:
         packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
-                                install_folder, package_output, hook_manager, conan_file_path,
+                                install_folder, hook_manager, conan_file_path,
                                 reference, local=True)
     recorder.package_exported(pkg_reference)
