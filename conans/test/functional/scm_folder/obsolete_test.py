@@ -38,7 +38,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         # Work on pkg to improve it ==> create pkg/v2
         ref_v2 = "pkg/v2@user/channel"
         t.save(files={'conanfile.py': self.conanfile,
-                           'file.txt': ref_v2})
+                      'file.txt': ref_v2})
         t.runner('git commit -m "up to v2"', cwd=t.current_folder)
         t.run("create . {}".format(ref_v2))
         self.assertIn(">>>> I'm {}".format(ref_v2), t.out)
@@ -48,5 +48,3 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         t.run("install {} --build".format(reference))
         self.assertIn(">>>> I'm {}".format(reference), t.out)
         self.assertIn(">>>> content: {}".format(reference), t.out)
-
-
