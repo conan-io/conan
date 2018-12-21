@@ -27,10 +27,10 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         t = TestClient(path_with_spaces=False)
 
         # Create pkg/v1
-        create_local_git_repo(files={'conanfile.py': self.conanfile,
+        url, _ = create_local_git_repo(files={'conanfile.py': self.conanfile,
                                      'file.txt': reference},
                               folder=t.current_folder)
-        t.runner('git remote add origin https://myrepo.com.git', cwd=t.current_folder)
+        t.runner('git remote add origin {}'.format(url), cwd=t.current_folder)
         t.run("create . {}".format(reference))
         self.assertIn(">>>> I'm {}".format(reference), t.out)
         self.assertIn(">>>> content: {}".format(reference), t.out)
@@ -39,7 +39,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         ref_v2 = "pkg/v2@user/channel"
         t.save(files={'conanfile.py': self.conanfile,
                       'file.txt': ref_v2})
-        t.runner('git commit -m "up to v2"', cwd=t.current_folder)
+        t.runner('git commit -a -m "up to v2"', cwd=t.current_folder)
         t.run("create . {}".format(ref_v2))
         self.assertIn(">>>> I'm {}".format(ref_v2), t.out)
         self.assertIn(">>>> content: {}".format(ref_v2), t.out)
