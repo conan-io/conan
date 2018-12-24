@@ -53,12 +53,10 @@ class InfoCommandTest(unittest.TestCase):
     @parameterized.expand([(True, ), (False, )])
     def test_no_args(self, use_local_path):
         args = "." if use_local_path else self.child_ref
-        project_name = "PROJECT" if use_local_path else self.child_ref
+        project_name = "conanfile.py" if use_local_path else self.child_ref
 
         self.t.run('info {}'.format(args))
-        self.assertIn("    Requires:\n"
-                      "        lib/version@user/name\n"
-                      "lib/version@user/name\n"
+        self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
                       "    Remote: None\n"
@@ -74,12 +72,14 @@ class InfoCommandTest(unittest.TestCase):
     @parameterized.expand([(True,), (False,)])
     def test_only_none(self, use_local_path):
         args = "." if use_local_path else self.child_ref
-        project_name = "PROJECT" if use_local_path else self.child_ref
+        project_name = "conanfile.py" if use_local_path else self.child_ref
 
         self.t.run('info {} --only None'.format(args))
-        self.assertIn("{}\n"
-                      "lib/version@user/name\n"
-                      "parent/version@user/name".format(project_name), self.t.out)
+        # Compare, order is not guaranteed
+        self.assertListEqual(sorted(str(self.t.out).splitlines()),
+                             sorted(["lib/version@user/name",
+                                     "parent/version@user/name",
+                                     str(project_name)]))
 
     @parameterized.expand([(True,), (False,)])
     def test_paths(self, use_local_path):

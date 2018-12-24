@@ -48,28 +48,24 @@ class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
         self.t.run('info .')
-        self.assertIn("PROJECT\n"
+        self.assertIn("conanfile.py\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
                       "    Requires:\n"
-                      "        parent/version@user/name\n"
-                      "parent/version@user/name\n"
-                      "    ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.t.out)
+                      "        parent/version@user/name\n", self.t.out)
 
     def test_only_none(self):
         self.t.run('info . --only None')
-        self.assertIn("PROJECT\n"
-                      "parent/version@user/name", self.t.out)
+        self.assertIn("parent/version@user/name\n"
+                      "conanfile.py", self.t.out)
 
     def test_paths(self):
         self.t.run('info . --paths')
-        self.assertIn("PROJECT\n"
+        self.assertIn("conanfile.py\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
                       "    Requires:\n"
-                      "        parent/version@user/name\n"
-                      "parent/version@user/name\n"
-                      "    ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.t.out)
+                      "        parent/version@user/name\n", self.t.out)
 
 
 class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
@@ -83,8 +79,6 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
                       "    Recipe: Editable\n"
                       "    Binary: Editable\n"
                       "    Binary remote: None\n"
-                      "    Required by:\n"
-                      "        PROJECT\n"
                       "    Requires:\n"
                       "        parent/version@user/name\n"
                       "parent/version@user/name\n"
