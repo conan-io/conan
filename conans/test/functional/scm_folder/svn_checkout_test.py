@@ -2,9 +2,8 @@
 
 import os
 import textwrap
-import unittest
-from nose.plugins.attrib import attr
 
+from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client.tools import environment_append
