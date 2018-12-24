@@ -91,7 +91,7 @@ class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_remote_workflow(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner("svn co {}/lib1 .".format(self.url), cwd=t.current_folder)
 
@@ -100,7 +100,7 @@ class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_remote_workflow_monorepo(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
 
@@ -109,7 +109,7 @@ class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_remote_workflow_monorepo_chdir(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
 

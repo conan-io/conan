@@ -77,7 +77,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     captured_revision = scm_data.capture_revision
 
     scm = SCM(scm_data, conanfile_dir, output)
-    if get_bool_from_text(os.environ.get("USE_SCM_FOLER", "True")):
+    if get_bool_from_text(os.environ.get("USE_SCM_FOLDER", "True")):
         if scm_data.capture_origin or scm_data.capture_revision:
             # Generate the scm_folder.txt file pointing to the src_path
             src_path = scm.get_repo_root()

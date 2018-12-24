@@ -51,7 +51,7 @@ class SCMFolderGitTest(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_local_workflow_root_folder(self, use_scm_folder):
-        with environment_append({'USE_SCM_FOLER': use_scm_folder}):
+        with environment_append({'USE_SCM_FOLDER': use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
 
@@ -60,7 +60,7 @@ class SCMFolderGitTest(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_local_workflow_inner_folder(self, use_scm_folder):
-        with environment_append({'USE_SCM_FOLER': use_scm_folder}):
+        with environment_append({'USE_SCM_FOLDER': use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
 
@@ -79,14 +79,14 @@ class SCMFolderGitTest(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_remote_workflow(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
             self._run_remote_test(t, t.current_folder, "lib1")
 
     @parameterized.expand([("True",), ("False",)])
     def test_remote_workflow_chdir(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
             self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), ".")

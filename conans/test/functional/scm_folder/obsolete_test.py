@@ -26,7 +26,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
 
     @parameterized.expand([("True", ), ("False", )])
     def test_obsolete(self, use_scm_folder):
-        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+        with environment_append({"USE_SCM_FOLDER": use_scm_folder}):
             reference = "pkg/v1@user/channel"
             t = TestClient(path_with_spaces=False)
 
