@@ -666,14 +666,13 @@ class StoppableThreadBottle(threading.Thread):
     """
     Real server to test download endpoints
     """
-    server = None
-    port = None
 
-    def __init__(self, host="127.0.0.1", port=None):
-        self.port = port or random.randrange(8200, 8600)
+    def __init__(self, host=None, port=None):
+        self.host = host or "127.0.0.1"
+        self.port = port or random.randrange(49000, 49151)
         self.server = bottle.Bottle()
         super(StoppableThreadBottle, self).__init__(target=self.server.run,
-                                                    kwargs={"host": host, "port": self.port})
+                                                    kwargs={"host": self.host, "port": self.port})
         self.daemon = True
         self._stop = threading.Event()
 
