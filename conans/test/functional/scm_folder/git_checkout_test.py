@@ -10,7 +10,7 @@ from conans.client.tools import environment_append
 from conans.test.utils.tools import TestClient, create_local_git_repo
 
 
-class SCMFolderGITCheckout(unittest.TestCase):
+class SCMFolderGitTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile, tools
@@ -26,6 +26,11 @@ class SCMFolderGITCheckout(unittest.TestCase):
                                                                self.user, self.channel))
                 self.output.info(">>>> content: {} ".format(content)) 
         """)
+
+    def run(self, *args, **kwargs):
+        with environment_append({'CONAN_USERNAME': "user",
+                                 'CONAN_CHANNEL': "channel"}):
+            super(SCMFolderGitTest, self).run(*args, **kwargs)
 
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"
@@ -46,9 +51,7 @@ class SCMFolderGITCheckout(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_local_workflow_root_folder(self, use_scm_folder):
-        with environment_append({'USE_SCM_FOLER': use_scm_folder,
-                                 'CONAN_USERNAME': "user",
-                                 'CONAN_CHANNEL': "channel"}):
+        with environment_append({'USE_SCM_FOLER': use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
 
@@ -57,9 +60,7 @@ class SCMFolderGITCheckout(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False",)])
     def test_local_workflow_inner_folder(self, use_scm_folder):
-        with environment_append({'USE_SCM_FOLER': use_scm_folder,
-                                 'CONAN_USERNAME': "user",
-                                 'CONAN_CHANNEL': "channel"}):
+        with environment_append({'USE_SCM_FOLER': use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
 
@@ -81,8 +82,6 @@ class SCMFolderGITCheckout(unittest.TestCase):
         with environment_append({"USE_SCM_FOLER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-
-            # Remote workflow
             self._run_remote_test(t, t.current_folder, "lib1")
 
     @parameterized.expand([("True",), ("False",)])
@@ -90,6 +89,4 @@ class SCMFolderGITCheckout(unittest.TestCase):
         with environment_append({"USE_SCM_FOLER": use_scm_folder}):
             t = TestClient(path_with_spaces=False)
             t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-
-            # Remote workflow
             self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), ".")
