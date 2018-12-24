@@ -591,9 +591,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
-                                                          check_updates, False, remote_name,
-                                                          recorder, workspace=None)
+        deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
+                                                       check_updates, False, remote_name,
+                                                       recorder, workspace=None)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -603,10 +603,10 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info,
-                                                                  build_modes, check_updates,
-                                                                  False, remote_name, recorder,
-                                                                  workspace=None)
+        deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
+                                                               build_modes, check_updates,
+                                                               False, remote_name, recorder,
+                                                               workspace=None)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
@@ -616,9 +616,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
-                                                                  update, False, remote_name,
-                                                                  recorder, workspace=None)
+        deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
+                                                               update, False, remote_name,
+                                                               recorder, workspace=None)
         return deps_graph, conanfile
 
     @api_method

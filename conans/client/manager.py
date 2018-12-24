@@ -32,9 +32,9 @@ class ConanManager(object):
 
     def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
         references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        deps_graph, _, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
-                                                          False, update, remote_name, self._recorder,
-                                                          workspace)
+        deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
+                                                       False, update, remote_name, self._recorder,
+                                                       workspace)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
@@ -75,7 +75,7 @@ class ConanManager(object):
         result = self._graph_manager.load_graph(reference, create_reference, graph_info,
                                                 build_modes, False, update, remote_name,
                                                 self._recorder, None)
-        deps_graph, conanfile, cache_settings = result
+        deps_graph, conanfile = result
 
         if conanfile.display_name == "virtual":
             self._user_io.out.highlight("Installing package: %s" % str(reference))
@@ -84,9 +84,9 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         try:
-            if cross_building(cache_settings):
-                b_os, b_arch, h_os, h_arch = get_cross_building_settings(cache_settings)
-                message = "Cross-build from '%s:%s' to '%s:%s'" % (b_os, b_arch, h_os, h_arch)
+            if cross_building(graph_info.profile.processed_settings):
+                settings = get_cross_building_settings(graph_info.profile.processed_settings)
+                message = "Cross-build from '%s:%s' to '%s:%s'" % settings
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass

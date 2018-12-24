@@ -115,7 +115,6 @@ class GraphManager(object):
 
         # Computing the full dependency graph
         profile = graph_info.profile
-        cache_settings = profile.processed_settings
         processed_profile = ProcessedProfile(profile, create_reference)
         conan_ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
@@ -156,7 +155,7 @@ class GraphManager(object):
             self._output.writeln("")
 
         build_mode.report_matches()
-        return deps_graph, conanfile, cache_settings
+        return deps_graph, conanfile
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):

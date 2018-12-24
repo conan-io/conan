@@ -82,7 +82,8 @@ class Printer(object):
 
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.conan_ref, node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.conan_ref,
+                                      node.conanfile.info.package_id()), []).append(node)
 
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -143,12 +144,14 @@ class Printer(object):
                 self._out.writeln("    Recipe: %s" % node.recipe)
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
             if revisions_enabled:
-                if isinstance(ref, ConanFileReference) and show("revision") and node.conan_ref.revision:  # Excludes PROJECT
+                if (isinstance(ref, ConanFileReference) and show("revision") and
+                        node.conan_ref.revision):
                     self._out.writeln("    Revision: %s" % node.conan_ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
-                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name if node.binary_remote else "None"))
+                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name
+                                                             if node.binary_remote else "None"))
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
@@ -156,10 +159,11 @@ class Printer(object):
 
             dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
-                self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
-                for d in dependants:
-                    ref = d.conan_ref
-                    self._out.writeln("        %s" % d.conanfile.display_name, Color.BRIGHT_YELLOW)
+                required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
+                if required:
+                    self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
+                    for d in required:
+                        self._out.writeln("        %s" % d.display_name, Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 depends = node.neighbors()
@@ -237,7 +241,8 @@ class Printer(object):
                 # Always compare outdated with local recipe, simplification,
                 # if a remote check is needed install recipe first
                 if "outdated" in package:
-                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
+                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"],
+                                             indent=2)
                 self._out.writeln("")
 
     def print_profile(self, name, profile):
