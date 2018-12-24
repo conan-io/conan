@@ -288,6 +288,14 @@ class MyTest(ConanFile):
         path = os.path.join(self.client.current_folder, "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
 
+    def info_virtual_test(self):
+        # Checking that "Required by: virtual" doesnt appear in the output
+        self.client = TestClient()
+        self._create("Hello", "0.1")
+        self.client.run("info Hello/0.1@lasote/stable")
+        self.assertNotIn("virtual", self.client.out)
+        self.assertNotIn("Required", self.client.out)
+
     def reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
