@@ -223,25 +223,25 @@ class B2Generator(Generator):
             }.get(self.conanfile.settings.get_safe('compiler'))+'-'+self.b2_toolset_version
             self._b2_variation['architecture'] = {
                 'x86': 'x86', 'x86_64': 'x86',
-                'ppc64le': 'power', 'ppc64': 'power',
-                'armv6': 'arm', 'armv7': 'arm', 'armv7hf': 'arm', 'armv8': 'arm',
-                'armv7s': 'arm', 'armv7k': 'arm',
+                'ppc64le': 'power', 'ppc64': 'power', 'ppc32': 'power',
+                'armv6': 'arm', 'armv7': 'arm', 'armv7hf': 'arm', 'armv7s': 'arm', 'armv7k': 'arm',
+                'armv8': 'arm', 'armv8_32': 'arm', 'armv8.3': 'arm',
                 'sparc': 'sparc', 'sparcv9': 'sparc',
                 'mips': 'mips1', 'mips64': 'mips64',
             }.get(self.conanfile.settings.get_safe('arch'))
             self._b2_variation['instruction-set'] = {
                 'armv6': 'armv6', 'armv7': 'armv7', 'armv7hf': None, 'armv7k': None,
-                'armv7s': 'armv7s', 'armv8': None, 'avr': None,
+                'armv7s': 'armv7s', 'armv8': None, 'armv8_32': None, 'armv8.3': None, 'avr': None,
                 'mips': None, 'mips64': None,
-                'ppc64le': None, 'ppc64': 'powerpc64',
+                'ppc64le': None, 'ppc64': 'powerpc64', 'ppc32': None,
                 'sparc': None, 'sparcv9': 'v9',
                 'x86': None, 'x86_64': None,
             }.get(self.conanfile.settings.get_safe('arch'))
             self._b2_variation['address-model'] = {
                 'x86': '32', 'x86_64': '64',
                 'ppc64le': '64', 'ppc64': '64',
-                'armv6': '32', 'armv7': '32', 'armv7hf': '32', 'armv8': '64',
-                'armv7s': '32', 'armv7k': '32',
+                'armv6': '32', 'armv7': '32', 'armv7s': '32', 'armv7k': '32', 'armv7hf': '32',
+                'armv8': '64', 'armv8_32': '32', 'armv8.3': "64",
                 'sparc': '32', 'sparcv9': '64',
                 'mips': '32', 'mips64': '64',
             }.get(self.conanfile.settings.get_safe('arch'))
