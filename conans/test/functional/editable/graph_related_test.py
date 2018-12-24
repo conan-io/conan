@@ -86,16 +86,12 @@ class RelatedToGraphBehavior(object):
         self.t.run('link . {}'.format(self.reference))
 
         # Install our project and check that everything is in place
-        if not update:
-            self.t.run('install {}'.format(self.reference))
-            self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
-            self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
-                          self.t.out)
-            self.assertTrue(os.path.exists(self.t.client_cache.conan(ref_parent)))
-        else:
-            self.t.run('install {} --update'.format(self.reference), assert_error=True)
-            self.assertIn("ERROR: Operation not allowed on a package installed as editable",
-                          self.t.out)
+        update = ' --update' if update else ''
+        self.t.run('install {}{}'.format(self.reference, update))
+        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
+                      self.t.out)
+        self.assertTrue(os.path.exists(self.t.client_cache.conan(ref_parent)))
 
     @parameterized.expand([(True,), (False,)])
     def test_middle_graph(self, update):
@@ -121,16 +117,15 @@ class RelatedToGraphBehavior(object):
         self.t.save(files={'conanfile.py': conanfile_base.
                     format(body='requires = "{}"'.format(self.reference)), },
                     path=path_to_child)
-        if not update:
-            self.t.run('create "{}" {}'.format(path_to_child, ref_child))
-            self.assertIn("    child/version@lasote/channel from local cache - Cache", self.t.out)
-            self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
-            self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
-            self.assertTrue(os.path.exists(self.t.client_cache.conan(ref_parent)))
-        else:
-            self.t.run('create "{}" {} --update'.format(path_to_child, ref_child), assert_error=True)
-            self.assertIn("ERROR: Operation not allowed on a package installed as editable",
-                          self.t.out)
+
+        update = ' --update' if update else ''
+        self.t.run('create "{}" {} {}'.format(path_to_child, ref_child, update))
+        child_remote = 'No remote' if update else 'Cache'
+        self.assertIn("    child/version@lasote/channel from local cache - {}".format(child_remote),
+                      self.t.out)
+        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
+        self.assertTrue(os.path.exists(self.t.client_cache.conan(ref_parent)))
 
 
 class CreateLinkOverEmptyCache(EmptyCacheTestMixin, RelatedToGraphBehavior, unittest.TestCase):
