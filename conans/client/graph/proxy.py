@@ -23,6 +23,14 @@ class ConanProxy(object):
         self._registry = client_cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
+        if self._client_cache.installed_as_editable(conan_reference):
+            conanfile_path = self._client_cache.conanfile(conan_reference)
+            status = RECIPE_EDITABLE
+            # TODO: log_recipe_got_from_editable(reference)
+            # TODO: recorder.recipe_fetched_as_editable(reference)
+            metadata = self._client_cache.load_metadata(conan_reference)
+            return conanfile_path, status, None, conan_reference.copy_with_rev(metadata.recipe.revision)
+
         with self._client_cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference, check_updates, update, remote_name, recorder)
             conanfile_path, status, remote, reference = result
@@ -65,12 +73,7 @@ class ConanProxy(object):
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         if not check_updates:
-            if self._client_cache.installed_as_editable(reference):
-                status = RECIPE_EDITABLE
-                # TODO: log_recipe_got_from_editable(reference)
-                # TODO: recorder.recipe_fetched_as_editable(reference)
-            else:
-                status = RECIPE_INCACHE
+            status = RECIPE_INCACHE
             ref = reference.copy_with_rev(cur_revision)
             return conanfile_path, status, remote, ref
 

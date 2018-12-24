@@ -80,14 +80,12 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
                       "    Binary: Editable\n"
                       "    Binary remote: None\n"
                       "    Requires:\n"
-                      "        parent/version@user/name\n"
-                      "parent/version@user/name\n"
-                      "    ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.t.out)
+                      "        parent/version@user/name\n", self.t.out)
 
     def test_only_none(self):
         self.t.run('info {} --only None'.format(self.reference))
-        self.assertIn("lib/version@user/name\n"
-                      "parent/version@user/name", self.t.out)
+        self.assertListEqual(sorted(str(self.t.out).splitlines()),
+                             sorted(["lib/version@user/name", "parent/version@user/name"]))
 
     def test_paths(self):
         self.t.run('info {} --paths'.format(self.reference), assert_error=True)
