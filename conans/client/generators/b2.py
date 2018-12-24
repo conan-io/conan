@@ -14,6 +14,7 @@ from conans.model import Generator
 
 
 class B2Generator(Generator):
+    _b2_variation_key = None
 
     @property
     def filename(self):
@@ -21,11 +22,11 @@ class B2Generator(Generator):
 
     @property
     def content(self):
-        '''
+        """
         Generates two content files: conanbuildinfo.jam and conanbuildinfo-ID.jam which
         the former defines sub-projects for each package and loads the other files and
         the latter define variables and targets for the packages.
-        '''
+        """
         result = {
             'conanbuildinfo.jam': None,
             self.conanbuildinfo_variation_jam: None
@@ -72,10 +73,10 @@ class B2Generator(Generator):
         return result
 
     def b2_project_for_dep(self, name, info):
-        '''
+        """
         Generates a sub-project definition to match the package. Which is used later
         to define targets for the package libs.
-        '''
+        """
         if not info:
             return []
         name = name.lower()
@@ -83,11 +84,11 @@ class B2Generator(Generator):
         return [self.conanbuildinfo_project_template.format(name=name)]
     
     def b2_constants_for_dep(self, name, info, user=None):
-        '''
+        """
         Generates a list of constant variable definitions for the information in the
         CppInfo conan data given for the package. If user variables map is also given
         those are also generated following the package variables.
-        '''
+        """
         if not info:
             return []
         name = name.lower()
@@ -119,10 +120,10 @@ class B2Generator(Generator):
         return result
 
     def b2_targets_for_dep(self, name, info):
-        '''
+        """
         Generates individual targets for the libraries in a package and a single "libs"
         collective alias target that refers to them.
-        '''
+        """
         if not info:
             return []
         name = name.lower()
@@ -140,10 +141,10 @@ class B2Generator(Generator):
         return result
 
     def b2_constant(self, name, var, val, is_paths=False):
-        '''
+        """
         Generates a constant definition for the given variable and value(s). If is_path
-        is True the value(s) are reformated to be acceptable to b2.
-        '''
+        is True the value(s) are reformatted to be acceptable to b2.
+        """
         if not val:
             return []
         if is_paths:
@@ -158,34 +159,33 @@ class B2Generator(Generator):
             name=name, var=var, variation=self.b2_variation_id, value="\n".join(value)
         )]
 
-    def b2_path(self, p):
-        '''
-        Adjust a ragular path to the form b2 can use in source code.
-        '''
-        return p.replace('\\', '/')
+    @staticmethod
+    def b2_path(path):
+        """
+        Adjust a regular path to the form b2 can use in source code.
+        """
+        return path.replace('\\', '/')
 
-    def b2_features(self, m):
-        '''
-        Generated a b2 requirements list, i.e. <name>value list, from the given
-        map of key-values.
-        '''
+    @staticmethod
+    def b2_features(variations):
+        """
+        Generated a b2 requirements list, i.e. <name>value list, from the given 'variations' dict.
+        """
         result = []
-        for k, v in sorted(m.items()):
+        for k, v in sorted(variations.items()):
             if v:
                 result += ['<%s>%s' % (k, v)]
         return result
 
     @property
     def conanbuildinfo_variation_jam(self):
-        return 'conanbuildinfo-%s.jam'%(self.b2_variation_key)
-
-    _b2_variation_key = None
+        return 'conanbuildinfo-%s.jam' % self.b2_variation_key
 
     @property
     def b2_variation_key(self):
-        '''
+        """
         A hashed key of the variation to use a UID for the variation.
-        '''
+        """
         if not self._b2_variation_key:
             self._b2_variation_key = md5(self.b2_variation_id.encode('utf-8')).hexdigest()
         return self._b2_variation_key
@@ -194,10 +194,10 @@ class B2Generator(Generator):
 
     @property
     def b2_variation_id(self):
-        '''
+        """
         A compact single comma separated list of the variation where only the values
         of the b2 variation are included in sorted by feature name order.
-        '''
+        """
         if not self._b2_variation_id:
             vid = []
             for k in sorted(self.b2_variation.keys()):
@@ -208,20 +208,20 @@ class B2Generator(Generator):
 
     @property
     def b2_variation(self):
-        '''
+        """
         Returns a map of b2 features & values as translated from conan settings that
         can affect the link compatibility of libraries.
-        '''
+        """
         if not getattr(self, "_b2_variation_key", None):
-            self._b2_variation = {}
-            self._b2_variation['toolset'] = {
+            b2_variation = {}
+            b2_variation['toolset'] = {
                 'sun-cc': 'sun',
                 'gcc': 'gcc',
                 'Visual Studio': 'msvc',
                 'clang': 'clang',
                 'apple-clang': 'clang'
             }.get(self.conanfile.settings.get_safe('compiler'))+'-'+self.b2_toolset_version
-            self._b2_variation['architecture'] = {
+            b2_variation['architecture'] = {
                 'x86': 'x86', 'x86_64': 'x86',
                 'ppc64le': 'power', 'ppc64': 'power', 'ppc32': 'power',
                 'armv6': 'arm', 'armv7': 'arm', 'armv7hf': 'arm', 'armv7s': 'arm', 'armv7k': 'arm',
@@ -229,7 +229,7 @@ class B2Generator(Generator):
                 'sparc': 'sparc', 'sparcv9': 'sparc',
                 'mips': 'mips1', 'mips64': 'mips64',
             }.get(self.conanfile.settings.get_safe('arch'))
-            self._b2_variation['instruction-set'] = {
+            b2_variation['instruction-set'] = {
                 'armv6': 'armv6', 'armv7': 'armv7', 'armv7hf': None, 'armv7k': None,
                 'armv7s': 'armv7s', 'armv8': None, 'armv8_32': None, 'armv8.3': None, 'avr': None,
                 'mips': None, 'mips64': None,
@@ -237,7 +237,7 @@ class B2Generator(Generator):
                 'sparc': None, 'sparcv9': 'v9',
                 'x86': None, 'x86_64': None,
             }.get(self.conanfile.settings.get_safe('arch'))
-            self._b2_variation['address-model'] = {
+            b2_variation['address-model'] = {
                 'x86': '32', 'x86_64': '64',
                 'ppc64le': '64', 'ppc64': '64',
                 'armv6': '32', 'armv7': '32', 'armv7s': '32', 'armv7k': '32', 'armv7hf': '32',
@@ -245,7 +245,7 @@ class B2Generator(Generator):
                 'sparc': '32', 'sparcv9': '64',
                 'mips': '32', 'mips64': '64',
             }.get(self.conanfile.settings.get_safe('arch'))
-            self._b2_variation['target-os'] = {
+            b2_variation['target-os'] = {
                 'Windows': 'windows', 'WindowsStore': 'windows',
                 'Linux': 'linux',
                 'Macos': 'darwin',
@@ -255,13 +255,13 @@ class B2Generator(Generator):
                 'SunOS': 'solaris',
                 'Arduino': 'linux',
             }.get(self.conanfile.settings.get_safe('os'))
-            self._b2_variation['variant'] = {
+            b2_variation['variant'] = {
                 'Debug': 'debug',
                 'Release': 'release',
                 'RelWithDebInfo': 'relwithdebinfo',
                 'MinSizeRel': 'minsizerel',
             }.get(self.conanfile.settings.get_safe('build_type'))
-            self._b2_variation['cxxstd'] = {
+            b2_variation['cxxstd'] = {
                 '98': '98', 'gnu98': '98',
                 '11': '11', 'gnu11': '11',
                 '14': '14', 'gnu14': '14',
@@ -270,7 +270,7 @@ class B2Generator(Generator):
                 '2b': '2b', 'gnu2b': '2b',
                 '2c': '2c', 'gnu2c': '2c',
             }.get(self.conanfile.settings.get_safe('cppstd'))
-            self._b2_variation['cxxstd:dialect'] = {
+            b2_variation['cxxstd:dialect'] = {
                 '98': None, 'gnu98': 'gnu',
                 '11': None, 'gnu11': 'gnu',
                 '14': None, 'gnu14': 'gnu',
@@ -279,8 +279,8 @@ class B2Generator(Generator):
                 '2b': None, 'gnu2b': 'gnu',
                 '2c': None, 'gnu2c': 'gnu',
             }.get(self.conanfile.settings.get_safe('cppstd'))
-        return self._b2_variation
-    
+        return b2_variation
+
     @property
     def b2_toolset_version(self):
         if self.conanfile.settings.compiler == 'Visual Studio':
@@ -290,14 +290,14 @@ class B2Generator(Generator):
                 return str(self.conanfile.settings.compiler.version)+'.0'
         return str(self.conanfile.settings.compiler.version)
 
-    conanbuildinfo_header_text = '''\
+    conanbuildinfo_header_text = """
 #|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
-'''
+"""
 
-    conanbuildinfo_prefix_text = '''\
+    conanbuildinfo_prefix_text = """
 import path ;
 import project ;
 import modules ;
@@ -375,14 +375,14 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
         call-in-project : include-conanbuildinfo $(__cbi__) ;
     }
 }
-'''
+"""
 
-    conanbuildinfo_project_template = '''\
+    conanbuildinfo_project_template = """
 # {name}
 project-define {name} ;
-'''
+"""
 
-    conanbuildinfo_postfix_text = '''\
+    conanbuildinfo_postfix_text = """
 {
     local __define_targets__ = yes ;
     for local __cbi__ in $(__conanbuildinfo__)
@@ -390,15 +390,15 @@ project-define {name} ;
         call-in-project : include-conanbuildinfo $(__cbi__) ;
     }
 }
-'''
+"""
 
-    conanbuildinfo_variation_constant_template = '''\
+    conanbuildinfo_variation_constant_template = """
 constant-if {var}({name},{variation}) :
 {value}
     ;
-'''
+"""
 
-    conanbuildinfo_variation_lib_template = '''\
+    conanbuildinfo_variation_lib_template = """
 if $(__define_targets__) {{
     call-in-project $({name}-mod) : lib {lib}
         :
@@ -406,9 +406,9 @@ if $(__define_targets__) {{
         :
         : $(usage-requirements({name},{variation})) ;
     call-in-project $({name}-mod) : explicit {lib} ; }}
-'''
+"""
 
-    conanbuildinfo_variation_alias_template = '''\
+    conanbuildinfo_variation_alias_template = """
 if $(__define_targets__) {{
     call-in-project $({name}-mod) : alias libs
         : {libs}
@@ -416,4 +416,4 @@ if $(__define_targets__) {{
         :
         : $(usage-requirements({name},{variation})) ;
     call-in-project $({name}-mod) : explicit libs ; }}
-'''
+"""
