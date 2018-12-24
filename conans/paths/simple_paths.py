@@ -103,5 +103,4 @@ class SimplePaths(object):
         return self.package_layout(conan_reference).package_metadata()
 
     def installed_as_editable(self, conan_reference):
-        return self.package_layout(conan_reference).installed_as_editable()
-
+        return isinstance(self.package_layout(conan_reference), PackageEditableLayout)

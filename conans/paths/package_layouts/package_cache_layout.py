@@ -81,6 +81,3 @@ class PackageCacheLayout(object):
 
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
-
-    def installed_as_editable(self):
-        return False

@@ -27,9 +27,6 @@ class PackageEditableLayout(object):
         """
         return os.path.join(self.conan(), CONANFILE)
 
-    def installed_as_editable(self):
-        return True
-
     def editable_package_layout_file(self):
         return os.path.join(self.conan(), CONAN_PACKAGE_LAYOUT_FILE)
 
