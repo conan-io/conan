@@ -14,6 +14,7 @@ from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
 from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
+from conans.util.config_parser import get_bool_from_text
 
 
 def export_alias(reference, target_reference, client_cache):
@@ -76,10 +77,11 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     captured_revision = scm_data.capture_revision
 
     scm = SCM(scm_data, conanfile_dir, output)
-    if scm_data.capture_origin or scm_data.capture_revision:
-        # Generate the scm_folder.txt file pointing to the src_path
-        src_path = scm.get_repo_root()
-        save(scm_src_file, src_path.replace("\\", "/"))
+    if get_bool_from_text(os.environ.get("USE_SCM_FOLER", "True")):
+        if scm_data.capture_origin or scm_data.capture_revision:
+            # Generate the scm_folder.txt file pointing to the src_path
+            src_path = scm.get_repo_root()
+            save(scm_src_file, src_path.replace("\\", "/"))
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url()

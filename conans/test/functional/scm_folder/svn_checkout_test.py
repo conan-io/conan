@@ -1,0 +1,112 @@
+# coding=utf-8
+
+import os
+import textwrap
+import unittest
+
+from parameterized import parameterized
+
+from conans.client.tools import environment_append
+from conans.test.utils.tools import SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient
+
+
+@unittest.attr("svn")
+class SCMFolderSVNCheckout(SVNLocalRepoTestCase):
+    conanfile = textwrap.dedent("""\
+        import os
+        from conans import ConanFile, tools
+
+        class Pkg(ConanFile):
+            scm = {"type": "svn",
+                   "url": "auto",
+                   "revision": "auto"}
+
+            def build(self):
+                content = tools.load(os.path.join(self.source_folder, "file.txt"))
+                self.output.info(">>>> I'm {}/{}@{}/{}".format(self.name, self.version, 
+                                                               self.user, self.channel))
+                self.output.info(">>>> content: {} ".format(content)) 
+        """)
+
+    def setUp(self):
+        self.lib1_ref = "lib1/version@user/channel"
+        self.lib2_ref = "lib2/version@user/channel"
+        self.url, _ = self.create_project(files={'lib1/conanfile.py': self.conanfile,
+                                                 'lib1/file.txt': self.lib1_ref})
+
+    def _run_local_test(self, t, working_dir, path_to_conanfile):
+        old_wd = t.current_folder
+        try:
+            t.current_folder = working_dir
+            t.run("install {} -if tmp".format(path_to_conanfile))
+            t.run("source {} -if tmp -sf src".format(path_to_conanfile))
+            t.run("build {} -if tmp -sf src -bf build".format(path_to_conanfile))
+            self.assertIn(">>>> I'm None/None@user/channel".format(self.lib1_ref), t.out)
+            self.assertIn(">>>> content: {}".format(self.lib1_ref), t.out)
+        finally:
+            t.current_folder = old_wd
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_local_workflow_root_folder(self, use_scm_folder):
+        t = TestClient(path_with_spaces=False)
+        t.runner("svn co {}/lib1 .".format(self.url), cwd=t.current_folder)
+
+        with environment_append({'USE_SCM_FOLDER': use_scm_folder, 'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
+            # Local workflow (from root folder)
+            self._run_local_test(t, t.current_folder, ".")
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_local_workflow_root_folder_monorepo(self, use_scm_folder):
+        t = TestClient(path_with_spaces=False)
+        t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
+
+        with environment_append({'USE_SCM_FOLDER': use_scm_folder, 'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
+            # Local workflow (from root folder)
+            self._run_local_test(t, t.current_folder, "lib1")
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_local_workflow_root_folder_monorepo_chdir(self, use_scm_folder):
+        t = TestClient(path_with_spaces=False)
+        t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
+
+        with environment_append({'USE_SCM_FOLDER': use_scm_folder, 'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
+            # Local workflow (from root folder)
+            self._run_local_test(t, os.path.join(t.current_folder, "lib1"), ".")
+
+    def _run_remote_test(self, t, working_dir, path_to_conanfile):
+        old_wd = t.current_folder
+        try:
+            t.current_folder = working_dir
+            t.run("create {} {}".format(path_to_conanfile, self.lib1_ref))
+            self.assertIn(">>>> I'm {}".format(self.lib1_ref), t.out)
+            self.assertIn(">>>> content: {}".format(self.lib1_ref), t.out)
+        finally:
+            t.current_folder = old_wd
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_remote_workflow(self, use_scm_folder):
+        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+            t = TestClient(path_with_spaces=False)
+            t.runner("svn co {}/lib1 .".format(self.url), cwd=t.current_folder)
+
+            # Remote workflow
+            self._run_remote_test(t, t.current_folder, ".")
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_remote_workflow_monorepo(self, use_scm_folder):
+        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+            t = TestClient(path_with_spaces=False)
+            t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
+
+            # Remote workflow
+            self._run_remote_test(t, t.current_folder, "lib1")
+
+    @parameterized.expand([("True",), ("False",)])
+    def test_remote_workflow_monorepo_chdir(self, use_scm_folder):
+        with environment_append({"USE_SCM_FOLER": use_scm_folder}):
+            t = TestClient(path_with_spaces=False)
+            t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
+
+            # Remote workflow
+            self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), ".")
