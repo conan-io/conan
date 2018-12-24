@@ -15,6 +15,7 @@ from conans.model import Generator
 
 class B2Generator(Generator):
     _b2_variation_key = None
+    _b2_variation_id = None
 
     @property
     def filename(self):
@@ -57,7 +58,7 @@ class B2Generator(Generator):
         cbiv = [self.conanbuildinfo_header_text]
         # The first, 1, set of variables are collective in that they have the info for all
         # of the packages combined, 1a.
-        cbiv += ["# global" ]
+        cbiv += ["# global"]
         cbiv += self.b2_constants_for_dep('conan', self.deps_build_info)
         # Now the constants for individual packages, 1b.
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
@@ -190,8 +191,6 @@ class B2Generator(Generator):
             self._b2_variation_key = md5(self.b2_variation_id.encode('utf-8')).hexdigest()
         return self._b2_variation_key
 
-    _b2_variation_id = None
-
     @property
     def b2_variation_id(self):
         """
@@ -213,15 +212,15 @@ class B2Generator(Generator):
         can affect the link compatibility of libraries.
         """
         if not getattr(self, "_b2_variation_key", None):
-            b2_variation = {}
-            b2_variation['toolset'] = {
+            self._b2_variation = {}
+            self._b2_variation['toolset'] = {
                 'sun-cc': 'sun',
                 'gcc': 'gcc',
                 'Visual Studio': 'msvc',
                 'clang': 'clang',
                 'apple-clang': 'clang'
             }.get(self.conanfile.settings.get_safe('compiler'))+'-'+self.b2_toolset_version
-            b2_variation['architecture'] = {
+            self._b2_variation['architecture'] = {
                 'x86': 'x86', 'x86_64': 'x86',
                 'ppc64le': 'power', 'ppc64': 'power', 'ppc32': 'power',
                 'armv6': 'arm', 'armv7': 'arm', 'armv7hf': 'arm', 'armv7s': 'arm', 'armv7k': 'arm',
@@ -229,7 +228,7 @@ class B2Generator(Generator):
                 'sparc': 'sparc', 'sparcv9': 'sparc',
                 'mips': 'mips1', 'mips64': 'mips64',
             }.get(self.conanfile.settings.get_safe('arch'))
-            b2_variation['instruction-set'] = {
+            self._b2_variation['instruction-set'] = {
                 'armv6': 'armv6', 'armv7': 'armv7', 'armv7hf': None, 'armv7k': None,
                 'armv7s': 'armv7s', 'armv8': None, 'armv8_32': None, 'armv8.3': None, 'avr': None,
                 'mips': None, 'mips64': None,
@@ -237,7 +236,7 @@ class B2Generator(Generator):
                 'sparc': None, 'sparcv9': 'v9',
                 'x86': None, 'x86_64': None,
             }.get(self.conanfile.settings.get_safe('arch'))
-            b2_variation['address-model'] = {
+            self._b2_variation['address-model'] = {
                 'x86': '32', 'x86_64': '64',
                 'ppc64le': '64', 'ppc64': '64',
                 'armv6': '32', 'armv7': '32', 'armv7s': '32', 'armv7k': '32', 'armv7hf': '32',
@@ -245,7 +244,7 @@ class B2Generator(Generator):
                 'sparc': '32', 'sparcv9': '64',
                 'mips': '32', 'mips64': '64',
             }.get(self.conanfile.settings.get_safe('arch'))
-            b2_variation['target-os'] = {
+            self._b2_variation['target-os'] = {
                 'Windows': 'windows', 'WindowsStore': 'windows',
                 'Linux': 'linux',
                 'Macos': 'darwin',
@@ -255,13 +254,13 @@ class B2Generator(Generator):
                 'SunOS': 'solaris',
                 'Arduino': 'linux',
             }.get(self.conanfile.settings.get_safe('os'))
-            b2_variation['variant'] = {
+            self._b2_variation['variant'] = {
                 'Debug': 'debug',
                 'Release': 'release',
                 'RelWithDebInfo': 'relwithdebinfo',
                 'MinSizeRel': 'minsizerel',
             }.get(self.conanfile.settings.get_safe('build_type'))
-            b2_variation['cxxstd'] = {
+            self._b2_variation['cxxstd'] = {
                 '98': '98', 'gnu98': '98',
                 '11': '11', 'gnu11': '11',
                 '14': '14', 'gnu14': '14',
@@ -270,7 +269,7 @@ class B2Generator(Generator):
                 '2b': '2b', 'gnu2b': '2b',
                 '2c': '2c', 'gnu2c': '2c',
             }.get(self.conanfile.settings.get_safe('cppstd'))
-            b2_variation['cxxstd:dialect'] = {
+            self._b2_variation['cxxstd:dialect'] = {
                 '98': None, 'gnu98': 'gnu',
                 '11': None, 'gnu11': 'gnu',
                 '14': None, 'gnu14': 'gnu',
@@ -279,7 +278,7 @@ class B2Generator(Generator):
                 '2b': None, 'gnu2b': 'gnu',
                 '2c': None, 'gnu2c': 'gnu',
             }.get(self.conanfile.settings.get_safe('cppstd'))
-        return b2_variation
+        return self._b2_variation
 
     @property
     def b2_toolset_version(self):
@@ -290,14 +289,14 @@ class B2Generator(Generator):
                 return str(self.conanfile.settings.compiler.version)+'.0'
         return str(self.conanfile.settings.compiler.version)
 
-    conanbuildinfo_header_text = """
+    conanbuildinfo_header_text = """\
 #|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
 """
 
-    conanbuildinfo_prefix_text = """
+    conanbuildinfo_prefix_text = """\
 import path ;
 import project ;
 import modules ;
@@ -377,12 +376,12 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 }
 """
 
-    conanbuildinfo_project_template = """
+    conanbuildinfo_project_template = """\
 # {name}
 project-define {name} ;
 """
 
-    conanbuildinfo_postfix_text = """
+    conanbuildinfo_postfix_text = """\
 {
     local __define_targets__ = yes ;
     for local __cbi__ in $(__conanbuildinfo__)
@@ -392,13 +391,13 @@ project-define {name} ;
 }
 """
 
-    conanbuildinfo_variation_constant_template = """
+    conanbuildinfo_variation_constant_template = """\
 constant-if {var}({name},{variation}) :
 {value}
     ;
 """
 
-    conanbuildinfo_variation_lib_template = """
+    conanbuildinfo_variation_lib_template = """\
 if $(__define_targets__) {{
     call-in-project $({name}-mod) : lib {lib}
         :
@@ -408,7 +407,7 @@ if $(__define_targets__) {{
     call-in-project $({name}-mod) : explicit {lib} ; }}
 """
 
-    conanbuildinfo_variation_alias_template = """
+    conanbuildinfo_variation_alias_template = """\
 if $(__define_targets__) {{
     call-in-project $({name}-mod) : alias libs
         : {libs}
