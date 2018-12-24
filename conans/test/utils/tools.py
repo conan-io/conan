@@ -669,7 +669,7 @@ class StoppableThreadBottle(threading.Thread):
 
     def __init__(self, host=None, port=None):
         self.host = host or "127.0.0.1"
-        self.port = port or random.randrange(49000, 49151)
+        self.port = port or random.randrange(48000, 49151)
         self.server = bottle.Bottle()
         super(StoppableThreadBottle, self).__init__(target=self.server.run,
                                                     kwargs={"host": self.host, "port": self.port})
