@@ -3,6 +3,7 @@
 import os
 import unittest
 import tempfile
+import itertools
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
@@ -49,23 +50,31 @@ class Pkg(ConanFile):
     """
 
     conan_package_layout = """
-[includedirs]
-src/include/{settings.build_type}/{options.shared}
+[{namespace}includedirs]
+src/include/{{settings.build_type}}/{{options.shared}}
 """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, use_repo_file, *args, **kwargs):
         super(HeaderOnlyLibTestClient, self).__init__(*args, **kwargs)
-        self.save({"conanfile.py": self.conanfile,
-                   CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout,
-                   "src/include/Debug/True/hello.hpp": self.header.format(build_type="Debug",
+
+        files = {"conanfile.py": self.conanfile,
+                 "src/include/Debug/True/hello.hpp": self.header.format(build_type="Debug",
+                                                                        shared="True"),
+                 "src/include/Debug/False/hello.hpp": self.header.format(build_type="Debug",
+                                                                         shared="False"),
+                 "src/include/Release/True/hello.hpp": self.header.format(build_type="Release",
                                                                           shared="True"),
-                   "src/include/Debug/False/hello.hpp": self.header.format(build_type="Debug",
+                 "src/include/Release/False/hello.hpp": self.header.format(build_type="Release",
                                                                            shared="False"),
-                   "src/include/Release/True/hello.hpp": self.header.format(build_type="Release",
-                                                                            shared="True"),
-                   "src/include/Release/False/hello.hpp": self.header.format(build_type="Release",
-                                                                             shared="False"),
-                   })
+                 }
+
+        if use_repo_file:
+            files[CONAN_PACKAGE_LAYOUT_FILE] = self.conan_package_layout.format(namespace="")
+        else:
+            save(self.client_cache.default_editable_path,
+                 self.conan_package_layout.format(namespace="MyLib:"))
+
+        self.save(files)
 
     def make_editable(self, full_reference):
         conan_ref = ConanFileReference.loads(full_reference)
@@ -75,13 +84,16 @@ src/include/{settings.build_type}/{options.shared}
 
 class SettingsAndOptionsTest(unittest.TestCase):
 
-    @parameterized.expand([("Debug", True), ("Debug", False), ("Release", True), ("Release", False)])
-    def test_settings_options(self, build_type, shared):
+    @parameterized.expand(itertools.product(["Debug", "Release", ],  # build_type
+                                            [True, False, ],  # shared
+                                            [True, False, ]))  # use_repo_file
+    def test_settings_options(self, build_type, shared, use_repo_file):
         # We need two clients sharing the same Conan cache
         base_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
 
         # Editable project
-        client_editable = HeaderOnlyLibTestClient(base_folder=base_folder)
+        client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
+                                                  base_folder=base_folder)
         client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
 
         # Consumer project

@@ -29,6 +29,7 @@ REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+EDITABLES_FILE = "editable_packages.ini"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -163,6 +164,10 @@ class ClientCache(SimplePaths):
         else:
             return join(self.conan_folder, PROFILES_FOLDER,
                         self.conan_config.default_profile)
+
+    @property
+    def default_editable_path(self):
+        return os.path.join(self.conan_folder, EDITABLES_FILE)
 
     @property
     def hooks_path(self):

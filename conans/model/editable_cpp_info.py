@@ -63,8 +63,13 @@ class EditableCppInfo(object):
         value = value.format(settings=settings, options=options)
         return value
 
+    def has_info_for(self, id, use_wildcard=True):
+        if self._uses_namespace:
+            return id in self._data or (use_wildcard and self.WILDCARD in self._data)
+        else:
+            return True
+
     def apply_to(self, id, cpp_info, base_path, settings=None, options=None, use_wildcard=True):
-        data_to_apply = None
         if self._uses_namespace:
             if id in self._data:
                 data_to_apply = self._data[id]
