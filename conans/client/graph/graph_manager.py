@@ -125,15 +125,16 @@ class GraphManager(object):
             conanfile = self._loader.load_virtual([reference], processed_profile)
             root_node = Node(conan_ref, conanfile, recipe=RECIPE_VIRTUAL)
         else:
-            if reference.endswith(".py"):
+            path = reference
+            if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
-                conanfile = self._loader.load_consumer(reference, processed_profile, test=test)
+                conanfile = self._loader.load_consumer(path, processed_profile, test=test)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
                 conan_ref = ConanFileReference(conanfile.name, conanfile.version, None, None,
                                                validate=False)
             else:
-                conanfile = self._loader.load_conanfile_txt(reference, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(path, processed_profile)
             root_node = Node(conan_ref, conanfile, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)

@@ -489,7 +489,8 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def install(self, path="", settings=None, options=None, env=None,
+    def install(self, path="", name=None, version=None, user=None, channel=None,
+                settings=None, options=None, env=None,
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
@@ -501,7 +502,8 @@ class ConanAPIV1(object):
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
             graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
-                                        self._client_cache, self._user_io.out)
+                                        self._client_cache, self._user_io.out,
+                                        name=name, version=version, user=user, channel=channel)
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -944,7 +946,8 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def get_graph_info(profile_name, settings, options, env, cwd, install_folder, client_cache, output):
+def get_graph_info(profile_name, settings, options, env, cwd, install_folder, client_cache, output,
+                   name=None, version=None, user=None, channel=None,):
     try:
         graph_info = GraphInfo.load(install_folder)
         graph_info.profile.process_settings(client_cache, preprocess=False)
