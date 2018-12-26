@@ -947,7 +947,7 @@ Conan = ConanAPIV1
 
 
 def get_graph_info(profile_name, settings, options, env, cwd, install_folder, client_cache, output,
-                   name=None, version=None, user=None, channel=None,):
+                   name=None, version=None, user=None, channel=None):
     try:
         graph_info = GraphInfo.load(install_folder)
         graph_info.profile.process_settings(client_cache, preprocess=False)
@@ -967,7 +967,8 @@ def get_graph_info(profile_name, settings, options, env, cwd, install_folder, cl
                         % install_folder)
         profile = profile_from_args(profile_name, settings, options, env, cwd, client_cache)
         profile.process_settings(client_cache)
-        graph_info = GraphInfo(profile=profile)
+        root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        graph_info = GraphInfo(profile=profile, root_ref=root_ref)
         # Preprocess settings and convert to real settings
     return graph_info
 

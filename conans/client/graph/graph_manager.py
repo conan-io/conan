@@ -61,7 +61,9 @@ class GraphManager(object):
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._client_cache.default_profile
             profile.process_settings(self._client_cache)
+            name, version, user, channel = None, None, None, None
         else:
+            name, version, user, channel, _ = graph_info.root
             profile = graph_info.profile
             profile.process_settings(self._client_cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
@@ -69,7 +71,9 @@ class GraphManager(object):
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_consumer(conanfile_path,
-                                                   processed_profile=processed_profile, test=test)
+                                                   processed_profile=processed_profile, test=test,
+                                                   name=name, version=version,
+                                                   user=user, channel=channel)
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
@@ -128,7 +132,11 @@ class GraphManager(object):
             path = reference
             if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
-                conanfile = self._loader.load_consumer(path, processed_profile, test=test)
+                conanfile = self._loader.load_consumer(path, processed_profile, test=test,
+                                                       name=graph_info.root.name,
+                                                       version=graph_info.root.version,
+                                                       user=graph_info.root.user,
+                                                       channel=graph_info.root.channel)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
                 conan_ref = ConanFileReference(conanfile.name, conanfile.version, None, None,

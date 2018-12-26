@@ -18,6 +18,49 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_reference_test(self):
+        # Test to check the "conan install <path> <reference>" command argument
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("REF: %s, %s, %s, %s" % (self.name, self.version, self.user, self.channel))
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("install . Pkg/0.1@myuser/testing")
+        client.run("build .")
+        self.assertIn("REF: Pkg, 0.1, myuser, testing", client.out)
+
+        # Trying with partial name
+        conanfile = conanfile + "    name = 'Other'\n"
+        client.save({"conanfile.py": conanfile})
+        # passing the wrong package name raises
+        client.run("install . Pkg/0.1@myuser/testing", assert_error=True)
+        self.assertIn("ERROR: Package recipe name Pkg!=Other", client.out)
+        # Partial reference works
+        client.run("install . 0.1@myuser/testing")
+        client.run("build .")
+        self.assertIn("REF: Other, 0.1, myuser, testing", client.out)
+        # And also full reference matching
+        client.run("install . Other/0.1@myuser/testing")
+        client.run("build .")
+        self.assertIn("REF: Other, 0.1, myuser, testing", client.out)
+
+        # Trying with partial name and version
+        conanfile = conanfile + "    version = '0.2'\n"
+        client.save({"conanfile.py": conanfile})
+        # passing the wrong package name raises
+        client.run("install . Other/0.1@myuser/testing", assert_error=True)
+        self.assertIn("ERROR: Package recipe version 0.1!=0.2", client.out)
+        # Partial reference works
+        client.run("install . myuser/testing")
+        client.run("build .")
+        self.assertIn("REF: Other, 0.2, myuser, testing", client.out)
+        # And also full reference matching
+        client.run("install . Other/0.2@myuser/testing")
+        client.run("build .")
+        self.assertIn("REF: Other, 0.2, myuser, testing", client.out)
+
     def test_four_subfolder_install(self):
         # https://github.com/conan-io/conan/issues/3950
         conanfile = ""
