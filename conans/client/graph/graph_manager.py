@@ -139,7 +139,8 @@ class GraphManager(object):
                                                        channel=graph_info.root.channel)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
-                conan_ref = ConanFileReference(conanfile.name, conanfile.version, None, None,
+                conan_ref = ConanFileReference(conanfile.name, conanfile.version,
+                                               conanfile._conan_user, conanfile._conan_channel,
                                                validate=False)
             else:
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile)

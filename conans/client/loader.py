@@ -84,7 +84,8 @@ class ConanFileLoader(object):
         if name and conanfile_class.name and name != conanfile_class.name:
             raise ConanException("Package recipe name %s!=%s" % (name, conanfile_class.name))
         if version and conanfile_class.version and version != conanfile_class.version:
-            raise ConanException("Package recipe version %s!=%s" % (version, conanfile_class.version))
+            raise ConanException("Package recipe version %s!=%s"
+                                 % (version, conanfile_class.version))
         conanfile_class.name = name or conanfile_class.name
         conanfile_class.version = version or conanfile_class.version
         if test:
