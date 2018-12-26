@@ -143,7 +143,8 @@ class GraphManager(object):
                                                conanfile._conan_user, conanfile._conan_channel,
                                                validate=False)
             else:
-                conanfile = self._loader.load_conanfile_txt(path, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(path, processed_profile,
+                                                            ref=graph_info.root)
             root_node = Node(conan_ref, conanfile, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)

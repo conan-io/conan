@@ -126,13 +126,14 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile_txt(self, conan_txt_path, processed_profile):
+    def load_conanfile_txt(self, conan_txt_path, processed_profile, ref=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path, basename = os.path.split(conan_txt_path)
-        conanfile = self._parse_conan_txt(contents, path, basename, processed_profile)
+        display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
+        conanfile = self._parse_conan_txt(contents, path, display_name, processed_profile)
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, processed_profile):

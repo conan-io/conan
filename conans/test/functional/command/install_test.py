@@ -18,6 +18,16 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_reference_txt_test(self):
+        # Test to check the "conan install <path> <reference>" command argument
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("info .")
+        self.assertIn("conanfile.txt", str(client.out).splitlines())
+        client.run("install . Pkg/0.1@myuser/testing")
+        client.run("info .")
+        self.assertIn("Pkg/0.1@myuser/testing", client.out)
+
     def install_reference_test(self):
         # Test to check the "conan install <path> <reference>" command argument
         client = TestClient()
@@ -28,6 +38,8 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . Pkg/0.1@myuser/testing")
+        client.run("info .")
+        self.assertIn("Pkg/0.1@myuser/testing", client.out)
         client.run("build .")
         self.assertIn("REF: Pkg, 0.1, myuser, testing", client.out)
 
