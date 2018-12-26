@@ -952,13 +952,6 @@ class ConanAPIV1(object):
                                  "conanfile.py ({}/{}) must match".
                                  format(reference, target_conanfile.name, target_conanfile.version))
 
-        pkg_layout_file = os.path.join(os.path.dirname(target_path), CONAN_PACKAGE_LAYOUT_FILE)
-        if not os.path.exists(pkg_layout_file):
-            raise ConanException("In order to link a package in editable mode, it is required "
-                                 "a '{}' file next to the 'conanfile.py'. Find more info "
-                                 "at https://".  # TODO: Add URL to docs
-                                 format(CONAN_PACKAGE_LAYOUT_FILE))
-
         self._client_cache.install_as_editable(reference, os.path.dirname(target_path))
 
     @api_method
