@@ -385,6 +385,7 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
     conanbuildinfo_project_template = '''\
 # {name}
 project-define {name} ;
+use-project /{name} : {name} ;
 '''
 
     conanbuildinfo_postfix_text = '''\
