@@ -5,12 +5,13 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans import load
-from conans.client.tools import chdir
+from conans.client.tools import chdir, which
 from conans.test.utils.tools import TestClient
 
 
 @attr("slow")
 @attr("premake")
+@unittest.skipIf(which("premake5") is None, "Needs premake5")
 class PremakeGeneratorTest(unittest.TestCase):
 
     def setUp(self):
@@ -57,13 +58,20 @@ class PremakeGeneratorTest(unittest.TestCase):
         """)
         self.client.save({"conanfile.txt": conanfile,
                           "premake5.lua": premake,
-                          "hello.cpp": hello_cpp}, clean_first=True)
-        self.client.run("install .")
+                          "src/hello.cpp": hello_cpp}, clean_first=True)
 
-    
-    def test_generate_basic_setup(self):
+    def test_generate_basic_setup_release(self):
+        self.client.run("install .")
         with chdir(self.client.current_folder):
             self.client.runner("premake5 vs2017")
-        print(load(os.path.join(self.client.current_folder, "example.sln")))
-        print(self.client.out)
-        print(os.listdir(self.client.current_folder))
+        sln_content = load(os.path.join(self.client.current_folder, "example.sln"))
+        self.assertIn("Release|x64", sln_content)
+        self.assertNotIn("Debug|x64", sln_content)
+
+    def test_generate_basic_setup_debug_32bit(self):
+        self.client.run("install . -s build_type=Debug -s arch=x86 --build missing")
+        with chdir(self.client.current_folder):
+            self.client.runner("premake5 vs2017")
+        sln_content = load(os.path.join(self.client.current_folder, "example.sln"))
+        self.assertIn("Debug|Win32", sln_content)
+        self.assertNotIn("Release|x64", sln_content)
