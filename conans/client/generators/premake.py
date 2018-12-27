@@ -57,14 +57,14 @@ class PremakeGenerator(Generator):
             sections.append(dep_flags)
 
         sections.append(
-            'function conan_basic_setup()\n'
-            '	configurations{conan_build_type}\n'
-            '	architecture(conan_arch)\n'
-            '	includedirs{conan_includedirs}\n'
-            '	libdirs{conan_libdirs}\n'
-            '	links{conan_libs}\n'
-            '	defines{conan_cppdefines}\n'
-            '	bindirs{conan_bindirs}\n'
-            'end\n')
-        
+            "function conan_basic_setup()\n"
+            "    configurations{conan_build_type}\n"
+            "    architecture(conan_arch)\n"
+            "    includedirs{conan_includedirs}\n"
+            "    libdirs{conan_libdirs}\n"
+            "    links{conan_libs}\n"
+            "    defines{conan_cppdefines}\n"
+            "    bindirs{conan_bindirs}\n"
+            "end\n")
+
         return "\n".join(sections)
