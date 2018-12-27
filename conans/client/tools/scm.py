@@ -1,14 +1,14 @@
 
 import os
-import re
-
-import subprocess
-from six.moves.urllib.parse import urlparse, quote_plus, unquote
-from subprocess import CalledProcessError, PIPE, STDOUT
 import platform
+import re
+import subprocess
 import xml.etree.ElementTree as ET
+from subprocess import CalledProcessError, PIPE, STDOUT
 
-from conans.client.tools.env import no_op, environment_append
+from six.moves.urllib.parse import quote_plus, unquote, urlparse
+
+from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -18,8 +18,8 @@ from conans.util.files import decode_text, to_file_bytes, walk
 class SCMBase(object):
     cmd_command = None
 
-    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
+                 force_english=True, runner=None, output=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -28,6 +28,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
+        self._output = output
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -57,7 +58,7 @@ class Git(SCMBase):
         # TODO: This should be a context manager
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, branch=None, args=""):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -74,7 +75,7 @@ class Git(SCMBase):
             output += self.run("checkout -t origin/%s" % branch)
         else:
             branch_cmd = "--branch %s" % branch if branch else ""
-            output = self.run('clone "%s" . %s' % (url, branch_cmd))
+            output = self.run('clone "%s" . %s %s' % (url, branch_cmd, args))
             output += self._configure_ssl_verify()
 
         return output
@@ -97,19 +98,24 @@ class Git(SCMBase):
         return output
 
     def excluded_files(self):
+        ret = []
         try:
 
             file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
-            p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
-                                 stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes("\n".join(file_paths))
-            grep_stdout = decode_text(p.communicate(input=paths)[0])
-            tmp = grep_stdout.splitlines()
-        except CalledProcessError:
-            tmp = []
-        return tmp
+            if file_paths:
+                p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
+                                     stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
+                paths = to_file_bytes("\n".join(file_paths))
+                grep_stdout = decode_text(p.communicate(input=paths)[0])
+                ret = grep_stdout.splitlines()
+        except (CalledProcessError, FileNotFoundError) as e:
+            if self._output:
+                self._output.warn("Error checking excluded git files: %s. "
+                                  "Ignoring excluded files" % e)
+            ret = []
+        return ret
 
     def get_remote_url(self, remote_name=None):
         self._check_git_repo()
@@ -169,7 +175,7 @@ class Git(SCMBase):
 class SVN(SCMBase):
     cmd_command = "svn"
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
-    API_CHANGE_VERSION = Version("1.8")  # CLI changes in 1.8
+    API_CHANGE_VERSION = Version("1.9")  # CLI changes in 1.9
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):

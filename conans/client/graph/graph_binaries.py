@@ -1,22 +1,22 @@
 import os
 
-from conans.client.graph.graph import (BINARY_BUILD, BINARY_UPDATE, BINARY_CACHE,
-                                       BINARY_DOWNLOAD, BINARY_MISSING, BINARY_SKIP,
-                                       BINARY_WORKSPACE)
-from conans.client.output import ScopedOutput
-from conans.errors import NotFoundException, NoRemoteAvailable
+from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
+                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
+from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.util.files import rmdir, is_dirty
+from conans.util.env_reader import get_env
+from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, registry, workspace):
+    def __init__(self, client_cache, output, remote_manager, workspace):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
@@ -27,8 +27,22 @@ class GraphBinariesAnalyzer(object):
             return False
 
     def _check_update(self, package_folder, package_ref, remote, output, node):
+
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        if revisions_enabled:
+            metadata = self._client_cache.load_metadata(package_ref.conan)
+            rec_rev = metadata.packages[package_ref.package_id].recipe_revision
+            if rec_rev != node.conan_ref.revision:
+                output.warn("Outdated package! The package doesn't belong "
+                            "to the installed recipe revision: %s" % str(package_ref))
+
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
+            if not revisions_enabled and not node.revision_pinned:
+                # Compatibility mode and user hasn't specified the revision, so unlock
+                # it to find any binary for any revision
+                package_ref = package_ref.copy_clear_rev()
+
             upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
         except NotFoundException:
             output.warn("Can't update, no package in remote")
@@ -48,6 +62,7 @@ class GraphBinariesAnalyzer(object):
         assert node.binary is None
 
         conan_ref, conanfile = node.conan_ref, node.conanfile
+        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
         package_ref = PackageReference(conan_ref, package_id)
         # Check that this same reference hasn't already been checked
@@ -58,7 +73,7 @@ class GraphBinariesAnalyzer(object):
             return
         evaluated_references[package_ref] = node
 
-        output = ScopedOutput(str(conan_ref), self._out)
+        output = conanfile.output
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
@@ -102,15 +117,23 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
         else:  # Binary does NOT exist locally
+            if not revisions_enabled and not node.revision_pinned:
+                # Do not search for packages for the specific resolved recipe revision but all
+                package_ref = package_ref.copy_clear_rev()
+
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(package_ref, remote)
-            elif remotes:  # Iterate all remotes to get this binary
+
+            # If the "remote" came from the registry but the user didn't specified the -r, with
+            # revisions iterate all remotes
+            if not remote or (not remote_info and revisions_enabled and not remote_name):
                 for r in remotes:
                     remote_info = self._get_package_info(package_ref, r)
                     if remote_info:
                         remote = r
                         break
+
             if remote_info:
                 node.binary = BINARY_DOWNLOAD
                 package_hash = remote_info.recipe_hash
@@ -134,7 +157,7 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:  # Only value should be SKIP
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
             private_neighbours = node.private_neighbors()
             if private_neighbours:
@@ -147,6 +170,6 @@ class GraphBinariesAnalyzer(object):
                             n.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)

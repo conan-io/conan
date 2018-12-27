@@ -1,17 +1,16 @@
-import unittest
 import os
 import platform
+import re
 import shutil
+import time
+import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from conans.client import tools
 from conans.model.workspace import WORKSPACE_FILE
-from conans import tools
-import time
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import re
-
 
 conanfile = """from conans import ConanFile
 import os
@@ -135,11 +134,11 @@ root: HelloA
 """
         client.save({WORKSPACE_FILE: project})
         client.run("install . -if=build")
-        self.assertIn("Workspace HelloC: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloC/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
-        self.assertIn("Workspace HelloB: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloB/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
-        self.assertIn("Workspace HelloA: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloA/root@project/develop: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
         for sub in ("A", "B", "C"):
             conanbuildinfo = load(os.path.join(client.current_folder, "build", sub, "conanbuildinfo.cmake"))
@@ -204,9 +203,9 @@ name: MyProject
         TIME_DELAY = 1
         time.sleep(TIME_DELAY)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Hello World", "Bye Moon")
+                              "Hello World", "Bye Moon", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Release', cwd=base_folder)
         time.sleep(TIME_DELAY)
@@ -215,6 +214,7 @@ name: MyProject
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(TIME_DELAY)  # Try to avoid windows errors in CI  (The directory is not empty)
         shutil.rmtree(os.path.join(client.current_folder, "build"))
         client.run("install . -if=build -s build_type=Debug")
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_folder)
@@ -227,7 +227,7 @@ name: MyProject
         self.assertIn("Hello World A Debug!", client.out)
 
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Bye Moon", "Bye! Mars")
+                              "Bye Moon", "Bye! Mars", output=client.out)
         time.sleep(TIME_DELAY)
         client.runner('cmake --build . --config Debug', cwd=base_folder)
         time.sleep(TIME_DELAY)

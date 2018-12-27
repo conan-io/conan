@@ -1,12 +1,13 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.test.utils.context_manager import CustomEnvPath
 import platform
-from conans.test.utils.test_files import scan_folder
-from conans.test.utils.test_files import uncompress_packaged_files
+import unittest
+
 from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.context_manager import CustomEnvPath
+from conans.test.utils.test_files import scan_folder, uncompress_packaged_files
+from conans.test.utils.tools import TestClient, TestServer
 
 stringutil_conanfile = '''
 from conans import ConanFile
@@ -97,16 +98,16 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         # Check compilation ok
-        package_ids = self.client.paths.conan_packages(conan_reference)
+        package_ids = self.client.client_cache.conan_packages(conan_reference)
         self.assertEquals(len(package_ids), 1)
         package_ref = PackageReference(conan_reference, package_ids[0])
-        self._assert_package_exists(package_ref, self.client.paths, files_without_conanfile)
+        self._assert_package_exists(package_ref, self.client.client_cache, files_without_conanfile)
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
 
         # Check that conans exists on server
-        server_paths = self.servers["default"].paths
+        server_paths = self.servers["default"].server_store
         conan_path = server_paths.export(conan_reference)
         self.assertTrue(os.path.exists(conan_path))
 
@@ -120,10 +121,10 @@ class GoCompleteTest(unittest.TestCase):
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(conan_reference))
         # Build should be empty
-        build_path = other_conan.paths.build(package_ref)
+        build_path = other_conan.client_cache.build(package_ref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_package_exists(package_ref, other_conan.paths, files_without_conanfile)
+        self._assert_package_exists(package_ref, other_conan.client_cache, files_without_conanfile)
 
         reuse_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,

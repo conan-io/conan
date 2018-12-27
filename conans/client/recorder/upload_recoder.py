@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from datetime import datetime
 
 from conans.model.ref import ConanFileReference
@@ -37,6 +37,7 @@ class UploadRecorder(object):
         self._info = OrderedDict()
 
     def add_recipe(self, reference, remote_name, remote_url):
+
         self._info[str(reference)] = {"recipe": _UploadElement(reference, remote_name, remote_url),
                                       "packages": []}
 

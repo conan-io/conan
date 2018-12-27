@@ -1,7 +1,8 @@
 import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+
 from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import rmdir
 
 
@@ -52,7 +53,11 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
         self.assertNotIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertNotIn("Package is up to date", self.client.user_io.out)
-        self.assertIn("Outdated package!", self.client.user_io.out)
+
+        # With revisions it looks in the server a package for the changed local recipe and it
+        # doesn't find it, so there is no Outdated package alert, just building
+        if not self.client.revisions:
+            self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)
 
     def install_outdated_dep_test(self):
@@ -77,19 +82,22 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable")
 
         # Now, with the new_client, remove only the binary package from Hello0
-        rmdir(new_client.paths.packages(self.ref))
+        rmdir(new_client.client_cache.packages(self.ref))
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0
         new_client.run("install Hello1/0.1@lasote/stable --build outdated")
         self.assertIn("Downloading conan_package.tgz", new_client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", new_client.user_io.out)
 
-        # But if we remove the full Hello0 local package, will retrieve the updated
-        # recipe and the outdated package
-        new_client.run("remove Hello0* -f")
-        new_client.run("install Hello1/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.user_io.out)
-        self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.user_io.out)
+        # With revisions makes no sense, it won't download an outdated package, it belongs to
+        # a different recipe
+        if not new_client.revisions:
+            # But if we remove the full Hello0 local package, will retrieve the updated
+            # recipe and the outdated package
+            new_client.run("remove Hello0* -f")
+            new_client.run("install Hello1/0.1@lasote/stable --build outdated")
+            self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.user_io.out)
+            self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.user_io.out)
 
     def install_outdated_and_dep_test(self):
         # regression test for https://github.com/conan-io/conan/issues/1053
@@ -114,7 +122,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable")
 
         # Now, with the new_client, remove only the binary package from Hello0
-        rmdir(new_client.paths.packages(self.ref))
+        rmdir(new_client.client_cache.packages(self.ref))
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0
         new_client.run("install Hello1/0.1@lasote/stable --build outdated --build Hello1")

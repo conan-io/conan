@@ -4,15 +4,15 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+import os
+import platform
+import re
 # To use a consistent encoding
 from codecs import open
 from os import path
-import os
-import re
-import platform
 
+# Always prefer setuptools over distutils
+from setuptools import find_packages, setup
 
 here = path.abspath(path.dirname(__file__))
 

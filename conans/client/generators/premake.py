@@ -3,6 +3,7 @@ from conans.paths import BUILD_INFO_PREMAKE
 
 
 class PremakeDeps(object):
+
     def __init__(self, deps_cpp_info):
         self.include_paths = ",\n".join('"%s"' % p.replace("\\", "/")
                                         for p in deps_cpp_info.include_paths)
@@ -56,14 +57,14 @@ class PremakeGenerator(Generator):
             sections.append(dep_flags)
 
         sections.append(
-            'function conan_basic_setup()\n'
-            '	configurations{conan_build_type}\n'
-            '	architecture(conan_arch)\n'
-            '	includedirs{conan_includedirs}\n'
-            '	libdirs{conan_libdirs}\n'
-            '	links{conan_libs}\n'
-            '	defines{conan_cppdefines}\n'
-            '	bindirs{conan_bindirs}\n'
-            'end\n')
-        
+            "function conan_basic_setup()\n"
+            "    configurations{conan_build_type}\n"
+            "    architecture(conan_arch)\n"
+            "    includedirs{conan_includedirs}\n"
+            "    libdirs{conan_libdirs}\n"
+            "    links{conan_libs}\n"
+            "    defines{conan_cppdefines}\n"
+            "    bindirs{conan_bindirs}\n"
+            "end\n")
+
         return "\n".join(sections)
