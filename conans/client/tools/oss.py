@@ -344,7 +344,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
     machine = {"x86": "i686" if os_ != "Linux" else "x86",
                "x86_64": "x86_64",
                "armv8": "aarch64",
-               "armv8_32": "aarch32"}.get(arch, None)
+               "armv8_32": "aarch64"  # https://wiki.linaro.org/Platform/arm64-ilp32
+               }.get(arch, None)
 
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
@@ -395,6 +396,6 @@ def get_gnu_triplet(os_, arch, compiler=None):
             op_system += "hf"
 
         if arch == "armv8_32" and os_ == "Linux":
-            op_system += "_ilp32"
+            op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
