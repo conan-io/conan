@@ -19,9 +19,9 @@ import bottle
 import requests
 import six
 from mock import Mock
+from mock import patch
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
-
 
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
@@ -35,8 +35,8 @@ from conans.client.output import ConanOutput
 from conans.client.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools.files import replace_in_file
 from conans.client.tools.files import chdir
+from conans.client.tools.files import replace_in_file
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -45,16 +45,15 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.model.version import Version
+from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
-
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -467,8 +466,8 @@ class TestClient(object):
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.client_version = Version(str(client_version))
-        self.min_server_compatible_version = Version(str(min_server_compatible_version))
+        self.client_version = str(client_version)  #Version(str(client_version))
+        self.min_server_compatible_version = str(min_server_compatible_version)  # Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
@@ -578,11 +577,12 @@ servers["r2"] = TestServer()
             self.hook_manager = HookManager(self.client_cache.hooks_path,
                                             get_env("CONAN_HOOKS", list()), self.user_io.out)
 
-            self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
-                                                            self.requester, self.client_cache,
-                                                            self.user_io, self.client_version,
-                                                            self.min_server_compatible_version,
-                                                            self.hook_manager)
+            with patch('conans.client.rest.rest_client.client_version', self.client_version):
+                with patch('conans.client.rest.rest_client.MIN_SERVER_COMPATIBLE_VERSION',
+                           self.min_server_compatible_version):
+                    self.localdb, self.rest_api_client, self.remote_manager = \
+                            Conan.instance_remote_manager(self.requester, self.client_cache,
+                                                          self.user_io, self.hook_manager)
             self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 

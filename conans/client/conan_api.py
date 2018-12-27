@@ -39,7 +39,6 @@ from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
-from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
@@ -147,17 +146,11 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     @staticmethod
-    def instance_remote_manager(requester, client_cache, user_io, _client_version,
-                                min_server_compatible_version, hook_manager):
-
-        # Verify client version against remotes
-        version_checker_req = VersionCheckerRequester(requester, _client_version,
-                                                      min_server_compatible_version,
-                                                      user_io.out)
+    def instance_remote_manager(requester, client_cache, user_io, hook_manager):
 
         # To handle remote connections
         put_headers = client_cache.read_put_headers()
-        rest_api_client = RestApiClient(user_io.out, requester=version_checker_req,
+        rest_api_client = RestApiClient(user_io.out, requester=requester,
                                         put_headers=put_headers)
         # To store user and token
         localdb = LocalDB(client_cache.localdb)
@@ -209,8 +202,6 @@ class ConanAPIV1(object):
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(
                 requester,
                 client_cache, user_io,
-                Version(client_version),
-                Version(MIN_SERVER_COMPATIBLE_VERSION),
                 hook_manager)
 
             # Adjust global tool variables
