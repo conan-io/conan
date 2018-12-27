@@ -466,8 +466,8 @@ class TestClient(object):
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.client_version = str(client_version)  #Version(str(client_version))
-        self.min_server_compatible_version = str(min_server_compatible_version)  # Version(str(min_server_compatible_version))
+        self.client_version = str(client_version)
+        self.min_server_compatible_version = str(min_server_compatible_version)
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
