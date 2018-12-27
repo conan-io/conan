@@ -1,11 +1,10 @@
 import os
+
 from conans.client.remote_registry import Remote
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.search.search import filter_outdated, search_recipes, \
-    search_packages
+from conans.search.search import filter_outdated, search_packages, search_recipes
 from conans.util.log import logger
 
 
@@ -15,7 +14,7 @@ class DiskRemover(object):
 
     def _remove(self, path, conan_ref, msg=""):
         try:
-            logger.debug("Removing folder %s" % path)
+            logger.debug("REMOVE: folder %s" % path)
             rm_conandir(path)
         except OSError:
             error_msg = "Folder busy (open or some file open): %s" % path
@@ -24,7 +23,7 @@ class DiskRemover(object):
 
     def _remove_file(self, path, conan_ref, msg=""):
         try:
-            logger.debug("Removing file %s" % path)
+            logger.debug("REMOVE: file %s" % path)
             if os.path.exists(path):
                 os.remove(path)
         except OSError:
@@ -84,16 +83,17 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io, remote_registry):
+    def __init__(self, client_cache, remote_manager, user_io):
         self._user_io = user_io
         self._client_cache = client_cache
         self._remote_manager = remote_manager
-        self._registry = remote_registry
+        self._registry = client_cache.registry
 
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            return self._remote_manager.remove(reference, remote)
+            result = self._remote_manager.remove(reference, remote)
+            return result
         else:
             tmp = self._remote_manager.remove_packages(reference, package_ids, remote)
             return tmp
@@ -161,7 +161,7 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % str(reference))
+                                           % reference.full_repr())
                     continue
 
             if self._ask_permission(reference, src, build_ids, package_ids, force):

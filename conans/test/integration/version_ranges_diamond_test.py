@@ -5,8 +5,8 @@ from collections import OrderedDict
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer, \
-    inc_recipe_manifest_timestamp, inc_package_manifest_timestamp, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.files import load
 
 
@@ -77,7 +77,8 @@ class HelloReuseConan(ConanFile):
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
 
-        # Make sure timestamp increases, in some machines in testing, it can fail due to same timestamp
+        # Make sure timestamp increases, in some machines in testing,
+        # it can fail due to same timestamp
         inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
         inc_package_manifest_timestamp(client2.client_cache,
                                        "Pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
@@ -91,7 +92,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
 
         client.run("install . --update")
-        # Resolves to local package
+        # Resolves to remote new recipe and package
         self.assertIn("Pkg/1.2@lasote/testing: Package installed", client.out)
         self.assertNotIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO *1.2*", client.out)
@@ -134,10 +135,12 @@ class HelloReuseConan(ConanFile):
         for remote, solution in [("default", "0.2"), ("other", "0.3")]:
             self.client.run('remove "Hello0/0.*" -f')
             self.client.run("install . --build missing -r=%s" % remote)
-            self.assertIn("Version range '>0.1,<0.4' required by 'None' "
+            self.assertIn("Version range '>0.1,<0.4' required by "
+                          "'conanfile.py (Hello1/0.1@None/None)' "
                           "resolved to 'Hello0/%s@lasote/stable'" % solution,
-                          self.client.user_io.out)
-            self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+                          self.client.out)
+            self.assertIn("conanfile.py (Hello1/0.1@None/None): Generated conaninfo.txt",
+                          self.client.out)
             content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
             self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
@@ -177,9 +180,10 @@ class HelloReuseConan(ConanFile):
 
         self.client.run('remove "Hello0/0.*" -f')
         self.client.run("install . --build missing")
-        self.assertIn("Version range '>0.1,<0.3' required by 'None' "
+        self.assertIn("Version range '>0.1,<0.3' required by 'conanfile.py (Hello1/0.1@None/None)' "
                       "resolved to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+        self.assertIn("conanfile.py (Hello1/0.1@None/None): Generated conaninfo.txt",
+                      self.client.out)
 
         content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("Hello0/0.2@lasote/stable", content)
@@ -201,14 +205,15 @@ class HelloReuseConan(ConanFile):
         self.client.run("install . --build missing")
 
         def check1():
-            self.assertIn("Version range '~=0' required by 'None' resolved to "
-                          "'Hello2/0.1@lasote/stable'", self.client.user_io.out)
+            self.assertIn("Version range '~=0' required by 'conanfile.py (Hello3/0.1@None/None)' "
+                          "resolved to 'Hello2/0.1@lasote/stable'", self.client.out)
             self.assertIn("Version range '>0.1,<0.3' required by 'Hello1/0.1@lasote/stable' "
                           "resolved to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
             self.assertNotIn("Conflict", self.client.user_io.out)
-            self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+            self.assertIn("conanfile.py (Hello3/0.1@None/None): Generated conaninfo.txt",
+                          self.client.out)
 
             content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
             self.assertIn("Hello0/0.2@lasote/stable", content)
@@ -220,22 +225,51 @@ class HelloReuseConan(ConanFile):
         if upload:
             self._export("Hello0", "0.2.1", upload=upload)
             self.client.run('remove Hello0/0.2.1@lasote/stable -f')
-            self._export("Hello3", "0.1", ["Hello1/[>=0]@lasote/stable", "Hello2/[~=0]@lasote/stable"],
+            self._export("Hello3", "0.1", ["Hello1/[>=0]@lasote/stable",
+                                           "Hello2/[~=0]@lasote/stable"],
                          export=False, upload=upload)
             self.client.run("install . --build missing")
             check1()
             # Now update
             self.client.run("install . --update --build missing")
-            self.assertIn("Version range '~=0' required by 'None' resolved to "
-                          "'Hello2/0.1@lasote/stable'", self.client.user_io.out)
+            self.assertIn("Version range '~=0' required by 'conanfile.py (Hello3/0.1@None/None)' "
+                          "resolved to 'Hello2/0.1@lasote/stable'", self.client.out)
             self.assertIn("Version range '>0.1,<0.3' required by 'Hello1/0.1@lasote/stable' "
                           "resolved to 'Hello0/0.2.1@lasote/stable'", self.client.user_io.out)
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2.1@lasote/stable'", self.client.user_io.out)
             self.assertNotIn("Conflict", self.client.user_io.out)
-            self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+            self.assertIn("conanfile.py (Hello3/0.1@None/None): Generated conaninfo.txt",
+                          self.client.out)
 
             content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
             self.assertIn("Hello0/0.2.1@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
+
+    def no_joint_compatibility_resolved_test(self):
+        """Test to verify that conan is not resolving using joint-compatibility of the full graph
+        and you need to specify the right order or override downstream the conflict"""
+        self._export("ProblemRequirement", "1.0.0", upload=True)
+        self._export("ProblemRequirement", "1.1.0", upload=True)
+        self._export("RequirementOne", "1.2.3",
+                     ["ProblemRequirement/[=1.0.0]@lasote/stable"], upload=True)
+        self._export("RequirementTwo", "4.5.6",
+                     ["ProblemRequirement/[~1]@lasote/stable"], upload=True)
+        self._export("Project", "1.0.0",
+                     ["RequirementTwo/[=4.5.6]@lasote/stable",
+                      "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
+
+        self.client.run("remove '*' -f")
+        self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
+
+        self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
+                      "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
+
+        # Change the order, now it resolves correctly
+        self._export("Project", "1.0.0",
+                     ["RequirementOne/[=1.2.3]@lasote/stable",
+                      "RequirementTwo/[=4.5.6]@lasote/stable",
+                      ], upload=True)
+        self.client.run("remove '*' -f")
+        self.client.run("install Project/1.0.0@lasote/stable --build missing")

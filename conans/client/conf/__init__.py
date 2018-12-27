@@ -1,11 +1,11 @@
 import os
 
-from six.moves.configparser import ConfigParser, NoSectionError
 from six.moves import urllib
+from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
+from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -205,7 +205,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None)
+               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
+               "CONAN_CLIENT_REVISIONS_ENABLED": self._env_c("general.revisions_enabled", "CONAN_CLIENT_REVISIONS_ENABLED", "False"),
                }
 
         # Filter None values
@@ -260,7 +261,12 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("You can't set a full section, please specify a key=value")
 
         key = tokens[1]
-        super(ConanClientConfigParser, self).set(section_name, key, value)
+        try:
+            super(ConanClientConfigParser, self).set(section_name, key, value)
+        except ValueError:
+            # https://github.com/conan-io/conan/issues/4110
+            value = value.replace("%", "%%")
+            super(ConanClientConfigParser, self).set(section_name, key, value)
 
         with open(self.filename, "w") as f:
             self.write(f)
@@ -299,8 +305,8 @@ class ConanClientConfigParser(ConfigParser, object):
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 
             if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                                     "an existing profile file.")
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
+                                     "must point to an existing profile file.")
             return ret
         else:
             try:

@@ -1,23 +1,24 @@
 """
 Server's configuration variables
 """
-import six
 
-from conans import tools
-from conans.server.store.server_store import ServerStore
-from conans.server.store.server_store_revisions import ServerStoreRevisions
-from conans.util.env_reader import get_env
-from datetime import timedelta
 import os
 import random
 import string
-from conans.errors import ConanException
-from conans.util.files import save, mkdir
+from datetime import timedelta
+
+import six
 from six.moves.configparser import ConfigParser, NoSectionError
+
+from conans.client import tools
+from conans.errors import ConanException
 from conans.paths import conan_expand_user
+from conans.server.conf.default_server_conf import default_server_conf, default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
+from conans.server.store.server_store import ServerStore
+from conans.util.env_reader import get_env
+from conans.util.files import mkdir, save
 from conans.util.log import logger
-from conans.server.conf.default_server_conf import default_server_conf
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
@@ -49,8 +50,7 @@ class ConanServerConfigParser(ConfigParser):
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
                            # "user:pass,user2:pass2"
-                           "users": get_env("CONAN_SERVER_USERS", None, environment),
-                           "revisions": get_env("CONAN_SERVER_REVISIONS", None, environment)}
+                           "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
     def _get_file_conf(self, section, varname=None):
         """ Gets the section or variable from config file.
@@ -154,15 +154,6 @@ class ConanServerConfigParser(ConfigParser):
             return self._get_file_conf("write_permissions")
 
     @property
-    def revisions_enabled(self):
-        try:
-            revisions_enabled = self._get_conf_server_string("revisions").lower()
-            ret = revisions_enabled == "true" or revisions_enabled == "1"
-            return ret
-        except ConanException:
-            return None
-
-    @property
     def custom_authenticator(self):
         try:
             return self._get_conf_server_string("custom_authenticator")
@@ -225,12 +216,9 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_server_store(disk_storage_path, revisions_enabled, public_url, updown_auth_manager):
+def get_server_store(disk_storage_path, public_url, updown_auth_manager):
     disk_controller_url = "%s/%s" % (public_url, "files")
     if not updown_auth_manager:
         raise Exception("Updown auth manager needed for disk controller (not s3)")
     adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
-    if revisions_enabled:
-        return ServerStoreRevisions(adapter)
-    else:
-        return ServerStore(adapter)
+    return ServerStore(adapter)

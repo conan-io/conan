@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.paths import CONANFILE
-from conans.util.files import load
 import os
+import unittest
+
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class OrderLibsTest(unittest.TestCase):
@@ -104,7 +105,8 @@ class HelloReuseConan(ConanFile):
         self._export("MyProject", ["SDL2_ttf"], export=False)
 
         self.client.run("install . --build missing")
-        self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+        self.assertIn("conanfile.py (MyProject/1.0@None/None): Generated conaninfo.txt",
+                      self.client.out)
 
         expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']

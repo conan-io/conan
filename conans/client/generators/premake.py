@@ -3,6 +3,7 @@ from conans.paths import BUILD_INFO_PREMAKE
 
 
 class PremakeDeps(object):
+
     def __init__(self, deps_cpp_info):
         self.include_paths = ",\n".join('"%s"' % p.replace("\\", "/")
                                         for p in deps_cpp_info.include_paths)

@@ -8,8 +8,9 @@ conan install profile in addition to the central generic one that includes
 all possible variants.
 """
 
-from conans.model import Generator
 from hashlib import md5
+
+from conans.model import Generator
 
 
 class B2Generator(Generator):

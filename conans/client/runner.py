@@ -2,11 +2,13 @@ import io
 import os
 import sys
 from contextlib import contextmanager
-from subprocess import Popen, PIPE, STDOUT
-from conans.util.files import decode_text
-from conans.errors import ConanException
+from subprocess import PIPE, Popen, STDOUT
+
 import six
+
+from conans.errors import ConanException
 from conans.unicode import get_cwd
+from conans.util.files import decode_text
 
 
 class ConanRunner(object):

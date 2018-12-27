@@ -11,9 +11,10 @@ Replace this module with other that keeps the interface or super class.
 
 
 from abc import ABCMeta, abstractmethod
-from conans.errors import ForbiddenException, InternalErrorException,\
-    AuthenticationException
+
+from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference
+
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
@@ -201,7 +202,7 @@ class BasicAuthorizer(Authorizer):
     def _check_ref_apply_for_rule(self, rule_ref, conan_reference):
         """Checks if a conans reference specified in config file applies to current conans
         reference"""
-        name, version, user, channel = rule_ref
+        name, version, user, channel, _ = rule_ref
         return not((name != "*" and name != conan_reference.name) or
                    (version != "*" and version != conan_reference.version) or
                    (user != "*" and user != conan_reference.user) or
