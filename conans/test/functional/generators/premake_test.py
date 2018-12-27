@@ -9,19 +9,13 @@ from conans.client.tools import chdir, which
 from conans.test.utils.tools import TestClient
 
 
-@attr("slow")
 @attr("premake")
 @unittest.skipIf(which("premake5") is None, "Needs premake5")
 class PremakeGeneratorTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.client.run("new test/1.0")
-        self.client.run("create . danimtb/testing")
         conanfile = textwrap.dedent("""
-        [requires]
-        test/1.0@danimtb/testing
-        
         [generators]
         premake
         """)
@@ -36,10 +30,6 @@ class PremakeGeneratorTest(unittest.TestCase):
             language "C++"
             targetdir = "bin/%{cfg.buildcfg}"
 
-            files{
-                "src/**",
-            }
-
             filter "configurations:Debug"
                 defines { "DEBUG" }
                 symbols "On"
@@ -48,17 +38,8 @@ class PremakeGeneratorTest(unittest.TestCase):
                 defines { "NDEBUG" }
                 optimize "On"
         """)
-        hello_cpp = textwrap.dedent("""
-        #include "hello.h"
-        
-        int main()
-        {
-            hello();
-        }
-        """)
         self.client.save({"conanfile.txt": conanfile,
-                          "premake5.lua": premake,
-                          "src/hello.cpp": hello_cpp}, clean_first=True)
+                          "premake5.lua": premake}, clean_first=True)
 
     def test_generate_basic_setup_release(self):
         self.client.run("install .")
