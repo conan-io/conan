@@ -14,6 +14,56 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 
 class PremakeGeneratorTest(unittest.TestCase):
+    content_template = textwrap.dedent("""\
+    #!lua
+    conan_build_type = "None"
+    conan_arch = "None"
+
+    conan_includedirs = {{"{include1}",
+    "{include2}"}}
+    conan_libdirs = {{"{lib1}",
+    "{lib2}"}}
+    conan_bindirs = {{"{bin1}",
+    "{bin2}"}}
+    conan_libs = {{"libfoo", "libbar"}}
+    conan_cppdefines = {{"MYDEFINE2", "MYDEFINE1"}}
+    conan_cppflags = {{"-march=native", "-fPIE"}}
+    conan_cflags = {{"-mtune=native", "-fPIC"}}
+    conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework Cocoa"}}
+    conan_exelinkflags = {{"-framework VideoToolbox", "-framework QuartzCore"}}
+
+    conan_includedirs_MyPkg1 = {{"{include1}"}}
+    conan_libdirs_MyPkg1 = {{"{lib1}"}}
+    conan_bindirs_MyPkg1 = {{"{bin1}"}}
+    conan_libs_MyPkg1 = {{"libfoo"}}
+    conan_cppdefines_MyPkg1 = {{"MYDEFINE1"}}
+    conan_cppflags_MyPkg1 = {{"-fPIE"}}
+    conan_cflags_MyPkg1 = {{"-fPIC"}}
+    conan_sharedlinkflags_MyPkg1 = {{"-framework Cocoa"}}
+    conan_exelinkflags_MyPkg1 = {{"-framework QuartzCore"}}
+    conan_rootpath_MyPkg1 = "{root1}"
+
+    conan_includedirs_MyPkg2 = {{"{include2}"}}
+    conan_libdirs_MyPkg2 = {{"{lib2}"}}
+    conan_bindirs_MyPkg2 = {{"{bin2}"}}
+    conan_libs_MyPkg2 = {{"libbar"}}
+    conan_cppdefines_MyPkg2 = {{"MYDEFINE2"}}
+    conan_cppflags_MyPkg2 = {{"-march=native"}}
+    conan_cflags_MyPkg2 = {{"-mtune=native"}}
+    conan_sharedlinkflags_MyPkg2 = {{"-framework AudioFoundation"}}
+    conan_exelinkflags_MyPkg2 = {{"-framework VideoToolbox"}}
+    conan_rootpath_MyPkg2 = "{root2}"
+
+    function conan_basic_setup()
+        configurations{{conan_build_type}}
+        architecture(conan_arch)
+        includedirs{{conan_includedirs}}
+        libdirs{{conan_libdirs}}
+        links{{conan_libs}}
+        defines{{conan_cppdefines}}
+        bindirs{{conan_bindirs}}
+    end
+    """)
 
     def setUp(self):
         self.tmp_folder1 = temp_folder()
@@ -58,62 +108,20 @@ class PremakeGeneratorTest(unittest.TestCase):
         generator = PremakeGenerator(self.conanfile)
         content = generator.content
 
-        self.assertIn('conan_cppdefines = {"MYDEFINE2", "MYDEFINE1"}', content)
-        self.assertIn('conan_cppdefines_MyPkg1 = {"MYDEFINE1"}', content)
-        self.assertIn('conan_cppdefines_MyPkg2 = {"MYDEFINE2"}', content)
-
         inc1 = os.path.join(self.tmp_folder1, 'include1').replace('\\', '/')
         inc2 = os.path.join(self.tmp_folder2, 'include2').replace('\\', '/')
-        self.assertIn('conan_includedirs = {"%s",\n"%s"}' % (inc1, inc2), content)
-        self.assertIn('conan_includedirs_MyPkg1 = {"%s"}' % inc1, content)
-        self.assertIn('conan_includedirs_MyPkg2 = {"%s"}' % inc2, content)
 
         lib1 = os.path.join(self.tmp_folder1, 'lib1').replace('\\', '/')
         lib2 = os.path.join(self.tmp_folder2, 'lib2').replace('\\', '/')
-        self.assertIn('conan_libdirs = {"%s",\n"%s"}' % (lib1, lib2), content)
-        self.assertIn('conan_libdirs_MyPkg1 = {"%s"}' % lib1, content)
-        self.assertIn('conan_libdirs_MyPkg2 = {"%s"}' % lib2, content)
 
         bin1 = os.path.join(self.tmp_folder1, 'bin1').replace('\\', '/')
         bin2 = os.path.join(self.tmp_folder2, 'bin2').replace('\\', '/')
-        self.assertIn('conan_bindirs = {"%s",\n"%s"}' % (bin1, bin2), content)
-        self.assertIn('conan_bindirs_MyPkg1 = {"%s"}' % bin1, content)
-        self.assertIn('conan_bindirs_MyPkg2 = {"%s"}' % bin2, content)
 
-        self.assertIn('conan_libs = {"libfoo", "libbar"}', content)
-        self.assertIn('conan_libs_MyPkg1 = {"libfoo"}', content)
-        self.assertIn('conan_libs_MyPkg2 = {"libbar"}', content)
+        root1 = self.tmp_folder1.replace('\\', '/')
+        root2 = self.tmp_folder2.replace('\\', '/')
 
-        self.assertIn('conan_cflags = {"-mtune=native", "-fPIC"}', content)
-        self.assertIn('conan_cflags_MyPkg1 = {"-fPIC"}', content)
-        self.assertIn('conan_cflags_MyPkg2 = {"-mtune=native"}', content)
-
-        self.assertIn('conan_cppflags = {"-march=native", "-fPIE"}', content)
-        self.assertIn('conan_cppflags_MyPkg1 = {"-fPIE"}', content)
-        self.assertIn('conan_cppflags_MyPkg2 = {"-march=native"}', content)
-
-        self.assertIn('conan_sharedlinkflags = {"-framework AudioFoundation", "-framework Cocoa"}',
-                      content)
-        self.assertIn('conan_sharedlinkflags_MyPkg1 = {"-framework Cocoa"}', content)
-        self.assertIn('conan_sharedlinkflags_MyPkg2 = {"-framework AudioFoundation"}', content)
-
-        self.assertIn('conan_exelinkflags = {"-framework VideoToolbox", "-framework QuartzCore"}',
-                      content)
-        self.assertIn('conan_exelinkflags_MyPkg1 = {"-framework QuartzCore"}', content)
-        self.assertIn('conan_exelinkflags_MyPkg2 = {"-framework VideoToolbox"}', content)
-
-    def test_conan_basic_setup_content(self):
-        generator = PremakeGenerator(self.conanfile)
-        content = generator.content
-
-        basic_setup_expected = textwrap.dedent("""
-                function conan_basic_setup()
-                    configurations{conan_build_type}
-                    architecture(conan_arch)
-                    includedirs{conan_includedirs}
-                    libdirs{conan_libdirs}
-                    links{conan_libs}
-                    defines{conan_cppdefines}
-                    bindirs{conan_bindirs}
-                end""")
-        self.assertIn(basic_setup_expected, content)
+        expected_content = self.content_template.format(include1=inc1, include2=inc2,
+                                                        lib1=lib1, lib2=lib2,
+                                                        bin1=bin1, bin2=bin2,
+                                                        root1=root1, root2=root2)
+        self.assertEqual(expected_content, content)

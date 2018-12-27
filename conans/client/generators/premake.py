@@ -42,10 +42,12 @@ class PremakeGenerator(Generator):
 
         sections = ["#!lua"]
         
-        sections.append(
-            'conan_build_type = "' + str(self.settings.get_safe("build_type")) + '"\n'
-            'conan_arch = "' + str(self.settings.get_safe("arch")) + '"\n')
-        
+        sections.extend(
+                ['conan_build_type = "{0}"'.format(str(self.settings.get_safe("build_type"))),
+                 'conan_arch = "{0}"'.format(str(self.settings.get_safe("arch"))),
+                 ""]
+        )
+
         all_flags = template.format(dep="", deps=deps)
         sections.append(all_flags)
         template_deps = template + 'conan_rootpath{dep} = "{deps.rootpath}"\n'
