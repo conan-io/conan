@@ -238,7 +238,7 @@ class B2Generator(Generator):
             }.get(self.conanfile.settings.get_safe('arch'))
             self._b2_variation['address-model'] = {
                 'x86': '32', 'x86_64': '64',
-                'ppc64le': '64', 'ppc64': '64',
+                'ppc64le': '64', 'ppc64': '64', 'ppc32': '32',
                 'armv6': '32', 'armv7': '32', 'armv7s': '32', 'armv7k': '32', 'armv7hf': '32',
                 'armv8': '64', 'armv8_32': '32', 'armv8.3': "64",
                 'sparc': '32', 'sparcv9': '64',
