@@ -26,5 +26,5 @@ class Pkg(ConanFile):
     version = "1.0"
 
     def package(self):
-        assert(tools.get_env("test_param") == "{test_param}")
+        assert(tools.get_env("test_param") == r"{test_param}")
 """
