@@ -159,7 +159,6 @@ class RemoteManager(object):
         logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
         if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
-            self._output.writeln("")
 
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                    reference=package_reference.conan,
