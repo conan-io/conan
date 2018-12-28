@@ -322,7 +322,7 @@ class TestConan(ConanFile):
                              stat.S_IRWXU, stat.S_IRWXU)
 
     def upload_all_test(self):
-        '''Upload conans and package together'''
+        """Upload conans and package together"""
         # Try to upload all conans and packages
         self.client.run('upload %s --all' % str(self.conan_ref))
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
