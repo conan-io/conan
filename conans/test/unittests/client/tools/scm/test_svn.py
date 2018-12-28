@@ -11,6 +11,7 @@ from conans.test.utils.tools import temp_folder
 class SVNRemoteUrlTest(unittest.TestCase):
 
     def test_remove_credentials(self):
+        """ Check that the 'remove_credentials' argument is taken into account """
         expected_url = 'https://myrepo.com/path/to/repo'
         origin_url = 'https://username:password@myrepo.com/path/to/repo'
 
