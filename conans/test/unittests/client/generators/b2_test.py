@@ -329,3 +329,11 @@ if $(__define_targets__) {
 
         for ck, cv in generator.content.items():
             self.assertEquals(cv, content[ck])
+
+    def b2_empty_settings_test(self):
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+
+        generator = B2Generator(conanfile)
+        # fails if generator doesn't support empty settings
+        generator.content

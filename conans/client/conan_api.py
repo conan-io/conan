@@ -45,6 +45,7 @@ from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
+from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -590,9 +591,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, _, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
-                                                          check_updates, False, remote_name,
-                                                          recorder, workspace=None)
+        deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
+                                                       check_updates, False, remote_name,
+                                                       recorder, workspace=None)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -602,10 +603,10 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info,
-                                                                  build_modes, check_updates,
-                                                                  False, remote_name, recorder,
-                                                                  workspace=None)
+        deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
+                                                               build_modes, check_updates,
+                                                               False, remote_name, recorder,
+                                                               workspace=None)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
@@ -615,9 +616,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_name,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        deps_graph, conanfile, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
-                                                                  update, False, remote_name,
-                                                                  recorder, workspace=None)
+        deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
+                                                               update, False, remote_name,
+                                                               recorder, workspace=None)
         return deps_graph, conanfile
 
     @api_method
@@ -654,9 +655,10 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                 deps_info_required=True)
-        packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                install_folder, self._hook_manager, conanfile_path, None,
-                                local=True, copy_info=True)
+        with get_env_context_manager(conanfile):
+            packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
+                                    install_folder, self._hook_manager, conanfile_path, None,
+                                    local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

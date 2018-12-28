@@ -81,7 +81,7 @@ class B2Generator(Generator):
         name = name.lower()
         # Create a b2 project for the package dependency.
         return [self.conanbuildinfo_project_template.format(name=name)]
-    
+
     def b2_constants_for_dep(self, name, info, user=None):
         '''
         Generates a list of constant variable definitions for the information in the
@@ -214,13 +214,7 @@ class B2Generator(Generator):
         '''
         if not getattr(self, "_b2_variation_key", None):
             self._b2_variation = {}
-            self._b2_variation['toolset'] = {
-                'sun-cc': 'sun',
-                'gcc': 'gcc',
-                'Visual Studio': 'msvc',
-                'clang': 'clang',
-                'apple-clang': 'clang'
-            }.get(self.conanfile.settings.get_safe('compiler'))+'-'+self.b2_toolset_version
+            self._b2_variation['toolset'] = self.b2_toolset_name + '-' + self.b2_toolset_version
             self._b2_variation['architecture'] = {
                 'x86': 'x86', 'x86_64': 'x86',
                 'ppc64le': 'power', 'ppc64': 'power',
@@ -280,15 +274,26 @@ class B2Generator(Generator):
                 '2c': None, 'gnu2c': 'gnu',
             }.get(self.conanfile.settings.get_safe('cppstd'))
         return self._b2_variation
-    
+
+    @property
+    def b2_toolset_name(self):
+        compiler = {
+            'sun-cc': 'sun',
+            'gcc': 'gcc',
+            'Visual Studio': 'msvc',
+            'clang': 'clang',
+            'apple-clang': 'clang'
+        }.get(self.conanfile.settings.get_safe('compiler'))
+        return str(compiler)
+
     @property
     def b2_toolset_version(self):
-        if self.conanfile.settings.compiler == 'Visual Studio':
+        if self.conanfile.settings.get_safe('compiler') == 'Visual Studio':
             if self.conanfile.settings.compiler.version == '15':
                 return '14.1'
             else:
                 return str(self.conanfile.settings.compiler.version)+'.0'
-        return str(self.conanfile.settings.compiler.version)
+        return str(self.conanfile.settings.get_safe('compiler.version'))
 
     conanbuildinfo_header_text = '''\
 #|
