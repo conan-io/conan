@@ -19,7 +19,7 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list
-from conans.client.conf import ConanClientConfigParser, MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire

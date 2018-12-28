@@ -17,13 +17,10 @@ from conans.server.rest.controllers.v1.search_controller import SearchController
 class ApiV1(Bottle):
 
     def __init__(self, credentials_manager, updown_auth_manager,
-                 server_version, min_client_compatible_version,
                  server_capabilities, *argc, **argv):
 
         self.credentials_manager = credentials_manager
         self.updown_auth_manager = updown_auth_manager
-        self.server_version = server_version
-        self.min_client_compatible_version = min_client_compatible_version
         self.server_capabilities = server_capabilities
         Bottle.__init__(self, *argc, **argv)
 
@@ -47,9 +44,7 @@ class ApiV1(Bottle):
 
     def install_plugins(self):
         # Check client version
-        self.install(VersionCheckerPlugin(self.server_version,
-                                          self.min_client_compatible_version,
-                                          self.server_capabilities))
+        self.install(VersionCheckerPlugin(self.server_capabilities))
 
         # Second, check Http Basic Auth
         self.install(HttpBasicAuthentication())

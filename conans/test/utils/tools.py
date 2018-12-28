@@ -19,16 +19,14 @@ import bottle
 import requests
 import six
 from mock import Mock
-from mock import patch
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import __version__ as CLIENT_VERSION, tools
+from conans import tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_client_cache
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -225,13 +223,8 @@ class TestRequester(object):
 
 
 class TestServer(object):
-    from conans import __version__ as SERVER_VERSION
-    from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
-
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
-                 server_version=Version(SERVER_VERSION),
-                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
                  server_capabilities=None, complete_urls=False):
         """
              'read_permissions' and 'write_permissions' is a list of:
@@ -251,14 +244,11 @@ class TestServer(object):
             users = {"lasote": "mypass"}
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
-        min_client_ver = min_client_compatible_version
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
         self.test_server = TestServerLauncher(base_path, read_permissions,
                                               write_permissions, users,
                                               base_url=base_url,
                                               plugins=plugins,
-                                              server_version=server_version,
-                                              min_client_compatible_version=min_client_ver,
                                               server_capabilities=server_capabilities)
         self.app = TestApp(self.test_server.ra.root_app)
 
@@ -442,11 +432,9 @@ class TestClient(object):
     in command line
     """
 
-    def __init__(self, base_folder=None, current_folder=None,
-                 servers=None, users=None, client_version=CLIENT_VERSION,
-                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True,
-                 block_v2=None, revisions=None, cpu_count=1):
+    def __init__(self, base_folder=None, current_folder=None, servers=None, users=None,
+                 requester_class=None, runner=None, path_with_spaces=True, block_v2=None,
+                 revisions=None, cpu_count=1):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -465,9 +453,6 @@ class TestClient(object):
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
-
-        self.client_version = str(client_version)
-        self.min_server_compatible_version = str(min_server_compatible_version)
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
@@ -577,12 +562,9 @@ servers["r2"] = TestServer()
             self.hook_manager = HookManager(self.client_cache.hooks_path,
                                             get_env("CONAN_HOOKS", list()), self.user_io.out)
 
-            with patch('conans.client.rest.rest_client.client_version', self.client_version):
-                with patch('conans.client.rest.rest_client.MIN_SERVER_COMPATIBLE_VERSION',
-                           self.min_server_compatible_version):
-                    self.localdb, self.rest_api_client, self.remote_manager = \
-                            Conan.instance_remote_manager(self.requester, self.client_cache,
-                                                          self.user_io, self.hook_manager)
+            self.localdb, self.rest_api_client, self.remote_manager = \
+                Conan.instance_remote_manager(self.requester, self.client_cache,
+                                              self.user_io, self.hook_manager)
             self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 

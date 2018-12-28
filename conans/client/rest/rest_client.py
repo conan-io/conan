@@ -1,12 +1,8 @@
 from collections import defaultdict
 
 from conans import CHECKSUM_DEPLOY, REVISIONS
-from conans import __version__ as client_version
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.model.version import Version
 from conans.util.env_reader import get_env
 
 
@@ -22,11 +18,7 @@ class RestApiClient(object):
         self.remote_url = None
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
-
-        # Verify client version against remotes
-        self.requester = VersionCheckerRequester(requester, Version(client_version),
-                                                 Version(MIN_SERVER_COMPATIBLE_VERSION),
-                                                 output)
+        self.requester = requester
 
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
