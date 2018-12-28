@@ -83,7 +83,7 @@ class RestApiTest(unittest.TestCase):
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
         self.assertEquals(version, "0.16.0")
-        self.assertEquals(check, None)  # None because we are not sending client version
+        self.assertEquals(check, "server outdated")  # Client version is always sent (current)
         self.assertEquals(capabilities, ["ImCool"])
 
     def get_conan_test(self):
