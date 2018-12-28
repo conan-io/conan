@@ -29,9 +29,17 @@ class RemoveCredentialsTest(unittest.TestCase):
                          SCMBase._remove_credentials_url(
                              'git@github.com:conan-io/conan.git'))
 
-    def test_local(self):
+    def test_local_unix(self):
         self.assertEqual('file:///srv/git/project.git',
                          SCMBase._remove_credentials_url('file:///srv/git/project.git'))
+        self.assertEqual('file:///srv/git/PROJECT.git',
+                         SCMBase._remove_credentials_url('file:///srv/git/PROJECT.git'))
+
+    def test_local_windows(self):
+        self.assertEqual('file:///c:/srv/git/PROJECT',
+                         SCMBase._remove_credentials_url('file:///c:/srv/git/PROJECT'))
+        self.assertEqual('file:///C:/srv/git/PROJECT',
+                         SCMBase._remove_credentials_url('file:///C:/srv/git/PROJECT'))
 
     def test_svn_ssh(self):
         self.assertEqual('svn+ssh://10.106.191.164/home/svn/shproject',
