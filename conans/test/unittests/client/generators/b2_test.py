@@ -137,11 +137,13 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 # mypkg
 # mypkg
 project-define mypkg ;
+use-project /mypkg : mypkg ;
 
 
 # mypkg2
 # mypkg2
 project-define mypkg2 ;
+use-project /mypkg2 : mypkg2 ;
 
 {
     local __define_targets__ = yes ;
