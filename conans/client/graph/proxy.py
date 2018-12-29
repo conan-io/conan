@@ -11,7 +11,6 @@ from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
-from conans.util.log import logger
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
