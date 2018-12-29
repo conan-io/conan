@@ -177,7 +177,7 @@ class B2Generator(Generator):
 
     @property
     def conanbuildinfo_variation_jam(self):
-        return 'conanbuildinfo-%s.jam'%(self.b2_variation_key)
+        return 'conanbuildinfo-%s.jam' % (self.b2_variation_key)
 
     _b2_variation_key = None
 
