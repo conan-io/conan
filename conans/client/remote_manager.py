@@ -285,7 +285,7 @@ class RemoteManager(object):
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=package_reference.conan, package_id=package_id,
-                                   Wremote=remote)
+                                   remote=remote)
         return new_ref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
