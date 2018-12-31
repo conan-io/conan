@@ -42,11 +42,12 @@ class PremakeGeneratorTest(unittest.TestCase):
                           "premake5.lua": premake}, clean_first=True)
 
     def test_generate_basic_setup_release(self):
-        self.client.run("install .")
+        self.client.run("install . -s build_type=Release -s arch=x86_64 --build missing")
         with chdir(self.client.current_folder):
             self.client.runner("premake5 vs2017")
         sln_content = load(os.path.join(self.client.current_folder, "example.sln"))
         self.assertIn("Release|x64", sln_content)
+        self.assertNotIn("Debug|Win32", sln_content)
         self.assertNotIn("Debug|x64", sln_content)
 
     def test_generate_basic_setup_debug_32bit(self):
@@ -55,4 +56,5 @@ class PremakeGeneratorTest(unittest.TestCase):
             self.client.runner("premake5 vs2017")
         sln_content = load(os.path.join(self.client.current_folder, "example.sln"))
         self.assertIn("Debug|Win32", sln_content)
+        self.assertNotIn("Release|Win32", sln_content)
         self.assertNotIn("Release|x64", sln_content)
