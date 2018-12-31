@@ -4,7 +4,6 @@ import os
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.files import save
 
