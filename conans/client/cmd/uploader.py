@@ -142,9 +142,8 @@ class CmdUpload(object):
         self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                            policy=policy, remote_manifest=remote_manifest)
 
-        cur_recipe_remote = self._registry.refs.get(conan_reference)
         # The recipe wasn't in the registry or it has changed the revision field only
-        if not cur_recipe_remote and policy != UPLOAD_POLICY_SKIP:
+        if not current_remote and policy != UPLOAD_POLICY_SKIP:
             self._registry.refs.set(conan_reference, remote.name)
 
         return conan_reference

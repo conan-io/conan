@@ -253,7 +253,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 ''' % (conan_ref, conan_ref.name))
 
 
-class ConanInstaller(object):
+class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
@@ -341,7 +341,8 @@ class ConanInstaller(object):
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
-    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph, graph_info):
+    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph,
+                               graph_info):
         conan_file = node.conanfile
         output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
         include_dirs = workspace_package.includedirs
