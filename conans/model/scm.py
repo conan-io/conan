@@ -50,8 +50,9 @@ class SCMData(object):
 
 
 class SCM(object):
-    def __init__(self, data, repo_folder):
+    def __init__(self, data, repo_folder, output):
         self._data = data
+        self._output = output
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
@@ -62,14 +63,15 @@ class SCM(object):
             raise ConanException("SCM not supported: %s" % self._data.type)
 
         return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
-                          username=self._data.username, password=self._data.password)
+                          username=self._data.username, password=self._data.password,
+                          output=self._output)
 
     @property
     def excluded_files(self):
         return self.repo.excluded_files()
 
     def checkout(self):
-        output= ""
+        output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
             output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
@@ -97,4 +99,3 @@ class SCM(object):
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
-

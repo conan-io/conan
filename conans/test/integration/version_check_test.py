@@ -1,8 +1,9 @@
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
+from collections import OrderedDict
+
 from conans.model.version import Version
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from collections import OrderedDict
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class VersionCheckTest(unittest.TestCase):
@@ -13,7 +14,7 @@ class VersionCheckTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers,
                                  users={"default": [("lasote", "mypass")]}, client_version=4)
 
-        errors = self.client.run("search something -r default", ignore_error=True)
+        errors = self.client.run("search something -r default", assert_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). "
                       "Upgrade conan client.", self.client.user_io.out)
         self.assertTrue(errors)  # Not Errors
@@ -23,19 +24,17 @@ class VersionCheckTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers,
                                  users={"default": [("lasote", "mypass")]}, client_version=4)
 
-        errors = self.client.run("search something -r default", ignore_error=False)
+        self.client.run("search something -r default")
         self.assertIn(" A new conan version (v10) is available in current remote. Please, "
                       "upgrade conan client to avoid deprecation.", self.client.user_io.out)
-        self.assertFalse(errors)  # Not Errors
 
         # Client ok
         self.servers = {"default": self._get_server(10, 4)}
         self.client = TestClient(servers=self.servers,
                                  users={"default": [("lasote", "mypass")]}, client_version=10)
 
-        errors = self.client.run("search something -r default", ignore_error=False)
+        self.client.run("search something -r default")
         self.assertNotIn("conan client", self.client.user_io.out)
-        self.assertFalse(errors)  # Not Errors
 
         # Server outdated
         self.servers = {"default": self._get_server(1, 1)}
@@ -43,11 +42,8 @@ class VersionCheckTest(unittest.TestCase):
                                  users={"default": [("lasote", "mypass")]}, client_version=10,
                                  min_server_compatible_version=1)
 
-        errors = self.client.run("search something -r default", ignore_error=True)
-        self.assertNotIn("The conan remote version is outdated (v1). Please, contact"
-                         " with your system administrator and upgrade the remote to"
-                         " avoid deprecation", self.client.user_io.out)
-        self.assertFalse(errors)  # No Errors
+        self.client.run("search something -r default")
+        self.assertNotIn("The conan remote version is outdated (v1)", self.client.user_io.out)
 
         # Server deprecated
         self.servers = {"default": self._get_server(1, 1)}
@@ -55,7 +51,7 @@ class VersionCheckTest(unittest.TestCase):
                                  users={"default": [("lasote", "mypass")]}, client_version=10,
                                  min_server_compatible_version=2)
 
-        errors = self.client.run("search something -r default", ignore_error=True)
+        errors = self.client.run("search something -r default", assert_error=True)
         self.assertIn("Your conan's client is incompatible with this remote."
                       " The server is deprecated. "
                       "(v1). Please, contact with your system administrator and"
@@ -91,13 +87,13 @@ class VersionCheckTest(unittest.TestCase):
                                  users={"normal_server": [("lasote", "mypass")],
                                         "the_last_server": [("lasote", "mypass")]},
                                  client_version=2)
-        errors = self.client.run("search something -r the_last_server", ignore_error=True)
+        errors = self.client.run("search something -r the_last_server", assert_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). "
                       "Upgrade conan client.", self.client.user_io.out)
         self.assertTrue(errors)  # Errors
 
         errors = self.client.run("install Hello0/0.1@lasote/stable --build missing",
-                                 ignore_error=True)
+                                 assert_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). "
                       "Upgrade conan client.", self.client.user_io.out)
         self.assertTrue(errors)  # Errors! because it fails in the first remote

@@ -2,20 +2,19 @@ import json
 import os
 import platform
 import re
-import deprecation
-
 import subprocess
-
 from contextlib import contextmanager
 
+import deprecation
+
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import detected_architecture, OSInfo
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text, save, mkdir_tmp
-from conans.unicode import get_cwd
 from conans.model.version import Version
+from conans.unicode import get_cwd
+from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
+from conans.util.files import decode_text, mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -410,11 +409,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True):
+                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
     new_env = {}
@@ -575,12 +574,14 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         if subsystem != WSL:
 
             def get_path_value(container, subsystem_name):
-                """Gets the path from the container dict and returns a string with the path for the subsystem_name"""
+                """Gets the path from the container dict and returns a
+                string with the path for the subsystem_name"""
                 _path_key = next((name for name in container.keys() if "path" == name.lower()), None)
                 if _path_key:
                     _path_value = container.get(_path_key)
                     if isinstance(_path_value, list):
-                        return ":".join([unix_path(path, path_flavor=subsystem_name) for path in _path_value])
+                        return ":".join([unix_path(path, path_flavor=subsystem_name)
+                                         for path in _path_value])
                     else:
                         return unix_path(_path_value, path_flavor=subsystem_name)
 

@@ -1,15 +1,14 @@
 import json
 import os
-import fasteners
-
 from collections import OrderedDict, namedtuple
+
+import fasteners
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, save
 from conans.util.config_parser import get_bool_from_text_value
+from conans.util.files import load, save
 from conans.util.log import logger
-
 
 default_remotes = OrderedDict({"conan-center": ("https://conan.bintray.com", True)})
 

@@ -1,12 +1,12 @@
+from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
+                                                build_type_flags, format_defines,
+                                                format_include_paths, format_libraries,
+                                                format_library_paths, libcxx_define, libcxx_flag,
+                                                rpath_flags, sysroot_flag,
+                                                visual_linker_option_separator, visual_runtime)
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.model import Generator
 from conans.paths import BUILD_INFO_COMPILER_ARGS
-from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
-                                                format_defines, format_include_paths,
-                                                format_library_paths, format_libraries,
-                                                build_type_flags, build_type_define, libcxx_flag,
-                                                libcxx_define, rpath_flags, visual_runtime,
-                                                visual_linker_option_separator)
 
 
 class CompilerArgsGenerator(Generator):
@@ -28,12 +28,14 @@ class CompilerArgsGenerator(Generator):
         """
         flags = []
         flags.extend(format_defines(self._deps_build_info.defines))
-        flags.extend(format_include_paths(self._deps_build_info.include_paths, compiler=self.compiler))
+        flags.extend(format_include_paths(self._deps_build_info.include_paths,
+                                          compiler=self.compiler))
 
         flags.extend(self._deps_build_info.cppflags)
         flags.extend(self._deps_build_info.cflags)
 
-        arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"), compiler=self.compiler)
+        arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"),
+                                      compiler=self.compiler)
         if arch_flag:
             flags.append(arch_flag)
 

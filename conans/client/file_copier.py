@@ -1,5 +1,5 @@
-import os
 import fnmatch
+import os
 import shutil
 from collections import defaultdict
 
@@ -153,7 +153,7 @@ class FileCopier(object):
             relpath = os.path.relpath(abs_path, src)
             if relpath.startswith("."):
                 continue
-            
+
             link = os.readlink(src_link)
             # Absoluted path symlinks are a problem, convert it to relative
             if os.path.isabs(link):

@@ -1,12 +1,12 @@
 import json
 import os
 
-
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.printer import Printer
-from conans.client.remote_registry import RemoteRegistry
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.util.files import save
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
+from conans.util.files import save
 
 
 class CommandOutputer(object):
@@ -67,7 +67,7 @@ class CommandOutputer(object):
         ret = {}
         for node in sorted(deps_graph.nodes):
             ref = node.conan_ref
-            if ref:
+            if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
         return ret
@@ -76,17 +76,18 @@ class CommandOutputer(object):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def info(self, deps_graph, only, package_filter, show_paths):
-        registry = RemoteRegistry(self.client_cache.registry, self.user_io.out)
+        registry = self.client_cache.registry
         Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.client_cache, package_filter=package_filter,
+                                             path_resolver=self.client_cache,
+                                             package_filter=package_filter,
                                              show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph)
+            grapher = ConanHTMLGrapher(deps_graph, self.client_cache.conan_folder)
         else:
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(deps_graph)

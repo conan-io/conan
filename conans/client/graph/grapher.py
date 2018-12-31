@@ -1,7 +1,10 @@
-from conans.util.files import save
 from conans.client.installer import build_id
-from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
+import os
+
+from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE, \
     BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
+from conans.client.installer import build_id
+from conans.util.files import save
 
 
 class ConanGrapher(object):
@@ -12,11 +15,10 @@ class ConanGrapher(object):
         graph_lines = ['digraph {\n']
 
         for node in self._deps_graph.nodes:
-            ref = node.conan_ref or str(node.conanfile)
             depends = node.neighbors()
             if depends:
                 depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (str(ref), depends))
+                graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
@@ -26,8 +28,18 @@ class ConanGrapher(object):
 
 
 class ConanHTMLGrapher(object):
-    def __init__(self, deps_graph):
+    def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph
+        self._cache_folder = cache_folder
+
+    def _visjs_paths(self):
+        visjs = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"
+        viscss = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css"
+        visjs_path = os.path.join(self._cache_folder, "vis.min.js")
+        visjs = visjs_path if os.path.exists(visjs_path) else visjs
+        viscss_path = os.path.join(self._cache_folder, "vis.min.css")
+        viscss = viscss_path if os.path.exists(viscss_path) else viscss
+        return visjs, viscss
 
     def graph_file(self, filename):
         save(filename, self.graph())
@@ -40,25 +52,25 @@ class ConanHTMLGrapher(object):
         for i, node in enumerate(graph_nodes):
             ref, conanfile = node.conan_ref, node.conanfile
             nodes_map[node] = i
-            if ref:
-                label = "%s/%s" % (ref.name, ref.version)
-                fulllabel = ["<h3>%s</h3>" % str(ref)]
-                fulllabel.append("<ul>")
-                for name, data in [("id", conanfile.info.package_id()),
-                                   ("build_id", build_id(conanfile)),
-                                   ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
-                                   ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
-                                   ("license", conanfile.license),
-                                   ("author", conanfile.author),
-                                   ("topics", str(conanfile.topics))]:
-                    if data:
-                        data = data.replace("'", '"')
-                        fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
 
-                fulllabel.append("<ul>")
-                fulllabel = "".join(fulllabel)
-            else:
-                fulllabel = label = node.conan_ref or str(node.conanfile)
+            label = "%s/%s" % (ref.name, ref.version) if ref else conanfile.display_name
+            fulllabel = ["<h3>%s</h3>" % conanfile.display_name]
+            fulllabel.append("<ul>")
+            for name, data in [("id", conanfile.info.package_id()),
+                               ("build_id", build_id(conanfile)),
+                               ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
+                               ("homepage",
+                                '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
+                               ("license", conanfile.license),
+                               ("author", conanfile.author),
+                               ("topics", str(conanfile.topics))]:
+                if data:
+                    data = data.replace("'", '"')
+                    fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
+
+            fulllabel.append("<ul>")
+            fulllabel = "".join(fulllabel)
+
             if node.build_require:
                 shape = "ellipse"
             else:
@@ -68,7 +80,8 @@ class ConanHTMLGrapher(object):
                      BINARY_BUILD: "Khaki",
                      BINARY_MISSING: "OrangeRed",
                      BINARY_UPDATE: "SeaGreen"}.get(node.binary, "White")
-            nodes.append("{id: %d, label: '%s', shape: '%s', color: {background: '%s'}, fulllabel: '%s'}"
+            nodes.append("{id: %d, label: '%s', shape: '%s', "
+                         "color: {background: '%s'}, fulllabel: '%s'}"
                          % (i, label, shape, color, fulllabel))
         nodes = ",\n".join(nodes)
 
@@ -80,13 +93,15 @@ class ConanHTMLGrapher(object):
                 edges.append("{ from: %d, to: %d }" % (src, dst))
         edges = ",\n".join(edges)
 
-        return self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        result = self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        visjs, viscss = self._visjs_paths()
+        return result.replace("%VISJS%", visjs).replace("%VISCSS%", viscss)
 
     _template = """<html>
 
 <head>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="%VISJS%"></script>
+  <link href="%VISCSS%" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -119,7 +134,9 @@ class ConanHTMLGrapher(object):
     <div id="mynetwork" style="float:left; width: 75%;"></div>
     <div style="float:right;width:25%;">
       <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
-      <button onclick="javascript:showhideclass('controls')" class="button noPrint">Show / hide graph controls.</button>
+      <button onclick="javascript:showhideclass('controls')" class="button noPrint">
+          Show / hide graph controls
+      </button>
       <div id="controls" class="controls" style="padding:5; display:none"></div>
     </div>
   </div>

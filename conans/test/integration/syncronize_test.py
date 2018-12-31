@@ -1,16 +1,17 @@
+import os
 import unittest
 
-from conans import DEFAULT_REVISION_V1
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference, PackageReference
-import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
-from conans.util.files import load, save
-from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
-from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+
+from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 @attr("slow")
@@ -28,7 +29,7 @@ class SynchronizeTest(unittest.TestCase):
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
 
-        remote_paths = self.client.servers["default"].paths
+        remote_paths = self.client.servers["default"].server_store
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -88,7 +89,7 @@ class SynchronizeTest(unittest.TestCase):
 
         self.client.run("install %s --build missing" % str(conan_reference))
         # Upload package
-        package_ids = self.client.paths.conan_packages(conan_reference)
+        package_ids = self.client.client_cache.conan_packages(conan_reference)
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
 
         # Check that conans exists on server
@@ -97,7 +98,7 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = self.client.paths.package(package_reference)
+        pack_path = self.client.client_cache.package(package_reference)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
@@ -133,6 +134,6 @@ class SynchronizeTest(unittest.TestCase):
 
     def _create_manifest(self, package_reference):
         # Create the manifest to be able to upload the package
-        pack_path = self.client.paths.package(package_reference)
+        pack_path = self.client.client_cache.package(package_reference)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

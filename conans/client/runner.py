@@ -2,16 +2,19 @@ import io
 import os
 import sys
 from contextlib import contextmanager
-from subprocess import Popen, PIPE, STDOUT
-from conans.util.files import decode_text
-from conans.errors import ConanException
+from subprocess import PIPE, Popen, STDOUT
+
 import six
+
+from conans.errors import ConanException
 from conans.unicode import get_cwd
+from conans.util.files import decode_text
 
 
 class ConanRunner(object):
 
-    def __init__(self, print_commands_to_output=False, generate_run_log_file=False, log_run_to_output=True):
+    def __init__(self, print_commands_to_output=False, generate_run_log_file=False,
+                 log_run_to_output=True):
         self._print_commands_to_output = print_commands_to_output
         self._generate_run_log_file = generate_run_log_file
         self._log_run_to_output = log_run_to_output
@@ -118,7 +121,8 @@ if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
         :return: None
         """
         ld_library_path = os.environ['LD_LIBRARY_PATH']
-        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '').strip(';:')
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir,
+                                                                '').strip(';:')
         yield
         os.environ['LD_LIBRARY_PATH'] = ld_library_path
 

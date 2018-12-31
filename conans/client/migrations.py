@@ -3,11 +3,11 @@ import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
-from conans.migrations import Migrator
-from conans.paths import EXPORT_SOURCES_DIR_OLD
-from conans.util.files import load, save, list_folder_subdirs
-from conans.model.version import Version
 from conans.errors import ConanException
+from conans.migrations import Migrator
+from conans.model.version import Version
+from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.util.files import list_folder_subdirs, load, save
 
 
 class ClientMigrator(Migrator):
@@ -176,7 +176,6 @@ def migrate_to_default_profile(conf_path, default_profile_path):
 
 
 def migrate_c_src_export_source(client_cache, out):
-    from conans.util.files import list_folder_subdirs
     package_folders = list_folder_subdirs(client_cache.store, 4)
     for package in package_folders:
         package_folder = os.path.join(client_cache.store, package)

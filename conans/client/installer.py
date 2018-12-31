@@ -1,34 +1,31 @@
 import os
 import platform
-
 import shutil
 import time
 
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import write_generators, TXTGenerator
-from conans.client.graph.graph import BINARY_SKIP, BINARY_MISSING, \
-    BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_BUILD, BINARY_CACHE
+from conans.client.generators import TXTGenerator, write_generators
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
+    BINARY_SKIP, BINARY_UPDATE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING_BUILD_FOLDER, \
-    INSTALL_ERROR_BUILDING, \
-    INSTALL_ERROR_MISSING
-from conans.client.source import config_source, complete_recipe_sources
+from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
+    INSTALL_ERROR_MISSING_BUILD_FOLDER
+from conans.client.source import complete_recipe_sources, config_source
 from conans.client.tools.env import pythonpath
-from conans.errors import (ConanException, conanfile_exception_formatter,
-                           ConanExceptionInUserConanfileMethod)
+from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
+                           conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
+from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
-from conans.util.files import (save, rmdir, mkdir, make_read_only,
-                               set_dirty, clean_dirty, load, is_dirty)
+from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
@@ -104,8 +101,8 @@ class _ConanPackageBuilder(object):
                 ignore = None
 
             shutil.copytree(self.source_folder, self.build_folder, symlinks=True, ignore=ignore)
-            logger.debug("Copied to %s", self.build_folder)
-            logger.debug("Files copied %s", os.listdir(self.build_folder))
+            logger.debug("BUILD: Copied to %s", self.build_folder)
+            logger.debug("BUILD: Files copied %s", ",".join(os.listdir(self.build_folder)))
             self._conan_file.source_folder = self.build_folder
 
     def build(self):
@@ -141,7 +138,7 @@ class _ConanPackageBuilder(object):
             conanfile_path = self._client_cache.conanfile(self._conan_ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
-                           self.package_folder, install_folder, self._out, self._hook_manager,
+                           self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._conan_ref)
 
         p_hash = self._client_cache.package_summary_hash(self._package_reference)
@@ -164,14 +161,13 @@ class _ConanPackageBuilder(object):
         self._conan_file.install_folder = self.build_folder
 
         # Read generators from conanfile and generate the needed files
-        logger.debug("Writing generators")
+        logger.info("GENERATORS: Writing generators")
         write_generators(self._conan_file, self.build_folder, self._out)
-        logger.debug("Files copied after generators %s", os.listdir(self.build_folder))
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import run_imports
-        copied_files = run_imports(self._conan_file, self.build_folder, self._out)
+        copied_files = run_imports(self._conan_file, self.build_folder)
 
         try:
             # This is necessary because it is different for user projects
@@ -257,56 +253,55 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 ''' % (conan_ref, conan_ref.name))
 
 
-class ConanInstaller(object):
+class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_manager, registry, recorder, workspace,
-                 hook_manager):
+    def __init__(self, client_cache, output, remote_manager, recorder, workspace, hook_manager):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
 
-    def install(self, deps_graph, keep_build=False):
+    def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, deps_graph, keep_build, root_node)
+        self._build(nodes_by_level, deps_graph, keep_build, root_node, graph_info)
 
-    def _build(self, nodes_by_level, deps_graph, keep_build, root_node):
+    def _build(self, nodes_by_level, deps_graph, keep_build, root_node, graph_info):
         inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
                 conan_ref, conan_file = node.conan_ref, node.conanfile
-                output = ScopedOutput(str(conan_ref), self._out)
+                output = conan_file.output
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
                     raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node, inverse_levels, deps_graph, output)
-                if node.binary == BINARY_SKIP:  # Privates not necessary
-                    continue
-
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
                 if workspace_package:
-                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph)
+                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
+                                                graph_info)
                 else:
+                    self._propagate_info(node, inverse_levels, deps_graph)
+                    if node.binary == BINARY_SKIP:  # Privates not necessary
+                        continue
                     package_ref = PackageReference(conan_ref, package_id)
                     _handle_system_requirements(conan_file, package_ref, self._client_cache, output)
                     self._handle_node_cache(node, package_ref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (conan_ref=None)
-        self._propagate_info(root_node, inverse_levels, deps_graph, self._out)
+        self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -317,8 +312,8 @@ class ConanInstaller(object):
                 return True
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput(str(conan_ref), self._out)
+        conan_file = node.conanfile
+        output = conan_file.output
         package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
 
         with self._client_cache.package_lock(package_ref):
@@ -346,9 +341,10 @@ class ConanInstaller(object):
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
 
-    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
-        output = ScopedOutput("Workspace %s" % conan_ref.name, self._out)
+    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph,
+                               graph_info):
+        conan_file = node.conanfile
+        output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
         include_dirs = workspace_package.includedirs
         lib_dirs = workspace_package.libdirs
         self._call_package_info(conan_file, workspace_package.package_folder)
@@ -362,18 +358,20 @@ class ConanInstaller(object):
             for p in lib_paths:
                 mkdir(p)
 
-        self._propagate_info(node, inverse_levels, deps_graph, output)
+        self._propagate_info(node, inverse_levels, deps_graph)
 
         build_folder = workspace_package.build_folder
         write_generators(conan_file, build_folder, output)
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
         output.info("Generated %s" % CONANINFO)
+        graph_info.save(build_folder)
+        output.info("Generated graphinfo")
         save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
         output.info("Generated %s" % BUILD_INFO)
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import run_imports
-        copied_files = run_imports(conan_file, build_folder, output)
+        copied_files = run_imports(conan_file, build_folder)
         report_copied_files(copied_files, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
@@ -382,7 +380,7 @@ class ConanInstaller(object):
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
         for python_require in conan_file.python_requires:
-            complete_recipe_sources(self._remote_manager, self._client_cache, self._registry,
+            complete_recipe_sources(self._remote_manager, self._client_cache,
                                     conan_file, python_require.conan_ref)
 
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output,
@@ -406,7 +404,7 @@ class ConanInstaller(object):
             with self._client_cache.conanfile_write_lock(conan_ref):
                 set_dirty(builder.build_folder)
                 complete_recipe_sources(self._remote_manager, self._client_cache,
-                                        self._registry, conan_file, conan_ref)
+                                        conan_file, conan_ref)
                 builder.prepare_build()
 
         with self._client_cache.conanfile_read_lock(conan_ref):
@@ -432,7 +430,7 @@ class ConanInstaller(object):
         self._recorder.package_built(package_ref)
 
     @staticmethod
-    def _propagate_info(node, inverse_levels, deps_graph, out):
+    def _propagate_info(node, inverse_levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
         closure = deps_graph.full_closure(node)
         node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
@@ -442,7 +440,7 @@ class ConanInstaller(object):
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
-                out.info("Applying build-requirement: %s" % str(n.conan_ref))
+                conan_file.output.info("Applying build-requirement: %s" % str(n.conan_ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info

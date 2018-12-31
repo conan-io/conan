@@ -1,13 +1,13 @@
 import os
-from conans.model.ref import ConanFileReference, PackageReference
-from os.path import join, normpath
 import platform
+from os.path import join, normpath
+
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
-
 if platform.system() == "Windows":
-    from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
+    from conans.util.windows import conan_expand_user,  rm_conandir, path_shortener
 else:
     def path_shortener(x, _):
         return x

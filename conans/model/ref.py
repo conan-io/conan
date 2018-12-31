@@ -1,6 +1,6 @@
+import re
 from collections import namedtuple
 
-import re
 from six import string_types
 
 from conans.errors import ConanException, InvalidNameException
@@ -79,7 +79,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     opencv/2.4.10@lasote/testing
     """
     whitespace_pattern = re.compile(r"\s+")
-    sep_pattern = re.compile("@|/|#")
+    sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
@@ -89,13 +89,13 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        version = Version(version)
+        version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
-            obj.validate()
+            obj._validate()
         return obj
 
-    def validate(self):
+    def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
         ConanName.validate_name(self.user, reference_token="user name")
@@ -103,20 +103,14 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if self.revision:
             ConanName.validate_revision(self.revision)
 
-    def __hash__(self):
-        return hash((self.name, self.version, self.user, self.channel, self.revision))
-
     @staticmethod
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
         text = ConanFileReference.whitespace_pattern.sub("", text)
-        tokens = ConanFileReference.sep_pattern.split(text)
         try:
-            if len(tokens) not in (4, 5):
-                raise ValueError
-            name, version, user, channel = tokens[0:4]
-            revision = tokens[4] if len(tokens) == 5 else None
+            # Split returns empty start and end groups
+            _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
         except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@user/stable" % text)
