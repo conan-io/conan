@@ -40,8 +40,8 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         installer = BinaryInstaller(self._client_cache, output, self._remote_manager,
-                                   recorder=self._recorder, workspace=workspace,
-                                   hook_manager=self._hook_manager)
+                                    recorder=self._recorder, workspace=workspace,
+                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
         workspace.generate()
 
@@ -91,8 +91,8 @@ class ConanManager(object):
             pass
 
         installer = BinaryInstaller(self._client_cache, self._user_io.out, self._remote_manager,
-                                   recorder=self._recorder, workspace=None,
-                                   hook_manager=self._hook_manager)
+                                    recorder=self._recorder, workspace=None,
+                                    hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:
