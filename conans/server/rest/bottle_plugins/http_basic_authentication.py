@@ -8,12 +8,12 @@ from conans.util.files import decode_text
 
 
 class UserPasswordPair(namedtuple('UserPasswordPair', ['user', 'password'])):
-    '''Simple tuple for store user and pass'''
+    """ Simple tuple for store user and pass """
     pass
 
 
 class HttpBasicAuthentication(AuthorizationHeader):
-    ''' The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication'''
+    """ The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication """
 
     name = 'basichttpauth'
     api = 2

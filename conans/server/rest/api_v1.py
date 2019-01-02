@@ -4,7 +4,6 @@ from conans.errors import EXCEPTION_CODE_MAPPING
 from conans.server.rest.bottle_plugins.http_basic_authentication import HttpBasicAuthentication
 from conans.server.rest.bottle_plugins.jwt_authentication import JWTAuthentication
 from conans.server.rest.bottle_plugins.return_handler import ReturnHandlerPlugin
-from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 from conans.server.rest.controllers.ping_controller import PingController
 from conans.server.rest.controllers.users_controller import UsersController
 from conans.server.rest.controllers.v1.conan_controller import ConanController
@@ -43,9 +42,6 @@ class ApiV1(Bottle):
             FileUploadDownloadController("/files").attach_to(self)
 
     def install_plugins(self):
-        # Check client version
-        self.install(VersionCheckerPlugin(self.server_capabilities))
-
         # Second, check Http Basic Auth
         self.install(HttpBasicAuthentication())
 

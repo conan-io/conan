@@ -12,7 +12,6 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
@@ -58,8 +57,7 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            plugin = VersionCheckerPlugin(["ImCool"])
-            cls.server = TestServerLauncher(plugins=[plugin], server_capabilities=[])
+            cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
             cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
@@ -78,7 +76,7 @@ class RestApiTest(unittest.TestCase):
 
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
-        self.assertEquals(capabilities, ["ImCool"])
+        self.assertEquals(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
         # Upload a conans
