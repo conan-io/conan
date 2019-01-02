@@ -194,6 +194,7 @@ try{
         builders["Windows Rest API Test"] = {
             node("Windows"){
                 stage("REST tests Windows ${pyver}"){
+                    checkout scm
                     try{
                       bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
                     }
@@ -206,6 +207,7 @@ try{
         builders["Linux Rest API Test"] = {
             node("Linux"){
                 stage("REST tests Linux ${pyver}"){
+                    checkout scm
                     docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
                         sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
                     }
