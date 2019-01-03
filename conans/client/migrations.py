@@ -178,7 +178,6 @@ def migrate_to_default_profile(conf_path, default_profile_path):
 
 
 def migrate_c_src_export_source(client_cache, out):
-    from conans.util.files import list_folder_subdirs
     package_folders = list_folder_subdirs(client_cache.store, 4)
     for package in package_folders:
         package_folder = os.path.join(client_cache.store, package)

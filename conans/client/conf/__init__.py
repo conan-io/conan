@@ -9,7 +9,6 @@ from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
-MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
