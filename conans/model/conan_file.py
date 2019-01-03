@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 from conans.client import tools
-from conans.client.output import Color
+from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -50,13 +50,13 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings, local):
+def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current, raise_undefined_field=not local)
+        settings.constraint(current)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -115,21 +115,22 @@ class ConanFile(object):
     options = None
     default_options = None
 
-    def __init__(self, output, runner, user=None, channel=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
-        self.output = output
+        self.output = ScopedOutput(display_name, output)
+        self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
         self._conan_user = user
         self._conan_channel = channel
 
-    def initialize(self, settings, env, local=None):
+    def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings, local)
+        self.settings = create_settings(self, settings)
         try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -279,9 +280,4 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        if self.name and self.version and self._conan_channel and self._conan_user:
-            return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-        elif self.name and self.version:
-            return "%s/%s@PROJECT" % (self.name, self.version)
-        else:
-            return "PROJECT"
+        return self.display_name

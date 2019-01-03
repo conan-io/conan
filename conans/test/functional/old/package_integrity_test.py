@@ -1,0 +1,53 @@
+import os
+import unittest
+
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import save, set_dirty
+
+
+class PackageIngrityTest(unittest.TestCase):
+
+    def remove_locks_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": str(TestConanFile())})
+        client.run("create . lasote/testing")
+        self.assertNotIn('does not contain a number!', client.out)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        conan_folder = client.client_cache.conan(ref)
+        self.assertIn("locks", os.listdir(conan_folder))
+        self.assertTrue(os.path.exists(conan_folder + ".count"))
+        self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
+        client.run("remove * --locks", assert_error=True)
+        self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
+        client.run("remove", assert_error=True)
+        self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
+        client.run("remove --locks")
+        self.assertNotIn("locks", os.listdir(conan_folder))
+        self.assertFalse(os.path.exists(conan_folder + ".count"))
+        self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
+
+    def upload_dirty_test(self):
+        test_server = TestServer([], users={"lasote": "mypass"})
+        client = TestClient(servers={"default": test_server},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile())})
+        client.run("export . lasote/testing")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        pkg_ref = PackageReference(ref, "12345")
+        package_folder = client.client_cache.package(pkg_ref)
+        recipe_rev = client.get_revision(ref)
+        p_rev = client.get_package_revision(pkg_ref)
+        with client.client_cache.update_metadata(pkg_ref.conan) as metadata:
+            metadata.packages[pkg_ref.package_id].revision = p_rev
+            metadata.packages[pkg_ref.package_id].recipe_revision = recipe_rev
+        save(os.path.join(package_folder, "conanmanifest.txt"), "888")
+        set_dirty(package_folder)
+
+        client.run("upload * --all --confirm", assert_error=True)
+        self.assertIn("ERROR: Package Hello/0.1@lasote/testing:12345 is corrupted, aborting upload", client.out)
+        self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=12345'", client.out)
+
+        client.run("remove Hello/0.1@lasote/testing -p=12345 -f")
+        client.run("upload * --all --confirm")

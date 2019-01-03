@@ -12,7 +12,7 @@ from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXP
 from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
 
 
-def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, conan_reference):
+def complete_recipe_sources(remote_manager, client_cache, conanfile, conan_reference):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
@@ -27,7 +27,7 @@ def complete_recipe_sources(remote_manager, client_cache, registry, conanfile, c
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = registry.refs.get(conan_reference)
+    current_remote = client_cache.registry.refs.get(conan_reference)
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(conan_reference))
@@ -71,11 +71,11 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 shutil.copy2(src_file, dst_file)
 
 
-def config_source_local(src_folder, conanfile, output, conanfile_path, hook_manager):
+def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
     conanfile_folder = os.path.dirname(conanfile_path)
-    _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference=None,
+    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None,
                 client_cache=None, export_folder=None, export_source_folder=None,
                 local_sources_path=conanfile_folder)
 
@@ -115,12 +115,12 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
     if not os.path.exists(src_folder):  # No source folder, need to get it
         set_dirty(src_folder)
         mkdir(src_folder)
-        _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference,
+        _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                     client_cache, export_folder, export_source_folder, local_sources_path)
         clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, reference,
+def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                 client_cache, export_folder, export_source_folder, local_sources_path):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
@@ -139,14 +139,15 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, ref
                 hook_manager.execute("pre_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
                                      reference=reference)
+                output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
                 _run_scm(conanfile, src_folder, local_sources_path, output, cache=client_cache)
 
                 if client_cache:
                     _get_sources_from_exports(conanfile, src_folder, export_folder,
-                                              export_source_folder, output, client_cache)
+                                              export_source_folder, client_cache)
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(str(conanfile), "source"):
+                with conanfile_exception_formatter(conanfile.display_name, "source"):
                     conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
@@ -159,12 +160,12 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, output, ref
 
 
 def _get_sources_from_exports(conanfile, src_folder, export_folder, export_source_folder,
-                              output, client_cache):
+                              client_cache):
     # Files from python requires are obtained before the self files
     from conans.client.cmd.export import export_source
     for python_require in conanfile.python_requires:
         src = client_cache.export_sources(python_require.conan_ref)
-        export_source(conanfile, src, src_folder, output)
+        export_source(conanfile, src, src_folder)
 
     # so self exported files have precedence over python_requires ones
     merge_directories(export_folder, src_folder)

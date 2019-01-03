@@ -84,7 +84,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd"  # Do not exist
         client2 = TestClient(servers=servers, users=self.users)
-        err = client2.run("install MyLib/0.1@conan/testing --build=missing", ignore_error=True)
+        err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
@@ -143,15 +143,14 @@ class ConanFileToolsTest(ConanFile):
 
         self.servers.pop("remote1")
         # Now install it from a client, it won't find the binary in remote2
-        error = self.client.run("install %s" % ref, ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s" % ref, assert_error=True)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
         self.assertNotIn("remote2", self.client.out)
 
         self.client.run("install %s -r remote2" % ref)
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
         self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
-        registry = load(self.client.client_cache.registry)
+        registry = load(self.client.client_cache.registry_path)
         registry = json.loads(registry)
         self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
         self.assertEquals(registry["package_references"],

@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 from nose.plugins.attrib import attr
@@ -115,14 +116,14 @@ class HelloReuseConan(ConanFile):
         client.run("test test Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
 
     def conan_test_test(self):
 
@@ -197,6 +198,7 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
         client.run("create . lasote/stable")
+        time.sleep(1)  # Try to avoid windows errors in CI  (Cannot change permissions)
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
 
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)

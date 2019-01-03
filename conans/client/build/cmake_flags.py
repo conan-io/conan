@@ -101,18 +101,16 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False, output=None):
+                 parallel=True, generator=None, set_cmake_flags=False,
+                 forced_build_type=None, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
-        self._forced_generator = generator
+        self._generator = generator
         self._set_cmake_flags = set_cmake_flags
+        self._forced_build_type = forced_build_type
         self._output = output
-
-    @property
-    def generator(self):
-        return self._forced_generator or get_generator(self._conanfile.settings)
 
     def _ss(self, setname):
         """safe setting"""
@@ -222,10 +220,10 @@ class CMakeDefinitionsBuilder(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
-                self._conanfile.output.warn("The specified make program '%s' cannot be found"
-                                            "and will be ignored" % make_program)
+                self._output.warn("The specified make program '%s' cannot be found and will be "
+                                  "ignored" % make_program)
             else:
-                self._conanfile.output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
+                self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
                 return {"CMAKE_MAKE_PROGRAM": make_program}
 
         return {}
@@ -241,8 +239,14 @@ class CMakeDefinitionsBuilder(object):
         build_type = self._ss("build_type")
 
         ret = OrderedDict()
-        ret.update(build_type_definition(build_type, self.generator))
         ret.update(runtime_definition(runtime))
+
+        if self._forced_build_type and self._forced_build_type != build_type:
+            self._output.warn("Forced CMake build type ('%s') different from the settings build "
+                              "type ('%s')" % (self._forced_build_type, build_type))
+            ret.update(build_type_definition(self._forced_build_type, self._generator))
+        else:
+            ret.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":

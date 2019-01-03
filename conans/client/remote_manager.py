@@ -121,12 +121,13 @@ class RemoteManager(object):
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'" % (package_reference,
-                                                                             package_reference.conan,
-                                                                             package_reference.package_id))
+                                 "Remove it with 'conan remove %s -p=%s'"
+                                 % (package_reference, package_reference.conan,
+                                    package_reference.package_id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
-            self._output.warn("%s: Removing %s, marked as dirty" % (str(package_reference), PACKAGE_TGZ_NAME))
+            self._output.warn("%s: Removing %s, marked as dirty"
+                              % (str(package_reference), PACKAGE_TGZ_NAME))
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
@@ -136,11 +137,11 @@ class RemoteManager(object):
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         if integrity_check:
             self._package_integrity_check(package_reference, files, package_folder)
-            logger.debug("====> Time remote_manager check package integrity : %f"
+            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
@@ -156,7 +157,7 @@ class RemoteManager(object):
 
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
-        logger.debug("====> Time remote_manager upload_package: %f" % duration)
+        logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
         if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")
@@ -279,12 +280,12 @@ class RemoteManager(object):
                 output.warn("Trying to remove package folder: %s" % dest_folder)
                 rmdir(dest_folder)
             except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
-                                     "using it, and retry" % (str(e), dest_folder))
+                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
+                                     "Close any app using it, and retry" % (str(e), dest_folder))
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan, package_id=package_id,
-                                     remote=remote)
+                                   reference=package_reference.conan, package_id=package_id,
+                                   remote=remote)
         return new_ref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
