@@ -182,6 +182,7 @@ class SayConan(ConanFile):
             self.retriever.conan(say_ref, say_content)
 
     def root(self, content, update=False):
+        self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)

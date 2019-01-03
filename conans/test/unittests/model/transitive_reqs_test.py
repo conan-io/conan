@@ -115,6 +115,7 @@ class ConanRequirementsTest(unittest.TestCase):
                                         MockRequireResolver(), None, None)
 
     def root(self, content):
+        self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
@@ -430,7 +431,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content2)
 
         with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
-            _ = self.root(chat_content)
+            self.root(chat_content)
 
     def test_diamond_conflict_solved(self):
         chat_content = """
