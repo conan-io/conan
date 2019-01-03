@@ -109,7 +109,8 @@ class MyLibParent(ConanFile):
         # only from BuildRequire
         assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
         assert(os.environ.get("ENV_VAR", None) == "ENV_VALUE_FROM_BUILD_REQUIRE")
-        assert(os.environ.get("ENV_VAR_MULTI", None) == "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
+        assert(os.environ.get("ENV_VAR_MULTI", None) == "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE"
+               + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
         assert(os.environ.get("ENV_VAR_REQ2", None) == None)
 
     def package_info(self):
