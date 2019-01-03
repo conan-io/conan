@@ -10,12 +10,9 @@ from conans.server.rest.controllers.v2.search_controller import SearchController
 
 class ApiV2(ApiV1):
 
-    def __init__(self, credentials_manager, server_version, min_client_compatible_version,
-                 server_capabilities):
+    def __init__(self, credentials_manager, server_capabilities):
 
         self.credentials_manager = credentials_manager
-        self.server_version = server_version
-        self.min_client_compatible_version = min_client_compatible_version
         self.server_capabilities = server_capabilities
         Bottle.__init__(self)
 

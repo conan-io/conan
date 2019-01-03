@@ -19,6 +19,7 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
+
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
         self._put_headers = put_headers

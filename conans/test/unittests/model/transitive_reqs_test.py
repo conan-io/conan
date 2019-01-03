@@ -1321,7 +1321,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
-    def test_remove_build_requires(self):
+    def test_remove_requires(self):
         hello_content = """
 from conans import ConanFile
 
@@ -1344,7 +1344,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
-    def test_remove_two_build_requires(self):
+    def test_remove_two_requires(self):
         chat_content = """
 from conans import ConanFile
 
