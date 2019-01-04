@@ -3,6 +3,7 @@ import configparser
 import ntpath
 import os
 import posixpath
+import re
 from collections import defaultdict
 
 from conans.client.tools.files import load
@@ -52,6 +53,7 @@ class EditableCppInfo(object):
 
     @staticmethod
     def _work_on_item(value, base_path, settings, options):
+        value = re.sub(r'\\\\+', r'\\', value)
         value = value.replace('\\', '/')
         isabs = ntpath.isabs(value) or posixpath.isabs(value)
         if base_path and not isabs:
