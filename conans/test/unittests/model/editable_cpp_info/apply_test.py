@@ -1,11 +1,13 @@
 # coding=utf-8
 
-import unittest
+import os
 import textwrap
-import six
+import unittest
 from collections import namedtuple
-from conans.model.editable_cpp_info import EditableCppInfo
 
+import six
+
+from conans.model.editable_cpp_info import EditableCppInfo
 
 base_content = six.u(textwrap.dedent("""\
     [{namespace}includedirs]
@@ -39,9 +41,9 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         cpp_info = namedtuple('_', EditableCppInfo.cpp_info_dirs)
         editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
         self.assertTrue(editable_cpp_info.has_info_for('any-thing'))
-        self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs', ])
-        self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs', ])
-        self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs', ])
+        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('dirs/includedirs'), ])
+        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('dirs/libdirs'), ])
+        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('dirs/resdirs'), ])
         self.assertListEqual(cpp_info.bindirs, [])
 
     def test_require_namespace(self):
@@ -56,16 +58,16 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
 
         # Apply to 'libA' ==> existing one
         editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
-        self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs', ])
-        self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs', ])
-        self.assertListEqual(cpp_info.resdirs, ['libA/dirs/resdirs', ])
+        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('libA/dirs/includedirs'), ])
+        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('libA/dirs/libdirs'), ])
+        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('libA/dirs/resdirs'), ])
         self.assertListEqual(cpp_info.bindirs, [])
 
         # Apply to non existing lib ==> uses wildcard ones
         editable_cpp_info.apply_to('libOther', cpp_info, base_path=None, settings=None, options=None)
-        self.assertListEqual(cpp_info.includedirs, ['all/dirs/includedirs', ])
-        self.assertListEqual(cpp_info.libdirs, ['all/dirs/libdirs', ])
-        self.assertListEqual(cpp_info.resdirs, ['all/dirs/resdirs', ])
+        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('all/dirs/includedirs'), ])
+        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('all/dirs/libdirs'), ])
+        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('all/dirs/resdirs'), ])
         self.assertListEqual(cpp_info.bindirs, [])
 
         # Apply to non existing lib ==> not found, and not wildcard allowed
