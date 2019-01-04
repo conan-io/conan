@@ -23,7 +23,8 @@ class ToolsEnvTest(unittest.TestCase):
     def test_environment_append_list(self):
         with mock.patch.dict('os.environ', {}),\
              env.environment_append({'env_var1': ['value1', 'value2']}):
-                self.assertEqual(os.environ['env_var1'], 'value1;value2')
+                self.assertEqual(os.environ['env_var1'], 'value1' +
+                                 os.pathsep + 'value2')
 
     def test_environment_unset_variable(self):
         with mock.patch.dict('os.environ', {'env_var1': 'value'}),\
