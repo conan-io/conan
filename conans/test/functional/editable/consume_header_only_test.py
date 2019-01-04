@@ -56,19 +56,19 @@ class HeaderOnlyLibTestClient(TestClient):
         src/include-cache
         """)
 
-    def __init__(self, use_cache_file, *args, **kwargs):
+    def __init__(self, use_repo_file, *args, **kwargs):
         super(HeaderOnlyLibTestClient, self).__init__(*args, **kwargs)
 
+        save(self.client_cache.default_editable_path, self.conan_cache_layout)
         self.save({"conanfile.py": self.conanfile,
-                   CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout,
                    "src/include-inrepo/hello.hpp": self.header.format(word="EDITABLE",
                                                                       origin="inrepo"),
                    "src/include-cache/hello.hpp": self.header.format(word="EDITABLE",
                                                                      origin="cache")
                    })
 
-        if use_cache_file:
-            save(self.client_cache.default_editable_path, self.conan_cache_layout)
+        if use_repo_file:
+            self.save({CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout, })
 
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
@@ -85,12 +85,12 @@ class HeaderOnlyLibTestClient(TestClient):
 class EditableReferenceTest(unittest.TestCase):
 
     @parameterized.expand([(False,), (True,)])
-    def test_header_only(self, use_cache_file):
+    def test_header_only(self, use_repo_file):
         # We need two clients sharing the same Conan cache
         base_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
 
         # Editable project
-        client_editable = HeaderOnlyLibTestClient(use_cache_file=use_cache_file,
+        client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   base_folder=base_folder)
         client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
 
@@ -145,20 +145,20 @@ int main() {
         self.assertIn("    MyLib/0.1@user/editable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
         self.assertIn("Hello EDITABLE!", client.out)
-        if use_cache_file:  # Cache file will override folders from inrepo
-            self.assertIn("...using cache", client.out)
-            self.assertNotIn("...using inrepo", client.out)
-        else:
+        if use_repo_file:  # Cache file will override folders from inrepo
             self.assertIn("...using inrepo", client.out)
             self.assertNotIn("...using cache", client.out)
+        else:
+            self.assertIn("...using cache", client.out)
+            self.assertNotIn("...using inrepo", client.out)
 
         # Modify editable and build again
         client_editable.update_hello_word(hello_word="EDITED")
         client.run("create . pkg/0.0@user/testing")
         self.assertIn("Hello EDITED!", client.out)
-        if use_cache_file:  # Cache file will override folders from inrepo
-            self.assertIn("...using cache", client.out)
-            self.assertNotIn("...using inrepo", client.out)
-        else:
+        if use_repo_file:  # Repo file will override folders from inrepo
             self.assertIn("...using inrepo", client.out)
             self.assertNotIn("...using cache", client.out)
+        else:
+            self.assertIn("...using cache", client.out)
+            self.assertNotIn("...using inrepo", client.out)

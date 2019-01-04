@@ -3,10 +3,9 @@ import configparser
 import ntpath
 import os
 import posixpath
-import re
 from collections import defaultdict
 
-import six
+from conans.client.tools.files import load
 
 
 class EditableCppInfo(object):
@@ -25,8 +24,7 @@ class EditableCppInfo(object):
 
     @classmethod
     def parse_file(cls, filepath, require_namespace):
-        with open(filepath) as f:
-            return cls.parse_content(content=six.u(f.read()), require_namespace=require_namespace)
+        return cls.parse_content(content=load(filepath), require_namespace=require_namespace)
 
     @classmethod
     def parse_content(cls, content, require_namespace):
@@ -54,7 +52,6 @@ class EditableCppInfo(object):
 
     @staticmethod
     def _work_on_item(value, base_path, settings, options):
-        value = re.sub(r'\\\\+', r'\\', value)
         value = value.replace('\\', '/')
         isabs = ntpath.isabs(value) or posixpath.isabs(value)
         if base_path and not isabs:
@@ -63,9 +60,9 @@ class EditableCppInfo(object):
         value = value.format(settings=settings, options=options)
         return value
 
-    def has_info_for(self, id, use_wildcard=True):
+    def has_info_for(self, pck_name, use_wildcard=True):
         if self._uses_namespace:
-            return id in self._data or (use_wildcard and self.WILDCARD in self._data)
+            return pck_name in self._data or (use_wildcard and self.WILDCARD in self._data)
         else:
             return True
 

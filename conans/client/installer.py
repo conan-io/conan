@@ -329,26 +329,28 @@ class ConanInstaller(object):
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
-        if self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
-            # Try with the profile-like file
+        # Try with package-provided file
+        package_layout_file = package_layout.editable_package_layout_file()
+        if os.path.exists(package_layout_file):
+            editable_cpp_info = EditableCppInfo.create(package_layout_file,
+                                                       require_namespace=False)
+            editable_cpp_info.apply_to(node.conanfile.name,
+                                       node.conanfile.cpp_info,
+                                       base_path=base_path,
+                                       settings=node.conanfile.settings,
+                                       options=node.conanfile.options)
+
+        # Try with the profile-like file
+        elif self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
             self._editable_cpp_info.apply_to(node.conanfile.name,
                                              node.conanfile.cpp_info,
                                              base_path=base_path,
                                              settings=node.conanfile.settings,
                                              options=node.conanfile.options)
+
+        # Use `package_info()` data
         else:
-            # Try with package-provided file
-            package_layout_file = package_layout.editable_package_layout_file()
-            if os.path.exists(package_layout_file):
-                editable_cpp_info = EditableCppInfo.create(package_layout_file,
-                                                           require_namespace=False)
-                editable_cpp_info.apply_to(node.conanfile.name,
-                                           node.conanfile.cpp_info,
-                                           base_path=base_path,
-                                           settings=node.conanfile.settings,
-                                           options=node.conanfile.options)
-            else:
-                pass  # TODO: Use `package_info()` data
+            pass  # TODO: Use `package_info()` data
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_file = node.conanfile

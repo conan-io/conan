@@ -34,7 +34,8 @@ class WorkOnItemsTest(unittest.TestCase):
         self.assertIn(_make_abs(base_path, '..', 'relative', 'include'),
                       EditableCppInfo._work_on_item("../relative/include", base_path, None, None))
         self.assertIn(_make_abs(base_path, 'src', 'path with spaces', 'include'),
-                      EditableCppInfo._work_on_item("src/path with spaces/include", base_path, None, None))
+                      EditableCppInfo._work_on_item("src/path with spaces/include",
+                                                    base_path, None, None))
         self.assertIn(_make_abs(base_path, 'ending-slash', 'include'),
                       EditableCppInfo._work_on_item("ending-slash/include/", base_path, None, None))
 
@@ -43,9 +44,11 @@ class WorkOnItemsTest(unittest.TestCase):
         base_path = os.path.dirname(__file__) if make_abs else None
 
         self.assertIn(os.path.join('C:' + os.sep, 'Windows-single-slash', 'include'),
-                      EditableCppInfo._work_on_item("C:\Windows-single-slash\include", base_path, None, None))
+                      EditableCppInfo._work_on_item("C:\Windows-single-slash\include",
+                                                    base_path, None, None))
         self.assertIn(os.path.join('D:' + os.sep, 'Windows-double-slash', 'include'),
-                      EditableCppInfo._work_on_item("D:\\Windows-double-slash\\include", base_path, None, None))
+                      EditableCppInfo._work_on_item("D:\\Windows-double-slash\\include",
+                                                    base_path, None, None))
 
     @parameterized.expand([(False,), (True,)])
     def test_unix(self, make_abs):
@@ -65,10 +68,13 @@ class WorkOnItemsTest(unittest.TestCase):
 
         self.assertIn(_make_abs(base_path, 'src', 'Visual Studio14', 'Debug', 'include'),
                       EditableCppInfo._work_on_item("src/{settings.compiler}{settings.compiler.version}/{settings.build_type}/include",
-                                                    base_path=base_path, settings=settings, options=None))
+                                                    base_path=base_path, settings=settings,
+                                                    options=None))
         self.assertIn(os.path.join('C:' + os.sep, 'Visual Studio', 'include'),
                       EditableCppInfo._work_on_item("C:\\{settings.compiler}\\include\\",
-                                                    base_path=base_path, settings=settings, options=None))
+                                                    base_path=base_path, settings=settings,
+                                                    options=None))
         self.assertIn(os.path.join(os.sep, 'usr', 'path with spaces', 'Visual Studio', 'dir'),
                       EditableCppInfo._work_on_item("/usr/path with spaces/{settings.compiler}/dir",
-                                                    base_path=base_path, settings=settings, options=None))
+                                                    base_path=base_path, settings=settings,
+                                                    options=None))
