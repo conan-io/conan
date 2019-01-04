@@ -39,10 +39,11 @@ def environment_append(env_vars):
     :return: None
     """
     unset_vars = []
+    for key in env_vars.keys():
+        if env_vars[key] is None:
+            env_vars.pop(key, None)
+            unset_vars.append(key)    
     for name, value in env_vars.items():
-        if value is None:
-            env_vars.pop(name, None)
-            unset_vars.append(name)
         if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
             old = os.environ.get(name)
