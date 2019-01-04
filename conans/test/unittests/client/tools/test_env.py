@@ -10,7 +10,7 @@ from conans.client.tools import env
 class ToolsEnvTest(unittest.TestCase):
     def test_environment_append_variables(self):
         with mock.patch.dict('os.environ', {}),\
-             env.environment_append({'env_var1': 'value',\
+             env.environment_append({'env_var1': 'value',
                                      'env_var2': 'value2'}):
                 self.assertEqual(os.environ['env_var1'], 'value')
                 self.assertEqual(os.environ['env_var2'], 'value2')
