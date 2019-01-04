@@ -30,15 +30,6 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.run('link . {}'.format(reference))
         self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
 
-    @unittest.expectedFailure
-    def test_install_without_package_layout_file(self):
-        reference = ConanFileReference.loads('lib/version@user/name')
-
-        # Without the _magic_ file it is not supposed to fail
-        t = TestClient()
-        t.save(files={os.path.join('conanfile.py'): self.conanfile})
-        t.run('link . {}'.format(reference), assert_error=True)
-
     def test_install_wrong_reference(self):
         reference = ConanFileReference.loads('lib/version@user/name')
 
