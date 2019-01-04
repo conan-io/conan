@@ -33,8 +33,7 @@ class TestWorkflows:
         """)
 
     def get_files(self, subfolder, conanfile, lib_ref):
-        conanfile_path = os.path.join(subfolder, self.path_to_conanfile, 'conanfile.py')
-        return {conanfile_path: conanfile,
+        return {os.path.join(subfolder, self.path_to_conanfile, 'conanfile.py'): conanfile,
                 os.path.join(subfolder, 'file.txt'): lib_ref}
 
     def run(self, *args, **kwargs):
