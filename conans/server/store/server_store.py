@@ -268,7 +268,7 @@ class ServerStore(SimplePaths):
         if not rev_list:
             # FIXING BREAK MIGRATION NOT CREATING INDEXES
             # BOTH FOR RREV AND PREV THE FILE SHOULD BE CREATED WITH "0" REVISION
-            if self.path_exists(os.path.join(os.path.dirname(rev_file_path)), DEFAULT_REVISION_V1):
+            if self.path_exists(os.path.join(os.path.dirname(rev_file_path), DEFAULT_REVISION_V1)):
                 rev_list = RevisionList()
                 rev_list.add_revision(DEFAULT_REVISION_V1)
                 self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
