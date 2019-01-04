@@ -32,12 +32,17 @@ def run_environment(conanfile):
 @contextmanager
 def environment_append(env_vars):
     """
-    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.g.: MYVAR=1
+    :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2} => e.g.: MYVAR=1
                      The values can also be lists of appendable environment vars. {name: [value, value2]}
                       => e.g. PATH=/path/1:/path/2
+                     If the value is set to None, then that environment variable is unset.
     :return: None
     """
+    unset_vars = []
     for name, value in env_vars.items():
+        if value is None:
+            env_vars.pop(name, None)
+            unset_vars.append(name)
         if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
             old = os.environ.get(name)
@@ -46,6 +51,8 @@ def environment_append(env_vars):
     if env_vars:
         old_env = dict(os.environ)
         os.environ.update(env_vars)
+        for var in unset_vars:
+            os.environ.pop(var)
         try:
             yield
         finally:
