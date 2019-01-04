@@ -41,8 +41,9 @@ def environment_append(env_vars):
     unset_vars = []
     for key in env_vars.keys():
         if env_vars[key] is None:
-            env_vars.pop(key, None)
-            unset_vars.append(key)    
+            unset_vars.append(key)
+    for var in unset_vars:
+        env_vars.pop(var, None)
     for name, value in env_vars.items():
         if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
