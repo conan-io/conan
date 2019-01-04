@@ -1355,7 +1355,7 @@ class Command(object):
         self._conan.export_alias(args.reference, args.target)
 
     def link(self, *args):
-        """ Creates a link from a reference to a local package.
+        """ Links a conan reference (e.g lib/1.0@conan/stable) with a local folder path.
 
         """
         parser = argparse.ArgumentParser(description=self.link.__doc__,
