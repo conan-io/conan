@@ -7,7 +7,7 @@ from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class CompleteFlowTest(unittest.TestCase):
+class UploadCompressionTest(unittest.TestCase):
 
     def setUp(self):
         test_server = TestServer()
