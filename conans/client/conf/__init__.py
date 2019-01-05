@@ -60,7 +60,7 @@ compiler:
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14", "15"]
+        version: ["8", "9", "10", "11", "12", "14", "15", "16"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                   v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
