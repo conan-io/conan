@@ -161,3 +161,51 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
         self.assertIn("<AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>",
                       contents)
+
+    def definitions_test(self):
+        new_out = StringIO()
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, output=ConanOutput(new_out),
+                                    definitions={'_WIN32_WINNT': "0x0501"})
+        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
+                                           '/p:Platform="ARM" '
+                                           '/p:ForceImportBeforeCppTargets='), command)
+        path_tmp = command.split("/p:ForceImportBeforeCppTargets=")[1][1:-1]  # remove quotes
+        self.assertTrue(os.path.exists(path_tmp))
+        contents = load(path_tmp)
+        self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
+        self.assertIn("<AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>",
+                      contents)
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_WIN32_WINNT=0x0501;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", contents)
+
+    def definitions_no_value_test(self):
+        new_out = StringIO()
+        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
+                                                  "compiler.version": "17",
+                                                  "build_type": "Debug",
+                                                  "compiler.runtime": "MDd",
+                                                  "cppstd": "17"}),
+                                    sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, output=ConanOutput(new_out),
+                                    definitions={'_DEBUG': None})
+        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
+                                           '/p:Platform="ARM" '
+                                           '/p:ForceImportBeforeCppTargets='), command)
+        path_tmp = command.split("/p:ForceImportBeforeCppTargets=")[1][1:-1]  # remove quotes
+        self.assertTrue(os.path.exists(path_tmp))
+        contents = load(path_tmp)
+        self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
+        self.assertIn("<AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>",
+                      contents)
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_DEBUG;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", contents)
