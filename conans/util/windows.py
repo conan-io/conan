@@ -8,6 +8,7 @@ from conans.util.log import logger
 from conans.util.sha import sha256
 
 CONAN_LINK = ".conan_link"
+CONAN_REAL_PATH = "real_path.txt"
 
 
 def conan_expand_user(path):
@@ -75,6 +76,10 @@ def path_shortener(path, short_paths):
     if not redirect:
         logger.warn("Failed to create a deterministic short path in %s", short_home)
         redirect = tempfile.mkdtemp(dir=short_home, prefix="")
+
+    # Save the full path of the local cache directory where the redirect is from.
+    # This file is for debugging purposes and not used by Conan.
+    save(os.path.join(redirect, CONAN_REAL_PATH), path)
 
     # This "1" is the way to have a non-existing directory, so commands like
     # shutil.copytree() to it, works. It can be removed without compromising the
