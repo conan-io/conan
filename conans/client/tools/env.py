@@ -50,7 +50,7 @@ def environment_append(env_vars):
             old = os.environ.get(name)
             if old:
                 env_vars[name] += os.pathsep + old
-    if env_vars:
+    if env_vars or unset_vars:
         old_env = dict(os.environ)
         os.environ.update(env_vars)
         for var in unset_vars:
