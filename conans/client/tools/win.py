@@ -93,8 +93,31 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
+MSVS_DEFAULT_TOOLSETS = {"16": "v141",
+                         "15": "v141",
+                         "14": "v140",
+                         "12": "v120",
+                         "11": "v110",
+                         "10": "v100",
+                         "9": "v90",
+                         "8": "v80"}
+
+MSVS_VERSIONS = sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int)
+
+
+def msvs_toolset(settings):
+    toolset = settings.get_safe("compiler.toolset")
+    if not toolset:
+        vs_version = settings.get_safe("compiler.version")
+        try:
+            toolset = MSVS_DEFAULT_TOOLSETS[vs_version]
+        except KeyError:
+            return None
+    return toolset
+
+
 def latest_visual_studio_version_installed(output):
-    for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
+    for version in reversed(MSVS_VERSIONS):
         vs = _visual_compiler(output, version)
         if vs:
             return vs[1]
