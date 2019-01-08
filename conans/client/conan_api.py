@@ -957,7 +957,7 @@ class ConanAPIV1(object):
     @api_method
     def unlink(self, reference):
         assert isinstance(reference, ConanFileReference)
-        self._client_cache.remove_editable(reference)
+        return self._client_cache.remove_editable(reference)
 
 
 Conan = ConanAPIV1

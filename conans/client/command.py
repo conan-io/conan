@@ -1383,8 +1383,12 @@ class Command(object):
             self._outputer.writeln("Reference '{}' linked to "
                                    "directory '{}'".format(reference, os.path.dirname(args.target)))
         else:
-            self._conan.unlink(reference)
-            self._outputer.writeln("Removed linkage for reference '{}'".format(reference))
+            ret = self._conan.unlink(reference)
+            if ret:
+                self._outputer.writeln("Removed linkage for reference '{}'".format(reference))
+            else:
+                self._user_io.out.warn("Reference '{}' was not installed "
+                                       "as editable".format(reference))
 
     def _show_help(self):
         """Prints a summary of all commands

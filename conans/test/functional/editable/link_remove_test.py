@@ -29,3 +29,9 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t.run('link {} --remove'.format(self.reference))
         self.assertIn("Removed linkage for reference '{}'".format(self.reference), self.t.out)
         self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
+
+    def test_unlink_not_linked(self):
+        reference = 'otherlib/version@user/name'
+        self.t.run('search {}'.format(reference), assert_error=True)
+        self.t.run('link {} --remove'.format(reference))
+        self.assertIn("Reference '{}' was not installed as editable".format(reference), self.t.out)

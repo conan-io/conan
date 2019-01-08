@@ -334,6 +334,8 @@ class ClientCache(SimplePaths):
         if self.installed_as_editable(conan_reference):
             linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
             os.remove(linked_folder_sentinel)
+            return True
+        return False
 
 
 def _mix_settings_with_env(settings):
