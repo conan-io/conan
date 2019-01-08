@@ -942,22 +942,21 @@ class ConanAPIV1(object):
         return self._client_cache.registry.remotes.get(remote_name)
 
     @api_method
-    def link(self, target_path, reference):
-        assert isinstance(reference, ConanFileReference)
-
+    def link(self, target_path, target_reference):
+        ref = ConanFileReference.loads(target_reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)
-        if (target_conanfile.name and target_conanfile.name != reference.name) or \
-                (target_conanfile.version and target_conanfile.version != reference.version):
+        if (target_conanfile.name and target_conanfile.name != ref.name) or \
+                (target_conanfile.version and target_conanfile.version != ref.version):
             raise ConanException("Name and version from reference ({}) and target "
                                  "conanfile.py ({}/{}) must match".
-                                 format(reference, target_conanfile.name, target_conanfile.version))
+                                 format(ref, target_conanfile.name, target_conanfile.version))
 
-        self._client_cache.install_as_editable(reference, os.path.dirname(target_path))
+        self._client_cache.install_as_editable(ref, os.path.dirname(target_path))
 
     @api_method
     def unlink(self, reference):
-        assert isinstance(reference, ConanFileReference)
-        return self._client_cache.remove_editable(reference)
+        ref = ConanFileReference.loads(reference, validate=True)
+        return self._client_cache.remove_editable(ref)
 
 
 Conan = ConanAPIV1

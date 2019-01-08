@@ -1376,19 +1376,17 @@ class Command(object):
         if not args.remove and not args.target:
             raise ConanException("Argument 'target' is required to link a reference")
 
-        reference = ConanFileReference.loads(args.reference)
-
         if not args.remove:
-            self._conan.link(args.target, reference)
-            self._outputer.writeln("Reference '{}' linked to "
-                                   "directory '{}'".format(reference, os.path.dirname(args.target)))
+            self._conan.link(args.target, args.reference)
+            self._outputer.writeln("Reference '{}' linked to directory "
+                                   "'{}'".format(args.reference, os.path.dirname(args.target)))
         else:
-            ret = self._conan.unlink(reference)
+            ret = self._conan.unlink(args.reference)
             if ret:
-                self._outputer.writeln("Removed linkage for reference '{}'".format(reference))
+                self._outputer.writeln("Removed linkage for reference '{}'".format(args.reference))
             else:
                 self._user_io.out.warn("Reference '{}' was not installed "
-                                       "as editable".format(reference))
+                                       "as editable".format(args.reference))
 
     def _show_help(self):
         """Prints a summary of all commands
