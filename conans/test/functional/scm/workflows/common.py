@@ -47,6 +47,7 @@ class TestWorkflow(object):
     def _run_local_test(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
+            path_to_conanfile = path_to_conanfile.replace('\\', '/')
             t.current_folder = working_dir
             t.run("install {} -if tmp".format(path_to_conanfile))
             t.run("source {} -if tmp -sf src".format(path_to_conanfile))
@@ -58,6 +59,7 @@ class TestWorkflow(object):
     def _run_remote_test(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
+            path_to_conanfile = path_to_conanfile.replace('\\', '/')
             t.current_folder = working_dir
             t.run("create {} {}".format(path_to_conanfile, self.lib1_ref))
             self.assertIn(">>>> I'm {}".format(self.lib1_ref), t.out)
