@@ -1,171 +1,155 @@
-import copy
 import os
+import shutil
+import subprocess
 import unittest
+from textwrap import dedent
 
-from conans.client import tools
-from conans.client.tools.oss import OSInfo
-from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.client.generators.virtualenv import VirtualEnvGenerator
+from conans.client.tools import OSInfo, which
+from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.tools import TestBufferConanOutput, temp_folder
+from conans.util.files import decode_text, load, save_files, to_file_bytes
+
+os_info = OSInfo()
 
 
-class VirtualEnvGeneratorTest(unittest.TestCase):
+class VirtualEnvIntegrationTest(unittest.TestCase):
+    def setUp(self):
+        self.test_folder = temp_folder()
+        self.generator = VirtualEnvGenerator(ConanFileMock())
+        self.generator.env = {
+            "PATH": [os.path.join(self.test_folder, "bin")],
+            "CFLAGS": ["-O2"],
+            "USER_VALUE": r"some value with space and \ (backslash)"
+        }
+        self.generator.venv_name = "conan_venv_test_prompt"
 
-    def basic_test(self, posix_empty_vars=True):
-        env = copy.deepcopy(os.environ)
-        client = TestClient()
-        dep1 = """
-import os
-from conans import ConanFile
+        trap_files = {
+            os.path.join("original path", "conan_original_test_prog"): "",
+            os.path.join("bin", "conan_venv_test_prog"): "",
+        }
+        save_files(self.test_folder, trap_files)
+        save_files(self.test_folder, self.generator.content)
+        for f in trap_files:
+            os.chmod(os.path.join(self.test_folder, f), 0o755)
 
-class BaseConan(ConanFile):
-    name = "base"
-    version = "0.1"
+    def tearDown(self):
+        shutil.rmtree(os.path.split(self.test_folder)[0], ignore_errors=True)
 
-    def package_info(self):
-        self.env_info.PATH.extend([os.path.join("basedir", "bin"),"samebin"])
-        self.env_info.LD_LIBRARY_PATH.append(os.path.join("basedir", "lib"))
-        self.env_info.BASE_VAR = "baseValue"
-        self.env_info.SPECIAL_VAR = "baseValue"
-        self.env_info.BASE_LIST = ["baseValue1", "baseValue2"]
-        self.env_info.CPPFLAGS = ["-baseFlag1", "-baseFlag2"]
-        self.env_info.BCKW_SLASH = r"base\\value"
-"""
+    @property
+    def subprocess_env(self):
+        env = os.environ.copy()
+        env["PATH"] = "%s%s%s" % (os.path.join(
+            self.test_folder, "original path"), os.pathsep, env.get(
+                "PATH", ""))
+        env["CFLAGS"] = "-g"
+        env["USER_VALUE"] = "original value"
+        return env
 
-        dep2 = """
-import os
-from conans import ConanFile
+    @staticmethod
+    def load_env(path):
+        text = load(path)
+        return dict(l.split("=", 1) for l in text.splitlines())
 
-class DummyConan(ConanFile):
-    name = "dummy"
-    version = "0.1"
-    requires = "base/0.1@lasote/testing"
+    def do_verification(self, stdout, stderr):
+        stdout = decode_text(stdout)
+        self.assertFalse(
+            stderr, "Running shell resulted in error, output:\n%s" % stdout)
+        self.assertRegex(
+            stdout,
+            r"(?m)^__conan_venv_test_prog_path__=%s.*bin[/\\]conan_venv_test_prog"
+            % self.test_folder.replace("\\", "\\\\"),
+            "Packaged binary was not found in PATH")
+        self.assertRegex(
+            stdout,
+            r"(?m)^__original_prog_path__=%s.*original path[/\\]conan_original_test_prog"
+            % self.test_folder.replace("\\", "\\\\"),
+            "Activated environment incorrectly preserved PATH")
+        activated_env = VirtualEnvIntegrationTest.load_env(
+            os.path.join(self.test_folder, "env_activated.txt"))
+        self.assertEqual(
+            activated_env["CFLAGS"], "-O2 -g",
+            "Environment variable with spaces is set incorrectly")
+        self.assertEqual(activated_env["USER_VALUE"],
+                         r"some value with space and \ (backslash)",
+                         "Custom variable is set incorrectly")
+        before_env = VirtualEnvIntegrationTest.load_env(
+            os.path.join(self.test_folder, "env_before.txt"))
+        after_env = VirtualEnvIntegrationTest.load_env(
+            os.path.join(self.test_folder, "env_after.txt"))
+        self.assertDictEqual(before_env, after_env,
+                             "Environment restored incorrectly")
+        return stdout
 
-    def package_info(self):
-        self.env_info.PATH = [os.path.join("dummydir", "bin"),"samebin"]
-        self.env_info.LD_LIBRARY_PATH.append(os.path.join("dummydir", "lib"))
-        self.env_info.SPECIAL_VAR = "dummyValue"
-        self.env_info.BASE_LIST = ["dummyValue1", "dummyValue2"]
-        self.env_info.CPPFLAGS = ["-flag1", "-flag2"]
-        self.env_info.BCKW_SLASH = r"dummy\\value"
-"""
-        base = '''
-[requires]
-dummy/0.1@lasote/testing
-[generators]
-virtualenv
-    '''
-        client.save({"conanfile.py": dep1})
-        client.run("export . lasote/testing")
-        client.save({"conanfile.py": dep2}, clean_first=True)
-        client.run("export . lasote/testing")
-        client.save({"conanfile.txt": base}, clean_first=True)
-        client.run("install . --build")
+    def execute_intereactive_shell(self, args, commands):
+        shell = subprocess.Popen(
+            args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.test_folder,
+            env=self.subprocess_env)
+        (stdout, stderr) = shell.communicate(to_file_bytes(dedent(commands)))
+        return self.do_verification(stdout, stderr)
 
-        os_info = OSInfo()
-        if os_info.is_windows and not os_info.is_posix:
-            activate = load(os.path.join(client.current_folder, "activate.bat"))
-            self.assertIn('SET PROMPT=(conanenv) %PROMPT%', activate)
-            self.assertIn('SET BASE_LIST=dummyValue1;dummyValue2;baseValue1;baseValue2;%BASE_LIST%', activate)
-            self.assertIn('SET BASE_VAR=baseValue', activate)
-            self.assertIn('SET CPPFLAGS=-flag1 -flag2 -baseFlag1 -baseFlag2 %CPPFLAGS%', activate)
-            self.assertIn('SET LD_LIBRARY_PATH=dummydir\\lib;basedir\\lib;%LD_LIBRARY_PATH%', activate)
-            self.assertIn('SET PATH=dummydir\\bin;basedir\\bin;samebin;%PATH%', activate)
-            self.assertIn('SET SPECIAL_VAR=dummyValue', activate)
-            self.assertIn('SET BCKW_SLASH=dummy\\value', activate)
+    @unittest.skipUnless(os_info.is_posix, "needs POSIX")
+    def posix_shell_test(self):
+        self.execute_intereactive_shell(
+            "sh", """\
+                env > env_before.txt
+                . ./activate.sh
+                env > env_activated.txt
+                echo __conan_venv_test_prog_path__=$(which conan_venv_test_prog)
+                echo __original_prog_path__=$(which conan_original_test_prog)
+                deactivate
+                env > env_after.txt
+                """)
 
-            activate = load(os.path.join(client.current_folder, "activate.ps1"))
-            self.assertIn('$env:BASE_LIST = "dummyValue1;dummyValue2;baseValue1;baseValue2;$env:BASE_LIST"', activate)
-            self.assertIn('$env:BASE_VAR = "baseValue"', activate)
-            self.assertIn('$env:CPPFLAGS = "-flag1 -flag2 -baseFlag1 -baseFlag2 $env:CPPFLAGS"', activate)
-            self.assertIn('$env:LD_LIBRARY_PATH = "dummydir\\lib;basedir\\lib;$env:LD_LIBRARY_PATH"', activate)
-            self.assertIn('$env:PATH = "dummydir\\bin;basedir\\bin;samebin;$env:PATH"', activate)
-            self.assertIn('$env:SPECIAL_VAR = "dummyValue"', activate)
-            self.assertIn('$env:BCKW_SLASH = "dummy\\value"', activate)
+    @unittest.skipUnless(
+        os_info.is_posix and which("fish"), "fish shell is not found")
+    def fish_shell_test(self):
+        self.execute_intereactive_shell(
+            "fish", """\
+                env > env_before.txt
+                . activate.fish
+                env > env_activated.txt
+                echo __conan_venv_test_prog_path__=(which conan_venv_test_prog)
+                echo __original_prog_path__=(which conan_original_test_prog)
+                deactivate
+                env > env_after.txt
+                """)
 
-            deactivate = load(os.path.join(client.current_folder, "deactivate.bat"))
-            self.assertIn('SET PROMPT=%s' % env.setdefault('PROMPT', ''), deactivate)
-            self.assertIn('SET BASE_LIST=%s' % env.setdefault('BASE_LIST', ''), deactivate)
-            self.assertIn('SET BASE_VAR=%s' % env.setdefault('BASE_VAR', ''), deactivate)
-            self.assertIn('SET CPPFLAGS=%s' % env.setdefault('CPPFLAGS', ''), deactivate)
-            self.assertIn('SET LD_LIBRARY_PATH=%s' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
-            self.assertIn('SET PATH=%s' % env.setdefault('PATH', ''), deactivate)
-            self.assertIn('SET SPECIAL_VAR=%s' % env.setdefault('SPECIAL_VAR', ''), deactivate)
-            self.assertIn('SET BCKW_SLASH=%s' % env.setdefault('BCKW_SLASH', ''), deactivate)
+    @unittest.skipUnless(
+        os_info.is_windows or which("pwsh"), "Requires PowerShell (Core)")
+    def powershell_test(self):
+        powershell_cmd = "powershell.exe" if os_info.is_windows else "pwsh"
+        stdout = self.execute_intereactive_shell(
+            [powershell_cmd, "-ExecutionPolicy", "RemoteSigned", "-NoLogo"],
+            """\
+                Get-ChildItem Env: | ForEach-Object {"$($_.Name)=$($_.Value)"} | Out-File -Encoding utf8 -FilePath env_before.txt
+                . ./activate.ps1
+                Get-ChildItem Env: | ForEach-Object {"$($_.Name)=$($_.Value)"} | Out-File -Encoding utf8 -FilePath env_activated.txt
+                Write-Host "__conan_venv_test_prog_path__=$((Get-Command conan_venv_test_prog).Source)"
+                Write-Host "__original_prog_path__=$((Get-Command conan_original_test_prog).Source)"
+                deactivate
+                Get-ChildItem Env: | ForEach-Object {"$($_.Name)=$($_.Value)"} | Out-File -Encoding utf8 -FilePath env_after.txt
+                """)
+        self.assertIn("conan_venv_test_prompt", stdout,
+                      "Custom prompt is not found")
 
-            deactivate = load(os.path.join(client.current_folder, "deactivate.ps1"))
-            self.assertIn('$env:BASE_LIST = "%s"' % env.setdefault('BASE_LIST', ''), deactivate)
-            self.assertIn('$env:BASE_VAR = "%s"' % env.setdefault('BASE_VAR', ''), deactivate)
-            self.assertIn('$env:CPPFLAGS = "%s"' % env.setdefault('CPPFLAGS', ''), deactivate)
-            self.assertIn('$env:LD_LIBRARY_PATH = "%s"' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
-            self.assertIn('$env:PATH = "%s"' % env.setdefault('PATH', ''), deactivate)
-            self.assertIn('$env:SPECIAL_VAR = "%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
-            self.assertIn('$env:BCKW_SLASH = "%s"' % env.setdefault('BCKW_SLASH', ''), deactivate)
+    @unittest.skipUnless(os_info.is_windows and not os_info.is_posix,
+                         "Available on Windows only")
+    def windows_cmd_test(self):
+        stdout = self.execute_intereactive_shell(
+            "cmd", """\
+                set > env_before.txt
+                activate.bat
+                set > env_activated.txt
+                for /f "usebackq tokens=*" %i in (`where conan_venv_test_prog`) do echo __conan_venv_test_prog_path__=%i
+                for /f "usebackq tokens=*" %i in (`where conan_original_test_prog`) do echo __original_prog_path__=%i
+                deactivate.bat
+                set > env_after.txt
+                """)
 
-        activate = load(os.path.join(client.current_folder, "activate.sh"))
-        self.assertIn('OLD_PS1="$PS1"', activate)
-        self.assertIn('export OLD_PS1', activate)
-        self.assertIn('PS1="(conanenv) $PS1"', activate)
-        self.assertIn('export PS1', activate)
-        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2":$BASE_LIST', activate)
-        self.assertIn('export BASE_LIST', activate)
-        self.assertIn('BASE_VAR="baseValue"', activate)
-        self.assertIn('export BASE_VAR', activate)
-        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 $CPPFLAGS"', activate)
-        self.assertIn('export CPPFLAGS', activate)
-        self.assertIn('SPECIAL_VAR="dummyValue"', activate)
-        self.assertIn('export SPECIAL_VAR', activate)
-        self.assertIn('BCKW_SLASH="dummy\\value"', activate)
-        self.assertIn('export BCKW_SLASH', activate)
-        if os_info.is_windows:
-            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin":$PATH', activate)
-        else:
-            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH', activate)
-        self.assertIn('export LD_LIBRARY_PATH', activate)
-        self.assertIn('export PATH', activate)
-        deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
-        if posix_empty_vars:
-            self.assertNotIn('unset PS1', deactivate)
-            self.assertIn('unset OLD_PS1', deactivate)
-            self.assertIn('unset BASE_LIST', deactivate)
-            self.assertIn('unset BASE_VAR', deactivate)
-            self.assertIn('unset CPPFLAGS', deactivate)
-            self.assertIn('unset LD_LIBRARY_PATH', deactivate)
-            self.assertIn('PATH="%s"' % env.setdefault('PATH', ''), deactivate)
-            self.assertIn('export PATH', deactivate)
-            self.assertIn('unset SPECIAL_VAR', deactivate)
-            self.assertIn('unset BCKW_SLASH', deactivate)
-        else:
-            self.assertIn('OLD_PS1="%s"' % env.setdefault('OLD_PS1', ''), deactivate)
-            self.assertIn('PS1=$OLD_PS1', deactivate)
-            self.assertIn('export OLD_PS1', deactivate)
-            self.assertNotIn('PS1="%s"' % env.setdefault('PS1', ''), deactivate)
-            self.assertIn('export PS1', deactivate)
-            self.assertIn('BASE_LIST="%s"' % env.setdefault('BASE_LIST', ''), deactivate)
-            self.assertIn('export BASE_LIST', deactivate)
-            self.assertIn('BASE_VAR="%s"' % env.setdefault('BASE_VAR', ''), deactivate)
-            self.assertIn('export BASE_VAR', deactivate)
-            self.assertIn('CPPFLAGS="%s"' % env.setdefault('CPPFLAGS', ''), deactivate)
-            self.assertIn('export CPPFLAGS', deactivate)
-            self.assertIn('LD_LIBRARY_PATH="%s"' % env.setdefault('LD_LIBRARY_PATH', ''), deactivate)
-            self.assertIn('export LD_LIBRARY_PATH', deactivate)
-            self.assertIn('PATH="%s"' % env.setdefault('PATH', ''), deactivate)
-            self.assertIn('export PATH', deactivate)
-            self.assertIn('SPECIAL_VAR="%s"' % env.setdefault('SPECIAL_VAR', ''), deactivate)
-            self.assertIn('export SPECIAL_VAR', deactivate)
-            self.assertIn('BCKW_SLASH="%s"' % env.setdefault('BCKW_SLASH', ''), deactivate)
-            self.assertIn('export BCKW_SLASH', deactivate)
-
-    def environment_test(self):
-        env = {"PROMPT": "old_PROMPT",
-               "OLD_PS1": "old_OLD_PS1",
-               "PS1": "old_PS1",
-               "BASE_LIST": "old_BASE_LIST",
-               "BASE_VAR": "old_BASE_VAR",
-               "CPPFLAGS": "old_CPPFLAGS",
-               "LD_LIBRARY_PATH": "old_LD_LIBRARY_PATH",
-               "SPECIAL_VAR": "old_SPECIAL_VAR",
-               "BCKW_SLASH": "old_BCKW_SLASH"}
-        with tools.environment_append(env):
-            self.basic_test(posix_empty_vars=False)
+        self.assertIn("conan_venv_test_prompt", stdout,
+                      "Custom prompt is not found")

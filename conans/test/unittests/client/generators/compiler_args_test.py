@@ -3,10 +3,8 @@ import unittest
 from conans.client.conf import default_settings_yml
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.gcc import GCCGenerator
-from conans.model.build_info import CppInfo, DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvInfo
+from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
-from conans.model.user_info import DepsUserInfo
 from conans.test.utils.conanfile import ConanFileMock
 
 
@@ -22,14 +20,10 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        conan_file.deps_env_info = DepsEnvInfo()
-        conan_file.deps_user_info = DepsUserInfo()
-        conan_file.deps_cpp_info = DepsCppInfo()
         cpp_info = CppInfo("/root")
         cpp_info.libs.append("mylib")
         cpp_info.libs.append("other.lib")
         conan_file.deps_cpp_info.update(cpp_info, "zlib")
-        conan_file.env_info = EnvInfo()
 
         gen = CompilerArgsGenerator(conan_file)
         self.assertEquals('-O2 -Ob2 -DNDEBUG -link mylib.lib other.lib', gen.content)
@@ -39,9 +33,6 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.settings = settings
         conan_file.source_folder = "my_cache_source_folder"
         conan_file.build_folder = "my_cache_build_folder"
-        conan_file.deps_env_info = DepsEnvInfo()
-        conan_file.deps_user_info = DepsUserInfo()
-        conan_file.deps_cpp_info = DepsCppInfo()
         cpp_info = CppInfo("/root")
         cpp_info.include_paths.append("path/to/include1")
         cpp_info.lib_paths.append("path/to/lib1")
@@ -52,7 +43,6 @@ class CompilerArgsTest(unittest.TestCase):
         cpp_info.defines.append("mydefine1")
 
         conan_file.deps_cpp_info.update(cpp_info, "zlib")
-        conan_file.env_info = EnvInfo()
         return conan_file
 
     def gcc_test(self):

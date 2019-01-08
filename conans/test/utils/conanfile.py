@@ -2,8 +2,10 @@ import os
 from collections import namedtuple
 
 from conans import ConanFile, Options
-from conans.model.conan_file import ConanFile
+from conans.model.build_info import DepsCppInfo
+from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.options import PackageOptions
+from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -114,8 +116,17 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
+        self.deps_env_info = DepsEnvInfo()
+        self.deps_user_info = DepsUserInfo()
+        self.deps_cpp_info = DepsCppInfo()
+        self.env_info = EnvInfo()
+        self._env = EnvValues()
 
     def run(self, command):
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+
+    @property
+    def env(self):
+        return self._env
