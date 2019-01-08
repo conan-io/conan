@@ -347,7 +347,8 @@ class Command(object):
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("reference", nargs="?",
-                            help='user/channel, version@user/channel or pkg/version@user/channel '
+                            help='Reference for the conanfile path of the first argument: '
+                            'user/channel, version@user/channel or pkg/version@user/channel'
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
@@ -386,6 +387,9 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
             else:
+                if args.reference:
+                    raise ConanException("A full reference was provided as first argument, second "
+                                         "argument not allowed")
                 info = self._conan.install_reference(reference, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,

@@ -24,9 +24,12 @@ class InstallTest(unittest.TestCase):
         client.save({"conanfile.txt": ""})
         client.run("info .")
         self.assertIn("conanfile.txt", str(client.out).splitlines())
-        client.run("install . Pkg/0.1@myuser/testing")
-        client.run("info .")
-        self.assertIn("Pkg/0.1@myuser/testing", client.out)
+
+    def install_reference_error_test(self):
+        # Test to check the "conan install <path> <reference>" command argument
+        client = TestClient()
+        client.run("install Pkg/0.1@myuser/testing user/testing", assert_error=True)
+        self.assertIn("ERROR: A full reference was provided as first argument", client.out)
 
     def install_reference_test(self):
         # Test to check the "conan install <path> <reference>" command argument
@@ -290,8 +293,8 @@ class Pkg(ConanFile):
         self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-        hello0 = self.client.client_cache.package(PackageReference(conan_ref,
-                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+        hello0 = self.client.client_cache.package(
+            PackageReference(conan_ref, "8b964e421a5b7e48b7bc19b94782672be126be8b"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
@@ -317,8 +320,8 @@ class Pkg(ConanFile):
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-        hello0 = self.client.client_cache.package(PackageReference(conan_ref,
-                                           "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
+        hello0 = self.client.client_cache.package(
+            PackageReference(conan_ref, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual("language=0\nstatic=True", hello0_conan_info.options.dumps())
@@ -351,8 +354,8 @@ class Pkg(ConanFile):
         self.assertEqual("", conan_info.options.dumps())
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-        hello0 = self.client.client_cache.package(PackageReference(conan_ref,
-                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+        hello0 = self.client.client_cache.package(
+            PackageReference(conan_ref, "8b964e421a5b7e48b7bc19b94782672be126be8b"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
@@ -436,7 +439,8 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        client.run("install . --build=missing -s os=Windows -s os_build=Windows "
+                   "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
