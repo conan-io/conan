@@ -357,11 +357,13 @@ class MyPkg(ConanFile):
     def test(self):
         pass
         """
+
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
 
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include",
+                      client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
