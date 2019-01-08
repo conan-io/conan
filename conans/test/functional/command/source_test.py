@@ -20,8 +20,9 @@ class ScmtestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
+        client.runner("git init .", cwd=client.current_folder)
         client.run("source .")
-        self.assertEqual(["conanfile.py"], os.listdir(client.current_folder))
+        self.assertEqual(["conanfile.py", '.git'], os.listdir(client.current_folder))
 
     def local_flow_patch_test(self):
         # https://github.com/conan-io/conan/issues/2327
