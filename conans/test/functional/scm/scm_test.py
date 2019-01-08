@@ -722,7 +722,7 @@ class ConanLib(ConanFile):
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         # Even the not commited files are copied
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "aditional_file.txt")))
-        self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
+        self.assertIn("Getting sources from folder: %s" % curdir.replace("\\", "/"), self.client.out)
 
         # Export again but now with absolute reference, so no pointer file is created nor kept
         svn = SVN(curdir.replace("\\", "/"))
