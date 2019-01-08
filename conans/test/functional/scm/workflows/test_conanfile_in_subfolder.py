@@ -4,6 +4,8 @@ import os
 import textwrap
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans.test.functional.scm.workflows.common import TestWorkflow
 from conans.test.utils.tools import SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient, create_local_git_repo
@@ -16,6 +18,7 @@ class ConanfileInSubfolder(TestWorkflow):
     path_from_conanfile_to_root = ".."
 
 
+@attr("svn")
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\
