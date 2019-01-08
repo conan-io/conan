@@ -99,3 +99,11 @@ class SCM(object):
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
+
+    @classmethod
+    def clean_url(cls, url):
+        _, last_chunk = url.rsplit('/', 1)
+        if '@' in last_chunk:  # Remove peg_revision
+            url, peg_revision = url.rsplit('@', 1)
+            return url
+        return url
