@@ -6,7 +6,7 @@ import textwrap
 from conans.client.tools import environment_append
 
 
-class TestWorkflow:
+class TestWorkflow(object):
     """ This class implements a conan package with some tests (local and remote workflow)"""
 
     path_to_conanfile = None
