@@ -20,10 +20,11 @@ from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 class ServerLauncher(object):
     def __init__(self, force_migration=False):
+        self.force_migration = force_migration
         user_folder = conan_expand_user("~")
         server_folder = os.path.join(user_folder, '.conan_server')
 
-        server_config = migrate_and_get_server_config(user_folder, None, force_migration)
+        server_config = migrate_and_get_server_config(user_folder, None, self.force_migration)
         custom_auth = server_config.custom_authenticator
         if custom_auth:
             authenticator = load_authentication_plugin(server_folder, custom_auth)
@@ -45,17 +46,18 @@ class ServerLauncher(object):
         server_capabilities = SERVER_CAPABILITIES
         server_capabilities.append(REVISIONS)
 
-        self.ra = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, server_store,
-                              Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                              server_capabilities)
-
-        print("***********************")
-        print("Using config: %s" % server_config.config_filename)
-        print("Storage: %s" % server_config.disk_storage_path)
-        print("Public URL: %s" % server_config.public_url)
-        print("PORT: %s" % server_config.port)
-        print("***********************")
+        self.server = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
+                                  authorizer, authenticator, server_store,
+                                  Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
+                                  server_capabilities)
+        if not self.force_migration:
+            print("***********************")
+            print("Using config: %s" % server_config.config_filename)
+            print("Storage: %s" % server_config.disk_storage_path)
+            print("Public URL: %s" % server_config.public_url)
+            print("PORT: %s" % server_config.port)
+            print("***********************")
 
     def launch(self):
-        self.ra.run(host="0.0.0.0")
+        if not self.force_migration:
+            self.server.run(host="0.0.0.0")
