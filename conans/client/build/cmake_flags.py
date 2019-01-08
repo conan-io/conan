@@ -252,20 +252,21 @@ class CMakeDefinitionsBuilder(object):
             ret["CONAN_COMPILER_VERSION"] = str(compiler_version)
 
         # C, CXX, LINK FLAGS
-        arch_flag = architecture_flag(compiler=compiler, arch=arch)
-        if arch_flag:
-            ret['CONAN_CXX_FLAGS'] = arch_flag
-            ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
-            ret['CONAN_C_FLAGS'] = arch_flag
-            if self._set_cmake_flags:
-                ret['CMAKE_CXX_FLAGS'] = arch_flag
-                ret['CMAKE_SHARED_LINKER_FLAGS'] = arch_flag
-                ret['CMAKE_C_FLAGS'] = arch_flag
-        elif self._parallel and "Windows" in str(os_) and compiler == "Visual Studio":
-            # Parallel and Windows is mutually exclusive from above "arch_flag"
-            flag = parallel_compiler_cl_flag(output=self._output)
-            ret['CONAN_CXX_FLAGS'] = flag
-            ret['CONAN_C_FLAGS'] = flag
+        if compiler == "Visual Studio":
+            if self._parallel:
+                flag = parallel_compiler_cl_flag(output=self._output)
+                ret['CONAN_CXX_FLAGS'] = flag
+                ret['CONAN_C_FLAGS'] = flag
+        else:  # arch_flag is only set for non Visual Studio
+            arch_flag = architecture_flag(compiler=compiler, arch=arch)
+            if arch_flag:
+                ret['CONAN_CXX_FLAGS'] = arch_flag
+                ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
+                ret['CONAN_C_FLAGS'] = arch_flag
+                if self._set_cmake_flags:
+                    ret['CMAKE_CXX_FLAGS'] = arch_flag
+                    ret['CMAKE_SHARED_LINKER_FLAGS'] = arch_flag
+                    ret['CMAKE_C_FLAGS'] = arch_flag
 
         if libcxx:
             ret["CONAN_LIBCXX"] = libcxx
