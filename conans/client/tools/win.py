@@ -120,7 +120,7 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None, output=None):
+                      arch=None, parallel=True, toolset=None, platforms=None, output=None, verbosity=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -141,7 +141,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     command = tmp.get_command(sln_path, tmp_path,
                               targets=targets, upgrade_project=upgrade_project,
                               build_type=build_type, arch=arch, parallel=parallel,
-                              toolset=toolset, platforms=platforms, use_env=False)
+                              toolset=toolset, platforms=platforms, use_env=False,
+                              verbosity=verbosity)
 
     return command
 
