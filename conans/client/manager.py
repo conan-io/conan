@@ -2,6 +2,7 @@ import os
 
 from conans.client.client_cache import ClientCache
 from conans.client.generators import write_generators
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import ConanInstaller, call_system_requirements
@@ -13,9 +14,7 @@ from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
-from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
 from conans.util.files import normalize, save
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class ConanManager(object):
