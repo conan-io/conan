@@ -33,12 +33,17 @@ class ConanFileLoader(object):
         self._runner = runner
         self._output = output
         self._python_requires = python_requires
-        sys.modules["conans"].python_requires = self._python_requires
+        sys.modules["conans"].python_requires = python_requires
+        self.cached_conanfiles = {}
 
     def load_class(self, conanfile_path):
-        self._python_requires.valid = True
-        _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
-        self._python_requires.valid = False
+        try:
+            return self.cached_conanfiles[conanfile_path]
+        except KeyError:
+            self._python_requires.valid = True
+            _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+            self._python_requires.valid = False
+            self.cached_conanfiles[conanfile_path] = conanfile
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel):

@@ -11,9 +11,7 @@ from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.version import Version
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
@@ -51,7 +49,7 @@ class RestApiUnitTest(unittest.TestCase):
 @attr('slow')
 @attr('rest_api')
 class RestApiTest(unittest.TestCase):
-    '''Open a real server (sockets) to test rest_api function.'''
+    """Open a real server (sockets) to test rest_api function."""
 
     server = None
     api = None
@@ -59,11 +57,7 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            plugin = VersionCheckerPlugin(Version("0.16.0"), Version("0.16.0"), ["ImCool"])
-            cls.server = TestServerLauncher(server_version=Version("0.16.0"),
-                                            min_client_compatible_version=Version("0.16.0"),
-                                            plugins=[plugin],
-                                            server_capabilities=[])
+            cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
             cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
@@ -82,9 +76,7 @@ class RestApiTest(unittest.TestCase):
 
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
-        self.assertEquals(version, "0.16.0")
-        self.assertEquals(check, None)  # None because we are not sending client version
-        self.assertEquals(capabilities, ["ImCool"])
+        self.assertEquals(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
         # Upload a conans

@@ -72,7 +72,7 @@ def add_cmake_flag(cmake_flags, name, flag):
         if name not in cmake_flags:
             cmake_flags[name] = flag
         else:
-            cmake_flags[name] = ' ' + flag
+            cmake_flags[name] += ' ' + flag
     return cmake_flags
 
 
