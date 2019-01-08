@@ -98,10 +98,11 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     if captured:
         # Generate the scm_folder.txt file pointing to the src_path
         src_path = scm.get_repo_root()
-        url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
         scm_url = SCM.clean_url(scm_data.url)  # Remove peg_revision (SVN), ....
-        src_path = os.path.join(src_path, os.path.relpath(scm_url, url_root))
-        save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
+        url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
+        if url_root:
+            src_path = os.path.join(src_path, os.path.relpath(scm_url, url_root))
+            save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
 
     return scm_data, captured_revision
 
