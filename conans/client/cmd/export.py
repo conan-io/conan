@@ -100,7 +100,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         src_path = scm.get_repo_root()
         url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
         src_path = os.path.join(src_path, os.path.relpath(scm_data.url, url_root))
-        save(scm_src_file, src_path.replace("\\", "/"))
+        save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
 
     return scm_data, captured_revision
 
