@@ -350,7 +350,7 @@ class ConanInstaller(object):
 
         # Use `package_info()` data
         else:
-            pass  # TODO: Use `package_info()` data
+            pass  # It will use `package_info()` data relative to path used as 'package_folder'
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_file = node.conanfile

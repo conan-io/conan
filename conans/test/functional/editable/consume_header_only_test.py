@@ -43,7 +43,7 @@ class HeaderOnlyLibTestClient(TestClient):
                 self.cpp_info.libs = ["MyLib", "otra", ]
                 self.cpp_info.defines = ["MyLibDEFINES",]
                 self.cpp_info.libdirs = ["MyLib-libdirs", ]
-                self.cpp_info.includedirs = ["MyLib-includedirs", "include", ]
+                self.cpp_info.includedirs = ["src/include-local", ]
         """)
 
     conan_inrepo_layout = textwrap.dedent("""\
@@ -56,25 +56,31 @@ class HeaderOnlyLibTestClient(TestClient):
         src/include-cache
         """)
 
-    def __init__(self, use_repo_file, *args, **kwargs):
+    def __init__(self, use_repo_file, use_cache_file, *args, **kwargs):
         super(HeaderOnlyLibTestClient, self).__init__(*args, **kwargs)
 
-        save(self.client_cache.default_editable_path, self.conan_cache_layout)
         self.save({"conanfile.py": self.conanfile,
                    "src/include-inrepo/hello.hpp": self.header.format(word="EDITABLE",
                                                                       origin="inrepo"),
                    "src/include-cache/hello.hpp": self.header.format(word="EDITABLE",
-                                                                     origin="cache")
+                                                                     origin="cache"),
+                   "src/include-local/hello.hpp": self.header.format(word="EDITABLE",
+                                                                     origin="local")
                    })
 
         if use_repo_file:
             self.save({CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout, })
 
+        if use_cache_file:
+            save(self.client_cache.default_editable_path, self.conan_cache_layout)
+
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
                                                                       origin='inrepo'),
                    "src/include-cache/hello.hpp": self.header.format(word=hello_word,
-                                                                     origin='cache')})
+                                                                     origin='cache'),
+                   "src/include-local/hello.hpp": self.header.format(word=hello_word,
+                                                                     origin='local')})
 
     def make_editable(self, full_reference):
         conan_ref = ConanFileReference.loads(full_reference)
@@ -84,13 +90,14 @@ class HeaderOnlyLibTestClient(TestClient):
 
 class EditableReferenceTest(unittest.TestCase):
 
-    @parameterized.expand([(False,), (True,)])
-    def test_header_only(self, use_repo_file):
+    @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])
+    def test_header_only(self, use_repo_file, use_cache_file):
         # We need two clients sharing the same Conan cache
         base_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
 
         # Editable project
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
+                                                  use_cache_file=use_cache_file,
                                                   base_folder=base_folder)
         client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
 
@@ -145,20 +152,32 @@ int main() {
         self.assertIn("    MyLib/0.1@user/editable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
         self.assertIn("Hello EDITABLE!", client.out)
-        if use_repo_file:  # Cache file will override folders from inrepo
+        if use_repo_file:  # Repo file will override folders from cache
             self.assertIn("...using inrepo", client.out)
             self.assertNotIn("...using cache", client.out)
-        else:
+            self.assertNotIn("...using local", client.out)
+        elif use_cache_file:
             self.assertIn("...using cache", client.out)
             self.assertNotIn("...using inrepo", client.out)
+            self.assertNotIn("...using local", client.out)
+        else:
+            self.assertIn("...using local", client.out)
+            self.assertNotIn("...using inrepo", client.out)
+            self.assertNotIn("...using cache", client.out)
 
         # Modify editable and build again
         client_editable.update_hello_word(hello_word="EDITED")
         client.run("create . pkg/0.0@user/testing")
         self.assertIn("Hello EDITED!", client.out)
-        if use_repo_file:  # Repo file will override folders from inrepo
+        if use_repo_file:  # Repo file will override folders from cache
             self.assertIn("...using inrepo", client.out)
             self.assertNotIn("...using cache", client.out)
-        else:
+            self.assertNotIn("...using local", client.out)
+        elif use_cache_file:
             self.assertIn("...using cache", client.out)
             self.assertNotIn("...using inrepo", client.out)
+            self.assertNotIn("...using local", client.out)
+        else:
+            self.assertIn("...using local", client.out)
+            self.assertNotIn("...using inrepo", client.out)
+            self.assertNotIn("...using cache", client.out)
