@@ -42,14 +42,6 @@ class InspectCommandTest(unittest.TestCase):
         self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
         self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
 
-    def test_local(self):
-        self.t.run('inspect .')
-        self.assertIn("url: None", self.t.out)
-
-        self.t.save(files={'conanfile.py': self.conanfile_base.format(body='url ="hh"')})
-        self.t.run('inspect .')
-        self.assertIn('url: hh', self.t.out)
-
     def test_reference(self):
         self.t.run('inspect {}'.format(self.reference))
         self.assertIn("url: None", self.t.out)
