@@ -97,7 +97,6 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 
     if captured:
         # Generate the scm_folder.txt file pointing to the src_path
-        # TODO: Factor out this functionality
         src_path = scm.get_repo_root()
         url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
         src_path = os.path.join(src_path, os.path.relpath(scm_data.url, url_root))

@@ -201,10 +201,9 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         captured = scm_data.capture_origin or scm_data.capture_revision
 
         if captured:
-            # TODO: Factor out this functionality
-            conanfile_dir = local_sources_path
-            scm = SCM(scm_data, conanfile_dir, output)
-            scm_url = scm_data.url if scm_data.url != "auto" else scm.get_qualified_remote_url(remove_credentials=True)
+            scm = SCM(scm_data, local_sources_path, output)
+            scm_url = scm_data.url if scm_data.url != "auto" else \
+                scm.get_qualified_remote_url(remove_credentials=True)
 
             src_path = scm.get_repo_root()
             url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
