@@ -10,6 +10,8 @@ from conans.test.utils.tools import TestClient, create_local_git_repo
 
 
 class ConanfileInRepoRoot(TestWorkflow):
+    """ The conanfile.py is in the root of the package """
+
     path_to_conanfile = "."
     path_from_conanfile_to_root = "."
 
@@ -82,21 +84,8 @@ class GitConanfileInRepoRootTest(ConanfileInRepoRoot, unittest.TestCase):
         t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
         self._run_local_test(t, t.current_folder, self.path_to_conanfile)
 
-    def test_local_chdir(self):
-        t = TestClient(path_with_spaces=False)
-        t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-        self._run_local_test(t, t.current_folder, self.path_to_conanfile)
-
     # Cache workflow
     def test_remote_root_folder(self):
         t = TestClient(path_with_spaces=False)
         t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
         self._run_remote_test(t, t.current_folder, self.path_to_conanfile)
-
-    def test_remote_chdir(self):
-        t = TestClient(path_with_spaces=False)
-        t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-        self._run_remote_test(t, t.current_folder, self.path_to_conanfile)
-
-
-

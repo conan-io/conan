@@ -7,6 +7,7 @@ from conans.client.tools import environment_append
 
 
 class TestWorkflow:
+    """ This class implements a conan package with some tests (local and remote workflow)"""
 
     path_to_conanfile = None
     path_from_conanfile_to_root = None

@@ -10,11 +10,13 @@ from conans.test.utils.tools import TestClient, create_local_git_repo
 
 
 class ConanfileInSubfolder(TestWorkflow):
+    """ The conanfile.py is in a subfolder inside the package """
+
     path_to_conanfile = "conan"
     path_from_conanfile_to_root = ".."
 
 
-class SVNConanfileInRepoRootTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
+class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\
         def get_remote_url():
@@ -65,7 +67,7 @@ class SVNConanfileInRepoRootTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
-class GitConanfileInRepoRootTest(ConanfileInSubfolder, unittest.TestCase):
+class GitConanfileInSubfolderTest(ConanfileInSubfolder, unittest.TestCase):
 
     conanfile = ConanfileInSubfolder.conanfile_base.format(extra_header="",
                                                            type="git",
@@ -82,21 +84,8 @@ class GitConanfileInRepoRootTest(ConanfileInSubfolder, unittest.TestCase):
         t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
         self._run_local_test(t, t.current_folder, self.path_to_conanfile)
 
-    def test_local_chdir(self):
-        t = TestClient(path_with_spaces=False)
-        t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-        self._run_local_test(t, t.current_folder, self.path_to_conanfile)
-
     # Cache workflow
     def test_remote_root_folder(self):
         t = TestClient(path_with_spaces=False)
         t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
         self._run_remote_test(t, t.current_folder, self.path_to_conanfile)
-
-    def test_remote_chdir(self):
-        t = TestClient(path_with_spaces=False)
-        t.runner('git clone "{}" .'.format(self.url), cwd=t.current_folder)
-        self._run_remote_test(t, t.current_folder, self.path_to_conanfile)
-
-
-
