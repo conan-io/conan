@@ -38,6 +38,7 @@ def complete_recipe_sources(remote_manager, client_cache, conanfile, conan_refer
 
 
 def merge_directories(src, dst, excluded=None, symlinks=True):
+    src = os.path.normpath(src)
     dst = os.path.normpath(dst)
     excluded = excluded or []
     excluded = [os.path.normpath(entry) for entry in excluded]
@@ -198,16 +199,16 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
             local_sources_path = None
     else:
         # In user space, if revision="auto", then copy
-        captured = scm_data.capture_origin or scm_data.capture_revision
-
-        if captured:
+        if scm_data.capture_origin or scm_data.capture_revision:
             scm = SCM(scm_data, local_sources_path, output)
             scm_url = scm_data.url if scm_data.url != "auto" else \
                 scm.get_qualified_remote_url(remove_credentials=True)
 
-            src_path = scm.get_repo_root()
-            url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
-            local_sources_path = os.path.join(src_path, os.path.relpath(scm_url, url_root))
+            if scm_url:  # If there is no remote (git), we cannot compute this block
+                src_path = scm.get_repo_root()
+                url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
+                scm_url = SCM.clean_url(scm_url)  # Remove peg_revision (SVN), ....
+                local_sources_path = os.path.join(src_path, os.path.relpath(scm_url, url_root))
         else:
             local_sources_path = None
 
