@@ -161,6 +161,8 @@ adjusting 'compiler.libcxx=libstdc++11'
         elif compiler == "clang":
             if platform.system() == "FreeBSD":
                 result.append(("compiler.libcxx", "libc++"))
+            elif platform.system() == "Windows":
+                result.append(("compiler.libcxx", "msstl"))
             else:
                 result.append(("compiler.libcxx", "libstdc++"))
         elif compiler == "sun-cc":
