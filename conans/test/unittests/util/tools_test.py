@@ -1025,6 +1025,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
+    @attr("slow")
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
 
@@ -1221,6 +1222,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(host, "arm-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8.3")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "watchOS", "armv8_32")
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
 

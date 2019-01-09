@@ -344,7 +344,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
     machine = {"x86": "i686" if os_ != "Linux" else "x86",
                "x86_64": "x86_64",
                "armv8": "aarch64",
-               "armv8_32": "aarch64"  # https://wiki.linaro.org/Platform/arm64-ilp32
+               "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
+               "armv8.3": "aarch64"
                }.get(arch, None)
 
     if not machine:
