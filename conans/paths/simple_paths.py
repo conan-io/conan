@@ -2,7 +2,7 @@ import os
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.paths import LINKED_FOLDER_SENTINEL, is_case_insensitive_os
+from conans.paths import LINKED_PACKAGE_SENTINEL, is_case_insensitive_os
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 
@@ -45,7 +45,7 @@ class SimplePaths(object):
 
     def _build_path_to_linked_folder_sentinel(self, conan_reference):
         base_folder = self._build_path_to_base_folder(conan_reference)
-        linked_package_file = os.path.join(base_folder, LINKED_FOLDER_SENTINEL)
+        linked_package_file = os.path.join(base_folder, LINKED_PACKAGE_SENTINEL)
         return linked_package_file
 
     def package_layout(self, conan_reference, short_paths=False):

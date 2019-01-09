@@ -8,7 +8,7 @@ import textwrap
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.paths import LINKED_FOLDER_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import LINKED_PACKAGE_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -84,7 +84,7 @@ class HeaderOnlyLibTestClient(TestClient):
     def make_editable(self, full_reference):
         conan_ref = ConanFileReference.loads(full_reference)
         cache_dir = self.client_cache.conan(conan_ref)
-        save(os.path.join(cache_dir, LINKED_FOLDER_SENTINEL), content=self.current_folder)
+        save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
 
 
 class EditableReferenceTest(unittest.TestCase):

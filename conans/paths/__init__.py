@@ -53,7 +53,7 @@ RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
-LINKED_FOLDER_SENTINEL = '.linked_package'
+LINKED_PACKAGE_SENTINEL = '.linked_package'
 CONAN_PACKAGE_LAYOUT_FILE = '.conan_package_layout'
 
 # Directories
