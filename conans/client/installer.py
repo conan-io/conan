@@ -320,7 +320,7 @@ class BinaryInstaller(object):
     def _load_editables_cpp_info(self):
         editables_path = self._client_cache.default_editable_path
         if os.path.exists(editables_path):
-            return EditableCppInfo.create(editables_path, require_namespace=True)
+            return EditableCppInfo.load(editables_path, require_namespace=True)
         return None
 
     def _handle_node_editable(self, node):
@@ -332,8 +332,8 @@ class BinaryInstaller(object):
         # Try with package-provided file
         package_layout_file = package_layout.editable_package_layout_file()
         if os.path.exists(package_layout_file):
-            editable_cpp_info = EditableCppInfo.create(package_layout_file,
-                                                       require_namespace=False)
+            editable_cpp_info = EditableCppInfo.load(package_layout_file,
+                                                     require_namespace=False)
             editable_cpp_info.apply_to(node.conanfile.name,
                                        node.conanfile.cpp_info,
                                        base_path=base_path,

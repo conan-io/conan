@@ -17,17 +17,17 @@ class EditableCppInfo(object):
         self._uses_namespace = uses_namespace
 
     @classmethod
-    def create(cls, filepath_or_content, require_namespace):
-        _parse_func = cls.parse_file if os.path.exists(filepath_or_content) else cls.parse_content
-        data = _parse_func(filepath_or_content, require_namespace=require_namespace)
+    def load(cls, filepath, require_namespace):
+        data = cls._loads(content=load(filepath), require_namespace=require_namespace)
         return EditableCppInfo(data, uses_namespace=require_namespace)
 
     @classmethod
-    def parse_file(cls, filepath, require_namespace):
-        return cls.parse_content(content=load(filepath), require_namespace=require_namespace)
+    def loads(cls, content, require_namespace):
+        data = cls._loads(content=content, require_namespace=require_namespace)
+        return EditableCppInfo(data, uses_namespace=require_namespace)
 
     @classmethod
-    def parse_content(cls, content, require_namespace):
+    def _loads(cls, content, require_namespace):
         """ Returns a dictionary containing information about paths for a CppInfo object: includes,
         libraries, resources, binaries,... """
 

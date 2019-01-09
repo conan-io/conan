@@ -33,8 +33,8 @@ class NoNamespaceFileTest(unittest.TestCase):
     ])
 
     def test_read_empty_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(
-            filepath_or_content=base_content.format(namespace="libA:", path_prefix="libA/"),
+        editable_cpp_info = EditableCppInfo.loads(
+            content=base_content.format(namespace="libA:", path_prefix="libA/"),
             require_namespace=False)
         self.assertFalse(editable_cpp_info._uses_namespace)
 
@@ -46,14 +46,14 @@ class NoNamespaceFileTest(unittest.TestCase):
         self.assertFalse(len(data['bindirs']))
 
     def test_read_empty_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(
-            filepath_or_content=base_content.format(namespace="", path_prefix=""),
+        editable_cpp_info = EditableCppInfo.loads(
+            content=base_content.format(namespace="", path_prefix=""),
             require_namespace=True)
         self.assertTrue(editable_cpp_info._uses_namespace)
         self.assertFalse(len(editable_cpp_info._data.keys()))
 
     def test_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(self.content, require_namespace=False)
+        editable_cpp_info = EditableCppInfo.loads(self.content, require_namespace=False)
         self.assertFalse(editable_cpp_info._uses_namespace)
 
         data = editable_cpp_info._data
@@ -65,7 +65,7 @@ class NoNamespaceFileTest(unittest.TestCase):
         self.assertListEqual(list(data['bindirs']), [])
 
     def test_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(self.content, require_namespace=True)
+        editable_cpp_info = EditableCppInfo.loads(self.content, require_namespace=True)
         self.assertTrue(editable_cpp_info._uses_namespace)
 
         self.assertListEqual(sorted(editable_cpp_info._data.keys()), sorted(['*', 'libA', ]))

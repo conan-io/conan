@@ -35,8 +35,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
     ])
 
     def test_require_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(filepath_or_content=self.content,
-                                                   require_namespace=False)
+        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=False)
 
         cpp_info = namedtuple('_', EditableCppInfo.cpp_info_dirs)
         editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
@@ -47,8 +46,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.bindirs, [])
 
     def test_require_namespace(self):
-        editable_cpp_info = EditableCppInfo.create(filepath_or_content=self.content,
-                                                   require_namespace=True)
+        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=True)
         self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=True))
         self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=False))
         self.assertTrue(editable_cpp_info.has_info_for('libOther', use_wildcard=True))
