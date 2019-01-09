@@ -83,6 +83,10 @@ def _process_folder(folder, client_cache, output):
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(client_cache, os.path.join(root, f))
+            elif f == "README.md":
+                output.info("Skip README.md")
+            elif f == "LICENSE.txt":
+                output.info("Skip LICENSE.txt")
             else:
                 relpath = os.path.relpath(root, folder)
                 target_folder = os.path.join(client_cache.conan_folder, relpath)
