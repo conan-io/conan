@@ -15,6 +15,8 @@ def to_apple_arch(arch):
             'x86_64': 'x86_64',
             'armv7': 'armv7',
             'armv8': 'arm64',
+            'armv8_32': 'arm64_32',
+            'armv8.3': 'arm64e',
             'armv7s': 'armv7s',
             'armv7k': 'armv7k'}.get(str(arch))
 
