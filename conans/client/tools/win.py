@@ -574,12 +574,14 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         if subsystem != WSL:
 
             def get_path_value(container, subsystem_name):
-                """Gets the path from the container dict and returns a string with the path for the subsystem_name"""
+                """Gets the path from the container dict and returns a
+                string with the path for the subsystem_name"""
                 _path_key = next((name for name in container.keys() if "path" == name.lower()), None)
                 if _path_key:
                     _path_value = container.get(_path_key)
                     if isinstance(_path_value, list):
-                        return ":".join([unix_path(path, path_flavor=subsystem_name) for path in _path_value])
+                        return ":".join([unix_path(path, path_flavor=subsystem_name)
+                                         for path in _path_value])
                     else:
                         return unix_path(_path_value, path_flavor=subsystem_name)
 

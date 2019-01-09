@@ -115,6 +115,7 @@ class ConanRequirementsTest(unittest.TestCase):
                                         MockRequireResolver(), None, None)
 
     def root(self, content):
+        self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
@@ -430,7 +431,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content2)
 
         with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
-            deps_graph = self.root(chat_content)
+            self.root(chat_content)
 
     def test_diamond_conflict_solved(self):
         chat_content = """
@@ -1320,7 +1321,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
-    def test_remove_build_requires(self):
+    def test_remove_requires(self):
         hello_content = """
 from conans import ConanFile
 
@@ -1343,7 +1344,7 @@ class HelloConan(ConanFile):
         self.assertEqual(hello.conanfile.info.full_requires.dumps(),
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
-    def test_remove_two_build_requires(self):
+    def test_remove_two_requires(self):
         chat_content = """
 from conans import ConanFile
 
@@ -1609,7 +1610,8 @@ class LibDConan(ConanFile):
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
         self.retriever.conan(libc_ref, libc_content)
 
-        with self.assertRaisesRegexp(ConanException, "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
+        with self.assertRaisesRegexp(ConanException,
+                                     "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
                                      "option LibA:shared to True"):
             self.root(self.consumer_content)
 

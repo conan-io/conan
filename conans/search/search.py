@@ -56,7 +56,8 @@ def evaluate_postfix_with_info(postfix, conan_vars_info):
 
 def evaluate(prop_name, prop_value, conan_vars_info):
     """
-    Evaluates a single prop_name, prop_value like "os", "Windows" against conan_vars_info.serialize_min()
+    Evaluates a single prop_name, prop_value like "os", "Windows" against
+    conan_vars_info.serialize_min()
     """
 
     def compatible_prop(setting_value, prop_value):
@@ -65,7 +66,8 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
 
-    if prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or prop_name.startswith("compiler."):
+    if (prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or
+            prop_name.startswith("compiler.")):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)

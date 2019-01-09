@@ -1,5 +1,7 @@
+import os
 from os.path import join, normpath, relpath
 
+from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
@@ -265,7 +267,16 @@ class ServerStore(SimplePaths):
     def _get_latest_revision(self, rev_file_path):
         rev_list = self._get_revisions(rev_file_path)
         if not rev_list:
-            return None
+            # FIXING BREAK MIGRATION NOT CREATING INDEXES
+            # BOTH FOR RREV AND PREV THE FILE SHOULD BE CREATED WITH "0" REVISION
+            if self.path_exists(os.path.join(os.path.dirname(rev_file_path), DEFAULT_REVISION_V1)):
+                rev_list = RevisionList()
+                rev_list.add_revision(DEFAULT_REVISION_V1)
+                self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
+                                                 lock_file=rev_file_path + ".lock")
+                return DEFAULT_REVISION_V1
+            else:
+                return None
         return rev_list.latest_revision()
 
     def _recipe_revisions_file(self, reference):

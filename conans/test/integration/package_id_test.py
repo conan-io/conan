@@ -352,4 +352,3 @@ class Pkg(ConanFile):
                                 ' -s compiler.version=7.2 -s cppstd=gnu14',
                                 assert_error=True)  # Default
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
-
