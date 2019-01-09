@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 from collections import OrderedDict
@@ -199,7 +200,9 @@ class ClientCache(SimplePaths):
             mixed_settings = _mix_settings_with_env(self._default_profile.settings)
             self._default_profile.settings = mixed_settings
 
-        return self._default_profile
+        # Return a copy to avoid modified objects, for example when using the python API
+        # the default object should be always constant
+        return copy.copy(self._default_profile)
 
     @property
     def settings(self):
