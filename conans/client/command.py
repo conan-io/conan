@@ -72,27 +72,6 @@ class OnceArgument(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class ConanFilePath(argparse.Action):
-    """ Expect a path to a conanfile.py file or to the directory where it is located """
-    def __call__(self, parser, namespace, values, option_string=None):
-        prospective_dir = values
-        try:
-            conanfile = _get_conanfile_path(path=prospective_dir, cwd=os.getcwd(), py=True)
-            setattr(namespace, self.dest, conanfile)
-        except ConanException:
-            raise argparse.ArgumentError(None, "Editable package at {} must contain "
-                                               "a 'conanfile.py' file".format(prospective_dir))
-
-
-class ConanFilePathOptional(ConanFilePath):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if not values:
-            setattr(namespace, self.dest, None)
-        else:
-            return super(ConanFilePathOptional, self).__call__(parser, namespace, values,
-                                                               option_string=option_string)
-
-
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
@@ -1361,7 +1340,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.link.__doc__,
                                          prog="conan link")
         parser.add_argument('target', help='Path to the package folder in the user workspace',
-                            nargs='?', action=ConanFilePathOptional)
+                            nargs='?',)
         parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
         parser.add_argument("--remove", action='store_true', default=False,
                             help='Remove linked reference (target not required)')
@@ -1377,7 +1356,7 @@ class Command(object):
             raise ConanException("Argument 'target' is required to link a reference")
 
         if not args.remove:
-            self._conan.link(args.target, args.reference)
+            self._conan.link(args.target, args.reference, cwd=os.getcwd())
             self._outputer.writeln("Reference '{}' linked to directory "
                                    "'{}'".format(args.reference, os.path.dirname(args.target)))
         else:

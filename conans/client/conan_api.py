@@ -935,7 +935,10 @@ class ConanAPIV1(object):
         return self._client_cache.registry.remotes.get(remote_name)
 
     @api_method
-    def link(self, target_path, target_reference):
+    def link(self, target_path, target_reference, cwd):
+        # Retrieve conanfile.py from target_path
+        target_path = _get_conanfile_path(path=target_path, cwd=cwd, py=True)
+
         ref = ConanFileReference.loads(target_reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
