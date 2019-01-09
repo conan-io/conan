@@ -4,10 +4,8 @@ import os
 
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
 from conans.util.files import load
-
-CONAN_PACKAGE_LAYOUT_FILE = '.conan_package_layout'
 
 
 class PackageEditableLayout(object):

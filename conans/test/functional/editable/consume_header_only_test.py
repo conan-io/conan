@@ -8,8 +8,7 @@ import textwrap
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.paths import LINKED_FOLDER_SENTINEL
-from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import LINKED_FOLDER_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save

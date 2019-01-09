@@ -49,14 +49,13 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
 
 default_manifest_folder = '.conan_manifests'
 

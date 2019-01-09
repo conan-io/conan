@@ -5,7 +5,7 @@ import textwrap
 import unittest
 from parameterized import parameterized
 from conans.model.ref import ConanFileReference
-from conans.paths.package_layouts.package_editable_layout import CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient
 
 

@@ -62,3 +62,4 @@ SRC_FOLDER = "source"
 BUILD_FOLDER = "build"
 PACKAGES_FOLDER = "package"
 SYSTEM_REQS_FOLDER = "system_reqs"
+CONAN_PACKAGE_LAYOUT_FILE = '.conan_package_layout'
