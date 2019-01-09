@@ -1,6 +1,6 @@
 from conans.model.ref import ConanFileReference
+from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controllers.controller import Controller
-from conans.server.rest.controllers.routes import Router
 from conans.server.rest.controllers.v2 import get_package_ref
 from conans.server.service.service_v2 import ConanServiceV2
 
@@ -11,7 +11,7 @@ class RevisionsController(Controller):
     """
     def attach_to(self, app):
 
-        r = Router(self.route)
+        r = BottleRoutes(self.route)
 
         @app.route(r.recipe_revisions, method="GET")
         def get_recipe_revisions(name, version, username, channel, auth_user):

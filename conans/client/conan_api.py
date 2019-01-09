@@ -933,6 +933,31 @@ class ConanAPIV1(object):
     def get_remote_by_name(self, remote_name):
         return self._client_cache.registry.remotes.get(remote_name)
 
+    @api_method
+    def get_recipe_revisions(self, reference, remote_name=None):
+        reference = ConanFileReference.loads(reference)
+        if not remote_name:
+            pass
+        else:
+            remote = self.get_remote_by_name(remote_name)
+            # VALIDATE NOT RREV PRESENT OR DIE
+            return self._remote_manager.xxxxxx(reference)
+            pass
+
+        return
+
+    @api_method
+    def get_package_revisions(self, package_reference, remote_name=None):
+        p_reference = PackageReference.loads(str(package_reference), validate=True)
+        if not remote_name:
+            pass
+        else:
+            remote = self.get_remote_by_name(remote_name)
+            # VALIDATE RREV PRESENT OR DIE
+            return self._remote_manager.xxxxxx(package_reference)
+
+        return
+
 
 Conan = ConanAPIV1
 

@@ -1076,3 +1076,41 @@ class Test(ConanFile):
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
             self.assertIn("os: Windows", client.user_io.out)
             self.assertNotIn("os: Linux", client.user_io.out)
+
+
+@unittest.skipUnless(TestClient().revisions,
+                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+class SearchRevisionsTest(unittest.TestCase):
+
+
+    def search_recipe_revisions_test(self):
+        test_server = TestServer(users={"user": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        conanfile = """
+from conans import ConanFile
+class Test(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . lib/1.0@user/testing")
+        client.run("upload lib/1.0@user/testing -c")
+
+        client.run("search lib/1.0@user/testing --revisions")
+        self.assertIn("WHATEVER")
+
+        client.save({"conanfile.py": conanfile + "# force new rev"})
+        client.run("export . lib/1.0@user/testing")
+        client.run("upload lib/1.0@user/testing -c")
+
+        client.run("search lib/1.0@user/testing --revisions")
+
+        client.run("search lib/1.0@user/testing --revisions --json")
+        # WHAT ABOUT THE JSON?
+
+        # ALSO LOCAL SEARCH
+
+    def search_revision_fail_if_v1_server(self):
+        self.assertTrue(False)
+

@@ -982,6 +982,8 @@ class Command(object):
                             "reference search")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the search information will be written to')
+        parser.add_argument("-rev", "--revisions", default=False, action=OnceArgument,
+                            help='Get a list of revisions for a reference or a package reference.')
         args = parser.parse_args(*args)
 
         if args.table and args.json:

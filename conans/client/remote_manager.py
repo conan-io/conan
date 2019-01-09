@@ -318,6 +318,12 @@ class RemoteManager(object):
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
 
+    def get_recipe_revisions(self, reference):
+        pass
+
+    def get_package_revisions(self, package_reference):
+        pass
+
     def _call_remote(self, remote, method, *argc, **argv):
         assert(isinstance(remote, Remote))
         self._auth_manager.remote = remote

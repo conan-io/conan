@@ -305,3 +305,9 @@ class RestV1Methods(RestCommonMethods):
         payload = {"package_ids": package_ids}
         url = self.conans_router.remove_packages(conan_reference)
         return self._post_json(url, payload)
+
+    def get_recipe_revisions(self, reference):
+        raise ConanException("The remote doesn't support revisions")
+
+    def get_package_revisions(self, package_reference):
+        raise ConanException("The remote doesn't support revisions")

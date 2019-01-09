@@ -244,3 +244,9 @@ class RestV2Methods(RestCommonMethods):
             url = self.conans_router.remove_package(pref)
             self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                   verify=self.verify_ssl)
+
+    def get_recipe_revisions(self, reference):
+        pass
+
+    def get_package_revisions(self, package_reference):
+        pass
