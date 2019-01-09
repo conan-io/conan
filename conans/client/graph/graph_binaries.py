@@ -1,8 +1,8 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE)
-from conans.client.output import ScopedOutput
+                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -12,11 +12,11 @@ from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, registry, workspace):
+    def __init__(self, client_cache, output, remote_manager, workspace):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = registry
+        self._registry = client_cache.registry
         self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
@@ -73,7 +73,7 @@ class GraphBinariesAnalyzer(object):
             return
         evaluated_references[package_ref] = node
 
-        output = ScopedOutput(str(conan_ref), self._out)
+        output = conanfile.output
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
@@ -157,7 +157,7 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_references = {}
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:  # Only value should be SKIP
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
             private_neighbours = node.private_neighbors()
             if private_neighbours:
@@ -170,6 +170,6 @@ class GraphBinariesAnalyzer(object):
                             n.binary = BINARY_SKIP
 
         for node in deps_graph.nodes:
-            if not node.conan_ref or node.binary:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)

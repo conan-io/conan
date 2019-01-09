@@ -1,6 +1,5 @@
 import fnmatch
 
-from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 
 
@@ -47,8 +46,8 @@ class BuildMode(object):
             return True
 
         if conan_file.build_policy_always:
-            out = ScopedOutput(str(reference), self._out)
-            out.info("Building package from source as defined by build_policy='always'")
+            conan_file.output.info("Building package from source as defined by "
+                                   "build_policy='always'")
             return True
 
         ref = reference.name
@@ -66,8 +65,8 @@ class BuildMode(object):
         if self.missing or self.outdated:
             return True
         if conan_file.build_policy_missing:
-            out = ScopedOutput(str(reference), self._out)
-            out.info("Building package from source as defined by build_policy='missing'")
+            conan_file.output.info("Building package from source as defined by "
+                                   "build_policy='missing'")
             return True
         return False
 

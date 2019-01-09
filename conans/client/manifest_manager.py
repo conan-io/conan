@@ -5,6 +5,7 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import SimplePaths
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class ManifestManager(object):
@@ -22,8 +23,7 @@ class ManifestManager(object):
         levels = graph.by_levels()
         for level in levels:
             for node in level:
-                ref = node.conan_ref
-                if not ref:
+                if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
                 self._handle_recipe(node, verify, interactive)
                 self._handle_package(node, verify, interactive)

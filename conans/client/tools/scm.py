@@ -50,6 +50,15 @@ class SCMBase(object):
         url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
         return url
 
+    @classmethod
+    def _remove_credentials_url(cls, url):
+        parsed = urlparse(url)
+        netloc = parsed.hostname
+        if parsed.port:
+            netloc += ":{}".format(parsed.port)
+        replaced = parsed._replace(netloc=netloc)
+        return replaced.geturl()
+
 
 class Git(SCMBase):
     cmd_command = "git"
@@ -58,7 +67,7 @@ class Git(SCMBase):
         # TODO: This should be a context manager
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, branch=None, args=""):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -75,7 +84,7 @@ class Git(SCMBase):
             output += self.run("checkout -t origin/%s" % branch)
         else:
             branch_cmd = "--branch %s" % branch if branch else ""
-            output = self.run('clone "%s" . %s' % (url, branch_cmd))
+            output = self.run('clone "%s" . %s %s' % (url, branch_cmd, args))
             output += self._configure_ssl_verify()
 
         return output
@@ -117,7 +126,7 @@ class Git(SCMBase):
             ret = []
         return ret
 
-    def get_remote_url(self, remote_name=None):
+    def get_remote_url(self, remote_name=None, remove_credentials=False):
         self._check_git_repo()
         remote_name = remote_name or "origin"
         remotes = self.run("remote -v")
@@ -125,6 +134,8 @@ class Git(SCMBase):
             name, url = remote.split(None, 1)
             if name == remote_name:
                 url, _ = url.rsplit(None, 1)
+                if remove_credentials and not os.path.exists(url):  # only if not local
+                    url = self._remove_credentials_url(url)
                 return url
         return None
 
@@ -261,12 +272,15 @@ class SVN(SCMBase):
                 excluded_list.append(os.path.normpath(filepath))
         return excluded_list
 
-    def get_remote_url(self):
-        return self._show_item('url')
+    def get_remote_url(self, remove_credentials=False):
+        url = self._show_item('url')
+        if remove_credentials and not os.path.exists(url):  # only if not local
+            url = self._remove_credentials_url(url)
+        return url
 
-    def get_qualified_remote_url(self):
+    def get_qualified_remote_url(self, remove_credentials=False):
         # Return url with peg revision
-        url = self.get_remote_url()
+        url = self.get_remote_url(remove_credentials=remove_credentials)
         revision = self.get_last_changed_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
         

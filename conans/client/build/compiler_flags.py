@@ -203,4 +203,3 @@ def format_libraries(libraries, compiler=None):
 
 def parallel_compiler_cl_flag(output=None):
     return "/MP%s" % cpu_count(output=output)
-

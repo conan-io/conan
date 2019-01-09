@@ -15,6 +15,7 @@ if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
     full_py_vers = true
 }
 
+
 if (env.BRANCH_NAME =~ /(^PR-.*)/) {
     full_py_vers = false
     test_revisions = false
@@ -68,7 +69,7 @@ if(is_pr){ // Read the PR body to
 
 def flavors
 if(test_revisions){
-    flavors = ["blocked_v2", "disabled_revisions", "enabled_revisions"]
+    flavors = ["enabled_revisions", "disabled_revisions",  "blocked_v2"]
 }
 else{
     flavors = ["blocked_v2"]
@@ -193,8 +194,9 @@ try{
         builders["Windows Rest API Test"] = {
             node("Windows"){
                 stage("REST tests Windows ${pyver}"){
+                    checkout scm
                     try{
-                      bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
+                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
                     }
                     finally{
                       bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
@@ -205,8 +207,9 @@ try{
         builders["Linux Rest API Test"] = {
             node("Linux"){
                 stage("REST tests Linux ${pyver}"){
+                    checkout scm
                     docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
+                        sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
                     }
                 }
             }
@@ -215,7 +218,7 @@ try{
             node("Macos"){
                 stage("REST tests Windows ${pyver}"){
                     withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.functional.remote.rest_api_test")
                     }
                 }
             }
