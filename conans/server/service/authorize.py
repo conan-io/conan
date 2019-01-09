@@ -11,8 +11,10 @@ Replace this module with other that keeps the interface or super class.
 
 
 from abc import ABCMeta, abstractmethod
-from conans.errors import ForbiddenException, InternalErrorException
+
+from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference
+
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
@@ -163,7 +165,10 @@ class BasicAuthorizer(Authorizer):
             ret = self._check_rule_ok(username, rule, *args, **kwargs)
             if ret:  # A rule is applied ok, if not apply keep looking
                 return True
-        raise ForbiddenException("Unauthorized")
+        if username:
+            raise ForbiddenException("Permission denied")
+        else:
+            raise AuthenticationException()
 
     def _check_rule_ok(self, username, rule, conan_reference):
         """Checks if a rule specified in config file applies to current conans
@@ -174,7 +179,7 @@ class BasicAuthorizer(Authorizer):
             # TODO: Log error
             raise InternalErrorException("Invalid server configuration. "
                                          "Contact the administrator.")
-        authorized_users = rule[1].split(",")
+        authorized_users = [_.strip() for _ in rule[1].split(",")]
         if len(authorized_users) < 1:
             raise InternalErrorException("Invalid server configuration. "
                                          "Contact the administrator.")
@@ -184,14 +189,20 @@ class BasicAuthorizer(Authorizer):
             if authorized_users[0] == "*" or username in authorized_users:
                 return True  # Ok, applies and match username
             else:
-                raise ForbiddenException("Unauthorized")
+                if username:
+                    if authorized_users[0] == "?":
+                        return True #Ok, applies and match any authenticated username
+                    else:
+                        raise ForbiddenException("Permission denied")
+                else:
+                    raise AuthenticationException()
 
         return False
 
     def _check_ref_apply_for_rule(self, rule_ref, conan_reference):
         """Checks if a conans reference specified in config file applies to current conans
         reference"""
-        name, version, user, channel = rule_ref
+        name, version, user, channel, _ = rule_ref
         return not((name != "*" and name != conan_reference.name) or
                    (version != "*" and version != conan_reference.version) or
                    (user != "*" and user != conan_reference.user) or

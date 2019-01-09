@@ -1,18 +1,32 @@
+import re
+
+
 class Version(str):
-    SEP = '.'
+    """ This is NOT an implementation of semver, as users may use any pattern in their versions.
+    It is just a helper to parse .-, and compare taking into account integers when possible
+    """
+    version_pattern = re.compile('[.-]')
 
     def __new__(cls, content):
         return str.__new__(cls, content.strip())
 
     @property
     def as_list(self):
-        result = []
-        for item in self.split(Version.SEP):
-            result.append(int(item) if item.isdigit() else item)
-        return result
+        if not hasattr(self, "_cached_list"):
+            tokens = self.rsplit('+', 1)
+            self._base = tokens[0]
+            if len(tokens) == 2:
+                self._build = tokens[1]
+            self._cached_list = []
+            tokens = Version.version_pattern.split(tokens[0])
+            for item in tokens:
+                self._cached_list.append(int(item) if item.isdigit() else item)
+        return self._cached_list
 
     def major(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v = str(self_list[0]) if self_list else "0"
         if fill:
             return Version(".".join([v, 'Y', 'Z']))
@@ -28,11 +42,46 @@ class Version(str):
 
     def minor(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v0 = str(self_list[0]) if len(self_list) > 0 else "0"
         v1 = str(self_list[1]) if len(self_list) > 1 else "0"
         if fill:
             return Version(".".join([v0, v1, 'Z']))
         return Version(".".join([v0, v1]))
+
+    def patch(self):
+        self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
+        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
+        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
+        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
+        return Version(".".join([v0, v1, v2]))
+
+    def pre(self):
+        self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
+        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
+        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
+        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
+        v = ".".join([v0, v1, v2])
+        if len(self_list) > 3:
+            v += "-%s" % self_list[3]
+        return Version(v)
+
+    @property
+    def build(self):
+        self.as_list
+        if hasattr(self, "_build"):
+            return self._build
+        return ""
+
+    @property
+    def base(self):
+        self.as_list
+        return Version(self._base)
 
     def compatible(self, other):
         if not isinstance(other, Version):
@@ -50,24 +99,37 @@ class Version(str):
         if not isinstance(other, Version):
             other = Version(other)
 
+        # Check equals
+        def get_el(a_list, index):
+            if len(a_list) - 1 < index:
+                return 0  # out of range, 4 == 4.0 == 4.0.0
+            return a_list[index]
+
+        equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
+                     for ind in range(0, max(len(other.as_list), len(self.as_list))))
+        if equals:
+            return 0
+
+        # Check greater than or less than
+        other_list = other.as_list
         for ind, el in enumerate(self.as_list):
-            if ind + 1 > len(other.as_list):
-                return 1
-            if not isinstance(el, int) and isinstance(other.as_list[ind], int):
+            if ind + 1 > len(other_list):
+                if isinstance(el, int):
+                    return 1
+                return -1
+            if not isinstance(el, int) and isinstance(other_list[ind], int):
                 # Version compare with 1.4.rc2
                 return -1
-            elif not isinstance(other.as_list[ind], int) and isinstance(el, int):
+            elif not isinstance(other_list[ind], int) and isinstance(el, int):
                 return 1
-            elif el == other.as_list[ind]:
+            elif el == other_list[ind]:
                 continue
-            elif el > other.as_list[ind]:
+            elif el > other_list[ind]:
                 return 1
             else:
                 return -1
-        if len(other.as_list) > len(self.as_list):
+        if len(other_list) > len(self.as_list):
             return -1
-        else:
-            return 0
 
     def __gt__(self, other):
         return self.__cmp__(other) == 1
@@ -80,3 +142,12 @@ class Version(str):
 
     def __ge__(self, other):
         return self.__cmp__(other) in [0, 1]
+
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return str.__hash__(self)

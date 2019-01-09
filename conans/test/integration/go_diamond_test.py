@@ -1,26 +1,29 @@
-import unittest
-from conans.test.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference
-import platform
 import os
+import platform
+import unittest
+
+from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference
 from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 
 
+@attr('golang')
 class GoDiamondTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
-        self.conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
+        self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def _export_upload(self, ref_str, number=0, deps=None):
         conan_reference = ConanFileReference.loads(ref_str)
-        files = hello_conan_files(conan_reference=conan_reference, number=number, deps=deps, lang='go')
+        files = hello_conan_files(conan_reference=conan_reference, number=number, deps=deps,
+                                  lang='go')
         self.conan.save(files, clean_first=True)
-        self.conan.run("export lasote/stable")
+        self.conan.run("export . lasote/stable")
         self.conan.run("upload %s" % str(conan_reference))
 
     def reuse_test(self):
@@ -29,13 +32,13 @@ class GoDiamondTest(unittest.TestCase):
         self._export_upload("hello2/0.1@lasote/stable", 2, [0])
         self._export_upload("hello3/0.1@lasote/stable", 3, [1, 2])
 
-        client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conan_reference = ConanFileReference.loads("hello4/0.2@lasote/stable")
         files3 = hello_conan_files(conan_reference=conan_reference, number=4, deps=[3], lang='go')
         client.save(files3)
-        client.run("install --build missing")
-        client.run("build")
-        command = os.sep.join([".", "bin", "say_hello"])
+        client.run("install . --build missing")
+        client.run("build .")
+
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client.current_folder), ]):
 
@@ -59,18 +62,18 @@ class GoDiamondTest(unittest.TestCase):
         client.run("upload hello0/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
 #
-        client2 = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
+        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conan_reference = ConanFileReference.loads("hello4/0.2@lasote/stable")
 
         files3 = hello_conan_files(conan_reference=conan_reference, number=4, deps=[3], lang='go')
         client2.save(files3)
 
-        client2.run("install --build missing")
+        client2.run("install . --build missing")
         command = os.sep.join([".", "bin", "say_hello"])
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client2.current_folder), ]):
-
-            client2.runner('go install hello4_main', cwd=os.path.join(client2.current_folder, 'src'))
+            client2.runner('go install hello4_main',
+                           cwd=os.path.join(client2.current_folder, 'src'))
         if platform.system() == "Windows":
             command = "hello4_main"
         else:

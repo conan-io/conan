@@ -1,27 +1,46 @@
-from conans.client.store.sqlite import SQLiteDB
+import os
+import sqlite3
+from sqlite3 import OperationalError
+
 from conans.errors import ConanException
 
-USER_TABLE = "users"
 REMOTES_USER_TABLE = "users_remotes"
 
 
-class LocalDB(SQLiteDB):
+class LocalDB(object):
 
     def __init__(self, dbfile):
+        if not os.path.exists(dbfile):
+            par = os.path.dirname(dbfile)
+            if not os.path.exists(par):
+                os.makedirs(par)
+            db = open(dbfile, 'w+')
+            db.close()
         self.dbfile = dbfile
-        super(LocalDB, self).__init__(dbfile)
-        self.connect()
+        try:
+            self.connection = sqlite3.connect(self.dbfile,
+                                              detect_types=sqlite3.PARSE_DECLTYPES)
+            self.connection.text_factory = str
+        except Exception as e:
+            raise ConanException('Could not connect to local cache', e)
         self.init()
 
-    def init(self):
-        SQLiteDB.init(self)
+    def init(self, clean=False):
         cursor = None
         try:
             cursor = self.connection.cursor()
-            cursor.execute("drop table if exists %s" % USER_TABLE)      
+            if clean:
+                cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
+                try:
+                    # https://github.com/ghaering/pysqlite/issues/109
+                    self.connection.isolation_level = None
+                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
+                    self.connection.isolation_level = ''  # default value of isolation_level
+                except OperationalError:
+                    pass
+
             cursor.execute("create table if not exists %s "
                            "(remote_url TEXT UNIQUE, user TEXT, token TEXT)" % REMOTES_USER_TABLE)
-
         except Exception as e:
             message = "Could not initialize local sqlite database"
             raise ConanException(message, e)

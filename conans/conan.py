@@ -1,5 +1,6 @@
-from conans.client.command import main
 import sys
+
+from conans.client.command import main
 
 
 def run():

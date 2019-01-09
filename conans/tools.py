@@ -1,135 +1,213 @@
-""" ConanFile user tools, as download, etc
 """
-from __future__ import print_function
-import sys
-import os
-from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, save
-from patch import fromfile, fromstring
-from conans.client.rest.uploader_downloader import Downloader
+    Conan tools: classes and function in this module are intended to be used out of the box
+    with the Conan configuration already currified into them. This configuration refers
+    mainly to two items:
+     - requester: on network calls, this will include proxy definition.
+     - output: the output configuration
+
+    Here in this module there should be no logic, all functions and classes must be implemented
+    elsewhere (mainly in conans.util or conans.client.tools) and ready to be used without
+    the currification.
+"""
+
 import requests
+
 from conans.client.output import ConanOutput
+# Tools from conans.client.tools
+from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
+    system_pm as tools_system_pm, win as tools_win
+from conans.client.tools.env import *  # pylint: disable=unused-import
+from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
+from conans.client.tools.scm import *  # pylint: disable=unused-import
+from conans.client.tools.apple import *
+# Tools form conans.util
+from conans.util.env_reader import get_env
+from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
+    rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
+    to_file_bytes, touch
+from conans.util.log import logger
 
 
-def vcvars_command(settings):
-    param = "x86" if settings.arch == "x86" else "amd64"
-    command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-               % (settings.compiler.version, param))
-    return command
+# This global variables are intended to store the configuration of the running Conan application
+_global_output = None
+_global_requester = None
 
 
-def human_size(size_bytes):
-    """
-    format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
-    Note that bytes/KB will be reported in whole numbers but MB and above will have
-    greater precision.  e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
-    """
-    if size_bytes == 1:
-        return "1 byte"
+def set_global_instances(the_output, the_requester):
+    global _global_output
+    global _global_requester
 
-    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+    old_output, old_requester = _global_output, _global_requester
 
-    num = float(size_bytes)
-    for suffix, precision in suffixes_table:
-        if num < 1024.0:
-            break
-        num /= 1024.0
+    # TODO: pass here the configuration file, and make the work here (explicit!)
+    _global_output = the_output
+    _global_requester = the_requester
 
-    if precision == 0:
-        formatted_size = "%d" % num
+    return old_output, old_requester
+
+
+def get_global_instances():
+    return _global_output, _global_requester
+
+
+# Assign a default, will be overwritten in the factory of the ConanAPI
+set_global_instances(the_output=ConanOutput(sys.stdout, True), the_requester=requests)
+
+
+"""
+From here onwards only currification is expected, no logic
+"""
+
+
+def save(path, content, append=False):
+    # TODO: All this three functions: save, save_append and this one should be merged into one.
+    if append:
+        save_append(path=path, content=content)
     else:
-        formatted_size = str(round(num, ndigits=precision))
-
-    return "%s %s" % (formatted_size, suffix)
+        files_save(path=path, content=content, only_if_modified=False)
 
 
-def unzip(filename, destination="."):
-    if ".tar.gz" in filename or ".tgz" in filename:
-        return untargz(filename, destination)
-    import zipfile
-    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
-    with zipfile.ZipFile(filename, "r") as z:
-        uncompress_size = sum((file_.file_size for file_ in z.infolist()))
-        print("Unzipping %s, this can take a while" % human_size(uncompress_size))
-        extracted_size = 0
-        for file_ in z.infolist():
-            extracted_size += file_.file_size
-            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-            print(txt_msg, end='')
-            try:
-                if len(file_.filename) + len(full_path) > 200:
-                    raise ValueError("Filename too long")
-                z.extract(file_, full_path)
-            except Exception as e:
-                print("Error extract %s\n%s" % (file_.filename, str(e)))
+# From conans.client.tools.net
+ftp_download = tools_net.ftp_download
 
 
-def untargz(filename, destination="."):
-    import tarfile
-    with tarfile.TarFile.open(filename, 'r:gz') as tarredgzippedFile:
-        tarredgzippedFile.extractall(destination)
+def download(*args, **kwargs):
+    return tools_net.download(out=_global_output, requester=_global_requester, *args, **kwargs)
 
 
-def get(url):
-    """ high level downloader + unziper + delete temporary zip
-    """
-    filename = os.path.basename(url)
-    download(url, filename)
-    unzip(filename)
-    os.unlink(filename)
+def get(*args, **kwargs):
+    return tools_net.get(output=_global_output, requester=_global_requester, *args, **kwargs)
 
 
-def download(url, filename, verify=True):
-    out = ConanOutput(sys.stdout, True)
-    if verify:
-        # We check the certificate using a list of known verifiers
-        import conans.client.rest.cacert as cacert
-        verify = cacert.file_path
-    downloader = Downloader(requests, out, verify=verify)
-    content = downloader.download(url)
-    out.writeln("")
-    save(filename, content)
+# from conans.client.tools.files
+chdir = tools_files.chdir
+human_size = tools_files.human_size
+untargz = tools_files.untargz
+check_with_algorithm_sum = tools_files.check_with_algorithm_sum
+check_sha1 = tools_files.check_sha1
+check_md5 = tools_files.check_md5
+check_sha256 = tools_files.check_sha256
+patch = tools_files.patch
+replace_prefix_in_pc_file = tools_files.replace_prefix_in_pc_file
+collect_libs = tools_files.collect_libs
+which = tools_files.which
+unix2dos = tools_files.unix2dos
+dos2unix = tools_files.dos2unix
 
 
-def replace_in_file(file_path, search, replace):
-    with open(file_path, 'rt') as content_file:
-        content = content_file.read()
-        content = content.replace(search, replace)
-    with open(file_path, 'wt') as handle:
-        handle.write(content)
+def unzip(*args, **kwargs):
+    return tools_files.unzip(output=_global_output, *args, **kwargs)
 
 
-def check_with_algorithm_sum(algorithm_name, file_path, signature):
-
-    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature:
-        raise ConanException("%s signature failed for '%s' file."
-                             " Computed signature: %s" % (algorithm_name,
-                                                          os.path.basename(file_path),
-                                                          real_signature))
+def replace_in_file(*args, **kwargs):
+    return tools_files.replace_in_file(output=_global_output, *args, **kwargs)
 
 
-def check_sha1(file_path, signature):
-    check_with_algorithm_sum("sha1", file_path, signature)
+def replace_path_in_file(*args, **kwargs):
+    return tools_files.replace_path_in_file(output=_global_output, *args, **kwargs)
 
 
-def check_md5(file_path, signature):
-    check_with_algorithm_sum("md5", file_path, signature)
+# from conans.client.tools.oss
+args_to_string = tools_oss.args_to_string
+detected_architecture = tools_oss.detected_architecture
+OSInfo = tools_oss.OSInfo
+cross_building = tools_oss.cross_building
+get_cross_building_settings = tools_oss.get_cross_building_settings
+get_gnu_triplet = tools_oss.get_gnu_triplet
 
 
-def check_sha256(file_path, signature):
-    check_with_algorithm_sum("sha256", file_path, signature)
+def cpu_count(*args, **kwargs):
+    return tools_oss.cpu_count(output=_global_output, *args, **kwargs)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None):
-    """Applies a diff from file (patch_file)  or string (patch_string)
-    in base_path directory or current dir if None"""
+# from conans.client.tools.system_pm
+class SystemPackageTool(tools_system_pm.SystemPackageTool):
+    def __init__(self, *args, **kwargs):
+        super(SystemPackageTool, self).__init__(output=_global_output, *args, **kwargs)
 
-    if not patch_file and not patch_string:
-        return
-    if patch_file:
-        patchset = fromfile(patch_file)
-    else:
-        patchset = fromstring(patch_string.encode())
 
-    patchset.apply(root=base_path)
+class NullTool(tools_system_pm.NullTool):
+    def __init__(self, *args, **kwargs):
+        super(NullTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class AptTool(tools_system_pm.AptTool):
+    def __init__(self, *args, **kwargs):
+        super(AptTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class YumTool(tools_system_pm.YumTool):
+    def __init__(self, *args, **kwargs):
+        super(YumTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class BrewTool(tools_system_pm.BrewTool):
+    def __init__(self, *args, **kwargs):
+        super(BrewTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PkgTool(tools_system_pm.PkgTool):
+    def __init__(self, *args, **kwargs):
+        super(PkgTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class ChocolateyTool(tools_system_pm.ChocolateyTool):
+    def __init__(self, *args, **kwargs):
+        super(ChocolateyTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PkgUtilTool(tools_system_pm.PkgUtilTool):
+    def __init__(self, *args, **kwargs):
+        super(PkgUtilTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class PacManTool(tools_system_pm.PacManTool):
+    def __init__(self, *args, **kwargs):
+        super(PacManTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+class ZypperTool(tools_system_pm.ZypperTool):
+    def __init__(self, *args, **kwargs):
+        super(ZypperTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
+# from conans.client.tools.win
+msvc_build_command = tools_win.msvc_build_command
+vs_installation_path = tools_win.vs_installation_path
+vswhere = tools_win.vswhere
+vs_comntools = tools_win.vs_comntools
+find_windows_10_sdk = tools_win.find_windows_10_sdk
+vcvars = tools_win.vcvars
+escape_windows_cmd = tools_win.escape_windows_cmd
+get_cased_path = tools_win.get_cased_path
+MSYS2 = tools_win.MSYS2
+MSYS = tools_win.MSYS
+CYGWIN = tools_win.CYGWIN
+WSL = tools_win.WSL
+SFU = tools_win.SFU
+unix_path = tools_win.unix_path
+run_in_windows_bash = tools_win.run_in_windows_bash
+
+
+def build_sln_command(*args, **kwargs):
+    return tools_win.build_sln_command(output=_global_output, *args, **kwargs)
+
+
+def vcvars_command(*args, **kwargs):
+    return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
+
+
+def vcvars_dict(*args, **kwargs):
+    return tools_win.vcvars_dict(output=_global_output, *args, **kwargs)
+
+
+def latest_vs_version_installed(*args, **kwargs):
+    return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
+
+
+# Ready to use objects.
+try:
+    os_info = OSInfo()
+except Exception as exc:
+    logger.error(exc)
+    _global_output.error("Error detecting os_info")

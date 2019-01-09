@@ -1,23 +1,33 @@
-build: false
+-
+    branches:
+      only:
+        - /release.*/
+        - master
+    environment:
+      matrix:
+        - PYTHON: "C:\\Python27"
+        - PYTHON: "C:\\Python34"
+        - PYTHON: "C:\\Python35"
+    build: false
+    cache:
+        - C:\mingw64-> appveyor.yml
+    install:
+      - .ci/appveyor/install.bat
+    test_script:
+      - .ci/appveyor/test.bat
+    after_test:
+      - .ci/appveyor/after.bat
 
-environment:
-  matrix:
-    - PYTHON: "C:\\Python27"
-    - PYTHON: "C:\\Python33"
-    - PYTHON: "C:\\Python34"
-    - PYTHON: "C:\\Python35"
-
-init:
-  - "ECHO %PYTHON%"
-
-install:
-  - "set PYTHONPATH=%PYTHONPATH%;%CD%"
-  - "set CONAN_LOGGING_LEVEL=10"
-  - "set CONAN_COMPILER=Visual Studio"
-  - "set CONAN_COMPILER_VERSION=12"
-  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements.txt"
-  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt"
-  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
-
-test_script:
-  - "%PYTHON%/Scripts/nosetests"
+-
+    environment:
+      matrix:
+        - PYTHON: "C:\\Python35"
+    build: false
+    cache:
+        - C:\mingw64-> appveyor.yml
+    install:
+      - .ci/appveyor/install.bat
+    test_script:
+      - .ci/appveyor/test.bat
+    after_test:
+      - .ci/appveyor/after.bat

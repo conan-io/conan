@@ -1,40 +1,38 @@
-language: python
-python:
-    - 2.7
-    - 3.3
-    - 3.4
-    - 3.5
 os: linux
 sudo: required
 dist: trusty
-
-env:
-  - CONAN_COMPILER=gcc CONAN_COMPILER_VERSION=4.8
+language: python
 
 matrix:
     include:
+        - python: 2.7
+        - python: 3.4
+          if: branch =~ ^release.* OR branch =~ ^master
+        - python: 3.5
+          if: branch =~ ^release.* OR branch =~ ^master
+        - python: 3.6
+        - python: 3.7
+          dist: xenial
         - language: generic
           os: osx
-          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-          
+          osx_image: xcode8.3
+          env: PYVER=py27
+          if: branch =~ ^release.* OR branch =~ ^master
         - language: generic
           os: osx
-          env: PYVER=py33 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-        
-        - language: generic
-          os: osx
-          env: PYVER=py34 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-          
-        - language: generic
-          os: osx
-          env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-          
+          osx_image: xcode8.3
+          env: PYVER=py36
+
 # command to install dependencies
 install:
   - ./.ci/travis/install.sh
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
-  - export CONAN_LOGGING_LEVEL=10
+
 # command to run tests
 script: 
+  - ulimit -n 2048 # Error with py3 and OSX, max file descriptors
   - ./.ci/travis/run.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

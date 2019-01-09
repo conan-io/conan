@@ -1,5 +1,7 @@
-from colorama import Fore, Back, Style
 import six
+from colorama import Fore, Style
+
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 
@@ -23,14 +25,15 @@ class Color(object):
     BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE   # @UndefinedVariable
     BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA   # @UndefinedVariable
 
-    BACK_YELLOW = Back.YELLOW  # @UndefinedVariable
-    BACK_BLUE = Back.BLUE  # @UndefinedVariable
-    BACK_BLACK = Back.BLACK  # @UndefinedVariable
-    BACK_MAGENTA = Back.MAGENTA  # @UndefinedVariable
-    BACK_CYAN = Back.CYAN  # @UndefinedVariable
-    BACK_GREEN = Back.GREEN  # @UndefinedVariable
-    BACK_RED = Back.RED  # @UndefinedVariable
-    BACK_WHITE = Back.WHITE   # @UndefinedVariable
+
+if get_env("CONAN_COLOR_DARK", 0):
+    Color.WHITE = Fore.BLACK
+    Color.CYAN = Fore.BLUE
+    Color.YELLOW = Fore.MAGENTA
+    Color.BRIGHT_WHITE = Fore.BLACK
+    Color.BRIGHT_CYAN = Fore.BLUE
+    Color.BRIGHT_YELLOW = Fore.MAGENTA
+    Color.BRIGHT_GREEN = Fore.GREEN
 
 
 class ConanOutput(object):
@@ -41,6 +44,10 @@ class ConanOutput(object):
     def __init__(self, stream, color=False):
         self._stream = stream
         self._color = color
+
+    @property
+    def is_terminal(self):
+        return hasattr(self._stream, "isatty") and self._stream.isatty()
 
     def writeln(self, data, front=None, back=None):
         self.write(data, front, back, True)
@@ -53,15 +60,23 @@ class ConanOutput(object):
         if self._color and (front or back):
             color = "%s%s" % (front or '', back or '')
             end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
-            self._stream.write("%s%s%s" % (color, data, end))
+            data = "%s%s%s" % (color, data, end)
         else:
             if newline:
                 data = "%s\n" % data
+
+        try:
+            self._stream.write(data)
+        except UnicodeError:
+            data = data.encode("utf8").decode("ascii", "ignore")
             self._stream.write(data)
         self._stream.flush()
 
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
+
+    def highlight(self, data):
+        self.writeln(data, Color.BRIGHT_MAGENTA)
 
     def success(self, data):
         self.writeln(data, Color.BRIGHT_GREEN)
@@ -79,11 +94,15 @@ class ConanOutput(object):
         tmp_color = self._color
         self._color = False
         TOTAL_SIZE = 70
+        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
         if len(line) > TOTAL_SIZE:
-            line = line[0:TOTAL_SIZE / 2 - 3] + " ... " + line[TOTAL_SIZE / 2 + 3:]
+            line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
         self._stream.flush()
         self._color = tmp_color
+
+    def flush(self):
+        self._stream.flush()
 
 
 class ScopedOutput(ConanOutput):
@@ -93,5 +112,6 @@ class ScopedOutput(ConanOutput):
         self._color = output._color
 
     def write(self, data, front=None, back=None, newline=False):
+        assert self.scope != "virtual", "printing with scope==virtual"
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
         super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)

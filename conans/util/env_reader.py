@@ -9,25 +9,21 @@
 import os
 
 
-def get_env(env_key, default=None, environment=os.environ):
-    '''Get the env variable associated with env_key'''
-    _default_type = {str: lambda x: x,
-                     int: lambda x: int(x),
-                     float: lambda x: float(x),
-                     list: lambda x: x.split(","),
-                     bool: lambda x: x == '1'}
+def get_env(env_key, default=None, environment=None):
+    """Get the env variable associated with env_key"""
+    if environment is None:
+        environment = os.environ
 
     env_var = environment.get(env_key, default)
     if env_var != default:
         if isinstance(default, str):
             return env_var
+        elif isinstance(default, bool):
+            return env_var == "1" or env_var == "True"
         elif isinstance(default, int):
             return int(env_var)
         elif isinstance(default, float):
             return float(env_var)
         elif isinstance(default, list):
-            return env_var.split(",")
-        elif isinstance(default, bool):
-            return env_var == "1"
-    
+            return [var.strip() for var in env_var.split(",")]
     return env_var

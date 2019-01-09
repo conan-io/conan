@@ -1,0 +1,24 @@
+Contributors
+-------------
+
+This is the list of contributors to this project source code, in alphabetical order.
+Many thanks to all of them!
+
+- Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
+- Cicholewski, Adrian (et666@t-online.de)
+- Dauphin, Loïc (astralien3000@yahoo.fr, @astralien3000)
+- Díaz Más, Luis (piponazo@gmail, @pipotux)
+- Dragly, Svenn-Arne (dragly.org)
+- Ford, Andrew (andrewford55139@gmail.com)
+- Hieta, Tobias (tobias@plex.tv, @tobiashieta)
+- Hochstedler, Reid
+- Ivek, Tomislav (tomislav.ivek@gmail.com, @tomivek)
+- Koch, Marco (marco-koch@t-online.de, @MarcoKoch)
+- Kourkoulis, Dimitri (@dimi309)
+- Lee, Jeongseok (jslee02@gmail.com, @jslee02)
+- Lord, Matthew( @luckielordie )
+- Márki, Róbert (gsmiko@gmail.com, @robertmrk)
+- Ray, Chris (chris@xaltotun.com)
+- Ries, Uilian (uilianries@gmail.com, @uilianries)
+- Sechet, Olivier (osechet@gmail.com)
+- Sturm, Fabian (f@rtfs.org, @sturmf)

@@ -19,6 +19,7 @@ lib64/
 parts/
 sdist/
 var/
+venv/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -42,6 +43,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+.pytest_cache/
 
 # Translations
 *.mo
@@ -92,3 +94,13 @@ cacert.pem
 
 #Pyinstaller generated binaries
 /pyinstaller
+
+# Run tests in docker in current dir
+.bash_history
+.conan_server/
+.sudo_as_admin_successful
+.noseids
+
+# add excluded
+!conans/client/build
+!conans/test/unittests/client/build

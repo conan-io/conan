@@ -1,15 +1,16 @@
 from bottle import HTTPResponse
+
 from conans.server.rest.bottle_plugins.authorization_header import AuthorizationHeader
 
 
 class JWTAuthentication(AuthorizationHeader):
-    ''' The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication'''
+    """ The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication """
 
     name = 'jwtauthenticationbottleplugin'
     api = 2
 
     def __init__(self, manager, keyword='auth_user'):
-        '''Manager should be a JWTCredentialsManager'''
+        """ Manager should be a JWTCredentialsManager """
         self.manager = manager
         self.keyword = keyword
         super(JWTAuthentication, self).__init__(keyword)
@@ -27,7 +28,7 @@ class JWTAuthentication(AuthorizationHeader):
             else:
                 # Check if its valid obtaining the password_timestamp
                 username = self.manager.get_user(token=header_value)
-        except Exception as exc:
+        except Exception:
             # Check if
             resp = HTTPResponse("Wrong JWT token!", "401 Unauthorized")
             resp.set_header('Content-Type', 'text/plain')

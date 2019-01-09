@@ -1,27 +1,43 @@
 from collections import OrderedDict
+
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-import six
 
 
 class Requirement(object):
-    """ A reference to a conans plus some attributes of how to
-    depend on that conans
+    """ A reference to a package plus some attributes of how to
+    depend on that package
     """
     def __init__(self, conan_reference, private=False, override=False):
         """
         param override: True means that this is not an actual requirement, but something to
                         be passed upstream and override possible existing values
-        param private: True means that this requirement will be somewhat embedded (like
-                       a static lib linked into a shared lib), so it is not required to link
         """
         self.conan_reference = conan_reference
-        self.private = private
+        self.range_reference = conan_reference
         self.override = override
+        self.private = private
+
+    @property
+    def version_range(self):
+        """ returns the version range expression, without brackets []
+        or None if it is not an expression
+        """
+        version = self.range_reference.version
+        if version.startswith("[") and version.endswith("]"):
+            return version[1:-1]
+
+    @property
+    def is_resolved(self):
+        """ returns True if the version_range reference has been already resolved to a
+        concrete reference
+        """
+        return self.conan_reference != self.range_reference
 
     def __repr__(self):
-        return ("%s" % str(self.conan_reference) +
-               (" P" if self.private else ""))
+        return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
 
     def __eq__(self, other):
         return (self.override == other.override and
@@ -30,15 +46,11 @@ class Requirement(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-    
 
 
 class Requirements(OrderedDict):
     """ {name: Requirement} in order, e.g. {"Hello": Requirement for Hello}
     """
-    # auxiliary class variable so output messages when overriding requirements
-    # FIXME: A more elegant solution
-    output = None
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
@@ -59,32 +71,30 @@ class Requirements(OrderedDict):
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
-        properly defined
+        properly defined. This is not a deep-copy, in fact, requirements in the dict
+        are changed by RangeResolver, and are propagated upstream
         """
         result = Requirements()
         for name, req in self.items():
             result[name] = req
         return result
 
-    def iteritems(self): # FIXME: Just a trick to not change the default testing conanfile for python 3
+    def iteritems(self):  # FIXME: Just a trick to not change default testing conanfile for py3
         return self.items()
 
     def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-        try:
-            conan_reference = ConanFileReference.loads(reference)
-            name = conan_reference.name
-        except ConanException:
-            conan_reference = None
-            name = reference
+
+        conan_reference = ConanFileReference.loads(reference)
+        name = conan_reference.name
 
         new_requirement = Requirement(conan_reference, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            self.output.warn("Duplicated requirement %s != %s"
-                             % (old_requirement, new_requirement))
+            raise ConanException("Duplicated requirement %s != %s"
+                                 % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
 
@@ -105,12 +115,14 @@ class Requirements(OrderedDict):
         if own_ref:
             new_reqs.pop(own_ref.name, None)
         for name, req in self.items():
+            if req.private:
+                continue
             if name in down_reqs:
                 other_req = down_reqs[name]
                 # update dependency
                 other_ref = other_req.conan_reference
                 if other_ref and other_ref != req.conan_reference:
-                    output.info("%s requirement %s overriden by %s to %s "
+                    output.info("%s requirement %s overridden by %s to %s "
                                 % (own_ref, req.conan_reference, down_ref or "your conanfile",
                                    other_ref))
                     req.conan_reference = other_ref
