@@ -30,7 +30,8 @@ class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     conanfile = ConanfileInSubfolder.conanfile_base.format(extra_header=extra_header,
                                                            type="svn",
-                                                           url="get_remote_url()")
+                                                           url="get_remote_url()",
+                                                           scm_subfolder=ConanfileInSubfolder.scm_subfolder)
 
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"
@@ -74,7 +75,8 @@ class GitConanfileInSubfolderTest(ConanfileInSubfolder, unittest.TestCase):
 
     conanfile = ConanfileInSubfolder.conanfile_base.format(extra_header="",
                                                            type="git",
-                                                           url="\"auto\"")
+                                                           url="\"auto\"",
+                                                           scm_subfolder=ConanfileInSubfolder.scm_subfolder)
 
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"

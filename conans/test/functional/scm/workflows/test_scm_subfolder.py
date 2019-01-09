@@ -11,15 +11,18 @@ from conans.test.utils.tools import SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient, create_local_git_repo
 
 
-class ConanfileInRepoRoot(TestWorkflow):
-    """ The conanfile.py is in the root of the package """
+class SCMSubfolder(TestWorkflow):
+    """ The conanfile.py is in a subfolder inside the package,
+        also using subfolder for repo checkout
+    """
 
-    path_to_conanfile = "."
-    path_from_conanfile_to_root = "."
+    path_to_conanfile = "cc"  # It
+    path_from_conanfile_to_root = ".."
+    scm_subfolder = "scm_subfolder"
 
 
 @attr("svn")
-class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
+class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 
         In this case, it is exactly the same to have the url="auto" or to implement a custom
@@ -33,10 +36,17 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
 
     """
 
-    conanfile = ConanfileInRepoRoot.conanfile_base.format(extra_header="",
-                                                          type="svn",
-                                                          url="\"auto\"",
-                                                          scm_subfolder=ConanfileInRepoRoot.scm_subfolder)
+    extra_header = textwrap.dedent("""\
+        def get_remote_url():
+            here = os.path.dirname(__file__)
+            svn = tools.SVN(os.path.join(here, "%s"))
+            return svn.get_remote_url()
+        """ % SCMSubfolder.path_from_conanfile_to_root)
+
+    conanfile = SCMSubfolder.conanfile_base.format(extra_header=extra_header,
+                                                   type="svn",
+                                                   url="get_remote_url()",
+                                                   scm_subfolder=SCMSubfolder.scm_subfolder)
 
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"
@@ -64,27 +74,24 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
         t = TestClient(path_with_spaces=False)
         t.runner("svn co {}/lib1 .".format(self.url), cwd=t.current_folder)
         self._run_remote_test(t, t.current_folder, self.path_to_conanfile)
-        self.assertIn("Repo origin deduced by 'auto':", t.out)
 
     def test_remote_monorepo(self):
         t = TestClient(path_with_spaces=False)
         t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
         self._run_remote_test(t, t.current_folder, os.path.join("lib1", self.path_to_conanfile))
-        self.assertIn("Repo origin deduced by 'auto':", t.out)
 
     def test_remote_monorepo_chdir(self):
         t = TestClient(path_with_spaces=False)
         t.runner("svn co {} .".format(self.url), cwd=t.current_folder)
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
-        self.assertIn("Repo origin deduced by 'auto':", t.out)
 
 
-class GitConanfileInRepoRootTest(ConanfileInRepoRoot, unittest.TestCase):
+class GitConanfileInRepoRootTest(SCMSubfolder, unittest.TestCase):
 
-    conanfile = ConanfileInRepoRoot.conanfile_base.format(extra_header="",
-                                                          type="git",
-                                                          url="\"auto\"",
-                                                          scm_subfolder=ConanfileInRepoRoot.scm_subfolder)
+    conanfile = SCMSubfolder.conanfile_base.format(extra_header="",
+                                                   type="git",
+                                                   url="\"auto\"",
+                                                   scm_subfolder=SCMSubfolder.scm_subfolder)
 
     def setUp(self):
         self.lib1_ref = "lib1/version@user/channel"

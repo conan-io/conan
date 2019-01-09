@@ -11,6 +11,7 @@ class TestWorkflow(object):
 
     path_to_conanfile = None
     path_from_conanfile_to_root = None
+    scm_subfolder = ""
 
     conanfile_base = textwrap.dedent("""\
         import os
@@ -21,11 +22,12 @@ class TestWorkflow(object):
         class Pkg(ConanFile):
             scm = {{"type": "{type}",
                    "url": {url},
-                   "revision": "auto"}}
+                   "revision": "auto",
+                   "subfolder": "{scm_subfolder}" }}
 
             def source(self):
                 self.output.info(self.source_folder)
-                content = tools.load(os.path.join(self.source_folder, "file.txt"))
+                content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
                 self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version, 
                                                                        self.user, self.channel))
                 self.output.info(">>>> content: {{}} ".format(content)) 
