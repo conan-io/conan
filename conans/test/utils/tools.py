@@ -57,7 +57,7 @@ NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = ConanFileReference.loads(str(reference))
+    ref = ConanFileReference.loads(reference)
     path = cache.export(ref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
@@ -65,7 +65,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    pref = PackageReference.loads(str(package_reference))
+    pref = PackageReference.loads(package_reference)
     path = cache.package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
