@@ -1160,6 +1160,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "arm-linux-gnueabi")
 
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+        
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+        
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-linux-android")
@@ -1180,10 +1188,6 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "aarch64-linux-android")
 
-        build, host = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
-
         build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-w64-mingw32")
@@ -1192,6 +1196,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "x86_64-w64-mingw32")
 
+        build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "x86_64-w64-mingw32")
+        
         build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
         self.assertEquals(build, "x86_64-w64-mingw32")
         self.assertEquals(host, "i686-w64-mingw32")
