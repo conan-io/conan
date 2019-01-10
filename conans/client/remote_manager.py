@@ -83,7 +83,8 @@ class RemoteManager(object):
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
-        read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+        layout = self._client_cache.package_layout(package_reference.conan)
+        read_manifest, expected_manifest = layout.package_manifests(package_reference)
 
         if read_manifest != expected_manifest:
             self._output.writeln("")

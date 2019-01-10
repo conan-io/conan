@@ -16,7 +16,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import CONAN_MANIFEST, PUT_HEADERS
+from conans.paths import PUT_HEADERS
 from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
@@ -249,29 +249,6 @@ class ClientCache(SimplePaths):
         except OSError:  # if there isn't any package folder
             builds = []
         return builds
-
-    def load_manifest(self, conan_reference):
-        """conan_id = sha(zip file)"""
-        assert isinstance(conan_reference, ConanFileReference)
-        export_folder = self.export(conan_reference)
-        return FileTreeManifest.load(export_folder)
-
-    def load_package_manifest(self, package_reference):
-        """conan_id = sha(zip file)"""
-        package_folder = self.package(package_reference, short_paths=None)
-        return FileTreeManifest.load(package_folder)
-
-    def package_manifests(self, package_reference):
-        package_folder = self.package(package_reference, short_paths=None)
-        if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
-            return None, None
-        return self._digests(package_folder)
-
-    @staticmethod
-    def _digests(folder, exports_sources_folder=None):
-        readed_digest = FileTreeManifest.load(folder)
-        expected_digest = FileTreeManifest.create(folder, exports_sources_folder)
-        return readed_digest, expected_digest
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:

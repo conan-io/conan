@@ -7,6 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
+from conans.model.manifest import FileTreeManifest
 
 
 def short_path(func):
@@ -81,3 +82,12 @@ class PackageCacheLayout(object):
 
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
+
+    def load_manifest(self):
+        return FileTreeManifest.load(self.export())
+
+    def package_manifests(self, package_reference):
+        package_folder = self.package(package_reference)
+        readed_manifest = FileTreeManifest.load(package_folder)
+        expected_manifest = FileTreeManifest.create(package_folder)
+        return readed_manifest, expected_manifest

@@ -118,7 +118,7 @@ class _ConanPackageBuilder(object):
         """
 
         # FIXME: Is weak to assign here the recipe_hash
-        manifest = self._client_cache.load_manifest(self._conan_ref)
+        manifest = self._client_cache.package_layout(self._conan_ref).load_manifest()
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
         # Creating ***info.txt files
