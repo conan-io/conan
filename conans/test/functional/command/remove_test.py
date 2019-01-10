@@ -161,7 +161,7 @@ class RemoveTest(unittest.TestCase):
         for pack_ref in pack_refs:
             pkg_folder = client.client_cache.package(pack_ref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
-            files["%s/%s/%s/%s" % (pack_ref.conan.dir_repr(),
+            files["%s/%s/%s/%s" % (pack_ref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
                                    pack_ref.package_id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)

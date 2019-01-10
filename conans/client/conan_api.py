@@ -858,7 +858,7 @@ class ConanAPIV1(object):
         tmp = self._client_cache.registry.prefs.list
         for r, remote in tmp.items():
             pref = PackageReference.loads(r)
-            if pref.conan == reference:
+            if pref.ref == reference:
                 ret[pref.full_repr()] = remote
         return ret
 

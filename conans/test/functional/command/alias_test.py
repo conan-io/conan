@@ -421,7 +421,7 @@ class Pkg(ConanFile):
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
-    def basic_test(self):
+    def test_basic_test(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})

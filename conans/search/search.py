@@ -138,7 +138,7 @@ def _get_local_infos_min(client_cache, reference):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
 
-            metadata = client_cache.load_metadata(package_reference.conan)
+            metadata = client_cache.load_metadata(package_reference.ref)
             recipe_revision = metadata.packages[package_id].recipe_revision
             info = ConanInfo.loads(conan_info_content)
             if reference.revision and recipe_revision and recipe_revision != reference.revision:

@@ -143,14 +143,14 @@ class BasicAuthorizer(Authorizer):
         username: User that request to read the package
         package_reference: PackageReference
         """
-        self.check_read_conan(username, package_reference.conan)
+        self.check_read_conan(username, package_reference.ref)
 
     def check_write_package(self, username, package_reference):
         """
         username: User that request to write the package
         package_reference: PackageReference
         """
-        self.check_write_conan(username, package_reference.conan)
+        self.check_write_conan(username, package_reference.ref)
 
     def check_delete_package(self, username, package_reference):
         """

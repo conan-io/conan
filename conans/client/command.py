@@ -1073,7 +1073,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-
         if args.query and args.package:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 

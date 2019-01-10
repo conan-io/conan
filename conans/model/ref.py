@@ -134,15 +134,15 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
 
-class PackageReference(namedtuple("PackageReference", "conan package_id revision")):
+class PackageReference(namedtuple("PackageReference", "ref package_id revision")):
     """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
 
-    def __new__(cls, conan, package_id, revision=None, validate=True):
+    def __new__(cls, ref, package_id, revision=None, validate=True):
         if "#" in package_id:
             package_id, revision = package_id.rsplit("#", 1)
-        obj = super(cls, PackageReference).__new__(cls, conan, package_id, revision)
+        obj = super(cls, PackageReference).__new__(cls, ref, package_id, revision)
         if validate:
             obj.validate()
         return obj
@@ -156,23 +156,23 @@ class PackageReference(namedtuple("PackageReference", "conan package_id revision
         text = text.strip()
         tmp = text.split(":")
         try:
-            conan = ConanFileReference.loads(tmp[0].strip())
+            ref = ConanFileReference.loads(tmp[0].strip())
             package_id = tmp[1].strip()
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
-        return PackageReference(conan, package_id, validate=validate)
+        return PackageReference(ref, package_id, validate=validate)
 
     def __repr__(self):
-        return "%s:%s" % (self.conan, self.package_id)
+        return "%s:%s" % (self.ref, self.package_id)
 
     def full_repr(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (self.conan.full_repr(), self.package_id, str_rev)
+        tmp = "%s:%s%s" % (self.ref.full_repr(), self.package_id, str_rev)
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
-        return PackageReference(self.conan.copy_with_rev(revision), self.package_id, p_revision)
+        return PackageReference(self.ref.copy_with_rev(revision), self.package_id, p_revision)
 
     def copy_clear_rev(self):
-        ref = self.conan.copy_clear_rev()
+        ref = self.ref.copy_clear_rev()
         return PackageReference(ref, self.package_id, revision=None)

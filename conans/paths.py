@@ -133,7 +133,7 @@ class SimplePaths(object):
 
     def build(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
-        p = normpath(join(self.conan(package_reference.conan), BUILD_FOLDER,
+        p = normpath(join(self.conan(package_reference.ref), BUILD_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
 
@@ -143,7 +143,7 @@ class SimplePaths(object):
 
     def system_reqs_package(self, package_reference):
         assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.conan(package_reference.conan), SYSTEM_REQS_FOLDER,
+        return normpath(join(self.conan(package_reference.ref), SYSTEM_REQS_FOLDER,
                              package_reference.package_id, SYSTEM_REQS))
 
     def packages(self, conan_reference):
@@ -152,7 +152,7 @@ class SimplePaths(object):
 
     def package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
-        p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
+        p = normpath(join(self.conan(package_reference.ref), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
 

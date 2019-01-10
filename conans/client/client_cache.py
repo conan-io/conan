@@ -90,7 +90,7 @@ class ClientCache(SimplePaths):
     def package_lock(self, package_ref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(join(self.conan(package_ref.conan), "locks",
+        return SimpleLock(join(self.conan(package_ref.ref), "locks",
                                package_ref.package_id))
 
     @property

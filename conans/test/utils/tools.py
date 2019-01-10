@@ -640,7 +640,7 @@ servers["r2"] = TestServer()
         return self.client_cache.load_metadata(conan_ref).recipe.revision
 
     def get_package_revision(self, package_ref):
-        metadata = self.client_cache.load_metadata(package_ref.conan)
+        metadata = self.client_cache.load_metadata(package_ref.ref)
         return metadata.packages[package_ref.package_id].revision
 
 

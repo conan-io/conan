@@ -194,7 +194,7 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             remotes, rrefs, prefs = self._load()
             ret = {}
             for p, r in prefs.items():
-                if PackageReference.loads(p).conan != ref.copy_clear_rev():
+                if PackageReference.loads(p).ref != ref.copy_clear_rev():
                     ret[p] = r
             self._save(remotes, rrefs, ret)
 

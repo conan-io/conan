@@ -27,7 +27,7 @@ class ServerStore(SimplePaths):
 
     def package(self, p_reference, short_paths=None):
         p_reference = self.p_ref_with_rev(p_reference)
-        tmp = join(self.packages(p_reference.conan), p_reference.package_id)
+        tmp = join(self.packages(p_reference.ref), p_reference.package_id)
         return join(tmp, p_reference.revision) if p_reference.revision else tmp
 
     def export(self, reference):
@@ -107,7 +107,7 @@ class ServerStore(SimplePaths):
     def remove_package(self, package_ref):
         assert isinstance(package_ref, PackageReference)
         assert package_ref.revision is not None
-        assert package_ref.conan.revision is not None
+        assert package_ref.ref.revision is not None
         package_folder = self.package(package_ref)
         self._storage_adapter.delete_folder(package_folder)
         self._remove_package_revision_from_index(package_ref)
@@ -201,13 +201,13 @@ class ServerStore(SimplePaths):
 
     def get_latest_package_reference(self, package_ref):
         assert(isinstance(package_ref, PackageReference))
-        rev_file_path = self._recipe_revisions_file(package_ref.conan)
+        rev_file_path = self._recipe_revisions_file(package_ref.ref)
         revs = self._get_revisions(rev_file_path)
         if not revs:
-            raise NotFoundException("Recipe not found: '%s'" % str(package_ref.conan))
+            raise NotFoundException("Recipe not found: '%s'" % str(package_ref.ref))
 
         for rev in revs.items():
-            pref = PackageReference(package_ref.conan.copy_with_rev(rev.revision),
+            pref = PackageReference(package_ref.ref.copy_with_rev(rev.revision),
                                     package_ref.package_id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
@@ -249,7 +249,7 @@ class ServerStore(SimplePaths):
                                          lock_file=rev_file_path + ".lock")
 
     def get_package_revisions(self, p_reference):
-        assert p_reference.conan.revision is not None
+        assert p_reference.ref.revision is not None
         tmp = self._package_revisions_file(p_reference)
         ret = self._get_revisions(tmp)
         return ret.items()
@@ -283,8 +283,8 @@ class ServerStore(SimplePaths):
         return join(recipe_folder, REVISIONS_FILE)
 
     def _package_revisions_file(self, p_reference):
-        tmp = normpath(join(self._store_folder, p_reference.conan.dir_repr()))
-        revision = {None: ""}.get(p_reference.conan.revision, p_reference.conan.revision)
+        tmp = normpath(join(self._store_folder, p_reference.ref.dir_repr()))
+        revision = {None: ""}.get(p_reference.ref.revision, p_reference.ref.revision)
         p_folder = join(tmp, revision, PACKAGES_FOLDER, p_reference.package_id)
         return join(p_folder, REVISIONS_FILE)
 
@@ -314,15 +314,15 @@ class ServerStore(SimplePaths):
         return rev_list.get_time(pref.revision)
 
     def p_ref_with_rev(self, p_reference):
-        if p_reference.revision and p_reference.conan.revision:
+        if p_reference.revision and p_reference.ref.revision:
             return p_reference
 
-        if not p_reference.conan.revision:
+        if not p_reference.ref.revision:
             # Search the latest recipe revision with the requested package
             p_reference = self.get_latest_package_reference(p_reference)
             return p_reference
 
-        reference = self.ref_with_rev(p_reference.conan)
+        reference = self.ref_with_rev(p_reference.ref)
         ret = PackageReference(reference, p_reference.package_id)
 
         latest_p = self.get_last_package_revision(ret)
