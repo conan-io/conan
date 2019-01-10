@@ -71,7 +71,7 @@ class HeaderOnlyLibTestClient(TestClient):
             self.save({CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout, })
 
         if use_cache_file:
-            save(self.client_cache.default_editable_path, self.conan_cache_layout)
+            save(self.cache.default_editable_path, self.conan_cache_layout)
 
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
@@ -83,7 +83,7 @@ class HeaderOnlyLibTestClient(TestClient):
 
     def make_editable(self, full_reference):
         ref = ConanFileReference.loads(full_reference)
-        cache_dir = self.client_cache.conan(ref)
+        cache_dir = self.cache.conan(ref)
         save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
 
 

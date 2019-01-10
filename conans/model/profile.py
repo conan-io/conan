@@ -20,8 +20,8 @@ class Profile(object):
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
 
-    def process_settings(self, client_cache, preprocess=True):
-        self.processed_settings = client_cache.settings.copy()
+    def process_settings(self, cache, preprocess=True):
+        self.processed_settings = cache.settings.copy()
         self.processed_settings.values = Values.from_list(list(self.settings.items()))
         if preprocess:
             settings_preprocessor.preprocess(self.processed_settings)

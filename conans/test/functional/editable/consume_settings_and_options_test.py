@@ -70,14 +70,14 @@ src/include/{{settings.build_type}}/{{options.shared}}
         if use_repo_file:
             files[CONAN_PACKAGE_LAYOUT_FILE] = self.conan_package_layout.format(namespace="")
         else:
-            save(self.client_cache.default_editable_path,
+            save(self.cache.default_editable_path,
                  self.conan_package_layout.format(namespace="MyLib:"))
 
         self.save(files)
 
     def make_editable(self, full_reference):
         ref = ConanFileReference.loads(full_reference)
-        cache_dir = self.client_cache.conan(ref)
+        cache_dir = self.cache.conan(ref)
         save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
 
 

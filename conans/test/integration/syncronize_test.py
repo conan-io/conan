@@ -83,7 +83,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.client_cache.conan_packages(ref)
+        package_ids = client.cache.conan_packages(ref)
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server
@@ -92,7 +92,7 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = client.client_cache.package(pref)
+        pack_path = client.cache.package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
@@ -128,6 +128,6 @@ class SynchronizeTest(unittest.TestCase):
 
     def _create_manifest(self, client, package_reference):
         # Create the manifest to be able to upload the package
-        pack_path = client.client_cache.package(package_reference)
+        pack_path = client.cache.package(package_reference)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

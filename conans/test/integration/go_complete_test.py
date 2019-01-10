@@ -98,10 +98,10 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(ref))
         # Check compilation ok
-        package_ids = self.client.client_cache.conan_packages(ref)
+        package_ids = self.client.cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
-        self._assert_package_exists(pref, self.client.client_cache, files_without_conanfile)
+        self._assert_package_exists(pref, self.client.cache, files_without_conanfile)
 
         # Upload conans
         self.client.run("upload %s" % str(ref))
@@ -121,10 +121,10 @@ class GoCompleteTest(unittest.TestCase):
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(ref))
         # Build should be empty
-        build_path = other_conan.client_cache.build(pref)
+        build_path = other_conan.cache.build(pref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_package_exists(pref, other_conan.client_cache, files_without_conanfile)
+        self._assert_package_exists(pref, other_conan.cache, files_without_conanfile)
 
         reuse_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,

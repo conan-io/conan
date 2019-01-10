@@ -48,8 +48,8 @@ def build_id(conan_file):
 class _ConanPackageBuilder(object):
     """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, pref, client_cache, output, hook_manager):
-        self._client_cache = client_cache
+    def __init__(self, conan_file, pref, cache, output, hook_manager):
+        self._cache = cache
         self._conan_file = conan_file
         self._out = output
         self._pref = pref
@@ -59,10 +59,9 @@ class _ConanPackageBuilder(object):
 
         new_id = build_id(self._conan_file)
         self.build_pref = PackageReference(self._ref, new_id) if new_id else pref
-        self.build_folder = self._client_cache.build(self.build_pref,
-                                                     self._conan_file.short_paths)
-        self.package_folder = self._client_cache.package(self._pref, self._conan_file.short_paths)
-        self.source_folder = self._client_cache.source(self._ref, self._conan_file.short_paths)
+        self.build_folder = self._cache.build(self.build_pref, self._conan_file.short_paths)
+        self.package_folder = self._cache.package(self._pref, self._conan_file.short_paths)
+        self.source_folder = self._cache.source(self._ref, self._conan_file.short_paths)
 
     def prepare_build(self):
         if self.build_pref != self._pref and \
@@ -71,10 +70,10 @@ class _ConanPackageBuilder(object):
             return
 
         # build_id is not caching the build folder, so actually rebuild the package
-        export_folder = self._client_cache.export(self._ref)
-        export_source_folder = self._client_cache.export_sources(self._ref,
-                                                                 self._conan_file.short_paths)
-        conanfile_path = self._client_cache.conanfile(self._ref)
+        export_folder = self._cache.export(self._ref)
+        export_source_folder = self._cache.export_sources(self._ref,
+                                                          self._conan_file.short_paths)
+        conanfile_path = self._cache.conanfile(self._ref)
 
         try:
             rmdir(self.build_folder)
@@ -86,7 +85,7 @@ class _ConanPackageBuilder(object):
         self._out.info('Building your package in %s' % self.build_folder)
         config_source(export_folder, export_source_folder, self.source_folder,
                       self._conan_file, self._out, conanfile_path, self._ref,
-                      self._hook_manager, self._client_cache)
+                      self._hook_manager, self._cache)
         self._out.info('Copying sources to build folder')
 
         if getattr(self._conan_file, 'no_copy_source', False):
@@ -116,7 +115,7 @@ class _ConanPackageBuilder(object):
         """
 
         # FIXME: Is weak to assign here the recipe_hash
-        manifest = self._client_cache.load_manifest(self._ref)
+        manifest = self._cache.load_manifest(self._ref)
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
         # Creating ***info.txt files
@@ -134,16 +133,16 @@ class _ConanPackageBuilder(object):
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
             pkg_id = self._conan_file.info.package_id()
-            conanfile_path = self._client_cache.conanfile(self._ref)
+            conanfile_path = self._cache.conanfile(self._ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        p_hash = self._client_cache.package_summary_hash(self._pref)
+        p_hash = self._cache.package_summary_hash(self._pref)
         p_id = self._pref.package_id
 
-        with self._client_cache.update_metadata(self._ref) as metadata:
+        with self._cache.update_metadata(self._ref) as metadata:
             metadata.packages[p_id].revision = p_hash
             metadata.packages[p_id].recipe_revision = self._ref.revision
 
@@ -197,7 +196,7 @@ class _ConanPackageBuilder(object):
             remove_imports(self._conan_file, copied_files, self._out)
 
 
-def _handle_system_requirements(conan_file, package_reference, client_cache, out):
+def _handle_system_requirements(conan_file, package_reference, cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -206,8 +205,8 @@ def _handle_system_requirements(conan_file, package_reference, client_cache, out
     if "system_requirements" not in type(conan_file).__dict__:
         return
 
-    system_reqs_path = client_cache.system_reqs(package_reference.ref)
-    system_reqs_package_path = client_cache.system_reqs_package(package_reference)
+    system_reqs_path = cache.system_reqs(package_reference.ref)
+    system_reqs_package_path = cache.system_reqs_package(package_reference)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
         return
 
@@ -256,11 +255,11 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, output, remote_manager, recorder, workspace, hook_manager):
-        self._client_cache = client_cache
+    def __init__(self, cache, output, remote_manager, recorder, workspace, hook_manager):
+        self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = client_cache.registry
+        self._registry = cache.registry
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
@@ -301,7 +300,7 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     pref = PackageReference(conan_ref, package_id)
-                    _handle_system_requirements(conan_file, pref, self._client_cache, output)
+                    _handle_system_requirements(conan_file, pref, self._cache, output)
                     self._handle_node_cache(node, pref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (conan_ref=None)
@@ -316,14 +315,14 @@ class BinaryInstaller(object):
                 return True
 
     def _load_editables_cpp_info(self):
-        editables_path = self._client_cache.default_editable_path
+        editables_path = self._cache.default_editable_path
         if os.path.exists(editables_path):
             return EditableCppInfo.load(editables_path, require_namespace=True)
         return None
 
     def _handle_node_editable(self, node):
         # Get source of information
-        package_layout = self._client_cache.package_layout(node.conan_ref)
+        package_layout = self._cache.package_layout(node.conan_ref)
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
@@ -353,9 +352,9 @@ class BinaryInstaller(object):
     def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
         conan_file = node.conanfile
         output = conan_file.output
-        package_folder = self._client_cache.package(pref, conan_file.short_paths)
+        package_folder = self._cache.package(pref, conan_file.short_paths)
 
-        with self._client_cache.package_lock(pref):
+        with self._cache.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 set_dirty(package_folder)
@@ -419,10 +418,10 @@ class BinaryInstaller(object):
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
         for python_require in conan_file.python_requires:
-            complete_recipe_sources(self._remote_manager, self._client_cache,
+            complete_recipe_sources(self._remote_manager, self._cache,
                                     conan_file, python_require.conan_ref)
 
-        builder = _ConanPackageBuilder(conan_file, pref, self._client_cache, output,
+        builder = _ConanPackageBuilder(conan_file, pref, self._cache, output,
                                        self._hook_manager)
 
         if is_dirty(builder.build_folder):
@@ -440,13 +439,13 @@ class BinaryInstaller(object):
                                                      msg, remote_name=None)
                 raise ConanException(msg)
         else:
-            with self._client_cache.conanfile_write_lock(conan_ref):
+            with self._cache.conanfile_write_lock(conan_ref):
                 set_dirty(builder.build_folder)
-                complete_recipe_sources(self._remote_manager, self._client_cache,
+                complete_recipe_sources(self._remote_manager, self._cache,
                                         conan_file, conan_ref)
                 builder.prepare_build()
 
-        with self._client_cache.conanfile_read_lock(conan_ref):
+        with self._cache.conanfile_read_lock(conan_ref):
             try:
                 if not skip_build:
                     builder.build()

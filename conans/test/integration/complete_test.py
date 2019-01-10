@@ -41,7 +41,7 @@ class CompleteFlowTest(unittest.TestCase):
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.client_cache.conan_packages(ref)
+        package_ids = other_conan.cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 2)
 
     def reuse_test(self):
@@ -56,10 +56,10 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' file: helloHello0.h",
                       self.client.out)
         # Check compilation ok
-        package_ids = self.client.client_cache.conan_packages(ref)
+        package_ids = self.client.cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
-        self._assert_library_exists(pref, self.client.client_cache)
+        self._assert_library_exists(pref, self.client.cache)
 
         # Upload package
         self.client.run("upload %s" % str(ref))
@@ -95,19 +95,19 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s" % str(ref))
         # Build should be empty
-        build_path = other_conan.client_cache.build(pref)
+        build_path = other_conan.cache.build(pref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_library_exists(pref, other_conan.client_cache)
+        self._assert_library_exists(pref, other_conan.cache)
 
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.client_cache.conan_packages(ref)
+        package_ids = other_conan.cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 2)
         for package_id in package_ids:
             pref = PackageReference(ref, package_id)
-            self._assert_library_exists(pref, other_conan.client_cache)
+            self._assert_library_exists(pref, other_conan.cache)
 
         client3 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])

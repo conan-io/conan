@@ -23,9 +23,9 @@ from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import tools
-from conans.client.client_cache import ClientCache
+from conans.client.cache import ClientCache
 from conans.client.command import Command
-from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_client_cache
+from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
@@ -56,17 +56,17 @@ from conans.util.log import logger
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
-def inc_recipe_manifest_timestamp(client_cache, reference, inc_time):
+def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(str(reference))
-    path = client_cache.export(ref)
+    path = cache.export(ref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
 
 
-def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
-    pref = PackageReference.loads(str(package_ref))
-    path = client_cache.package(pref)
+def inc_package_manifest_timestamp(cache, package_reference, inc_time):
+    pref = PackageReference.loads(str(package_reference))
+    path = cache.package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -458,27 +458,27 @@ class TestClient(object):
 
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.client_cache = ClientCache(self.base_folder, self.storage_folder,
-                                        TestBufferConanOutput())
+        self.cache = ClientCache(self.base_folder, self.storage_folder,
+                                 TestBufferConanOutput())
 
         self.requester_class = requester_class
         self.conan_runner = runner
 
         if cpu_count:
-            self.client_cache.conan_config
-            replace_in_file(self.client_cache.conan_conf_path,
+            self.cache.conan_config
+            replace_in_file(self.cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
-            self.client_cache.invalidate()
+            self.cache.invalidate()
         if self.revisions:
             # Generate base file
-            self.client_cache.conan_config
-            replace_in_file(self.client_cache.conan_conf_path,
+            self.cache.conan_config
+            replace_in_file(self.cache.conan_conf_path,
                             "revisions_enabled = False", "revisions_enabled = True",
                             output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
-            self.client_cache.invalidate()
+            self.cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -497,8 +497,8 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def update_servers(self):
-        save(self.client_cache.registry_path, dump_registry({}, {}, {}))
-        registry = self.client_cache.registry
+        save(self.cache.registry_path, dump_registry({}, {}, {}))
+        registry = self.cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
@@ -516,7 +516,7 @@ servers["r2"] = TestServer()
 
     @property
     def default_compiler_visual_studio(self):
-        settings = self.client_cache.default_profile.settings
+        settings = self.cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
 
     @property
@@ -539,7 +539,7 @@ servers["r2"] = TestServer()
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.client_cache = ClientCache(self.base_folder, self.storage_folder, output)
+        self.cache = ClientCache(self.base_folder, self.storage_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -548,7 +548,7 @@ servers["r2"] = TestServer()
             if isinstance(server, str):  # Just URI
                 real_servers = True
 
-        with tools.environment_append(self.client_cache.conan_config.env_vars):
+        with tools.environment_append(self.cache.conan_config.env_vars):
             if real_servers:
                 requester = requests.Session()
             else:
@@ -557,22 +557,22 @@ servers["r2"] = TestServer()
                 else:
                     requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.client_cache,
+            self.requester = ConanRequester(requester, self.cache,
                                             get_request_timeout())
 
-            self.hook_manager = HookManager(self.client_cache.hooks_path,
+            self.hook_manager = HookManager(self.cache.hooks_path,
                                             get_env("CONAN_HOOKS", list()), self.user_io.out)
 
             self.localdb, self.rest_api_client, self.remote_manager = \
-                Conan.instance_remote_manager(self.requester, self.client_cache,
+                Conan.instance_remote_manager(self.requester, self.cache,
                                               self.user_io, self.hook_manager)
             self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         storage_folder=self.storage_folder)
+        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput(),
+                                           storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
@@ -583,18 +583,18 @@ servers["r2"] = TestServer()
             tuple if required
         """
         output, requester = self.init_dynamic_vars(user_io)
-        with tools.environment_append(self.client_cache.conan_config.env_vars):
+        with tools.environment_append(self.cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
+            conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
                           self.hook_manager, requester, interactive=interactive)
-        outputer = CommandOutputer(self.user_io, self.client_cache)
-        command = Command(conan, self.client_cache, self.user_io, outputer)
+        outputer = CommandOutputer(self.user_io, self.cache)
+        command = Command(conan, self.cache, self.user_io, outputer)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
 
         old_output, old_requester = set_global_instances(output, requester)
@@ -638,10 +638,10 @@ servers["r2"] = TestServer()
             mkdir(self.current_folder)
 
     def get_revision(self, conan_ref):
-        return self.client_cache.load_metadata(conan_ref).recipe.revision
+        return self.cache.load_metadata(conan_ref).recipe.revision
 
     def get_package_revision(self, package_ref):
-        metadata = self.client_cache.load_metadata(package_ref.ref)
+        metadata = self.cache.load_metadata(package_ref.ref)
         return metadata.packages[package_ref.package_id].revision
 
 

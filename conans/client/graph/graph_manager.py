@@ -43,11 +43,11 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, cache, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
-        self._client_cache = client_cache
+        self._cache = cache
         self._remote_manager = remote_manager
         self._loader = loader
 
@@ -59,11 +59,11 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
         except IOError:  # Only if file is missing
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._client_cache.default_profile
-            profile.process_settings(self._client_cache)
+            profile = self._cache.default_profile
+            profile.process_settings(self._cache)
         else:
             profile = graph_info.profile
-            profile.process_settings(self._client_cache, preprocess=False)
+            profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
         processed_profile = ProcessedProfile(profile, None)
@@ -228,7 +228,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         if build_mode is None:
             return graph
-        binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
+        binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 

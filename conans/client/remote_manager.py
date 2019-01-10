@@ -29,19 +29,19 @@ from conans.util.tracer import (log_compressed_files, log_package_download, log_
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
-    def __init__(self, client_cache, auth_manager, output, hook_manager):
-        self._client_cache = client_cache
+    def __init__(self, cache, auth_manager, output, hook_manager):
+        self._cache = cache
         self._output = output
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
     def upload_recipe(self, ref, remote, retry, retry_wait, policy, remote_manifest):
-        conanfile_path = self._client_cache.conanfile(ref)
+        conanfile_path = self._cache.conanfile(ref)
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        export_folder = self._client_cache.export(ref)
+        export_folder = self._cache.export(ref)
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
@@ -53,7 +53,7 @@ class RemoteManager(object):
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
-        export_src_folder = self._client_cache.export_sources(ref, short_paths=None)
+        export_src_folder = self._cache.export_sources(ref, short_paths=None)
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
@@ -65,7 +65,7 @@ class RemoteManager(object):
                                           the_files, retry, retry_wait, policy, remote_manifest)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._client_cache.update_metadata(ref) as metadata:
+        with self._cache.update_metadata(ref) as metadata:
             metadata.recipe.time = rev_time
 
         duration = time.time() - t1
@@ -83,7 +83,7 @@ class RemoteManager(object):
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
-        read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+        read_manifest, expected_manifest = self._cache.package_manifests(package_reference)
 
         if read_manifest != expected_manifest:
             self._output.writeln("")
@@ -110,14 +110,14 @@ class RemoteManager(object):
                        policy=None):
 
         """Will upload the package to the first remote"""
-        conanfile_path = self._client_cache.conanfile(pref.ref)
+        conanfile_path = self._cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.package_id,
                                    remote=remote)
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = self._client_cache.package(pref, short_paths=None)
+        package_folder = self._cache.package(pref, short_paths=None)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
@@ -152,7 +152,7 @@ class RemoteManager(object):
                                                          the_files, retry, retry_wait, policy)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._client_cache.update_metadata(new_pref.ref) as metadata:
+        with self._cache.update_metadata(new_pref.ref) as metadata:
             metadata.packages[new_pref.package_id].time = rev_time
 
         duration = time.time() - t1
@@ -198,7 +198,7 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
         self._hook_manager.execute("pre_download_recipe", reference=conan_reference, remote=remote)
-        dest_folder = self._client_cache.export(conan_reference)
+        dest_folder = self._cache.export(conan_reference)
         rmdir(dest_folder)
 
         t1 = time.time()
@@ -209,13 +209,13 @@ class RemoteManager(object):
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
-        rm_conandir(self._client_cache.source(conan_reference))
+        rm_conandir(self._cache.source(conan_reference))
         touch_folder(dest_folder)
-        conanfile_path = self._client_cache.conanfile(conan_reference)
+        conanfile_path = self._cache.conanfile(conan_reference)
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=conan_reference, remote=remote)
 
-        with self._client_cache.update_metadata(conan_reference) as metadata:
+        with self._cache.update_metadata(conan_reference) as metadata:
             metadata.recipe.revision = conan_reference.revision
             metadata.recipe.time = rev_time
 
@@ -245,7 +245,7 @@ class RemoteManager(object):
 
     def get_package(self, pref, dest_folder, remote, output, recorder):
         package_id = pref.package_id
-        conanfile_path = self._client_cache.conanfile(pref.ref)
+        conanfile_path = self._cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=package_id,
                                    remote=remote)
@@ -256,7 +256,7 @@ class RemoteManager(object):
             zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
                                                                 pref, dest_folder)
 
-            with self._client_cache.update_metadata(new_ref.ref) as metadata:
+            with self._cache.update_metadata(new_ref.ref) as metadata:
                 metadata.packages[new_ref.package_id].revision = new_ref.revision
                 metadata.packages[new_ref.package_id].recipe_revision = new_ref.ref.revision
                 metadata.packages[new_ref.package_id].time = rev_time

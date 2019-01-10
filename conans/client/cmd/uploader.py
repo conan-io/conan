@@ -17,11 +17,11 @@ UPLOAD_POLICY_SKIP = "skip-upload"
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, loader, hook_manager):
-        self._client_cache = client_cache
+    def __init__(self, cache, user_io, remote_manager, loader, hook_manager):
+        self._cache = cache
         self._user_io = user_io
         self._remote_manager = remote_manager
-        self._registry = client_cache.registry
+        self._registry = cache.registry
         self._loader = loader
         self._hook_manager = hook_manager
 
@@ -40,7 +40,7 @@ class CmdUpload(object):
             refs = [ref, ]
             confirm = True
         else:
-            refs = search_recipes(self._client_cache, reference_or_pattern)
+            refs = search_recipes(self._cache, reference_or_pattern)
             if not refs:
                 raise NotFoundException(("No packages found matching pattern '%s'" %
                                          reference_or_pattern))
@@ -52,15 +52,15 @@ class CmdUpload(object):
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
-                    conanfile_path = self._client_cache.conanfile(ref)
+                    conanfile_path = self._cache.conanfile(ref)
                     conan_file = self._loader.load_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
                 if all_packages:
-                    packages_ids = self._client_cache.conan_packages(ref)
+                    packages_ids = self._cache.conan_packages(ref)
                 elif query:
-                    packages = search_packages(self._client_cache, ref, query)
+                    packages = search_packages(self._cache, ref, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
@@ -82,7 +82,7 @@ class CmdUpload(object):
         else:
             recipe_remote = cur_recipe_remote or default_remote
 
-        conanfile_path = self._client_cache.conanfile(ref)
+        conanfile_path = self._cache.conanfile(ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
@@ -95,7 +95,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
 
-        metadata = self._client_cache.load_metadata(ref)
+        metadata = self._cache.load_metadata(ref)
         ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
 
@@ -132,12 +132,12 @@ class CmdUpload(object):
                                    remote=recipe_remote)
 
     def _upload_recipe(self, conan_reference, retry, retry_wait, policy, remote, remote_manifest):
-        conan_file_path = self._client_cache.conanfile(conan_reference)
+        conan_file_path = self._cache.conanfile(conan_reference)
         current_remote = self._registry.refs.get(conan_reference)
 
         if remote != current_remote:
             conanfile = self._loader.load_class(conan_file_path)
-            complete_recipe_sources(self._remote_manager, self._client_cache,
+            complete_recipe_sources(self._remote_manager, self._cache,
                                     conanfile, conan_reference)
         self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                            policy=policy, remote_manifest=remote_manifest)
@@ -181,7 +181,7 @@ class CmdUpload(object):
         except NotFoundException:
             return  # First time uploading this package
 
-        local_manifest = self._client_cache.load_manifest(conan_ref)
+        local_manifest = self._cache.load_manifest(conan_ref)
 
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
@@ -202,7 +202,7 @@ class CmdUpload(object):
             self._user_io.out.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = load(os.path.join(self._client_cache.export(conan_ref), "conanfile.py"))
+                contents = load(os.path.join(self._cache.export(conan_ref), "conanfile.py"))
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_path(conan_ref, package_id=None,

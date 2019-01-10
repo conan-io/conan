@@ -7,18 +7,18 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
 
-def _prepare_sources(client_cache, reference, remote_manager, loader):
-    conan_file_path = client_cache.conanfile(reference)
+def _prepare_sources(cache, reference, remote_manager, loader):
+    conan_file_path = cache.conanfile(reference)
     conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, client_cache, conanfile, reference)
+    complete_recipe_sources(remote_manager, cache, conanfile, reference)
     return conanfile.short_paths
 
 
-def _get_package_ids(client_cache, reference, package_ids):
+def _get_package_ids(cache, reference, package_ids):
     if not package_ids:
         return []
     if package_ids is True:
-        packages = client_cache.packages(reference)
+        packages = cache.packages(reference)
         if os.path.exists(packages):
             package_ids = os.listdir(packages)
         else:
@@ -26,19 +26,16 @@ def _get_package_ids(client_cache, reference, package_ids):
     return package_ids
 
 
-def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote_manager,
-             loader, force=False):
+def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, force=False):
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
-    short_paths = _prepare_sources(client_cache, reference, remote_manager, loader)
-    package_ids = _get_package_ids(client_cache, reference, package_ids)
-    package_copy(reference, user_channel, package_ids, client_cache, user_io,
-                 short_paths, force)
+    short_paths = _prepare_sources(cache, ref, remote_manager, loader)
+    package_ids = _get_package_ids(cache, ref, package_ids)
+    package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
 
 
-def package_copy(src_ref, user_channel, package_ids, paths, user_io,
-                 short_paths=False, force=False):
+def package_copy(src_ref, user_channel, package_ids, paths, user_io, short_paths=False, force=False):
     dest_ref = ConanFileReference.loads("%s/%s@%s" % (src_ref.name,
                                                       src_ref.version,
                                                       user_channel))

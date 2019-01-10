@@ -34,7 +34,7 @@ class Test(ConanFile):
         client.run('remove "*" -f')
         client.run("remote list_pref Test/0.1@lasote/testing")
         self.assertNotIn("Test/0.1@lasote/testing", client.out)
-        registry_content = load(client.client_cache.registry_path)
+        registry_content = load(client.cache.registry_path)
         self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
@@ -152,21 +152,21 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
-            exports_sources_dir = client.client_cache.export_sources(ref)
+            exports_sources_dir = client.cache.export_sources(ref)
             os.makedirs(exports_sources_dir)
 
-        client.save(files, client.client_cache.store)
+        client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.client_cache.package(pref)
+            pkg_folder = client.cache.package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
                                    pref.package_id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
 
-        client.save(files, client.client_cache.store)
+        client.save(files, client.cache.store)
 
         self.client = client
 
@@ -179,7 +179,7 @@ class RemoveTest(unittest.TestCase):
                             {"H1": True, "H2": True, "B": True, "O": True})
 
     def assert_folders(self, local_folders, remote_folders, build_folders, src_folders):
-        for base_path, folders in [(self.client.client_cache, local_folders),
+        for base_path, folders in [(self.client.cache, local_folders),
                                    (self.server.server_store, remote_folders)]:
             root_folder = base_path.store
             for k, shas in folders.items():
@@ -220,7 +220,7 @@ class RemoveTest(unittest.TestCase):
                         else:
                             self.assertFalse(os.path.exists(package_folder))
 
-        root_folder = self.client.client_cache.store
+        root_folder = self.client.cache.store
         for k, shas in build_folders.items():
             folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
             if shas is None:

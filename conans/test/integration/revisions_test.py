@@ -115,13 +115,13 @@ class HelloConan(ConanFile):
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "8e54c6ea967722f2f9bdcbacb21792f5" % self.ref.full_repr())
 
-        contents = load(os.path.join(self.client.client_cache.package(pref), "myfile.txt"))
+        contents = load(os.path.join(self.client.cache.package(pref), "myfile.txt"))
         self.assertEquals(contents, "2")
 
         # Download previous package revision
         self.client.run("download %s -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"
                         "15ab113a16e2ac8c9ecffb4ba48306b2" % self.ref.full_repr())
-        contents = load(os.path.join(self.client.client_cache.package(pref), "myfile.txt"))
+        contents = load(os.path.join(self.client.cache.package(pref), "myfile.txt"))
         self.assertEquals(contents, "1")
 
         # Specify a package revision without a recipe revision
@@ -220,7 +220,7 @@ class HelloConan(ConanFile):
         self.client.run("info %s" % str(self.ref))
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
-        self.client.client_cache.registry.refs.remove(self.ref)
+        self.client.cache.registry.refs.remove(self.ref)
         # Upload to a non-revisions server, the revision should be always there in the registry
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))
@@ -863,7 +863,7 @@ class ConanFileToolsTest(ConanFile):
 
         # Try to install rev1 and not rev2
         self.client.run("install %s#%s" % (str(ref), rev1))
-        conanfile_path = self.client.client_cache.conanfile(ref)
+        conanfile_path = self.client.cache.conanfile(ref)
         contents = load(conanfile_path)
         self.assertNotIn("#Comment for rev2", contents)
 
@@ -872,7 +872,7 @@ class ConanFileToolsTest(ConanFile):
 
         # Try to install rev2 and not rev1
         self.client.run("install %s#%s" % (str(ref), rev2))
-        conanfile_path = self.client.client_cache.conanfile(ref)
+        conanfile_path = self.client.cache.conanfile(ref)
         contents = load(conanfile_path)
         self.assertIn("#Comment for rev2", contents)
 

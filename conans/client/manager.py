@@ -1,6 +1,6 @@
 import os
 
-from conans.client.client_cache import ClientCache
+from conans.client.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
@@ -18,11 +18,11 @@ from conans.util.files import normalize, save
 
 
 class ConanManager(object):
-    def __init__(self, client_cache, user_io, remote_manager,
+    def __init__(self, cache, user_io, remote_manager,
                  recorder, graph_manager, hook_manager):
         assert isinstance(user_io, UserIO)
-        assert isinstance(client_cache, ClientCache)
-        self._client_cache = client_cache
+        assert isinstance(cache, ClientCache)
+        self._cache = cache
         self._user_io = user_io
         self._remote_manager = remote_manager
         self._recorder = recorder
@@ -39,7 +39,7 @@ class ConanManager(object):
         output.highlight("Installing...")
         print_graph(deps_graph, self._user_io.out)
 
-        installer = BinaryInstaller(self._client_cache, output, self._remote_manager,
+        installer = BinaryInstaller(self._cache, output, self._remote_manager,
                                     recorder=self._recorder, workspace=workspace,
                                     hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
@@ -90,18 +90,18 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
-        installer = BinaryInstaller(self._client_cache, self._user_io.out, self._remote_manager,
+        installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=self._recorder, workspace=None,
                                     hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
-                                               client_cache=self._client_cache)
+                                               cache=self._cache)
             for node in deps_graph.nodes:
                 if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
-                complete_recipe_sources(self._remote_manager, self._client_cache,
+                complete_recipe_sources(self._remote_manager, self._cache,
                                         node.conanfile, node.conan_ref)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,

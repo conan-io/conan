@@ -110,7 +110,7 @@ def _partial_match(pattern, ref):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(client_cache, ref, query):
+def search_packages(cache, ref, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -118,26 +118,26 @@ def search_packages(client_cache, ref, query):
                            settings: {os: Windows}}}
     param conan_ref: ConanFileReference object
     """
-    if not os.path.exists(client_cache.conan(ref)):
+    if not os.path.exists(cache.conan(ref)):
         raise NotFoundException("Recipe not found: %s" % str(ref))
-    infos = _get_local_infos_min(client_cache, ref)
+    infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(client_cache, ref):
+def _get_local_infos_min(cache, ref):
     result = {}
-    packages_path = client_cache.packages(ref)
+    packages_path = cache.packages(ref)
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
         try:
             pref = PackageReference(ref, package_id)
-            info_path = os.path.join(client_cache.package(pref, short_paths=None), CONANINFO)
+            info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
             if not os.path.exists(info_path):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
 
-            metadata = client_cache.load_metadata(pref.ref)
+            metadata = cache.load_metadata(pref.ref)
             recipe_revision = metadata.packages[package_id].recipe_revision
             info = ConanInfo.loads(conan_info_content)
             if ref.revision and recipe_revision and recipe_revision != ref.revision:

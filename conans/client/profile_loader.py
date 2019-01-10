@@ -213,16 +213,16 @@ def _apply_inner_profile(doc, base_profile):
     base_profile.env_values = current_env_values
 
 
-def profile_from_args(profile, settings, options, env, cwd, client_cache):
+def profile_from_args(profile, settings, options, env, cwd, cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    default_profile = client_cache.default_profile  # Ensures a default profile creating
+    default_profile = cache.default_profile  # Ensures a default profile creating
 
     if profile is None:
         result = default_profile
     else:
-        result, _ = read_profile(profile, cwd, client_cache.profiles_path)
+        result, _ = read_profile(profile, cwd, cache.profiles_path)
     args_profile = _profile_parse_args(settings, options, env)
 
     if result:

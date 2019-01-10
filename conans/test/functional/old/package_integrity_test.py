@@ -15,7 +15,7 @@ class PackageIngrityTest(unittest.TestCase):
         client.run("create . lasote/testing")
         self.assertNotIn('does not contain a number!', client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        conan_folder = client.client_cache.conan(ref)
+        conan_folder = client.cache.conan(ref)
         self.assertIn("locks", os.listdir(conan_folder))
         self.assertTrue(os.path.exists(conan_folder + ".count"))
         self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
@@ -36,10 +36,10 @@ class PackageIngrityTest(unittest.TestCase):
         client.run("export . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pref = PackageReference(ref, "12345")
-        package_folder = client.client_cache.package(pref)
+        package_folder = client.cache.package(pref)
         recipe_rev = client.get_revision(ref)
         p_rev = client.get_package_revision(pref)
-        with client.client_cache.update_metadata(pref.ref) as metadata:
+        with client.cache.update_metadata(pref.ref) as metadata:
             metadata.packages[pref.package_id].revision = p_rev
             metadata.packages[pref.package_id].recipe_revision = recipe_rev
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")

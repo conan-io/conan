@@ -150,7 +150,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("install %s -r remote2" % reference)
         self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
         self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
-        registry = load(self.client.client_cache.registry_path)
+        registry = load(self.client.cache.registry_path)
         registry = json.loads(registry)
         self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
         self.assertEquals(registry["package_references"],

@@ -199,8 +199,8 @@ class MyTest(ConanFile):
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
-        visjs_path = os.path.join(client.client_cache.conan_folder, "vis.min.js")
-        viscss_path = os.path.join(client.client_cache.conan_folder, "vis.min.css")
+        visjs_path = os.path.join(client.cache.conan_folder, "vis.min.js")
+        viscss_path = os.path.join(client.cache.conan_folder, "vis.min.css")
         save(visjs_path, "")
         save(viscss_path, "")
         client.save({"conanfile.txt": ""})

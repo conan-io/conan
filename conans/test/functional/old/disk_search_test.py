@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.client_cache import ClientCache
+from conans.client.cache import ClientCache
 from conans.client.tools import chdir
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
@@ -16,10 +16,10 @@ class SearchTest(unittest.TestCase):
 
     def setUp(self):
         folder = temp_folder()
-        self.client_cache = ClientCache(folder, store_folder=folder, output=TestBufferConanOutput())
+        self.cache = ClientCache(folder, store_folder=folder, output=TestBufferConanOutput())
 
     def basic_test2(self):
-        with chdir(self.client_cache.store):
+        with chdir(self.cache.store):
             ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
             root_folder = str(ref1).replace("@", "/")
             artifacts = ["a", "b", "c"]
@@ -32,12 +32,12 @@ class SearchTest(unittest.TestCase):
                 info = ConanInfo().loads("[settings]\n[options]")
                 save(os.path.join(artif1, CONANINFO), info.dumps())
 
-            packages = search_packages(self.client_cache, ref1, "")
+            packages = search_packages(self.cache, ref1, "")
             all_artif = [_artif for _artif in sorted(packages)]
             self.assertEqual(all_artif, artifacts)
 
     def pattern_test(self):
-        with chdir(self.client_cache.store):
+        with chdir(self.cache.store):
             references = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
             refs = [ConanFileReference.loads(reference) for reference in references]
             for ref in refs:
@@ -45,11 +45,11 @@ class SearchTest(unittest.TestCase):
                 reg1 = "%s/%s" % (root_folder, EXPORT_FOLDER)
                 os.makedirs(reg1)
 
-            recipes = search_recipes(self.client_cache, "opencv/*@lasote/testing")
+            recipes = search_recipes(self.cache, "opencv/*@lasote/testing")
             self.assertEqual(recipes, refs)
 
     def case_insensitive_test(self):
-        with chdir(self.client_cache.store):
+        with chdir(self.cache.store):
             root_folder2 = "sdl/1.5/lasote/stable"
             ref2 = ConanFileReference.loads("sdl/1.5@lasote/stable")
             os.makedirs("%s/%s" % (root_folder2, EXPORT_FOLDER))
@@ -67,17 +67,17 @@ class SearchTest(unittest.TestCase):
             os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
             # Case insensitive searches
 
-            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.client_cache, "*")])
+            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.cache, "*")])
             self.assertEqual(reg_conans, [str(ref5),
                                           str(ref3),
                                           str(ref2),
                                           str(ref4)])
 
-            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.client_cache,
+            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.cache,
                                                                       pattern="sdl*")])
             self.assertEqual(reg_conans, [str(ref5), str(ref2), str(ref4)])
 
             # Case sensitive search
-            self.assertEqual(str(search_recipes(self.client_cache, pattern="SDL*",
+            self.assertEqual(str(search_recipes(self.cache, pattern="SDL*",
                                                 ignorecase=False)[0]),
                              str(ref5))

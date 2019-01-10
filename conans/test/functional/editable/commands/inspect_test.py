@@ -36,12 +36,12 @@ class InspectCommandTest(unittest.TestCase):
                                body='requires = "{}"'.format(self.ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
-        self.assertTrue(self.t.client_cache.installed_as_editable(self.ref))
+        self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
-        self.assertFalse(self.t.client_cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.client_cache.conan(self.ref)))
+        self.assertFalse(self.t.cache.installed_as_editable(self.ref))
+        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
     def test_reference(self):
         self.t.run('inspect {}'.format(self.ref))

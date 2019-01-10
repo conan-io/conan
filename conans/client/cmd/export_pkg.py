@@ -7,11 +7,11 @@ from conans.model.ref import PackageReference
 from conans.util.files import rmdir
 
 
-def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
+def export_pkg(cache, graph_manager, hook_manager, recorder, output,
                reference, source_folder, build_folder, package_folder, install_folder,
                graph_info, force):
 
-    conan_file_path = client_cache.conanfile(reference)
+    conan_file_path = cache.conanfile(reference)
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
@@ -27,7 +27,7 @@ def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
     pkg_id = conanfile.info.package_id()
     output.info("Packaging to %s" % pkg_id)
     pref = PackageReference(reference, pkg_id)
-    dest_package_folder = client_cache.package(pref, short_paths=conanfile.short_paths)
+    dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
 
     if os.path.exists(dest_package_folder):
         if force:
@@ -36,7 +36,7 @@ def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
 
-    recipe_hash = client_cache.load_manifest(reference).summary_hash
+    recipe_hash = cache.load_manifest(reference).summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:

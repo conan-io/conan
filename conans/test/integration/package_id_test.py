@@ -250,9 +250,9 @@ class Pkg(ConanFile):
                             ' --build missing')
 
             ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-            pkg = os.listdir(self.client.client_cache.packages(ref))
+            pkg = os.listdir(self.client.cache.packages(ref))
             pref = PackageReference(ref, pkg[0])
-            pkg_folder = self.client.client_cache.package(pref)
+            pkg_folder = self.client.cache.package(pref)
             return ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
 
         info = install_and_get_info(None)  # Default
@@ -302,9 +302,9 @@ class Pkg(ConanFile):
                         ' -s arch_build="x86"'
                         ' --build missing')
         ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-        pkg = os.listdir(self.client.client_cache.packages(ref))
+        pkg = os.listdir(self.client.cache.packages(ref))
         pref = PackageReference(ref, pkg[0])
-        pkg_folder = self.client.client_cache.package(pref)
+        pkg_folder = self.client.cache.package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEquals(str(info.settings.os_build), "Linux")
         self.assertEquals(str(info.settings.arch_build), "x86")

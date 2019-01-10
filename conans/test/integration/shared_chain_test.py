@@ -29,7 +29,7 @@ class SharedChainTest(unittest.TestCase):
         conan.run("install '%s' --build missing" % str(ref))
         conan.run("upload %s --all" % str(ref))
         rmdir(conan.current_folder)
-        shutil.rmtree(conan.client_cache.store, ignore_errors=True)
+        shutil.rmtree(conan.cache.store, ignore_errors=True)
 
     def uploaded_chain_test(self):
         self._export_upload("Hello0", "0.1")

@@ -15,22 +15,22 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
-    def __init__(self, client_cache, output, remote_manager):
+    def __init__(self, cache, output, remote_manager):
         # collaborators
-        self._client_cache = client_cache
+        self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = client_cache.registry
+        self._registry = cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
-        if self._client_cache.installed_as_editable(conan_reference):
-            conanfile_path = self._client_cache.conanfile(conan_reference)
+        if self._cache.installed_as_editable(conan_reference):
+            conanfile_path = self._cache.conanfile(conan_reference)
             status = RECIPE_EDITABLE
             # TODO: log_recipe_got_from_editable(reference)
             # TODO: recorder.recipe_fetched_as_editable(reference)
             return conanfile_path, status, None, conan_reference
 
-        with self._client_cache.conanfile_write_lock(conan_reference):
+        with self._cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference, check_updates, update, remote_name, recorder)
             conanfile_path, status, remote, reference = result
 
@@ -43,7 +43,7 @@ class ConanProxy(object):
     def _get_recipe(self, reference, check_updates, update, remote_name, recorder):
         output = ScopedOutput(str(reference), self._out)
         # check if it is in disk
-        conanfile_path = self._client_cache.conanfile(reference)
+        conanfile_path = self._cache.conanfile(reference)
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
@@ -51,7 +51,7 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        metadata = self._client_cache.load_metadata(reference)
+        metadata = self._cache.load_metadata(reference)
         cur_revision = metadata.recipe.revision
         remote = self._registry.refs.get(reference)
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
@@ -61,7 +61,7 @@ class ConanProxy(object):
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled and reference.revision and cur_revision != reference.revision:
             output.info("Different revision requested, removing current local recipe...")
-            DiskRemover(self._client_cache).remove_recipe(reference)
+            DiskRemover(self._cache).remove_recipe(reference)
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
             new_ref = self._remote_manager.get_recipe(reference, update_remote)
@@ -88,12 +88,12 @@ class ConanProxy(object):
             ref = reference.copy_with_rev(cur_revision)
             return conanfile_path, status, update_remote, ref
 
-        export = self._client_cache.export(reference)
+        export = self._cache.export(reference)
         read_manifest = FileTreeManifest.load(export)
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
                 if update:
-                    DiskRemover(self._client_cache).remove_recipe(reference)
+                    DiskRemover(self._cache).remove_recipe(reference)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(reference, update_remote)
                     self._registry.refs.set(new_ref, update_remote.name)

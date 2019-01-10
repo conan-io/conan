@@ -83,11 +83,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, remote_manager, user_io):
+    def __init__(self, cache, remote_manager, user_io):
         self._user_io = user_io
-        self._client_cache = client_cache
+        self._cache = cache
         self._remote_manager = remote_manager
-        self._registry = client_cache.registry
+        self._registry = cache.registry
 
     def _remote_remove(self, reference, package_ids, remote):
         assert(isinstance(remote, Remote))
@@ -99,13 +99,13 @@ class ConanRemover(object):
             return tmp
 
     def _local_remove(self, reference, src, build_ids, package_ids):
-        if self._client_cache.installed_as_editable(reference):
+        if self._cache.installed_as_editable(reference):
             raise ConanException("Package '{r}' is installed as editable, unlink it first using "
                                  "command 'conan link {r} --remove'".format(r=reference))
 
         # Make sure to clean the locks too
-        self._client_cache.remove_package_locks(reference)
-        remover = DiskRemover(self._client_cache)
+        self._cache.remove_package_locks(reference)
+        remover = DiskRemover(self._cache)
         if src:
             remover.remove_src(reference)
         if build_ids is not None:
@@ -138,7 +138,7 @@ class ConanRemover(object):
             remote = self._registry.remotes.get(remote_name)
             refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            refs = search_recipes(self._client_cache, pattern)
+            refs = search_recipes(self._cache, pattern)
         if not refs:
             self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
@@ -152,12 +152,12 @@ class ConanRemover(object):
                 if remote_name:
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
-                    packages = search_packages(self._client_cache, ref, packages_query)
+                    packages = search_packages(self._cache, ref, packages_query)
                 if outdated:
                     if remote_name:
                         recipe_hash = self._remote_manager.get_conan_manifest(ref, remote).summary_hash
                     else:
-                        recipe_hash = self._client_cache.load_manifest(ref).summary_hash
+                        recipe_hash = self._cache.load_manifest(ref).summary_hash
                     packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
@@ -177,7 +177,7 @@ class ConanRemover(object):
                     self._local_remove(ref, src, build_ids, package_ids)
 
         if not remote_name:
-            self._client_cache.delete_empty_dirs(deleted_refs)
+            self._cache.delete_empty_dirs(deleted_refs)
 
     def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):
         def stringlist(alist):

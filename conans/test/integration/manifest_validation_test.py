@@ -222,11 +222,11 @@ class ConanFileTest(ConanFile):
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build=missing")
-        info = os.path.join(client.client_cache.package(pref), "conaninfo.txt")
+        info = os.path.join(client.cache.package(pref), "conaninfo.txt")
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        package_folder = client.client_cache.package(pref)
+        package_folder = client.cache.package(pref)
         manifest = FileTreeManifest.load(package_folder)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         manifest.save(package_folder)
@@ -267,7 +267,7 @@ class ConanFileTest(ConanFile):
         self.assertIn("ERROR: Do not specify both", self.client.user_io.out)
 
     def test_corrupted_recipe(self):
-        export_path = self.client.client_cache.export(self.ref)
+        export_path = self.client.cache.export(self.ref)
         file_path = os.path.join(export_path, "data.txt")
         save(file_path, "BAD CONTENT")
 
@@ -279,7 +279,7 @@ class ConanFileTest(ConanFile):
     def test_corrupted_package(self):
         self.client.run("install %s --build missing" % str(self.ref))
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_path = self.client.client_cache.package(pref)
+        package_path = self.client.cache.package(pref)
         file_path = os.path.join(package_path, "conaninfo.txt")
         save(file_path, load(file_path) + "  ")
 

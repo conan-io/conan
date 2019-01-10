@@ -102,7 +102,7 @@ class HelloPythonConan(ConanFile):
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Copied 1 '.h' file: myfile.h", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.client_cache.packages(ref)
+        pkg_folder = client.cache.packages(ref)
         folders = os.listdir(pkg_folder)
         pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
@@ -196,13 +196,13 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.client_cache.package(win_pref, short_paths=short_paths)
+        package_folder = client.cache.package(win_pref, short_paths=short_paths)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.client_cache.package(win_pref),
+            self.assertEqual(load(os.path.join(client.cache.package(win_pref),
                                                ".conan_link")),
                              package_folder)
         else:
-            self.assertEqual(client.client_cache.package(win_pref), package_folder)
+            self.assertEqual(client.cache.package(win_pref), package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
         self._consume(client, ". -s os=Windows")
@@ -307,7 +307,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.client_cache.package(pref)
+        package_folder = client.cache.package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -330,7 +330,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.client_cache.package(pref)
+        package_folder = client.cache.package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -357,7 +357,7 @@ class TestConan(ConanFile):
                    "--source-folder=src")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.client_cache.package(pref)
+        package_folder = client.cache.package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")

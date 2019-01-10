@@ -97,10 +97,10 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, client_cache, user_io, outputer):
+    def __init__(self, conan_api, cache, user_io, outputer):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._client_cache = client_cache
+        self._cache = cache
         self._user_io = user_io
         self._outputer = outputer
 
@@ -851,7 +851,7 @@ class Command(object):
         if args.locks:
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._client_cache.remove_locks()
+            self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
         else:
@@ -1579,12 +1579,12 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, client_cache, user_io = Conan.factory()
+        conan_api, cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
         sys.exit(ERROR_MIGRATION)
 
-    outputer = CommandOutputer(user_io, client_cache)
-    command = Command(conan_api, client_cache, user_io, outputer)
+    outputer = CommandOutputer(user_io, cache)
+    command = Command(conan_api, cache, user_io, outputer)
     current_dir = get_cwd()
     try:
         import signal

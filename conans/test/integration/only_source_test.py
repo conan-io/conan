@@ -158,8 +158,8 @@ class MyPackage(ConanFile):
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
 
-        self.assertTrue(os.path.exists(client.client_cache.builds(ref)))
-        self.assertTrue(os.path.exists(client.client_cache.packages(ref)))
+        self.assertTrue(os.path.exists(client.cache.builds(ref)))
+        self.assertTrue(os.path.exists(client.cache.packages(ref)))
 
         # Upload
         client.run("upload %s --all" % str(ref))
@@ -167,20 +167,20 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(ref))
-        self.assertFalse(os.path.exists(other_conan.client_cache.builds(ref)))
-        self.assertTrue(os.path.exists(other_conan.client_cache.packages(ref)))
+        self.assertFalse(os.path.exists(other_conan.cache.builds(ref)))
+        self.assertTrue(os.path.exists(other_conan.cache.packages(ref)))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build" % str(ref))
-        self.assertTrue(os.path.exists(other_conan.client_cache.builds(ref)))
-        self.assertTrue(os.path.exists(other_conan.client_cache.packages(ref)))
+        self.assertTrue(os.path.exists(other_conan.cache.builds(ref)))
+        self.assertTrue(os.path.exists(other_conan.cache.packages(ref)))
 
         # Use an invalid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_conan.user_io.out)
-        self.assertFalse(os.path.exists(other_conan.client_cache.builds(ref)))
+        self.assertFalse(os.path.exists(other_conan.cache.builds(ref)))
         # self.assertFalse(os.path.exists(other_conan.client_cache.packages(conan_reference)))
 
         # Use another valid pattern and check that its not builded from source

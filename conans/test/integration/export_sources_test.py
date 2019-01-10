@@ -78,10 +78,10 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client = client
         self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
-        self.source_folder = self.client.client_cache.source(self.ref)
-        self.package_folder = self.client.client_cache.package(self.pref)
-        self.export_folder = self.client.client_cache.export(self.ref)
-        self.export_sources_folder = self.client.client_cache.export_sources(self.ref)
+        self.source_folder = self.client.cache.source(self.ref)
+        self.package_folder = self.client.cache.package(self.pref)
+        self.export_folder = self.client.cache.export(self.ref)
+        self.export_sources_folder = self.client.cache.export_sources(self.ref)
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
@@ -261,8 +261,8 @@ class ExportsSourcesTest(unittest.TestCase):
 
         # new copied package data
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        source_folder = self.client.client_cache.source(ref)
-        export_folder = self.client.client_cache.export(ref)
+        source_folder = self.client.cache.source(ref)
+        export_folder = self.client.cache.export(ref)
 
         self.client.run("copy Hello/0.1@lasote/testing lasote/stable")
         self._check_export_folder(mode, export_folder)

@@ -84,8 +84,8 @@ def satisfying(list_versions, versionexpr, result):
 
 class RangeResolver(object):
 
-    def __init__(self, client_cache, remote_search):
-        self._client_cache = client_cache
+    def __init__(self, cache, remote_search):
+        self._cache = cache
         self._remote_search = remote_search
         self._cached_remote_found = {}
         self._result = []
@@ -134,7 +134,7 @@ class RangeResolver(object):
                                  "could not be resolved" % (version_range, require, base_conanref))
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = search_recipes(self._client_cache, search_ref)
+        local_found = search_recipes(self._cache, search_ref)
         if local_found:
             return self._resolve_version(version_range, local_found)
 

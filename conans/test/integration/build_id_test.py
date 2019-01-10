@@ -62,28 +62,28 @@ class BuildIdTest(unittest.TestCase):
         # Check that conaninfo is correct
         pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
                                             "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
-        conaninfo = load(os.path.join(client.client_cache.package(pref_debug), "conaninfo.txt"))
+        conaninfo = load(os.path.join(client.cache.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
                                               "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
-        conaninfo = load(os.path.join(client.client_cache.package(pref_release), "conaninfo.txt"))
+        conaninfo = load(os.path.join(client.cache.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
         pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
                                             "322de4b4a41f905f6b18f454ab5f498690b39c2a")
-        conaninfo = load(os.path.join(client.client_cache.package(pref_debug), "conaninfo.txt"))
+        conaninfo = load(os.path.join(client.cache.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
                                               "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
-        conaninfo = load(os.path.join(client.client_cache.package(pref_release), "conaninfo.txt"))
+        conaninfo = load(os.path.join(client.cache.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
@@ -207,9 +207,9 @@ class BuildIdTest(unittest.TestCase):
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():
-            builds = client.client_cache.conan_builds(ref)
+            builds = client.cache.conan_builds(ref)
             self.assertEqual(1, len(builds))
-            packages = client.client_cache.conan_packages(ref)
+            packages = client.cache.conan_packages(ref)
             self.assertEqual(2, len(packages))
             self.assertNotIn(builds[0], packages)
             return builds[0], packages
@@ -218,9 +218,9 @@ class BuildIdTest(unittest.TestCase):
         client.run("remove Pkg/0.1@user/channel -b %s -f" % packages[0])
         _check_builds()
         client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
-        builds = client.client_cache.conan_builds(ref)
+        builds = client.cache.conan_builds(ref)
         self.assertEqual(0, len(builds))
-        packages = client.client_cache.conan_packages(ref)
+        packages = client.cache.conan_packages(ref)
         self.assertEqual(2, len(packages))
 
     @parameterized.expand([(True, ), (False,)])

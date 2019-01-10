@@ -4,7 +4,6 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
-from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -14,11 +13,11 @@ from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, workspace):
-        self._client_cache = client_cache
+    def __init__(self, cache, output, remote_manager, workspace):
+        self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = client_cache.registry
+        self._registry = cache.registry
         self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
@@ -32,7 +31,7 @@ class GraphBinariesAnalyzer(object):
 
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled:
-            metadata = self._client_cache.load_metadata(package_ref.ref)
+            metadata = self._cache.load_metadata(package_ref.ref)
             rec_rev = metadata.packages[package_ref.package_id].recipe_revision
             if rec_rev != node.conan_ref.revision:
                 output.warn("Outdated package! The package doesn't belong "
@@ -86,8 +85,8 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_BUILD
             return
 
-        package_folder = self._client_cache.package(pref,
-                                                    short_paths=conanfile.short_paths)
+        package_folder = self._cache.package(pref,
+                                             short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
         local_project = self._workspace[conan_ref] if self._workspace else None
@@ -95,7 +94,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_WORKSPACE
             return
 
-        with self._client_cache.package_lock(pref):
+        with self._cache.package_lock(pref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
@@ -154,7 +153,7 @@ class GraphBinariesAnalyzer(object):
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                local_recipe_hash = self._client_cache.load_manifest(pref.ref).summary_hash
+                local_recipe_hash = self._cache.load_manifest(pref.ref).summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD

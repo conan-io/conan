@@ -10,10 +10,10 @@ from conans.paths.simple_paths import SimplePaths
 
 class ManifestManager(object):
 
-    def __init__(self, folder, user_io, client_cache):
+    def __init__(self, folder, user_io, cache):
         self._paths = SimplePaths(folder)
         self._user_io = user_io
-        self._client_cache = client_cache
+        self._cache = cache
         self._log = []
 
     def check_graph(self, graph, verify, interactive):
@@ -30,8 +30,8 @@ class ManifestManager(object):
 
     def _handle_recipe(self, node, verify, interactive):
         ref = node.conan_ref
-        export = self._client_cache.export(ref)
-        exports_sources_folder = self._client_cache.export_sources(ref)
+        export = self._cache.export(ref)
+        exports_sources_folder = self._cache.export_sources(ref)
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
@@ -41,7 +41,7 @@ class ManifestManager(object):
     def _handle_package(self, node, verify, interactive):
         ref = node.conan_ref
         pref = PackageReference(ref, node.conanfile.info.package_id())
-        package_folder = self._client_cache.package(pref)
+        package_folder = self._cache.package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
         self._check_not_corrupted(pref, read_manifest, expected_manifest)
