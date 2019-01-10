@@ -181,7 +181,7 @@ class CmdUpload(object):
         except NotFoundException:
             return  # First time uploading this package
 
-        local_manifest = self._client_cache.load_manifest(conan_ref)
+        local_manifest = self._client_cache.package_layout(conan_ref).load_manifest()
 
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):

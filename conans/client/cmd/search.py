@@ -58,7 +58,7 @@ class Search(object):
         packages_props = search_packages(self._client_cache, reference, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
         try:
-            recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+            recipe_hash = self._client_cache.package_layout(reference).load_manifest().summary_hash
         except IOError:  # It could not exist in local
             recipe_hash = None
 
