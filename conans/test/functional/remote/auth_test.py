@@ -23,7 +23,7 @@ class AuthorizeTest(unittest.TestCase):
     def setUp(self):
         self.servers = {}
         self.ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
-        # Create a default remote. R/W is not authorized for conan_reference,
+        # Create a default remote. R/W is not authorized for ref,
         # just for pepe, nacho and owner
         self.test_server = TestServer([(str(self.ref), "pepe,nacho@gmail.com")],  # read permissions
                                       [(str(self.ref), "pepe,nacho@gmail.com")],  # write permissions

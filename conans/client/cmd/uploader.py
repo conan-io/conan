@@ -73,7 +73,7 @@ class CmdUpload(object):
 
     def _upload(self, conan_file, ref, packages_ids, retry, retry_wait,
                 integrity_check, policy, remote_name, recorder):
-        """Uploads the recipes and binaries identified by conan_ref"""
+        """Uploads the recipes and binaries identified by ref"""
 
         default_remote = self._registry.remotes.default
         cur_recipe_remote = self._registry.refs.get(ref)

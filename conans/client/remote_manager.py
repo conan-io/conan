@@ -291,7 +291,7 @@ class RemoteManager(object):
         """
         Search exported conans information from remotes
 
-        returns (dict str(conan_ref): {packages_info}"""
+        returns (dict str(ref): {packages_info}"""
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):

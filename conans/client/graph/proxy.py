@@ -32,13 +32,13 @@ class ConanProxy(object):
 
         with self._cache.conanfile_write_lock(ref):
             result = self._get_recipe(ref, check_updates, update, remote_name, recorder)
-            conanfile_path, status, remote, reference = result
+            conanfile_path, status, remote, new_ref = result
 
             if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
-                log_recipe_got_from_local_cache(reference)
-                recorder.recipe_fetched_from_cache(reference)
+                log_recipe_got_from_local_cache(new_ref)
+                recorder.recipe_fetched_from_cache(new_ref)
 
-        return conanfile_path, status, remote, reference
+        return conanfile_path, status, remote, new_ref
 
     def _get_recipe(self, ref, check_updates, update, remote_name, recorder):
         output = ScopedOutput(str(ref), self._out)

@@ -18,7 +18,7 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.env_values = EnvValues()
         self.options = OptionsValues()
-        self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
+        self.build_requires = OrderedDict()  # ref pattern: list of ref
 
     def process_settings(self, cache, preprocess=True):
         self.processed_settings = cache.settings.copy()

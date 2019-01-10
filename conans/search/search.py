@@ -116,7 +116,7 @@ def search_packages(cache, ref, query):
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param conan_ref: ConanFileReference object
+    param ref: ConanFileReference object
     """
     if not os.path.exists(cache.conan(ref)):
         raise NotFoundException("Recipe not found: %s" % str(ref))

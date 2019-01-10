@@ -265,7 +265,7 @@ class BinaryInstaller(object):
         self._editable_cpp_info = self._load_editables_cpp_info()
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
-        # order by levels and separate the root node (conan_ref=None) from the rest
+        # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
@@ -302,7 +302,7 @@ class BinaryInstaller(object):
                     _handle_system_requirements(conan_file, pref, self._cache, output)
                     self._handle_node_cache(node, pref, keep_build, processed_package_refs)
 
-        # Finally, propagate information to root node (conan_ref=None)
+        # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _node_concurrently_installed(self, node, package_folder):

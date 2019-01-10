@@ -10,7 +10,7 @@ from conans.util.files import load
 
 
 def _extract_uploads_from_conan_trace(path):
-    modules = defaultdict(dict)  # dict of {conan_ref: [abs_path1, abs_path2]}
+    modules = defaultdict(dict)
     try:
         with open(path, "r") as traces:
             for line in traces.readlines():
@@ -26,7 +26,7 @@ def _extract_uploads_from_conan_trace(path):
 
 
 def _extract_downloads_from_conan_trace(path):
-    downloaded_modules = defaultdict(dict)  # dict of {conan_ref: {"files": [doc_file, doc_file], "remote": remote }}
+    downloaded_modules = defaultdict(dict)  # dict of {reference: {"files": [], "remote": remote }}
 
     with open(path, "r") as traces:
         for line in traces.readlines():
@@ -97,13 +97,13 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
 def _get_only_downloads_module(downloaded_files):
     """
     Gets a BuildInfoModule for the downloaded_files
-    :param downloaded_files: {conan_ref: {"files": [doc_file, doc_file], "remote": remote }}
+    :param downloaded_files: {reference: {"files": [doc_file, doc_file], "remote": remote }}
     :return: BuildInfoModule object
     """
     ret = BuildInfoModule()
     ret.id = "DownloadOnly"
-    for _, file_docs in downloaded_files.items():
-        files = file_docs["files"]
+    for _, data in downloaded_files.items():
+        files = data["files"]
         for file_doc in files:
             the_type = _get_type(file_doc["path"])
             dep = BuildInfoModuleDependency(file_doc["name"], the_type, file_doc["sha1"],

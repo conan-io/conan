@@ -86,12 +86,12 @@ class SearchService(object):
         def get_ref(_pattern):
             if not isinstance(_pattern, ConanFileReference):
                 try:
-                    ref = ConanFileReference.loads(_pattern)
+                    ref_ = ConanFileReference.loads(_pattern)
                 except (ConanException, TypeError):
-                    ref = None
+                    ref_ = None
             else:
-                ref = _pattern
-            return ref
+                ref_ = _pattern
+            return ref_
 
         # Check directly if it is a reference
         ref = get_ref(pattern)
@@ -125,13 +125,13 @@ class SearchService(object):
             Attributes:
                 pattern = wildcards like opencv/*
         """
-        references = self.search_recipes(pattern, ignorecase)
+        refs = self.search_recipes(pattern, ignorecase)
         filtered = []
         # Filter out restricted items
-        for conan_ref in references:
+        for ref in refs:
             try:
-                self._authorizer.check_read_conan(self._auth_user, conan_ref)
-                filtered.append(conan_ref)
+                self._authorizer.check_read_conan(self._auth_user, ref)
+                filtered.append(ref)
             except ForbiddenException:
                 pass
         return filtered
@@ -285,28 +285,28 @@ def _validate_conan_reg_filenames(files):
             raise RequestErrorException(message)
 
 
-def search_packages(paths, reference, query, v2_compatibility_mode):
+def search_packages(paths, ref, query, v2_compatibility_mode):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param conan_ref: ConanFileReference object
+    param ref: ConanFileReference object
     """
-    if not os.path.exists(paths.conan(reference)):
-        raise NotFoundException("Recipe not found: %s" % str(reference))
-    infos = _get_local_infos_min(paths, reference, v2_compatibility_mode)
+    if not os.path.exists(paths.conan(ref)):
+        raise NotFoundException("Recipe not found: %s" % str(ref))
+    infos = _get_local_infos_min(paths, ref, v2_compatibility_mode)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
+def _get_local_infos_min(paths, ref, v2_compatibility_mode=False):
 
     result = {}
 
-    if not reference.revision and v2_compatibility_mode:
-        recipe_revisions = paths.get_recipe_revisions(reference)
+    if not ref.revision and v2_compatibility_mode:
+        recipe_revisions = paths.get_recipe_revisions(ref)
     else:
-        recipe_revisions = [reference]
+        recipe_revisions = [ref]
 
     for recipe_revision in recipe_revisions:
         packages_path = paths.packages(recipe_revision)
@@ -316,7 +316,7 @@ def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
                 continue
             # Read conaninfo
             try:
-                pref = PackageReference(reference, package_id)
+                pref = PackageReference(ref, package_id)
                 info_path = os.path.join(paths.package(pref, short_paths=None), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
