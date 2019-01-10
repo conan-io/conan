@@ -18,10 +18,10 @@ class RequirementInfo(object):
         """
         ref = PackageReference.loads(value_str)
         self.package = ref
-        self.full_name = ref.conan.name
-        self.full_version = ref.conan.version
-        self.full_user = ref.conan.user
-        self.full_channel = ref.conan.channel
+        self.full_name = ref.ref.name
+        self.full_version = ref.ref.version
+        self.full_user = ref.ref.user
+        self.full_channel = ref.ref.channel
         self.full_package_id = ref.package_id
 
         # sha values
@@ -124,7 +124,7 @@ class RequirementsInfo(object):
 
     def _get_key(self, item):
         for reference in self._data:
-            if reference.conan.name == item:
+            if reference.ref.name == item:
                 return reference
         raise ConanException("No requirement matching for %s" % (item))
 
@@ -137,7 +137,7 @@ class RequirementsInfo(object):
 
     @property
     def pkg_names(self):
-        return [r.conan.name for r in self._data.keys()]
+        return [r.ref.name for r in self._data.keys()]
 
     @property
     def sha(self):

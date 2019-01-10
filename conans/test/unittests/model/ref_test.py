@@ -66,10 +66,10 @@ class RefTest(unittest.TestCase):
 
         p_ref = PackageReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
         self.assertEqual(p_ref.revision, "989")
-        self.assertEqual(p_ref.conan.revision, "23")
+        self.assertEqual(p_ref.ref.revision, "23")
 
         p_ref = PackageReference(ref, "123123123#989")
-        self.assertEqual(p_ref.conan.revision, "34")
+        self.assertEqual(p_ref.ref.revision, "34")
 
     def equal_test(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")

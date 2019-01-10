@@ -42,7 +42,7 @@ class UploadRecorder(object):
                                       "packages": []}
 
     def add_package(self, p_ref, remote_name, remote_url):
-        self._info[str(p_ref.conan)]["packages"].append(_UploadElement(p_ref, remote_name,
+        self._info[str(p_ref.ref)]["packages"].append(_UploadElement(p_ref, remote_name,
                                                                        remote_url))
 
     def get_info(self):

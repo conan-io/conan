@@ -58,7 +58,7 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
     deps = defaultdict(set)  # Reference: [Reference, Reference]
     # Extract needed information
     for module_id, mod_doc in uploaded_files.items():
-        module_id = ConanFileReference.loads(module_id) if mod_doc["type"] == "recipe" \
+        ref_or_pref = ConanFileReference.loads(module_id) if mod_doc["type"] == "recipe" \
             else PackageReference.loads(module_id)
         # Store recipe and package dependencies
         if mod_doc["type"] == "package":
@@ -68,8 +68,8 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
                 conan_info = conan_infos[0]["path"]
                 info = ConanInfo.loads(load(conan_info))
                 for package_reference in info.full_requires:
-                    deps[str(module_id.conan)].add(str(package_reference.conan))
-                    deps[str(module_id)].add(str(package_reference))
+                    deps[str(ref_or_pref.ref)].add(str(package_reference.ref))
+                    deps[str(ref_or_pref)].add(str(package_reference))
 
     # Add the modules
     for module_id, mod_doc in uploaded_files.items():
@@ -84,7 +84,8 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
         for mod_dep_id in deps[module_id]:
             if mod_dep_id in downloaded_files:
                 down_module = downloaded_files[mod_dep_id]
-                # Check if the remote from the uploaded package matches the remote from the downloaded dependency
+                # Check if the remote from the uploaded package matches the remote
+                # from the downloaded dependency
                 if down_module.get("remote", None) == mod_doc["remote"]:
                     for file_doc in down_module["files"]:
                         module.dependencies.append(_get_dependency(file_doc, mod_dep_id))

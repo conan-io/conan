@@ -90,7 +90,7 @@ class ClientCache(SimplePaths):
     def package_lock(self, package_ref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(join(self.conan(package_ref.conan), "locks",
+        return SimpleLock(join(self.conan(package_ref.ref), "locks",
                                package_ref.package_id))
 
     @property
@@ -226,10 +226,10 @@ class ClientCache(SimplePaths):
                 hooks.append(hook_name[:-3])
         return hooks
 
-    def conan_packages(self, conan_reference):
+    def conan_packages(self, ref):
         """ Returns a list of package_id from a local cache package folder """
-        assert isinstance(conan_reference, ConanFileReference)
-        packages_dir = self.packages(conan_reference)
+        assert isinstance(ref, ConanFileReference)
+        packages_dir = self.packages(ref)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
                         if os.path.isdir(join(packages_dir, dirname))]
@@ -237,10 +237,10 @@ class ClientCache(SimplePaths):
             packages = []
         return packages
 
-    def conan_builds(self, conan_reference):
+    def conan_builds(self, ref):
         """ Returns a list of package ids from a local cache build folder """
-        assert isinstance(conan_reference, ConanFileReference)
-        builds_dir = self.builds(conan_reference)
+        assert isinstance(ref, ConanFileReference)
+        builds_dir = self.builds(ref)
         try:
             builds = [dirname for dirname in os.listdir(builds_dir)
                       if os.path.isdir(join(builds_dir, dirname))]
@@ -248,20 +248,20 @@ class ClientCache(SimplePaths):
             builds = []
         return builds
 
-    def load_manifest(self, conan_reference):
+    def load_manifest(self, ref):
         """conan_id = sha(zip file)"""
-        assert isinstance(conan_reference, ConanFileReference)
-        export_folder = self.export(conan_reference)
-        check_ref_case(conan_reference, export_folder, self.store)
+        assert isinstance(ref, ConanFileReference)
+        export_folder = self.export(ref)
+        check_ref_case(ref, export_folder, self.store)
         return FileTreeManifest.load(export_folder)
 
-    def load_package_manifest(self, package_reference):
+    def load_package_manifest(self, pref):
         """conan_id = sha(zip file)"""
-        package_folder = self.package(package_reference, short_paths=None)
+        package_folder = self.package(pref, short_paths=None)
         return FileTreeManifest.load(package_folder)
 
-    def package_manifests(self, package_reference):
-        package_folder = self.package(package_reference, short_paths=None)
+    def package_manifests(self, pref):
+        package_folder = self.package(pref, short_paths=None)
         if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
             return None, None
         return self._digests(package_folder)

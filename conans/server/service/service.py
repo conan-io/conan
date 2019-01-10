@@ -200,10 +200,10 @@ class ConanService(object):
     def remove_package(self, package_reference):
         self._authorizer.check_delete_package(self._auth_user, package_reference)
 
-        if not package_reference.conan.revision:
-            recipe_revisions = self._server_store.get_recipe_revisions(package_reference.conan)
+        if not package_reference.ref.revision:
+            recipe_revisions = self._server_store.get_recipe_revisions(package_reference.ref)
         else:
-            recipe_revisions = [package_reference.conan, ]
+            recipe_revisions = [package_reference.ref, ]
 
         for ref in recipe_revisions:
             if not package_reference.revision:
@@ -256,10 +256,10 @@ class ConanService(object):
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         try:
-            self._server_store.get_recipe_snapshot(package_reference.conan)
+            self._server_store.get_recipe_snapshot(package_reference.ref)
         except NotFoundException:
             raise NotFoundException("There are no remote conanfiles like %s"
-                                    % str(package_reference.conan))
+                                    % str(package_reference.ref))
         self._authorizer.check_write_package(self._auth_user, package_reference)
         urls = self._server_store.get_upload_package_urls(package_reference,
                                                           filesizes, self._auth_user)

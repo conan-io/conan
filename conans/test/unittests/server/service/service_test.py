@@ -144,8 +144,8 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + self.package_reference.conan.dir_repr()
-                    + "/" + self.package_reference.conan.revision
+                    + "/" + self.package_reference.ref.dir_repr()
+                    + "/" + self.package_reference.ref.revision
                     + "/package/" + self.package_reference.package_id
                     + "/" + self.package_reference.revision
                     + "/" + filename)
@@ -182,8 +182,8 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + self.package_reference.conan.dir_repr()
-                    + "/" + self.package_reference.conan.revision
+                    + "/" + self.package_reference.ref.dir_repr()
+                    + "/" + self.package_reference.ref.revision
                     + "/package/" + self.package_reference.package_id
                     + "/" + self.package_reference.revision
                     + "/" + filename)

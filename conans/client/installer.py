@@ -52,7 +52,7 @@ class _ConanPackageBuilder(object):
         self._conan_file = conan_file
         self._out = output
         self._package_reference = package_reference
-        self._conan_ref = self._package_reference.conan
+        self._conan_ref = self._package_reference.ref
         self._skip_build = False  # If build_id()
         self._hook_manager = hook_manager
 
@@ -207,7 +207,7 @@ def _handle_system_requirements(conan_file, package_reference, client_cache, out
     if "system_requirements" not in type(conan_file).__dict__:
         return
 
-    system_reqs_path = client_cache.system_reqs(package_reference.conan)
+    system_reqs_path = client_cache.system_reqs(package_reference.ref)
     system_reqs_package_path = client_cache.system_reqs_package(package_reference)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
         return

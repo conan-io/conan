@@ -110,9 +110,9 @@ class RemoteManager(object):
                        policy=None):
 
         """Will upload the package to the first remote"""
-        conanfile_path = self._client_cache.conanfile(package_reference.conan)
+        conanfile_path = self._client_cache.conanfile(package_reference.ref)
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.conan,
+                                   reference=package_reference.ref,
                                    package_id=package_reference.package_id,
                                    remote=remote)
         t1 = time.time()
@@ -122,7 +122,7 @@ class RemoteManager(object):
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
-                                 % (package_reference, package_reference.conan,
+                                 % (package_reference, package_reference.ref,
                                     package_reference.package_id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
@@ -152,7 +152,7 @@ class RemoteManager(object):
                                                          the_files, retry, retry_wait, policy)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._client_cache.update_metadata(new_pref.conan) as metadata:
+        with self._client_cache.update_metadata(new_pref.ref) as metadata:
             metadata.packages[new_pref.package_id].time = rev_time
 
         duration = time.time() - t1
@@ -163,7 +163,7 @@ class RemoteManager(object):
             self._output.writeln("")
 
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.conan,
+                                   reference=package_reference.ref,
                                    package_id=package_reference.package_id, remote=remote)
         return new_pref
 
@@ -245,9 +245,9 @@ class RemoteManager(object):
 
     def get_package(self, package_reference, dest_folder, remote, output, recorder):
         package_id = package_reference.package_id
-        conanfile_path = self._client_cache.conanfile(package_reference.conan)
+        conanfile_path = self._client_cache.conanfile(package_reference.ref)
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.conan, package_id=package_id,
+                                   reference=package_reference.ref, package_id=package_id,
                                    remote=remote)
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
@@ -256,9 +256,9 @@ class RemoteManager(object):
             zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
                                                                 package_reference, dest_folder)
 
-            with self._client_cache.update_metadata(new_ref.conan) as metadata:
+            with self._client_cache.update_metadata(new_ref.ref) as metadata:
                 metadata.packages[new_ref.package_id].revision = new_ref.revision
-                metadata.packages[new_ref.package_id].recipe_revision = new_ref.conan.revision
+                metadata.packages[new_ref.package_id].recipe_revision = new_ref.ref.revision
                 metadata.packages[new_ref.package_id].time = rev_time
 
             duration = time.time() - t1
@@ -284,7 +284,7 @@ class RemoteManager(object):
                                      "Close any app using it, and retry" % (str(e), dest_folder))
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.conan, package_id=package_id,
+                                   reference=package_reference.ref, package_id=package_id,
                                    remote=remote)
         return new_ref
 
