@@ -349,7 +349,8 @@ class SVN(SCMBase):
         """ Check if it is a valid SVN repo """
         try:
             with chdir(self.folder) if self.folder else no_op():
-                process = subprocess.Popen(['svn', 'info'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen(['svn', 'info'],
+                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 process.communicate()
         except FileNotFoundError:
             raise ConanException("Not a valid SVN repository")
