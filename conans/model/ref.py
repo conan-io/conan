@@ -78,7 +78,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
-    whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
@@ -107,7 +106,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        text = ConanFileReference.whitespace_pattern.sub("", text)
         try:
             # Split returns empty start and end groups
             _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)

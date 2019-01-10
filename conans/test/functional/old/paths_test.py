@@ -32,7 +32,7 @@ class PathsTest(unittest.TestCase):
         folder = temp_folder()
         paths = SimplePaths(folder)
         self.assertEqual(paths._store_folder, folder)
-        conan_ref = ConanFileReference.loads("opencv/2.4.10 @ lasote /testing")
+        conan_ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         package_ref = PackageReference(conan_ref, "456fa678eae68")
         expected_base = os.path.join(folder, os.path.sep.join(["opencv", "2.4.10",
                                                                "lasote", "testing"]))
@@ -84,4 +84,3 @@ class PathShortenerTest(unittest.TestCase):
 
             self.assertEqual(self.home_short in r, short_paths)
             self.assertEqual(self.home in r, not short_paths)
-
