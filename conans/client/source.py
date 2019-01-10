@@ -162,7 +162,7 @@ def _get_sources_from_exports(conanfile, src_folder, export_folder, export_sourc
     # Files from python requires are obtained before the self files
     from conans.client.cmd.export import export_source
     for python_require in conanfile.python_requires:
-        src = cache.export_sources(python_require.conan_ref)
+        src = cache.export_sources(python_require.ref)
         export_source(conanfile, src, src_folder)
 
     # so self exported files have precedence over python_requires ones

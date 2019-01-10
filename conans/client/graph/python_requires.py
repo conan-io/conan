@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.errors import ConanException
 
-PythonRequire = namedtuple("PythonRequire", "conan_ref module conanfile")
+PythonRequire = namedtuple("PythonRequire", "ref module conanfile")
 
 
 class ConanPythonRequire(object):

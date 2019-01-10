@@ -418,10 +418,9 @@ class BinaryInstaller(object):
         # It is necessary to complete the sources of python requires, which might be used
         for python_require in conan_file.python_requires:
             complete_recipe_sources(self._remote_manager, self._cache,
-                                    conan_file, python_require.conan_ref)
+                                    conan_file, python_require.ref)
 
-        builder = _ConanPackageBuilder(conan_file, pref, self._cache, output,
-                                       self._hook_manager)
+        builder = _ConanPackageBuilder(conan_file, pref, self._cache, output, self._hook_manager)
 
         if is_dirty(builder.build_folder):
             output.warn("Build folder is dirty, removing it: %s" % builder.build_folder)
