@@ -67,9 +67,9 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
             if conan_infos:
                 conan_info = conan_infos[0]["path"]
                 info = ConanInfo.loads(load(conan_info))
-                for package_reference in info.full_requires:
-                    deps[str(ref_or_pref.ref)].add(str(package_reference.ref))
-                    deps[str(ref_or_pref)].add(str(package_reference))
+                for pref in info.full_requires:
+                    deps[str(ref_or_pref.ref)].add(str(pref.ref))
+                    deps[str(ref_or_pref)].add(str(pref))
 
     # Add the modules
     for module_id, mod_doc in uploaded_files.items():

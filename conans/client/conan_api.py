@@ -861,17 +861,17 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
-        pref = PackageReference.loads(str(package_reference), validate=True)
+        pref = PackageReference.loads(package_reference, validate=True)
         return self._cache.registry.prefs.set(pref, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_pref(self, package_reference):
-        pref = PackageReference.loads(str(package_reference), validate=True)
+        pref = PackageReference.loads(package_reference, validate=True)
         return self._cache.registry.prefs.remove(pref)
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
-        pref = PackageReference.loads(str(package_reference), validate=True)
+        pref = PackageReference.loads(package_reference, validate=True)
         return self._cache.registry.prefs.update(pref, remote_name)
 
     def remote_clean(self):

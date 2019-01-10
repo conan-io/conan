@@ -155,7 +155,7 @@ class ServerStore(SimplePaths):
 
     def get_upload_package_urls(self, pref, filesizes, user):
         """
-        :param reference: PackageReference
+        :param pref: PackageReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         assert isinstance(pref, PackageReference)

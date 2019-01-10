@@ -250,19 +250,17 @@ class ConanService(object):
                                                             files_subset=files_subset)
         return urls
 
-    def get_package_upload_urls(self, package_reference, filesizes):
+    def get_package_upload_urls(self, pref, filesizes):
         """
-        :param package_reference: PackageReference
+        :param pref: PackageReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         try:
-            self._server_store.get_recipe_snapshot(package_reference.ref)
+            self._server_store.get_recipe_snapshot(pref.ref)
         except NotFoundException:
-            raise NotFoundException("There are no remote conanfiles like %s"
-                                    % str(package_reference.ref))
-        self._authorizer.check_write_package(self._auth_user, package_reference)
-        urls = self._server_store.get_upload_package_urls(package_reference,
-                                                          filesizes, self._auth_user)
+            raise NotFoundException("There are no remote conanfiles like %s" % str(pref.ref))
+        self._authorizer.check_write_package(self._auth_user, pref)
+        urls = self._server_store.get_upload_package_urls(pref, filesizes, self._auth_user)
         return urls
 
 

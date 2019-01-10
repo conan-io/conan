@@ -80,10 +80,10 @@ class RemoteManager(object):
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
-    def _package_integrity_check(self, package_reference, files, package_folder):
+    def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
-        read_manifest, expected_manifest = self._cache.package_manifests(package_reference)
+        read_manifest, expected_manifest = self._cache.package_manifests(pref)
 
         if read_manifest != expected_manifest:
             self._output.writeln("")
@@ -101,13 +101,12 @@ class RemoteManager(object):
             error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                         % (fname, h1, h2) for fname, (h1, h2) in diff.items())
             logger.error("Manifests doesn't match!\n%s" % error_msg)
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
         else:
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def upload_package(self, pref, remote, retry, retry_wait, integrity_check=False,
-                       policy=None):
+    def upload_package(self, pref, remote, retry, retry_wait, integrity_check=False, policy=None):
 
         """Will upload the package to the first remote"""
         conanfile_path = self._cache.conanfile(pref.ref)
