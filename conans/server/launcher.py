@@ -48,7 +48,6 @@ class ServerLauncher(object):
 
         self.server = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
                                   authorizer, authenticator, server_store,
-                                  Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION),
                                   server_capabilities)
         if not self.force_migration:
             print("***********************")

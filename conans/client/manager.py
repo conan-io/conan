@@ -2,6 +2,7 @@ import os
 
 from conans.client.client_cache import ClientCache
 from conans.client.generators import write_generators
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
@@ -14,7 +15,6 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class ConanManager(object):
@@ -52,7 +52,7 @@ class ConanManager(object):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
-        @param remote: install only from that remote
+        @param remote_name: install only from that remote
         @param profile: Profile object with both the -s introduced options and profile read values
         @param build_modes: List of build_modes specified
         @param update: Check for updated in the upstream remotes (and update)

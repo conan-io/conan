@@ -12,6 +12,7 @@ RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_WORKSPACE = "Workspace"
+RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 
@@ -22,6 +23,7 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_WORKSPACE = "Workspace"
+BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
@@ -99,6 +101,10 @@ class Node(object):
         if self.conan_ref.revision is not None and other.conan_ref.revision is None:
             return -1
 
+        if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return 1
+        if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return -1
         if self.conan_ref < other.conan_ref:
             return -1
 
