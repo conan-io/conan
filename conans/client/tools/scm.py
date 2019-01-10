@@ -346,7 +346,13 @@ class SVN(SCMBase):
             raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
 
     def _check_svn_repo(self):
+        """ Check if it is a valid SVN repo """
         try:
-            self.run("info")
-        except Exception:
+            with chdir(self.folder) if self.folder else no_op():
+                process = subprocess.Popen(['svn', 'info'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process.communicate()
+        except FileNotFoundError:
             raise ConanException("Not a valid SVN repository")
+        else:
+            if bool(process.returncode):
+                raise ConanException("Not a valid SVN repository")
