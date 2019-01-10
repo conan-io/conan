@@ -20,10 +20,10 @@ class Retriever(object):
         conanfile = self.loader.load_consumer(conan_path, processed_profile)
         return Node(None, conanfile, "rootpath")
 
-    def conan(self, conan_ref, content):
-        if isinstance(conan_ref, str):
-            conan_ref = ConanFileReference.loads(conan_ref)
-        conan_path = os.path.join(self.folder, conan_ref.dir_repr(), CONANFILE)
+    def conan(self, ref, content):
+        if isinstance(ref, str):
+            ref = ConanFileReference.loads(ref)
+        conan_path = os.path.join(self.folder, ref.dir_repr(), CONANFILE)
         save(conan_path, content)
 
     def get_recipe(self, conan_ref, check_updates, update, remote_name, recorder):  # @UnusedVariable

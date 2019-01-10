@@ -60,8 +60,8 @@ class RestApiClient(object):
     def get_recipe_sources(self, conan_reference, dest_folder):
         return self._get_api().get_recipe_sources(conan_reference, dest_folder)
 
-    def get_package(self, package_reference, dest_folder):
-        return self._get_api().get_package(package_reference, dest_folder)
+    def get_package(self, pref, dest_folder):
+        return self._get_api().get_package(pref, dest_folder)
 
     def get_path(self, conan_reference, package_id, path):
         return self._get_api().get_path(conan_reference, package_id, path)

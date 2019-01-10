@@ -352,35 +352,35 @@ class BinaryInstaller(object):
         else:
             pass  # It will use `package_info()` data relative to path used as 'package_folder'
 
-    def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
+    def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
         conan_file = node.conanfile
         output = conan_file.output
-        package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+        package_folder = self._client_cache.package(pref, conan_file.short_paths)
 
-        with self._client_cache.package_lock(package_ref):
-            if package_ref not in processed_package_references:
-                processed_package_references.add(package_ref)
+        with self._client_cache.package_lock(pref):
+            if pref not in processed_package_references:
+                processed_package_references.add(pref)
                 set_dirty(package_folder)
                 if node.binary == BINARY_BUILD:
-                    self._build_package(node, package_ref, output, keep_build)
+                    self._build_package(node, pref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     if not self._node_concurrently_installed(node, package_folder):
-                        new_ref = self._remote_manager.get_package(package_ref, package_folder,
+                        new_ref = self._remote_manager.get_package(pref, package_folder,
                                                                    node.binary_remote, output,
                                                                    self._recorder)
                         self._registry.prefs.set(new_ref, node.binary_remote.name)
                     else:
                         output.success('Download skipped. Probable concurrent download')
-                        log_package_got_from_local_cache(package_ref)
-                        self._recorder.package_fetched_from_cache(package_ref)
+                        log_package_got_from_local_cache(pref)
+                        self._recorder.package_fetched_from_cache(pref)
                 elif node.binary == BINARY_CACHE:
                     output.success('Already installed!')
-                    log_package_got_from_local_cache(package_ref)
-                    self._recorder.package_fetched_from_cache(package_ref)
+                    log_package_got_from_local_cache(pref)
+                    self._recorder.package_fetched_from_cache(pref)
                 clean_dirty(package_folder)
             # Call the info method
             self._call_package_info(conan_file, package_folder)
-            self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
+            self._recorder.package_cpp_info(pref, conan_file.cpp_info)
 
     def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph,
                                graph_info):

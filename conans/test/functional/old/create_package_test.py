@@ -44,8 +44,8 @@ class ExporterTest(unittest.TestCase):
         client.init_dynamic_vars()
         files = hello_source_files()
 
-        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.client_cache.export(conan_ref)
+        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        reg_folder = client.client_cache.export(ref)
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
@@ -71,7 +71,7 @@ class ExporterTest(unittest.TestCase):
                      "modules/opencv_mod.hpp":                     "copy"}, path=reg_folder)
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
-        package_ref = PackageReference(conan_ref, "myfakeid")
+        package_ref = PackageReference(ref, "myfakeid")
         build_folder = client.client_cache.build(package_ref)
         package_folder = client.client_cache.package(package_ref)
         install_folder = os.path.join(build_folder, "infos")
@@ -82,7 +82,7 @@ class ExporterTest(unittest.TestCase):
         conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       client.hook_manager, conanfile_path, conan_ref, copy_info=True)
+                       client.hook_manager, conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

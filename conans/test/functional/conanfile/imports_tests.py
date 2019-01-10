@@ -53,9 +53,9 @@ class TestConan(ConanFile):
         client.run("create . Pkg/0.1@user/testing --build=missing")
         self.assertIn("Pkg/0.1@user/testing package(): Copied 1 '.md' file: LICENSE.md",
                       client.out)
-        pkg_ref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
-                                   "e6f2dac07251ad9958120a7f7c324366fb3b6f2a")
-        pkg_folder = client.client_cache.package(pkg_ref)
+        pref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
+                                "e6f2dac07251ad9958120a7f7c324366fb3b6f2a")
+        pkg_folder = client.client_cache.package(pref)
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))

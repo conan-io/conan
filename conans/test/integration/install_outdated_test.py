@@ -30,7 +30,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # Then we can export a modified recipe and try to install without --build outdated
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = files["conanfile.py"] + "\n#Otherline"
+        files["conanfile.py"] += "\n#Otherline"
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable")
@@ -73,7 +73,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # Then modify REMOTE Hello0 recipe files (WITH THE OTHER CLIENT)
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = files["conanfile.py"] + "\n#MODIFIED RECIPE"
+        files["conanfile.py"] += "\n#MODIFIED RECIPE"
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", self.client.user_io.out)
@@ -113,7 +113,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # Then modify REMOTE Hello0 recipe files (WITH THE OTHER CLIENT)
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = files["conanfile.py"] + "\n#MODIFIED RECIPE"
+        files["conanfile.py"] += "\n#MODIFIED RECIPE"
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", self.client.user_io.out)

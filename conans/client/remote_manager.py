@@ -35,50 +35,50 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
-    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest):
-        conanfile_path = self._client_cache.conanfile(conan_reference)
+    def upload_recipe(self, ref, remote, retry, retry_wait, policy, remote_manifest):
+        conanfile_path = self._client_cache.conanfile(ref)
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=conan_reference, remote=remote)
+                                   reference=ref, remote=remote)
 
         t1 = time.time()
-        export_folder = self._client_cache.export(conan_reference)
+        export_folder = self._client_cache.export(ref)
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
             if is_dirty(tgz_path):
-                self._output.warn("%s: Removing %s, marked as dirty" % (str(conan_reference), f))
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
-            raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        export_src_folder = self._client_cache.export_sources(conan_reference, short_paths=None)
+            raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
+        export_src_folder = self._client_cache.export_sources(ref, short_paths=None)
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
 
         if policy == UPLOAD_POLICY_SKIP:
-            return conan_reference
+            return ref
 
-        ret, rev_time = self._call_remote(remote, "upload_recipe", conan_reference,
+        ret, rev_time = self._call_remote(remote, "upload_recipe", ref,
                                           the_files, retry, retry_wait, policy, remote_manifest)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._client_cache.update_metadata(conan_reference) as metadata:
+        with self._client_cache.update_metadata(ref) as metadata:
             metadata.recipe.time = rev_time
 
         duration = time.time() - t1
-        log_recipe_upload(conan_reference, duration, the_files, remote.name)
+        log_recipe_upload(ref, duration, the_files, remote.name)
         if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
             url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
             msg += ": %s" % url
         else:
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=conan_reference, remote=remote)
+                                   reference=ref, remote=remote)
 
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
@@ -106,28 +106,28 @@ class RemoteManager(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def upload_package(self, package_reference, remote, retry, retry_wait, integrity_check=False,
+    def upload_package(self, pref, remote, retry, retry_wait, integrity_check=False,
                        policy=None):
 
         """Will upload the package to the first remote"""
-        conanfile_path = self._client_cache.conanfile(package_reference.ref)
+        conanfile_path = self._client_cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.ref,
-                                   package_id=package_reference.package_id,
+                                   reference=pref.ref,
+                                   package_id=pref.package_id,
                                    remote=remote)
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        package_folder = self._client_cache.package(pref, short_paths=None)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
-                                 % (package_reference, package_reference.ref,
-                                    package_reference.package_id))
+                                 % (pref, pref.ref,
+                                    pref.package_id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
             self._output.warn("%s: Removing %s, marked as dirty"
-                              % (str(package_reference), PACKAGE_TGZ_NAME))
+                              % (str(pref), PACKAGE_TGZ_NAME))
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
@@ -135,12 +135,12 @@ class RemoteManager(object):
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
         logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         if integrity_check:
-            self._package_integrity_check(package_reference, files, package_folder)
+            self._package_integrity_check(pref, files, package_folder)
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
@@ -148,7 +148,7 @@ class RemoteManager(object):
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        uploaded, new_pref, rev_time = self._call_remote(remote, "upload_package", package_reference,
+        uploaded, new_pref, rev_time = self._call_remote(remote, "upload_package", pref,
                                                          the_files, retry, retry_wait, policy)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
@@ -156,15 +156,15 @@ class RemoteManager(object):
             metadata.packages[new_pref.package_id].time = rev_time
 
         duration = time.time() - t1
-        log_package_upload(package_reference, duration, the_files, remote)
+        log_package_upload(pref, duration, the_files, remote)
         logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
         if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")
 
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.ref,
-                                   package_id=package_reference.package_id, remote=remote)
+                                   reference=pref.ref,
+                                   package_id=pref.package_id, remote=remote)
         return new_pref
 
     def get_conan_manifest(self, conan_reference, remote):
@@ -243,18 +243,18 @@ class RemoteManager(object):
         touch_folder(export_sources_folder)
         return conan_reference
 
-    def get_package(self, package_reference, dest_folder, remote, output, recorder):
-        package_id = package_reference.package_id
-        conanfile_path = self._client_cache.conanfile(package_reference.ref)
+    def get_package(self, pref, dest_folder, remote, output, recorder):
+        package_id = pref.package_id
+        conanfile_path = self._client_cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.ref, package_id=package_id,
+                                   reference=pref.ref, package_id=package_id,
                                    remote=remote)
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
             zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
-                                                                package_reference, dest_folder)
+                                                                pref, dest_folder)
 
             with self._client_cache.update_metadata(new_ref.ref) as metadata:
                 metadata.packages[new_ref.package_id].revision = new_ref.revision
@@ -262,19 +262,19 @@ class RemoteManager(object):
                 metadata.packages[new_ref.package_id].time = rev_time
 
             duration = time.time() - t1
-            log_package_download(package_reference, duration, remote, zipped_files)
+            log_package_download(pref, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(dest_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(dest_folder)
-            recorder.package_downloaded(package_reference, remote.url)
+            recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % package_id)
         except NotFoundException:
-            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference,
+            raise NotFoundException("Package binary '%s' not found in '%s'" % (pref,
                                                                                remote.name))
         except BaseException as e:
-            output.error("Exception while getting package: %s" % str(package_reference.package_id))
+            output.error("Exception while getting package: %s" % str(pref.package_id))
             output.error("Exception: %s %s" % (type(e), str(e)))
             try:
                 output.warn("Trying to remove package folder: %s" % dest_folder)
@@ -284,7 +284,7 @@ class RemoteManager(object):
                                      "Close any app using it, and retry" % (str(e), dest_folder))
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=package_reference.ref, package_id=package_id,
+                                   reference=pref.ref, package_id=package_id,
                                    remote=remote)
         return new_ref
 

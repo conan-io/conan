@@ -27,7 +27,7 @@ class ConanFileTest(ConanFile):
     exports = "*"
 """
         self.files = {CONANFILE: conanfile, "data.txt": "MyData"}
-        self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        self.ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable")
 
@@ -71,13 +71,13 @@ class ConsumerFileTest(ConanFile):
                       self.client.user_io.out)
 
         paths = SimplePaths(output_folder)
-        self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), CONAN_MANIFEST)))
         # now verify
         self.client.run("create . lasote/stable --verify%s" % dest)
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
-        self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
+        self.assertIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
 
     def _capture_verify_manifest(self, reference, remote="local cache", folder=""):
         self.client.run("install %s --build missing --manifests %s" % (str(reference), folder))
@@ -90,20 +90,19 @@ class ConsumerFileTest(ConanFile):
         real_folder = folder or ".conan_manifests"
         output_folder = os.path.join(self.client.current_folder, real_folder)
         paths = SimplePaths(output_folder)
-        self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:%s" % 
-                                                   NO_SETTINGS_PACKAGE_ID)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), CONAN_MANIFEST)))
 
         # again should do nothing
         self.client.run("install %s --build missing --manifests %s"
-                        % (str(self.reference), folder))
+                        % (str(self.ref), folder))
         self.assertNotIn("Installed manifest", self.client.user_io.out)
 
         # now verify
-        self.client.run("install %s --build missing --verify %s" % (str(self.reference), folder))
+        self.client.run("install %s --build missing --verify %s" % (str(self.ref), folder))
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
-        self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
+        self.assertIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
 
     def capture_verify_manifest_test(self):
         self._capture_verify_manifest("Hello/0.1@lasote/stable")
@@ -138,10 +137,9 @@ class ConanFileTest(ConanFile):
         self.client.run("install . --build missing --manifests %s" % folder)
 
         remote = "local cache"
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:%s" % 
-                                                   NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
-        self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
+        self.assertIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
         self.assertIn("Installed manifest for 'Hello2/0.1@lasote/stable' from %s" % remote,
                       self.client.user_io.out)
         self.assertIn("Installed manifest for 'Hello2/0.1@lasote/stable:%s' from %s" % 
@@ -149,11 +147,11 @@ class ConanFileTest(ConanFile):
 
         output_folder = os.path.join(self.client.current_folder, folder)
         paths = SimplePaths(output_folder)
-        self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
-        self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), CONAN_MANIFEST)))
 
     def remote_capture_verify_manifest_test(self):
-        self.client.run("upload %s --all" % str(self.reference))
+        self.client.run("upload %s --all" % str(self.ref))
         self.client.run("remove Hello* -f")
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
@@ -168,7 +166,7 @@ class ConanFileTest(ConanFile):
 
         output_folder = os.path.join(self.client.current_folder, ".conan_manifests")
         paths = SimplePaths(output_folder)
-        self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
 
         package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
                                                    "%s" % NO_SETTINGS_PACKAGE_ID)
@@ -185,12 +183,12 @@ class ConanFileTest(ConanFile):
         # Export and upload the conanfile
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s --all" % str(self.reference))
+        client.run("upload %s --all" % str(self.ref))
 
         # now verify, with update
         self.client.run("remove Hello/0.1@lasote/stable -f")
         self.client.run("install %s --build missing --verify"
-                        % str(self.reference),
+                        % str(self.ref),
                         assert_error=True)
         self.assertNotIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
         self.assertNotIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
@@ -215,36 +213,35 @@ class ConanFileTest(ConanFile):
 
         output_folder = os.path.join(self.client.current_folder, ".conan_manifests")
         paths = SimplePaths(output_folder)
-        self.assertTrue(os.path.exists(os.path.join(paths.export(self.reference), CONAN_MANIFEST)))
+        self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
 
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                                   "%s" % NO_SETTINGS_PACKAGE_ID)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
+        pref = PackageReference.loads("Hello/0.1@lasote/stable: %s" % NO_SETTINGS_PACKAGE_ID)
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), CONAN_MANIFEST)))
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build=missing")
-        info = os.path.join(client.client_cache.package(package_reference), "conaninfo.txt")
+        info = os.path.join(client.client_cache.package(pref), "conaninfo.txt")
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        package_folder = client.client_cache.package(package_reference)
+        package_folder = client.client_cache.package(pref)
         manifest = FileTreeManifest.load(package_folder)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         manifest.save(package_folder)
 
-        client.run("upload %s --all" % str(self.reference))
+        client.run("upload %s --all" % str(self.ref))
 
         # now verify, with update
         self.client.run("remove Hello/0.1@lasote/stable -f")
         self.client.run("install %s --build missing --verify"
-                        % str(self.reference),
+                        % str(self.ref),
                         assert_error=True)
         self.assertNotIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
-        self.assertNotIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
-        self.assertIn("Modified or new manifest '%s' detected" % str(package_reference),
+        self.assertNotIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
+        self.assertIn("Modified or new manifest '%s' detected" % str(pref),
                       self.client.user_io.out)
 
     def capture_verify_package_error_manifest_test(self):
@@ -271,24 +268,23 @@ class ConanFileTest(ConanFile):
         self.assertIn("ERROR: Do not specify both", self.client.user_io.out)
 
     def test_corrupted_recipe(self):
-        export_path = self.client.client_cache.export(self.reference)
+        export_path = self.client.client_cache.export(self.ref)
         file_path = os.path.join(export_path, "data.txt")
         save(file_path, "BAD CONTENT")
 
-        self.client.run("install %s --build missing --manifests" % str(self.reference),
+        self.client.run("install %s --build missing --manifests" % str(self.ref),
                         assert_error=True)
         self.assertIn("Hello/0.1@lasote/stable local cache package is corrupted",
                       self.client.user_io.out)
 
     def test_corrupted_package(self):
-        self.client.run("install %s --build missing" % str(self.reference))
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                                   "%s" % NO_SETTINGS_PACKAGE_ID)
-        package_path = self.client.client_cache.package(package_reference)
+        self.client.run("install %s --build missing" % str(self.ref))
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        package_path = self.client.client_cache.package(pref)
         file_path = os.path.join(package_path, "conaninfo.txt")
         save(file_path, load(file_path) + "  ")
 
-        self.client.run("install %s --build missing --manifests" % str(self.reference),
+        self.client.run("install %s --build missing --manifests" % str(self.ref),
                         assert_error=True)
-        self.assertIn("%s local cache package is corrupted" % str(package_reference),
+        self.assertIn("%s local cache package is corrupted" % str(pref),
                       self.client.user_io.out)

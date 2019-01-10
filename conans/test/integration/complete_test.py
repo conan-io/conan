@@ -19,7 +19,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
         self.client.run("create . lasote/stable")
@@ -27,21 +27,21 @@ class CompleteFlowTest(unittest.TestCase):
                       self.client.out)
 
         # Upload package
-        self.client.run("upload %s --all" % str(conan_reference))
+        self.client.run("upload %s --all" % str(ref))
         self.assertIn("Compressing package", str(self.client.out))
 
         # Not needed to tgz again
-        self.client.run("upload %s --all" % str(conan_reference))
+        self.client.run("upload %s --all" % str(ref))
         self.assertNotIn("Compressing package", str(self.client.out))
 
         # Now from other "computer" install the uploaded packages with same options
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_conan.run("install %s" % str(conan_reference))
+        other_conan.run("install %s" % str(ref))
 
         # Now install it but with other options
-        other_conan.run('install %s -o language=1 --build missing' % (str(conan_reference)))
+        other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.client_cache.conan_packages(conan_reference)
+        package_ids = other_conan.client_cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 2)
 
     def reuse_test(self):
@@ -49,65 +49,65 @@ class CompleteFlowTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
         self.client.run("create . lasote/stable")
         self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' file: helloHello0.h",
                       self.client.out)
         # Check compilation ok
-        package_ids = self.client.client_cache.conan_packages(conan_reference)
+        package_ids = self.client.client_cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 1)
-        package_ref = PackageReference(conan_reference, package_ids[0])
-        self._assert_library_exists(package_ref, self.client.client_cache)
+        pref = PackageReference(ref, package_ids[0])
+        self._assert_library_exists(pref, self.client.client_cache)
 
         # Upload package
-        self.client.run("upload %s" % str(conan_reference))
+        self.client.run("upload %s" % str(ref))
         self.assertIn("Compressing recipe", str(self.client.user_io.out))
 
         # Not needed to tgz again
-        self.client.run("upload %s" % str(conan_reference))
+        self.client.run("upload %s" % str(ref))
         self.assertNotIn("Compressing exported", str(self.client.user_io.out))
 
         # Check that recipe exists on server
         server_paths = self.servers["default"].server_store
-        conan_path = server_paths.export(conan_reference)
+        conan_path = server_paths.export(ref)
         self.assertTrue(os.path.exists(conan_path))
 
         # Upload package
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertIn("Compressing package", str(self.client.user_io.out))
 
         # Not needed to tgz again
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # If we install the package again will be removed and re tgz
-        self.client.run("install %s" % str(conan_reference))
+        self.client.run("install %s" % str(ref))
         # Upload package
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # Check library on server
-        self._assert_library_exists_in_server(package_ref, server_paths)
+        self._assert_library_exists_in_server(pref, server_paths)
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_conan.run("install %s" % str(conan_reference))
+        other_conan.run("install %s" % str(ref))
         # Build should be empty
-        build_path = other_conan.client_cache.build(package_ref)
+        build_path = other_conan.client_cache.build(pref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_library_exists(package_ref, other_conan.client_cache)
+        self._assert_library_exists(pref, other_conan.client_cache)
 
         # Now install it but with other options
-        other_conan.run('install %s -o language=1 --build missing' % (str(conan_reference)))
+        other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.client_cache.conan_packages(conan_reference)
+        package_ids = other_conan.client_cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 2)
         for package_id in package_ids:
-            ref = PackageReference(conan_reference, package_id)
-            self._assert_library_exists(ref, other_conan.client_cache)
+            pref = PackageReference(ref, package_id)
+            self._assert_library_exists(pref, other_conan.client_cache)
 
         client3 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
@@ -128,8 +128,8 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hola Hello1", client3.user_io.out)
         self.assertIn("Hola Hello0", client3.user_io.out)
 
-    def _assert_library_exists(self, package_ref, paths):
-        package_path = paths.package(package_ref)
+    def _assert_library_exists(self, pref, paths):
+        package_path = paths.package(pref)
         self.assertTrue(os.path.exists(os.path.join(package_path, "lib")))
         self._assert_library_files(package_path)
 

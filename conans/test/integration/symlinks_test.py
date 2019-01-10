@@ -123,17 +123,17 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
-        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
-        package_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
-        team_package_ref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        team_pref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
 
-        for folder in [client.client_cache.export(conan_ref),
-                       client.client_cache.source(conan_ref),
-                       client.client_cache.build(package_ref),
-                       client.client_cache.package(package_ref),
+        for folder in [client.client_cache.export(ref),
+                       client.client_cache.source(ref),
+                       client.client_cache.build(pref),
+                       client.client_cache.package(pref),
                        client.client_cache.export(team_ref),
-                       client.client_cache.package(team_package_ref)]:
+                       client.client_cache.package(team_pref)]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)
@@ -141,7 +141,7 @@ class TestConan(ConanFile):
             self.assertEqual(load(exported_lib), load(exported_link))
             self.assertTrue(os.path.islink(exported_link))
 
-        self._check(client, package_ref)
+        self._check(client, pref)
 
     def upload_test(self):
         test_server = TestServer()

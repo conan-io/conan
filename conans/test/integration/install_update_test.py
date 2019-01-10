@@ -280,7 +280,7 @@ class ConanLib(ConanFile):
         self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
-        conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
-        pkg_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
-        header = os.path.join(client.client_cache.package(pkg_ref), "header.h")
+        ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        header = os.path.join(client.client_cache.package(pref), "header.h")
         self.assertEqual(load(header), "mycontent2")

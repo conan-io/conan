@@ -56,17 +56,17 @@ from conans.util.log import logger
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
-def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
-    conan_ref = ConanFileReference.loads(str(conan_ref))
-    path = client_cache.export(conan_ref)
+def inc_recipe_manifest_timestamp(client_cache, reference, inc_time):
+    ref = ConanFileReference.loads(str(reference))
+    path = client_cache.export(ref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
 
 
 def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
-    pkg_ref = PackageReference.loads(str(package_ref))
-    path = client_cache.package(pkg_ref)
+    pref = PackageReference.loads(str(package_ref))
+    path = client_cache.package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)

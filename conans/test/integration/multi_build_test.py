@@ -12,16 +12,16 @@ from conans.test.utils.tools import TestClient
 class CollectLibsTest(unittest.TestCase):
 
     def collect_libs_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", collect_libs=True)
         client = TestClient()
         client.save(files)
         client.run("export . lasote/stable")
 
-        client.run("install %s --build missing" % str(conan_reference))
+        client.run("install %s --build missing" % str(ref))
 
         # Check compilation ok
-        package_ids = client.client_cache.conan_packages(conan_reference)
+        package_ids = client.client_cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 1)
 
         # Reuse them

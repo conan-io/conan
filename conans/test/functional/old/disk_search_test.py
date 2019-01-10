@@ -20,8 +20,8 @@ class SearchTest(unittest.TestCase):
 
     def basic_test2(self):
         with chdir(self.client_cache.store):
-            conan_ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
-            root_folder = str(conan_ref1).replace("@", "/")
+            ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+            root_folder = str(ref1).replace("@", "/")
             artifacts = ["a", "b", "c"]
             reg1 = "%s/%s" % (root_folder, EXPORT_FOLDER)
             os.makedirs(reg1)
@@ -32,7 +32,7 @@ class SearchTest(unittest.TestCase):
                 info = ConanInfo().loads("[settings]\n[options]")
                 save(os.path.join(artif1, CONANINFO), info.dumps())
 
-            packages = search_packages(self.client_cache, conan_ref1, "")
+            packages = search_packages(self.client_cache, ref1, "")
             all_artif = [_artif for _artif in sorted(packages)]
             self.assertEqual(all_artif, artifacts)
 
@@ -51,32 +51,33 @@ class SearchTest(unittest.TestCase):
     def case_insensitive_test(self):
         with chdir(self.client_cache.store):
             root_folder2 = "sdl/1.5/lasote/stable"
-            conan_ref2 = ConanFileReference.loads("sdl/1.5@lasote/stable")
+            ref2 = ConanFileReference.loads("sdl/1.5@lasote/stable")
             os.makedirs("%s/%s" % (root_folder2, EXPORT_FOLDER))
 
             root_folder3 = "assimp/0.14/phil/testing"
-            conan_ref3 = ConanFileReference.loads("assimp/0.14@phil/testing")
+            ref3 = ConanFileReference.loads("assimp/0.14@phil/testing")
             os.makedirs("%s/%s" % (root_folder3, EXPORT_FOLDER))
 
             root_folder4 = "sdl/2.10/lasote/stable"
-            conan_ref4 = ConanFileReference.loads("sdl/2.10@lasote/stable")
+            ref4 = ConanFileReference.loads("sdl/2.10@lasote/stable")
             os.makedirs("%s/%s" % (root_folder4, EXPORT_FOLDER))
 
             root_folder5 = "SDL_fake/1.10/lasote/testing"
-            conan_ref5 = ConanFileReference.loads("SDL_fake/1.10@lasote/testing")
+            ref5 = ConanFileReference.loads("SDL_fake/1.10@lasote/testing")
             os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
             # Case insensitive searches
 
             reg_conans = sorted([str(_reg) for _reg in search_recipes(self.client_cache, "*")])
-            self.assertEqual(reg_conans, [str(conan_ref5),
-                                          str(conan_ref3),
-                                          str(conan_ref2),
-                                          str(conan_ref4)])
+            self.assertEqual(reg_conans, [str(ref5),
+                                          str(ref3),
+                                          str(ref2),
+                                          str(ref4)])
 
-            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.client_cache, pattern="sdl*")])
-            self.assertEqual(reg_conans, [str(conan_ref5), str(conan_ref2), str(conan_ref4)])
+            reg_conans = sorted([str(_reg) for _reg in search_recipes(self.client_cache,
+                                                                      pattern="sdl*")])
+            self.assertEqual(reg_conans, [str(ref5), str(ref2), str(ref4)])
 
             # Case sensitive search
             self.assertEqual(str(search_recipes(self.client_cache, pattern="SDL*",
                                                 ignorecase=False)[0]),
-                             str(conan_ref5))
+                             str(ref5))

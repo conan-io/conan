@@ -210,12 +210,12 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
         return urls
 
-    def get_package(self, package_reference, dest_folder):
-        urls = self._get_package_urls(package_reference)
+    def get_package(self, pref, dest_folder):
+        urls = self._get_package_urls(pref)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         rev_time = None
-        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        ret_ref = pref.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
         return zipped_files, ret_ref, rev_time
 
     def _get_package_urls(self, package_reference):

@@ -136,17 +136,17 @@ class MyTest(ConanFile):
 
             node_matches = node_regex.findall(line)
 
-            parent = node_matches[0]
-            deps = [ConanFileReference.loads(references) for references in node_matches[1:]]
+            parent_reference = node_matches[0]
+            deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
-            if parent == "conanfile.py (Hello0/0.1@None/None)":
-                parent = ConanFileReference("Hello0", None, None, None, validate=False)
+            if parent_reference == "conanfile.py (Hello0/0.1@None/None)":
+                parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
-                parent = ConanFileReference.loads(parent)
-                check_conan_ref(parent)
-            for dep in deps:
+                parent_ref = ConanFileReference.loads(parent_reference)
+                check_conan_ref(parent_ref)
+            for dep in deps_ref:
                 check_conan_ref(dep)
-                self.assertIn(dep.name, test_deps[parent.name])
+                self.assertIn(dep.name, test_deps[parent_ref.name])
 
         def check_file(dot_file):
             with open(dot_file) as dot_file_contents:

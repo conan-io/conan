@@ -17,7 +17,7 @@ class SynchronizeTest(unittest.TestCase):
     def upload_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
                                                    DEFAULT_REVISION_V1)
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["to_be_deleted.txt"] = "delete me"
@@ -29,13 +29,13 @@ class SynchronizeTest(unittest.TestCase):
         client.run("export . lasote/stable")
 
         # Upload conan file
-        client.run("upload %s" % str(conan_reference))
+        client.run("upload %s" % str(ref))
 
         # Verify the files are there
         if not client.block_v2:
-            rev = client.get_revision(conan_reference)
-            conan_reference = conan_reference.copy_with_rev(rev)
-        server_conan_path = remote_paths.export(conan_reference)
+            rev = client.get_revision(ref)
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -45,11 +45,11 @@ class SynchronizeTest(unittest.TestCase):
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(conan_reference))
+        client.run("upload %s" % str(ref))
         if not client.block_v2:
-            rev = client.get_revision(conan_reference)
-            conan_reference = conan_reference.copy_with_rev(rev)
-        server_conan_path = remote_paths.export(conan_reference)
+            rev = client.get_revision(ref)
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -62,12 +62,12 @@ class SynchronizeTest(unittest.TestCase):
         del files["to_be_deleted.txt"]
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(conan_reference))
+        client.run("upload %s" % str(ref))
 
         if not client.block_v2:
-            rev = client.get_revision(conan_reference)
-            conan_reference = conan_reference.copy_with_rev(rev)
-        server_conan_path = remote_paths.export(conan_reference)
+            rev = client.get_revision(ref)
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
 
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -81,13 +81,13 @@ class SynchronizeTest(unittest.TestCase):
         # Now try with the package
         ##########################
 
-        client.run("install %s --build missing" % str(conan_reference))
+        client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.client_cache.conan_packages(conan_reference)
-        client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        package_ids = client.client_cache.conan_packages(ref)
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server
-        package_reference = PackageReference(conan_reference, str(package_ids[0]))
+        package_reference = PackageReference(ref, str(package_ids[0]))
         package_server_path = remote_paths.package(package_reference)
         self.assertTrue(os.path.exists(package_server_path))
 
@@ -98,7 +98,7 @@ class SynchronizeTest(unittest.TestCase):
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
 
         self._create_manifest(client, package_reference)
-        client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         folder = uncompress_packaged_files(remote_paths, package_reference)
         remote_file_path = os.path.join(folder, "newlib.lib")
@@ -107,7 +107,7 @@ class SynchronizeTest(unittest.TestCase):
         # Now modify the file and check again
         save(new_file_source_path, "othercontent")
         self._create_manifest(client, package_reference)
-        client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         folder = uncompress_packaged_files(remote_paths, package_reference)
         remote_file_path = os.path.join(folder, "newlib.lib")
         self.assertTrue(os.path.exists(remote_file_path))
@@ -117,7 +117,7 @@ class SynchronizeTest(unittest.TestCase):
         os.remove(new_file_source_path)
         self._create_manifest(client, package_reference)
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
-        client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         folder = uncompress_packaged_files(remote_paths, package_reference)
         remote_file_path = os.path.join(folder, "newlib.lib")
 

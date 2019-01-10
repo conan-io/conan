@@ -39,12 +39,12 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
                          remote=remote)
 
 
-def _download_binaries(conanfile, reference, package_ids, client_cache, remote_manager, remote,
+def _download_binaries(conanfile, ref, package_ids, client_cache, remote_manager, remote,
                        output, recorder):
     short_paths = conanfile.short_paths
 
     for package_id in package_ids:
-        package_ref = PackageReference(reference, package_id)
-        package_folder = client_cache.package(package_ref, short_paths=short_paths)
-        output.info("Downloading %s" % str(package_ref))
-        remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
+        pref = PackageReference(ref, package_id)
+        package_folder = client_cache.package(pref, short_paths=short_paths)
+        output.info("Downloading %s" % str(pref))
+        remote_manager.get_package(pref, package_folder, remote, output, recorder)

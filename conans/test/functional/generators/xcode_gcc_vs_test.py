@@ -13,7 +13,7 @@ from conans.util.files import load
 class VSXCodeGeneratorsTest(unittest.TestCase):
 
     def generators_test(self):
-        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
 import os
@@ -75,8 +75,8 @@ xcode
         lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
         libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
 
-        package_id = os.listdir(client.client_cache.packages(conan_ref))[0]
-        package_ref = PackageReference(conan_ref, package_id)
+        package_id = os.listdir(client.client_cache.packages(ref))[0]
+        package_ref = PackageReference(ref, package_id)
         package_path = client.client_cache.package(package_ref).replace("\\", "/")
 
         replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),

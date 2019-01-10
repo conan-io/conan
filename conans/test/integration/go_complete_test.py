@@ -87,7 +87,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def reuse_test(self):
-        conan_reference = ConanFileReference.loads("stringutil/0.1@lasote/stable")
+        ref = ConanFileReference.loads("stringutil/0.1@lasote/stable")
         files = {'conanfile.py': stringutil_conanfile,
                  'reverse.go': reverse,
                  'reverse_test.go': reverse_test,
@@ -96,35 +96,35 @@ class GoCompleteTest(unittest.TestCase):
         files_without_conanfile = set(files.keys()) - set(["conanfile.py"])
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(conan_reference))
+        self.client.run("install %s --build missing" % str(ref))
         # Check compilation ok
-        package_ids = self.client.client_cache.conan_packages(conan_reference)
+        package_ids = self.client.client_cache.conan_packages(ref)
         self.assertEquals(len(package_ids), 1)
-        package_ref = PackageReference(conan_reference, package_ids[0])
-        self._assert_package_exists(package_ref, self.client.client_cache, files_without_conanfile)
+        pref = PackageReference(ref, package_ids[0])
+        self._assert_package_exists(pref, self.client.client_cache, files_without_conanfile)
 
         # Upload conans
-        self.client.run("upload %s" % str(conan_reference))
+        self.client.run("upload %s" % str(ref))
 
         # Check that conans exists on server
         server_paths = self.servers["default"].server_store
-        conan_path = server_paths.export(conan_reference)
+        conan_path = server_paths.export(ref)
         self.assertTrue(os.path.exists(conan_path))
 
         # Upload package
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check library on server
-        self._assert_package_exists_in_server(package_ref, server_paths, files_without_conanfile)
+        self._assert_package_exists_in_server(pref, server_paths, files_without_conanfile)
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_conan.run("install %s --build missing" % str(conan_reference))
+        other_conan.run("install %s --build missing" % str(ref))
         # Build should be empty
-        build_path = other_conan.client_cache.build(package_ref)
+        build_path = other_conan.client_cache.build(pref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_package_exists(package_ref, other_conan.client_cache, files_without_conanfile)
+        self._assert_package_exists(pref, other_conan.client_cache, files_without_conanfile)
 
         reuse_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,
