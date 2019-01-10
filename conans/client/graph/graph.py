@@ -27,8 +27,8 @@ BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, conan_ref, conanfile, recipe=None):
-        self.conan_ref = conan_ref
+    def __init__(self, ref, conanfile, recipe=None):
+        self.conan_ref = ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -184,7 +184,7 @@ class DepsGraph(object):
                     indirect_reqs.update(nconan.info.requires.refs())
                     conanfile.options.propagate_downstream(ref, nconan.info.full_options)
                     # Might be never used, but update original requirement, just in case
-                    conanfile.requires[ref.name].conan_reference = ref
+                    conanfile.requires[ref.name].ref = ref
 
                 # Make sure not duplicated
                 indirect_reqs.difference_update(direct_reqs)

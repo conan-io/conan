@@ -126,7 +126,7 @@ class MyTest(ConanFile):
             export = False if name == "Hello0" else True
             self._create(name, "0.1", expanded_deps, export=export)
 
-        def check_conan_ref(ref):
+        def check_ref(ref):
             self.assertEqual(ref.version, "0.1")
             self.assertEqual(ref.user, "lasote")
             self.assertEqual(ref.channel, "stable")
@@ -143,9 +143,9 @@ class MyTest(ConanFile):
                 parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
                 parent_ref = ConanFileReference.loads(parent_reference)
-                check_conan_ref(parent_ref)
+                check_ref(parent_ref)
             for dep in deps_ref:
-                check_conan_ref(dep)
+                check_ref(dep)
                 self.assertIn(dep.name, test_deps[parent_ref.name])
 
         def check_file(dot_file):

@@ -20,7 +20,7 @@ class GoDiamondTest(unittest.TestCase):
 
     def _export_upload(self, ref_str, number=0, deps=None):
         ref = ConanFileReference.loads(ref_str)
-        files = hello_conan_files(conan_reference=ref, number=number, deps=deps,
+        files = hello_conan_files(ref=ref, number=number, deps=deps,
                                   lang='go')
         self.conan.save(files, clean_first=True)
         self.conan.run("export . lasote/stable")
@@ -34,7 +34,7 @@ class GoDiamondTest(unittest.TestCase):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("hello4/0.2@lasote/stable")
-        files3 = hello_conan_files(conan_reference=ref, number=4, deps=[3], lang='go')
+        files3 = hello_conan_files(ref=ref, number=4, deps=[3], lang='go')
         client.save(files3)
         client.run("install . --build missing")
         client.run("build .")
@@ -65,7 +65,7 @@ class GoDiamondTest(unittest.TestCase):
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("hello4/0.2@lasote/stable")
 
-        files3 = hello_conan_files(conan_reference=ref, number=4, deps=[3], lang='go')
+        files3 = hello_conan_files(ref=ref, number=4, deps=[3], lang='go')
         client2.save(files3)
 
         client2.run("install . --build missing")

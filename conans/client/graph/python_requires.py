@@ -33,7 +33,7 @@ class ConanPythonRequire(object):
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
-            ref = requirement.conan_reference
+            ref = requirement.ref
             result = self._proxy.get_recipe(ref, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result

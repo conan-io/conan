@@ -95,14 +95,14 @@ def _get_edges(graph):
 
 
 class MockRequireResolver(object):
-    def resolve(self, rquire, conanref, update, remote_name):  # @UnusedVariable
+    def resolve(self, require, ref, update, remote_name):  # @UnusedVariable
         return
 
 
-def _clear_revs(reqs):
-    for req in reqs.values():
-        req.conan_reference = req.conan_reference.copy_clear_rev()
-    return reqs
+def _clear_revs(requires):
+    for require in requires.values():
+        require.ref = require.ref.copy_clear_rev()
+    return requires
 
 
 class ConanRequirementsTest(unittest.TestCase):

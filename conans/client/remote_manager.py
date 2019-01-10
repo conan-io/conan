@@ -167,71 +167,70 @@ class RemoteManager(object):
                                    package_id=pref.package_id, remote=remote)
         return new_pref
 
-    def get_conan_manifest(self, conan_reference, remote):
+    def get_conan_manifest(self, ref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        return self._call_remote(remote, "get_conan_manifest", conan_reference)
+        return self._call_remote(remote, "get_conan_manifest", ref)
 
-    def get_package_manifest(self, package_reference, remote):
+    def get_package_manifest(self, pref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        return self._call_remote(remote, "get_package_manifest", package_reference)
+        return self._call_remote(remote, "get_package_manifest", pref)
 
-    def get_package_info(self, package_reference, remote):
+    def get_package_info(self, pref, remote):
         """
         Read a package ConanInfo from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanInfo, remote_name)"""
-        return self._call_remote(remote, "get_package_info", package_reference)
+        return self._call_remote(remote, "get_package_info", pref)
 
-    def get_recipe(self, conan_reference, remote):
+    def get_recipe(self, ref, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        self._hook_manager.execute("pre_download_recipe", reference=conan_reference, remote=remote)
-        dest_folder = self._cache.export(conan_reference)
+        self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
+        dest_folder = self._cache.export(ref)
         rmdir(dest_folder)
 
         t1 = time.time()
-        tmp = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
-        zipped_files, conan_reference, rev_time = tmp
+        tmp = self._call_remote(remote, "get_recipe", ref, dest_folder)
+        zipped_files, ref, rev_time = tmp
         duration = time.time() - t1
-        log_recipe_download(conan_reference, duration, remote.name, zipped_files)
+        log_recipe_download(ref, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
-        rm_conandir(self._cache.source(conan_reference))
+        rm_conandir(self._cache.source(ref))
         touch_folder(dest_folder)
-        conanfile_path = self._cache.conanfile(conan_reference)
+        conanfile_path = self._cache.conanfile(ref)
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                   reference=conan_reference, remote=remote)
+                                   reference=ref, remote=remote)
 
-        with self._cache.update_metadata(conan_reference) as metadata:
-            metadata.recipe.revision = conan_reference.revision
+        with self._cache.update_metadata(ref) as metadata:
+            metadata.recipe.revision = ref.revision
             metadata.recipe.time = rev_time
 
-        return conan_reference
+        return ref
 
-    def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
+    def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
-                                         export_folder)
+        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
-            return conan_reference
+            return ref
 
         duration = time.time() - t1
-        log_recipe_sources_download(conan_reference, duration, remote.name, zipped_files)
+        log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
                             output=self._output)
@@ -241,7 +240,7 @@ class RemoteManager(object):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
-        return conan_reference
+        return ref
 
     def get_package(self, pref, dest_folder, remote, output, recorder):
         package_id = pref.package_id
@@ -295,25 +294,25 @@ class RemoteManager(object):
         returns (dict str(conan_ref): {packages_info}"""
         return self._call_remote(remote, "search", pattern, ignorecase)
 
-    def search_packages(self, remote, reference, query):
-        packages = self._call_remote(remote, "search_packages", reference, query)
+    def search_packages(self, remote, ref, query):
+        packages = self._call_remote(remote, "search_packages", ref, query)
         packages = filter_packages(query, packages)
         return packages
 
-    def remove(self, conan_ref, remote):
+    def remove(self, ref, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove", conan_ref)
+        return self._call_remote(remote, "remove", ref)
 
-    def remove_packages(self, conan_ref, remove_ids, remote):
+    def remove_packages(self, ref, remove_ids, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove_packages", conan_ref, remove_ids)
+        return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
-    def get_path(self, conan_ref, package_id, path, remote):
-        return self._call_remote(remote, "get_path", conan_ref, package_id, path)
+    def get_path(self, ref, package_id, path, remote):
+        return self._call_remote(remote, "get_path", ref, package_id, path)
 
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)

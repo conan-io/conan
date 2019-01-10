@@ -15,10 +15,10 @@ from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput, test_processed_profile
 
 
-def _clear_revs(reqs):
-    for req in reqs.values():
-        req.conan_reference = req.conan_reference.copy_clear_rev()
-    return reqs
+def _clear_revs(requires):
+    for require in requires.values():
+        require.ref = require.ref.copy_clear_rev()
+    return requires
 
 
 class BasicMaxVersionTest(unittest.TestCase):

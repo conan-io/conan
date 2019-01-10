@@ -231,7 +231,7 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies, out, recorder):
+def raise_package_not_found_error(conan_file, ref, package_id, dependencies, out, recorder):
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
@@ -241,14 +241,13 @@ def raise_package_not_found_error(conan_file, conan_ref, package_id, dependencie
 - Options: %s
 - Dependencies: %s
 - Package ID: %s
-''' % (conan_ref, settings_text, options_text, dependencies_text, package_id)
+''' % (ref, settings_text, options_text, dependencies_text, package_id)
     out.warn(msg)
-    recorder.package_install_error(PackageReference(conan_ref, package_id),
-                                   INSTALL_ERROR_MISSING, msg)
+    recorder.package_install_error(PackageReference(ref, package_id), INSTALL_ERROR_MISSING, msg)
     raise ConanException('''Missing prebuilt package for '%s'
 Try to build it from sources with "--build %s"
 Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (conan_ref, conan_ref.name))
+''' % (ref, ref.name))
 
 
 class BinaryInstaller(object):
@@ -279,12 +278,12 @@ class BinaryInstaller(object):
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
-                conan_ref, conan_file = node.conan_ref, node.conanfile
+                ref, conan_file = node.conan_ref, node.conanfile
                 output = conan_file.output
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
-                    raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
+                    raise_package_not_found_error(conan_file, ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
                 if node.binary == BINARY_EDITABLE:
@@ -299,7 +298,7 @@ class BinaryInstaller(object):
                     self._propagate_info(node, inverse_levels, deps_graph)
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
-                    pref = PackageReference(conan_ref, package_id)
+                    pref = PackageReference(ref, package_id)
                     _handle_system_requirements(conan_file, pref, self._cache, output)
                     self._handle_node_cache(node, pref, keep_build, processed_package_refs)
 
@@ -413,7 +412,7 @@ class BinaryInstaller(object):
         report_copied_files(copied_files, output)
 
     def _build_package(self, node, pref, output, keep_build):
-        conan_ref, conan_file = node.conan_ref, node.conanfile
+        ref, conan_file = node.conan_ref, node.conanfile
 
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
@@ -439,13 +438,13 @@ class BinaryInstaller(object):
                                                      msg, remote_name=None)
                 raise ConanException(msg)
         else:
-            with self._cache.conanfile_write_lock(conan_ref):
+            with self._cache.conanfile_write_lock(ref):
                 set_dirty(builder.build_folder)
                 complete_recipe_sources(self._remote_manager, self._cache,
-                                        conan_file, conan_ref)
+                                        conan_file, ref)
                 builder.prepare_build()
 
-        with self._cache.conanfile_read_lock(conan_ref):
+        with self._cache.conanfile_read_lock(ref):
             try:
                 if not skip_build:
                     builder.build()

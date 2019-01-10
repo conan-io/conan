@@ -62,10 +62,10 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_node(self, node, build_mode, update, evaluated_references, remote_name):
         assert node.binary is None
 
-        conan_ref, conanfile = node.conan_ref, node.conanfile
+        ref, conanfile = node.conan_ref, node.conanfile
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
-        pref = PackageReference(conan_ref, package_id)
+        pref = PackageReference(ref, package_id)
         # Check that this same reference hasn't already been checked
         previous_node = evaluated_references.get(pref)
         if previous_node:
@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_EDITABLE
             return
 
-        if build_mode.forced(conanfile, conan_ref):
+        if build_mode.forced(conanfile, ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
             return
@@ -89,7 +89,7 @@ class GraphBinariesAnalyzer(object):
                                              short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
-        local_project = self._workspace[conan_ref] if self._workspace else None
+        local_project = self._workspace[ref] if self._workspace else None
         if local_project:
             node.binary = BINARY_WORKSPACE
             return
@@ -106,7 +106,7 @@ class GraphBinariesAnalyzer(object):
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            remote = self._registry.prefs.get(pref) or self._registry.refs.get(conan_ref)
+            remote = self._registry.prefs.get(pref) or self._registry.refs.get(ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):
@@ -146,7 +146,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_DOWNLOAD
                 package_hash = remote_info.recipe_hash
             else:
-                if build_mode.allowed(conanfile, conan_ref):
+                if build_mode.allowed(conanfile, ref):
                     node.binary = BINARY_BUILD
                 else:
                     node.binary = BINARY_MISSING

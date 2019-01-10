@@ -101,17 +101,17 @@ class GraphManager(object):
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
-        def _inject_require(conanfile, reference):
+        def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
             before running the install
             """
-            require = conanfile.requires.get(reference.name)
+            require = conanfile.requires.get(ref.name)
             if require:
-                require.conan_reference = require.range_reference = reference
+                require.ref = require.range_ref = ref
             else:
-                conanfile.requires(str(reference))
-            conanfile._conan_user = reference.user
-            conanfile._conan_channel = reference.channel
+                conanfile.requires(str(ref))
+            conanfile._conan_user = ref.user
+            conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
         profile = graph_info.profile

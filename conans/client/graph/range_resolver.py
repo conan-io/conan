@@ -102,9 +102,9 @@ class RangeResolver(object):
             return
 
         if require.is_resolved:
-            ref = require.conan_reference
-            resolved = self._resolve_version(version_range, [ref])
-            if not resolved:
+            ref = require.ref
+            resolved_ref = self._resolve_version(version_range, [ref])
+            if not resolved_ref:
                 raise ConanException("Version range '%s' required by '%s' not valid for "
                                      "downstream requirement '%s'"
                                      % (version_range, base_conanref, str(ref)))
@@ -114,21 +114,21 @@ class RangeResolver(object):
                                     % (version_range, base_conanref, str(ref)))
             return
 
-        ref = require.conan_reference
+        ref = require.ref
         # The search pattern must be a string
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
 
         if update:
-            resolved = (self._resolve_remote(search_ref, version_range, remote_name) or
+            resolved_ref = (self._resolve_remote(search_ref, version_range, remote_name) or
                         self._resolve_local(search_ref, version_range))
         else:
-            resolved = (self._resolve_local(search_ref, version_range) or
+            resolved_ref = (self._resolve_local(search_ref, version_range) or
                         self._resolve_remote(search_ref, version_range, remote_name))
 
-        if resolved:
+        if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s'"
-                                % (version_range, base_conanref, str(resolved)))
-            require.conan_reference = resolved
+                                % (version_range, base_conanref, str(resolved_ref)))
+            require.ref = resolved_ref
         else:
             raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
                                  "could not be resolved" % (version_range, require, base_conanref))

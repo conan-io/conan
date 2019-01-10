@@ -73,27 +73,26 @@ class ClientCache(SimplePaths):
             self._no_lock = self.conan_config.cache_no_locks
         return self._no_lock
 
-    def conanfile_read_lock(self, conan_ref):
+    def conanfile_read_lock(self, ref):
         if self._no_locks():
             return NoLock()
-        return ReadLock(self.conan(conan_ref), conan_ref, self._output)
+        return ReadLock(self.conan(ref), ref, self._output)
 
-    def conanfile_write_lock(self, conan_ref):
+    def conanfile_write_lock(self, ref):
         if self._no_locks():
             return NoLock()
-        return WriteLock(self.conan(conan_ref), conan_ref, self._output)
+        return WriteLock(self.conan(ref), ref, self._output)
 
-    def conanfile_lock_files(self, conan_ref):
+    def conanfile_lock_files(self, ref):
         # Used in ConanRemover
         if self._no_locks():
             return ()
-        return WriteLock(self.conan(conan_ref), conan_ref, self._output).files
+        return WriteLock(self.conan(ref), ref, self._output).files
 
-    def package_lock(self, package_ref):
+    def package_lock(self, pref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(join(self.conan(package_ref.ref), "locks",
-                               package_ref.package_id))
+        return SimpleLock(join(self.conan(pref.ref), "locks", pref.package_id))
 
     @property
     def put_headers_path(self):
@@ -301,32 +300,32 @@ class ClientCache(SimplePaths):
         self._no_lock = None
 
     # Metadata
-    def load_metadata(self, conan_reference):
+    def load_metadata(self, ref):
         try:
-            text = load(self.package_metadata(conan_reference))
+            text = load(self.package_metadata(ref))
             return PackageMetadata.loads(text)
         except IOError:
             return PackageMetadata()
 
     @contextmanager
-    def update_metadata(self, conan_reference):
-        metadata = self.load_metadata(conan_reference)
+    def update_metadata(self, ref):
+        metadata = self.load_metadata(ref)
         yield metadata
-        save(self.package_metadata(conan_reference), metadata.dumps())
+        save(self.package_metadata(ref), metadata.dumps())
 
     # Revisions
-    def package_summary_hash(self, package_ref):
-        package_folder = self.package(package_ref, short_paths=None)
+    def package_summary_hash(self, pref):
+        package_folder = self.package(pref, short_paths=None)
         readed_digest = FileTreeManifest.load(package_folder)
         return readed_digest.summary_hash
 
-    def install_as_editable(self, conan_reference, target_path):
-        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+    def install_as_editable(self, ref, target_path):
+        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
         save(linked_folder_sentinel, content=target_path)
 
-    def remove_editable(self, conan_reference):
-        if self.installed_as_editable(conan_reference):
-            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+    def remove_editable(self, ref):
+        if self.installed_as_editable(ref):
+            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
             os.remove(linked_folder_sentinel)
             return True
         return False

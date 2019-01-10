@@ -70,7 +70,7 @@ def go_hello_source_files(number=0, deps=None):
     return ret
 
 
-def go_hello_conan_files(conan_reference, number=0, deps=None):
+def go_hello_conan_files(ref, number=0, deps=None):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -86,9 +86,9 @@ def go_hello_conan_files(conan_reference, number=0, deps=None):
     for d in deps or []:
         requires.append('"hello%d/0.1@lasote/stable"' % d)
     requires = ", ".join(requires)
-    conanfile = conanfile_template.format(name=conan_reference.name,
-                                      version=conan_reference.version,
-                                      requires=requires)
+    conanfile = conanfile_template.format(name=ref.name,
+                                          version=ref.version,
+                                          requires=requires)
     base_files[CONANFILE] = conanfile
 
     return base_files

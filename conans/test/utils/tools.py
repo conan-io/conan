@@ -637,8 +637,8 @@ servers["r2"] = TestServer()
         if not files:
             mkdir(self.current_folder)
 
-    def get_revision(self, conan_ref):
-        return self.cache.load_metadata(conan_ref).recipe.revision
+    def get_revision(self, ref):
+        return self.cache.load_metadata(ref).recipe.revision
 
     def get_package_revision(self, package_ref):
         metadata = self.cache.load_metadata(package_ref.ref)

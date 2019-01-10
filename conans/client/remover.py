@@ -12,55 +12,53 @@ class DiskRemover(object):
     def __init__(self, paths):
         self._paths = paths
 
-    def _remove(self, path, conan_ref, msg=""):
+    def _remove(self, path, ref, msg=""):
         try:
             logger.debug("REMOVE: folder %s" % path)
             rm_conandir(path)
         except OSError:
             error_msg = "Folder busy (open or some file open): %s" % path
-            raise ConanException("%s: Unable to remove %s\n\t%s"
-                                 % (repr(conan_ref), msg, error_msg))
+            raise ConanException("%s: Unable to remove %s\n\t%s" % (repr(ref), msg, error_msg))
 
-    def _remove_file(self, path, conan_ref, msg=""):
+    def _remove_file(self, path, ref, msg=""):
         try:
             logger.debug("REMOVE: file %s" % path)
             if os.path.exists(path):
                 os.remove(path)
         except OSError:
             error_msg = "File busy (open): %s" % path
-            raise ConanException("Unable to remove %s %s\n\t%s"
-                                 % (repr(conan_ref), msg, error_msg))
+            raise ConanException("Unable to remove %s %s\n\t%s" % (repr(ref), msg, error_msg))
 
-    def remove_recipe(self, conan_ref):
-        self.remove_src(conan_ref)
-        self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
-        self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
-        for f in self._paths.conanfile_lock_files(conan_ref):
+    def remove_recipe(self, ref):
+        self.remove_src(ref)
+        self._remove(self._paths.export(ref), ref, "export folder")
+        self._remove(self._paths.export_sources(ref), ref, "export_source folder")
+        for f in self._paths.conanfile_lock_files(ref):
             try:
                 os.remove(f)
             except OSError:
                 pass
 
-    def remove(self, conan_ref):
-        self.remove_recipe(conan_ref)
-        self.remove_builds(conan_ref)
-        self.remove_packages(conan_ref)
-        self._remove(self._paths.conan(conan_ref), conan_ref)
+    def remove(self, ref):
+        self.remove_recipe(ref)
+        self.remove_builds(ref)
+        self.remove_packages(ref)
+        self._remove(self._paths.conan(ref), ref)
 
-    def remove_src(self, conan_ref):
-        self._remove(self._paths.source(conan_ref), conan_ref, "src folder")
+    def remove_src(self, ref):
+        self._remove(self._paths.source(ref), ref, "src folder")
 
-    def remove_builds(self, conan_ref, ids=None):
+    def remove_builds(self, ref, ids=None):
         if not ids:
-            path = self._paths.builds(conan_ref)
-            for build in self._paths.conan_builds(conan_ref):
-                self._remove(os.path.join(path, build), conan_ref, "build folder:%s" % build)
-            self._remove(path, conan_ref, "builds")
+            path = self._paths.builds(ref)
+            for build in self._paths.conan_builds(ref):
+                self._remove(os.path.join(path, build), ref, "build folder:%s" % build)
+            self._remove(path, ref, "builds")
         else:
             for id_ in ids:
                 # Removal build IDs should be those of the build_id if present
-                pkg_path = self._paths.build(PackageReference(conan_ref, id_))
-                self._remove(pkg_path, conan_ref, "package:%s" % id_)
+                pkg_path = self._paths.build(PackageReference(ref, id_))
+                self._remove(pkg_path, ref, "package:%s" % id_)
 
     def remove_packages(self, ref, ids_filter=None):
         if not ids_filter:  # Remove all
@@ -89,39 +87,39 @@ class ConanRemover(object):
         self._remote_manager = remote_manager
         self._registry = cache.registry
 
-    def _remote_remove(self, reference, package_ids, remote):
+    def _remote_remove(self, ref, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            result = self._remote_manager.remove(reference, remote)
+            result = self._remote_manager.remove(ref, remote)
             return result
         else:
-            tmp = self._remote_manager.remove_packages(reference, package_ids, remote)
+            tmp = self._remote_manager.remove_packages(ref, package_ids, remote)
             return tmp
 
-    def _local_remove(self, reference, src, build_ids, package_ids):
-        if self._cache.installed_as_editable(reference):
+    def _local_remove(self, ref, src, build_ids, package_ids):
+        if self._cache.installed_as_editable(ref):
             raise ConanException("Package '{r}' is installed as editable, unlink it first using "
-                                 "command 'conan link {r} --remove'".format(r=reference))
+                                 "command 'conan link {r} --remove'".format(r=ref))
 
         # Make sure to clean the locks too
-        self._cache.remove_package_locks(reference)
+        self._cache.remove_package_locks(ref)
         remover = DiskRemover(self._cache)
         if src:
-            remover.remove_src(reference)
+            remover.remove_src(ref)
         if build_ids is not None:
-            remover.remove_builds(reference, build_ids)
+            remover.remove_builds(ref, build_ids)
         if package_ids is not None:
-            remover.remove_packages(reference, package_ids)
+            remover.remove_packages(ref, package_ids)
             for pid in package_ids:
-                pref = PackageReference(reference, pid)
+                pref = PackageReference(ref, pid)
                 self._registry.prefs.remove(pref)
         if not src and build_ids is None and package_ids is None:
-            remover.remove(reference)
-            self._registry.refs.remove(reference, quiet=True)
-            self._registry.prefs.remove_all(reference)
+            remover.remove(ref)
+            self._registry.refs.remove(ref, quiet=True)
+            self._registry.prefs.remove_all(ref)
 
-    def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None, force=False,
-               packages_query=None, outdated=False):
+    def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
+               force=False, packages_query=None, outdated=False):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
         @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
@@ -179,7 +177,7 @@ class ConanRemover(object):
         if not remote_name:
             self._cache.delete_empty_dirs(deleted_refs)
 
-    def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):
+    def _ask_permission(self, ref, src, build_ids, package_ids_filter, force):
         def stringlist(alist):
             return ", ".join(['"%s"' % p for p in alist])
 
@@ -199,4 +197,4 @@ class ConanRemover(object):
             else:  # All packages to remove, no filter
                 aux_str.append(" all packages")
         return self._user_io.request_boolean("Are you sure you want to delete%s from '%s'"
-                                             % (", ".join(aux_str), str(conan_ref)))
+                                             % (", ".join(aux_str), str(ref)))

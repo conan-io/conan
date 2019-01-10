@@ -62,21 +62,21 @@ class RestV2Methods(RestCommonMethods):
         ref = ConanFileReference.loads(reference)
         return snap, ref, rev_time
 
-    def _get_package_snapshot(self, p_ref):
-        url = self.conans_router.package_snapshot(p_ref)
-        repr_ref = p_ref.full_repr()
-        snap, p_reference, rev_time = self._get_snapshot(url, repr_ref)
+    def _get_package_snapshot(self, pref):
+        url = self.conans_router.package_snapshot(pref)
+        pref_str = pref.full_repr()
+        snap, package_reference, rev_time = self._get_snapshot(url, pref_str)
 
-        pref = PackageReference.loads(p_reference)
+        pref = PackageReference.loads(package_reference)
         return snap, pref, rev_time
 
-    def get_conan_manifest(self, conan_reference):
-        url = self.conans_router.recipe_manifest(conan_reference)
+    def get_conan_manifest(self, ref):
+        url = self.conans_router.recipe_manifest(ref)
         content = self._get_remote_file_contents(url)
         return FileTreeManifest.loads(decode_text(content))
 
-    def get_package_manifest(self, package_reference):
-        url = self.conans_router.package_manifest(package_reference)
+    def get_package_manifest(self, pref):
+        url = self.conans_router.package_manifest(pref)
         content = self._get_remote_file_contents(url)
         return FileTreeManifest.loads(decode_text(content))
 
