@@ -937,7 +937,8 @@ class ConanAPIV1(object):
     def get_recipe_revisions(self, ref, remote_name=None):
         ref = ConanFileReference.loads(ref.full_repr())
         if not remote_name:
-            return None
+            metadata = self._client_cache.load_metadata(ref)
+            print(metadata)
         else:
             remote = self.get_remote_by_name(remote_name)
             if ref.revision:

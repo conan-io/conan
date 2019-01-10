@@ -1111,7 +1111,12 @@ class Test(ConanFile):
 
         # ALSO LOCAL SEARCH
 
-        # Search not found
+    def local_search(self):
+        pass
+
+    def search_not_found(self):
+        # Search not found for both package and recipe
+        pass
 
     def search_revision_fail_if_v1_server(self):
         self.assertTrue(False)
