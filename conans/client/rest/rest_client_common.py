@@ -258,7 +258,7 @@ class RestCommonMethods(object):
         """
         url = self.search_router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(ref) for ref in response]
+        return [ConanFileReference.loads(reference) for reference in response]
 
     def search_packages(self, reference, query):
 

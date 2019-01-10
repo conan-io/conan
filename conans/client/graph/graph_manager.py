@@ -116,25 +116,25 @@ class GraphManager(object):
         # Computing the full dependency graph
         profile = graph_info.profile
         processed_profile = ProcessedProfile(profile, create_reference)
-        conan_ref = None
+        ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         else:
             if reference.endswith(".py"):
                 test = str(create_reference) if create_reference else None
                 conanfile = self._loader.load_consumer(reference, processed_profile, test=test)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
-                conan_ref = ConanFileReference(conanfile.name, conanfile.version, None, None,
-                                               validate=False)
+                ref = ConanFileReference(conanfile.name, conanfile.version, None, None,
+                                         validate=False)
             else:
                 conanfile = self._loader.load_conanfile_txt(reference, processed_profile)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,

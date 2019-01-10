@@ -30,8 +30,8 @@ class ConanManager(object):
         self._hook_manager = hook_manager
 
     def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
-        references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
+        refs = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
+        deps_graph, _ = self._graph_manager.load_graph(refs, None, graph_info, build_modes,
                                                        False, update, remote_name, self._recorder,
                                                        workspace)
 
@@ -45,12 +45,12 @@ class ConanManager(object):
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
         workspace.generate()
 
-    def install(self, reference, install_folder, graph_info, remote_name=None, build_modes=None,
+    def install(self, ref_or_path, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
                 keep_build=False):
         """ Fetch and build all dependencies for the given reference
-        @param reference: ConanFileReference or path to user space conanfile
+        @param ref_or_path: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
         @param remote: install only from that remote
         @param profile: Profile object with both the -s introduced options and profile read values
@@ -71,13 +71,13 @@ class ConanManager(object):
 
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(graph_info.profile.dumps())
-        result = self._graph_manager.load_graph(reference, create_reference, graph_info,
+        result = self._graph_manager.load_graph(ref_or_path, create_reference, graph_info,
                                                 build_modes, False, update, remote_name,
                                                 self._recorder, None)
         deps_graph, conanfile = result
 
         if conanfile.display_name == "virtual":
-            self._user_io.out.highlight("Installing package: %s" % str(reference))
+            self._user_io.out.highlight("Installing package: %s" % str(ref_or_path))
         else:
             conanfile.output.highlight("Installing package")
         print_graph(deps_graph, self._user_io.out)
@@ -116,7 +116,7 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            if not isinstance(reference, ConanFileReference):
+            if not isinstance(ref_or_path, ConanFileReference):
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)
@@ -127,7 +127,7 @@ class ConanManager(object):
                 run_imports(conanfile, install_folder)
             call_system_requirements(conanfile, conanfile.output)
 
-            if not create_reference and isinstance(reference, ConanFileReference):
+            if not create_reference and isinstance(ref_or_path, ConanFileReference):
                 # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile

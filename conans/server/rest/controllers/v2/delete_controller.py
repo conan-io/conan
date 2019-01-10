@@ -20,9 +20,9 @@ class DeleteControllerV2(Controller):
             Will remove all revisions, packages and package revisions (parent folder) if no revision
             is passed
             """
-            conan_reference = ConanFileReference(name, version, username, channel, revision)
+            ref = ConanFileReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_conanfile(conan_reference)
+            conan_service.remove_conanfile(ref)
 
         @app.route(r.package, method="DELETE")
         @app.route(r.package_recipe_revision, method=["DELETE"])
@@ -37,16 +37,16 @@ class DeleteControllerV2(Controller):
                   ALL the package revisions for the specified "package_id" for all the recipe
                   revisions (SAME AS V1)
              """
-            package_reference = get_package_ref(name, version, username, channel, package_id,
-                                                revision, p_revision)
+            pref = get_package_ref(name, version, username, channel, package_id,
+                                   revision, p_revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_package(package_reference)
+            conan_service.remove_package(pref)
 
         @app.route(r.packages, method="DELETE")
         @app.route(r.packages_revision, method="DELETE")
         def remove_all_packages(name, version, username, channel, auth_user, revision=None):
             """ Remove a file from a recipe. The revision is mandatory, because it comes from
             the upload and the revision is mandatory in v2"""
-            conan_reference = ConanFileReference(name, version, username, channel, revision)
+            ref = ConanFileReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_all_packages(conan_reference)
+            conan_service.remove_all_packages(ref)

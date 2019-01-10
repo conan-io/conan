@@ -278,11 +278,11 @@ class RestV1Methods(RestCommonMethods):
             snapshot = []
         return snapshot
 
-    def _get_recipe_snapshot(self, reference):
-        url = self.conans_router.recipe_snapshot(reference)
+    def _get_recipe_snapshot(self, ref):
+        url = self.conans_router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         rev_time = None
-        return snap, reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
+        return snap, ref.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
     def _get_package_snapshot(self, package_reference):
         url = self.conans_router.package_snapshot(package_reference)

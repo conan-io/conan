@@ -132,28 +132,28 @@ class ConanRemover(object):
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
-            references = self._remote_manager.search_recipes(remote, pattern)
+            refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            references = search_recipes(self._client_cache, pattern)
-        if not references:
+            refs = search_recipes(self._client_cache, pattern)
+        if not refs:
             self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
 
         deleted_refs = []
-        for reference in references:
-            assert isinstance(reference, ConanFileReference)
+        for ref in refs:
+            assert isinstance(ref, ConanFileReference)
             package_ids = package_ids_filter
             if packages_query or outdated:
                 # search packages
                 if remote_name:
-                    packages = self._remote_manager.search_packages(remote, reference, packages_query)
+                    packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
-                    packages = search_packages(self._client_cache, reference, packages_query)
+                    packages = search_packages(self._client_cache, ref, packages_query)
                 if outdated:
                     if remote_name:
-                        recipe_hash = self._remote_manager.get_conan_manifest(reference, remote).summary_hash
+                        recipe_hash = self._remote_manager.get_conan_manifest(ref, remote).summary_hash
                     else:
-                        recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+                        recipe_hash = self._client_cache.load_manifest(ref).summary_hash
                     packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
@@ -161,16 +161,16 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % reference.full_repr())
+                                           % ref.full_repr())
                     continue
 
-            if self._ask_permission(reference, src, build_ids, package_ids, force):
-                deleted_refs.append(reference)
+            if self._ask_permission(ref, src, build_ids, package_ids, force):
+                deleted_refs.append(ref)
                 if remote_name:
-                    self._remote_remove(reference, package_ids, remote)
+                    self._remote_remove(ref, package_ids, remote)
                 else:
-                    deleted_refs.append(reference)
-                    self._local_remove(reference, src, build_ids, package_ids)
+                    deleted_refs.append(ref)
+                    self._local_remove(ref, src, build_ids, package_ids)
 
         if not remote_name:
             self._client_cache.delete_empty_dirs(deleted_refs)

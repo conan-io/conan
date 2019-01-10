@@ -59,8 +59,8 @@ class RestV2Methods(RestCommonMethods):
         url = self.conans_router.recipe_snapshot(reference)
         repr_ref = reference.full_repr()
         snap, reference, rev_time = self._get_snapshot(url, repr_ref)
-        reference = ConanFileReference.loads(reference)
-        return snap, reference, rev_time
+        ref = ConanFileReference.loads(reference)
+        return snap, ref, rev_time
 
     def _get_package_snapshot(self, p_ref):
         url = self.conans_router.package_snapshot(p_ref)
@@ -85,8 +85,8 @@ class RestV2Methods(RestCommonMethods):
         content = self._get_remote_file_contents(url)
         return ConanInfo.loads(decode_text(content))
 
-    def get_recipe(self, conan_reference, dest_folder):
-        url = self.conans_router.recipe_snapshot(conan_reference)
+    def get_recipe(self, ref, dest_folder):
+        url = self.conans_router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
         rev_time = data["time"]
@@ -96,13 +96,13 @@ class RestV2Methods(RestCommonMethods):
             files.remove(EXPORT_SOURCES_TGZ_NAME)
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.conans_router.recipe_file(conan_reference, fn) for fn in files}
+        urls = {fn: self.conans_router.recipe_file(ref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret, new_ref, rev_time
 
-    def get_recipe_sources(self, conan_reference, dest_folder):
-        url = self.conans_router.recipe_snapshot(conan_reference)
+    def get_recipe_sources(self, ref, dest_folder):
+        url = self.conans_router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
@@ -117,8 +117,8 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_package(self, package_reference, dest_folder):
-        url = self.conans_router.package_snapshot(package_reference)
+    def get_package(self, pref, dest_folder):
+        url = self.conans_router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
         rev_time = data["time"]
@@ -131,21 +131,21 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret, new_reference, rev_time
 
-    def get_path(self, conan_reference, package_id, path):
+    def get_path(self, ref, package_id, path):
 
         if not package_id:
-            url = self.conans_router.recipe_snapshot(conan_reference)
+            url = self.conans_router.recipe_snapshot(ref)
         else:
-            package_ref = PackageReference(conan_reference, package_id)
-            url = self.conans_router.package_snapshot(package_ref)
+            pref = PackageReference(ref, package_id)
+            url = self.conans_router.package_snapshot(pref)
 
         try:
             files = self._get_file_list_json(url)
         except NotFoundException:
             if package_id:
-                raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
+                raise NotFoundException("Package %s:%s not found" % (ref, package_id))
             else:
-                raise NotFoundException("Recipe %s not found" % str(conan_reference))
+                raise NotFoundException("Recipe %s not found" % str(ref))
 
         def is_dir(the_path):
             if the_path == ".":
@@ -167,21 +167,21 @@ class RestV2Methods(RestCommonMethods):
             return sorted(ret)
         else:
             if not package_id:
-                url = self.conans_router.recipe_file(conan_reference, path)
+                url = self.conans_router.recipe_file(ref, path)
             else:
-                package_ref = PackageReference(conan_reference, package_id)
-                url = self.conans_router.package_file(package_ref, path)
+                pref = PackageReference(ref, package_id)
+                url = self.conans_router.package_file(pref, path)
 
             content = self._get_remote_file_contents(url)
             return decode_text(content)
 
-    def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
+    def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        urls = {fn: self.conans_router.recipe_file(conan_reference, fn) for fn in files_to_upload}
+        urls = {fn: self.conans_router.recipe_file(ref, fn) for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, retry, retry_wait)
 
-    def _upload_package(self, package_reference, files_to_upload, retry, retry_wait):
-        urls = {fn: self.conans_router.package_file(package_reference, fn)
+    def _upload_package(self, pref, files_to_upload, retry, retry_wait):
+        urls = {fn: self.conans_router.package_file(pref, fn)
                 for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, retry, retry_wait)
 
@@ -227,20 +227,20 @@ class RestV2Methods(RestCommonMethods):
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
 
-    def _remove_conanfile_files(self, conan_reference, files):
+    def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
 
-    def remove_packages(self, conan_reference, package_ids=None):
+    def remove_packages(self, ref, package_ids=None):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
         if not package_ids:
-            url = self.conans_router.remove_all_packages(conan_reference)
+            url = self.conans_router.remove_all_packages(ref)
             self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                   verify=self.verify_ssl)
             return
         for pid in package_ids:
-            pref = PackageReference(conan_reference, pid)
+            pref = PackageReference(ref, pid)
             url = self.conans_router.remove_package(pref)
             self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                   verify=self.verify_ssl)

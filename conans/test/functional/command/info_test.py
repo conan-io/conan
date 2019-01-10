@@ -137,7 +137,7 @@ class MyTest(ConanFile):
             node_matches = node_regex.findall(line)
 
             parent = node_matches[0]
-            deps = [ConanFileReference.loads(ref) for ref in node_matches[1:]]
+            deps = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
             if parent == "conanfile.py (Hello0/0.1@None/None)":
                 parent = ConanFileReference("Hello0", None, None, None, validate=False)

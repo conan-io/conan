@@ -302,7 +302,7 @@ class ConanAPIV1(object):
         return result
 
     @api_method
-    def test(self, path, ref, profile_name=None, settings=None, options=None, env=None,
+    def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
              remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None):
 
         settings = settings or []
@@ -313,7 +313,7 @@ class ConanAPIV1(object):
         cwd = cwd or get_cwd()
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._client_cache, self._user_io.out)
-        ref = ConanFileReference.loads(ref)
+        ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         pt = PackageTester(manager, self._user_io)
@@ -468,7 +468,7 @@ class ConanAPIV1(object):
 
             mkdir(install_folder)
             manager = self._init_manager(recorder)
-            manager.install(reference=reference, install_folder=install_folder,
+            manager.install(ref_or_path=reference, install_folder=install_folder,
                             remote_name=remote_name, graph_info=graph_info, build_modes=build,
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
@@ -513,7 +513,7 @@ class ConanAPIV1(object):
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
             manager = self._init_manager(recorder)
-            manager.install(reference=conanfile_path,
+            manager.install(ref_or_path=conanfile_path,
                             install_folder=install_folder,
                             remote_name=remote_name,
                             graph_info=graph_info,
@@ -555,13 +555,13 @@ class ConanAPIV1(object):
         return configuration_install(path_or_url, self._client_cache, self._user_io.out, verify_ssl,
                                      requester=self._requester, config_type=config_type, args=args)
 
-    def _info_args(self, ref, install_folder, profile_name, settings, options, env):
+    def _info_args(self, reference_or_path, install_folder, profile_name, settings, options, env):
         cwd = get_cwd()
         try:
-            ref = ConanFileReference.loads(ref)
+            ref = ConanFileReference.loads(reference_or_path)
             install_folder = None
         except ConanException:
-            ref = _get_conanfile_path(ref, cwd=None, py=None)
+            ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)

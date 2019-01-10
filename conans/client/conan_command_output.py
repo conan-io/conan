@@ -33,13 +33,13 @@ class CommandOutputer(object):
                 self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote_name in refs.items():
-            ref = ConanFileReference.loads(ref)
+        for reference, remote_name in refs.items():
+            ref = ConanFileReference.loads(reference)
             self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
     def remote_pref_list(self, refs):
-        for ref, remote_name in refs.items():
-            ref = PackageReference.loads(ref)
+        for reference, remote_name in refs.items():
+            ref = PackageReference.loads(reference)
             self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
     def build_order(self, info):

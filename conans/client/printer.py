@@ -202,25 +202,25 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     self._out.writeln(str(conan_item["recipe"]["id"]))
 
-    def print_search_packages(self, search_info, reference, packages_query,
+    def print_search_packages(self, search_info, ref, packages_query,
                               outdated=False):
-        assert(isinstance(reference, ConanFileReference))
-        self._out.info("Existing packages for recipe %s:\n" % str(reference))
+        assert(isinstance(ref, ConanFileReference))
+        self._out.info("Existing packages for recipe %s:\n" % str(ref))
         for remote_info in search_info:
             if remote_info["remote"]:
                 self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" % \
-                                ("outdated " if outdated else "", str(reference), packages_query)
+                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" \
+                               % ("outdated " if outdated else "", str(ref), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no %spackages for reference '%s', but package recipe found." % \
-                            ("outdated " if outdated else "", str(reference))
+                    warn_msg = "There are no %spackages for reference '%s', but package recipe " \
+                               "found." % ("outdated " if outdated else "", str(ref))
                 self._out.info(warn_msg)
                 continue
 
-            reference = remote_info["items"][0]["recipe"]["id"]
+            ref = remote_info["items"][0]["recipe"]["id"]
             packages = remote_info["items"][0]["packages"]
 
             # Each package

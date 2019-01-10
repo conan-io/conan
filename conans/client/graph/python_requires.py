@@ -29,12 +29,12 @@ class ConanPythonRequire(object):
         try:
             python_require = self._cached_requires[require]
         except KeyError:
-            r = ConanFileReference.loads(require)
-            requirement = Requirement(r)
+            ref = ConanFileReference.loads(require)
+            requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
-            r = requirement.conan_reference
-            result = self._proxy.get_recipe(r, False, False, remote_name=None,
+            ref = requirement.conan_reference
+            result = self._proxy.get_recipe(ref, False, False, remote_name=None,
                                             recorder=ActionRecorder())
             path, _, _, reference = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)

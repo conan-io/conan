@@ -86,12 +86,12 @@ class SearchService(object):
         def get_ref(_pattern):
             if not isinstance(_pattern, ConanFileReference):
                 try:
-                    r = ConanFileReference.loads(_pattern)
+                    ref = ConanFileReference.loads(_pattern)
                 except (ConanException, TypeError):
-                    r = None
+                    ref = None
             else:
-                r = _pattern
-            return r
+                ref = _pattern
+            return ref
 
         # Check directly if it is a reference
         ref = get_ref(pattern)
@@ -114,9 +114,9 @@ class SearchService(object):
         else:
             ret = []
             for subdir in subdirs:
-                conan_ref = ConanFileReference(*subdir.split("/"))
-                if _partial_match(b_pattern, conan_ref):
-                    ret.append(conan_ref)
+                ref = ConanFileReference(*subdir.split("/"))
+                if _partial_match(b_pattern, ref):
+                    ret.append(ref)
 
             return sorted(ret)
 

@@ -161,8 +161,8 @@ def _load_single_build_require(profile, line):
         pattern, req_list = "*", line
     else:
         pattern, req_list = tokens
-    req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-    profile.build_requires.setdefault(pattern, []).extend(req_list)
+    refs = [ConanFileReference.loads(reference.strip()) for reference in req_list.split(",")]
+    profile.build_requires.setdefault(pattern, []).extend(refs)
 
 
 def _apply_inner_profile(doc, base_profile):

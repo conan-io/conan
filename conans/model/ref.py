@@ -114,8 +114,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@user/stable" % text)
-        obj = ConanFileReference(name, version, user, channel, revision, validate=validate)
-        return obj
+        ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
+        return ref
 
     def __repr__(self):
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)

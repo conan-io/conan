@@ -48,16 +48,16 @@ class ServerStore(SimplePaths):
         return self._storage_adapter.path_exists(path)
 
     # ############ SNAPSHOTS (APIv1)
-    def get_recipe_snapshot(self, reference):
+    def get_recipe_snapshot(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(reference, ConanFileReference)
-        return self._get_snapshot_of_files(self.export(reference))
+        assert isinstance(ref, ConanFileReference)
+        return self._get_snapshot_of_files(self.export(ref))
 
-    def get_package_snapshot(self, p_reference):
+    def get_package_snapshot(self, pref):
         """Returns a {filepath: md5} """
-        assert isinstance(p_reference, PackageReference)
-        p_reference = self.p_ref_with_rev(p_reference)
-        path = self.package(p_reference)
+        assert isinstance(pref, PackageReference)
+        pref = self.p_ref_with_rev(pref)
+        path = self.package(pref)
         return self._get_snapshot_of_files(path)
 
     def _get_snapshot_of_files(self, relative_path):
@@ -66,15 +66,15 @@ class ServerStore(SimplePaths):
         return snapshot
 
     # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
-    def get_recipe_file_list(self, reference):
+    def get_recipe_file_list(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(reference, ConanFileReference)
-        return self._get_file_list(self.export(reference))
+        assert isinstance(ref, ConanFileReference)
+        return self._get_file_list(self.export(ref))
 
-    def get_package_file_list(self, p_reference):
+    def get_package_file_list(self, pref):
         """Returns a {filepath: md5} """
-        assert isinstance(p_reference, PackageReference)
-        return self._get_file_list(self.package(p_reference))
+        assert isinstance(pref, PackageReference)
+        return self._get_file_list(self.package(pref))
 
     def _get_file_list(self, relative_path):
         file_list = self._storage_adapter.get_file_list(relative_path)
@@ -82,40 +82,40 @@ class ServerStore(SimplePaths):
         return file_list
 
     # ######### DELETE (APIv1 and APIv2)
-    def remove_conanfile(self, reference):
-        assert isinstance(reference, ConanFileReference)
-        result = self._storage_adapter.delete_folder(self.conan(reference, resolve_latest=False))
-        if reference.revision:
-            self._remove_revision_from_index(reference)
-        self._storage_adapter.delete_empty_dirs([reference])
+    def remove_conanfile(self, ref):
+        assert isinstance(ref, ConanFileReference)
+        result = self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
+        if ref.revision:
+            self._remove_revision_from_index(ref)
+        self._storage_adapter.delete_empty_dirs([ref])
         return result
 
-    def remove_packages(self, reference, package_ids_filter):
-        assert isinstance(reference, ConanFileReference)
+    def remove_packages(self, ref, package_ids_filter):
+        assert isinstance(ref, ConanFileReference)
         assert isinstance(package_ids_filter, list)
 
         if not package_ids_filter:  # Remove all packages
-            packages_folder = self.packages(reference)
+            packages_folder = self.packages(ref)
             self._storage_adapter.delete_folder(packages_folder)
         else:
             for package_id in package_ids_filter:
-                package_ref = PackageReference(reference, package_id)
-                package_folder = self.package(package_ref)
+                pref = PackageReference(ref, package_id)
+                package_folder = self.package(pref)
                 self._storage_adapter.delete_folder(package_folder)
-        self._storage_adapter.delete_empty_dirs([reference])
+        self._storage_adapter.delete_empty_dirs([ref])
 
-    def remove_package(self, package_ref):
-        assert isinstance(package_ref, PackageReference)
-        assert package_ref.revision is not None
-        assert package_ref.ref.revision is not None
-        package_folder = self.package(package_ref)
+    def remove_package(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.revision is not None
+        assert pref.ref.revision is not None
+        package_folder = self.package(pref)
         self._storage_adapter.delete_folder(package_folder)
-        self._remove_package_revision_from_index(package_ref)
+        self._remove_package_revision_from_index(pref)
 
-    def remove_all_packages(self, reference):
-        assert reference.revision is not None
-        assert isinstance(reference, ConanFileReference)
-        packages_folder = self.packages(reference)
+    def remove_all_packages(self, ref):
+        assert ref.revision is not None
+        assert isinstance(ref, ConanFileReference)
+        packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
     def remove_conanfile_files(self, reference, files):
@@ -124,43 +124,43 @@ class ServerStore(SimplePaths):
             path = join(subpath, filepath)
             self._storage_adapter.delete_file(path)
 
-    def remove_package_files(self, package_reference, files):
-        subpath = self.package(package_reference)
+    def remove_package_files(self, pref, files):
+        subpath = self.package(pref)
         for filepath in files:
             path = join(subpath, filepath)
             self._storage_adapter.delete_file(path)
 
     # ONLY APIv1 URLS
     # ############ DOWNLOAD URLS
-    def get_download_conanfile_urls(self, reference, files_subset=None, user=None):
+    def get_download_conanfile_urls(self, ref, files_subset=None, user=None):
         """Returns a {filepath: url} """
-        assert isinstance(reference, ConanFileReference)
-        return self._get_download_urls(self.export(reference), files_subset, user)
+        assert isinstance(ref, ConanFileReference)
+        return self._get_download_urls(self.export(ref), files_subset, user)
 
-    def get_download_package_urls(self, package_reference, files_subset=None, user=None):
+    def get_download_package_urls(self, pref, files_subset=None, user=None):
         """Returns a {filepath: url} """
-        assert isinstance(package_reference, PackageReference)
-        return self._get_download_urls(self.package(package_reference), files_subset, user)
+        assert isinstance(pref, PackageReference)
+        return self._get_download_urls(self.package(pref), files_subset, user)
 
     # ############ UPLOAD URLS
-    def get_upload_conanfile_urls(self, reference, filesizes, user):
+    def get_upload_conanfile_urls(self, ref, filesizes, user):
         """
-        :param reference: ConanFileReference
+        :param ref: ConanFileReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        assert isinstance(reference, ConanFileReference)
+        assert isinstance(ref, ConanFileReference)
         assert isinstance(filesizes, dict)
-        return self._get_upload_urls(self.export(reference), filesizes, user)
+        return self._get_upload_urls(self.export(ref), filesizes, user)
 
-    def get_upload_package_urls(self, package_reference, filesizes, user):
+    def get_upload_package_urls(self, pref, filesizes, user):
         """
         :param reference: PackageReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        assert isinstance(package_reference, PackageReference)
+        assert isinstance(pref, PackageReference)
         assert isinstance(filesizes, dict)
 
-        return self._get_upload_urls(self.package(package_reference), filesizes, user)
+        return self._get_upload_urls(self.package(pref), filesizes, user)
 
     def _get_download_urls(self, relative_path, files_subset=None, user=None):
         """Get the download urls for the whole relative_path or just
@@ -189,26 +189,26 @@ class ServerStore(SimplePaths):
         return ret
 
     # Methods to manage revisions
-    def get_last_revision(self, reference):
-        assert(isinstance(reference, ConanFileReference))
-        rev_file_path = self._recipe_revisions_file(reference)
+    def get_last_revision(self, ref):
+        assert(isinstance(ref, ConanFileReference))
+        rev_file_path = self._recipe_revisions_file(ref)
         return self._get_latest_revision(rev_file_path)
 
-    def get_recipe_revisions(self, reference):
-        rev_file_path = self._recipe_revisions_file(reference)
-        return [reference.copy_with_rev(rev.revision)
+    def get_recipe_revisions(self, ref):
+        rev_file_path = self._recipe_revisions_file(ref)
+        return [ref.copy_with_rev(rev.revision)
                 for rev in self._get_revisions(rev_file_path).items()]
 
-    def get_latest_package_reference(self, package_ref):
-        assert(isinstance(package_ref, PackageReference))
-        rev_file_path = self._recipe_revisions_file(package_ref.ref)
+    def get_latest_package_reference(self, pref):
+        assert(isinstance(pref, PackageReference))
+        rev_file_path = self._recipe_revisions_file(pref.ref)
         revs = self._get_revisions(rev_file_path)
         if not revs:
-            raise NotFoundException("Recipe not found: '%s'" % str(package_ref.ref))
+            raise NotFoundException("Recipe not found: '%s'" % str(pref.ref))
 
         for rev in revs.items():
-            pref = PackageReference(package_ref.ref.copy_with_rev(rev.revision),
-                                    package_ref.package_id)
+            pref = PackageReference(pref.ref.copy_with_rev(rev.revision),
+                                    pref.package_id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
                 pref = pref.copy_with_revs(rev.revision, tmp.revision)
@@ -218,22 +218,22 @@ class ServerStore(SimplePaths):
                     return pref
             except NotFoundException:
                 pass
-        raise NotFoundException("Package not found: '%s'" % str(package_ref))
+        raise NotFoundException("Package not found: '%s'" % str(pref))
 
-    def get_last_package_revision(self, p_reference):
-        assert(isinstance(p_reference, PackageReference))
-        rev_file_path = self._package_revisions_file(p_reference)
+    def get_last_package_revision(self, pref):
+        assert(isinstance(pref, PackageReference))
+        rev_file_path = self._package_revisions_file(pref)
         return self._get_latest_revision(rev_file_path)
 
-    def update_last_revision(self, reference):
-        assert(isinstance(reference, ConanFileReference))
-        rev_file_path = self._recipe_revisions_file(reference)
-        self._update_last_revision(rev_file_path, reference)
+    def update_last_revision(self, ref):
+        assert(isinstance(ref, ConanFileReference))
+        rev_file_path = self._recipe_revisions_file(ref)
+        self._update_last_revision(rev_file_path, ref)
 
-    def update_last_package_revision(self, p_reference):
-        assert(isinstance(p_reference, PackageReference))
-        rev_file_path = self._package_revisions_file(p_reference)
-        self._update_last_revision(rev_file_path, p_reference)
+    def update_last_package_revision(self, pref):
+        assert(isinstance(pref, PackageReference))
+        rev_file_path = self._package_revisions_file(pref)
+        self._update_last_revision(rev_file_path, pref)
 
     def _update_last_revision(self, rev_file_path, reference):
         if self._storage_adapter.path_exists(rev_file_path):

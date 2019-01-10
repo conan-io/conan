@@ -38,8 +38,8 @@ class SearchTest(unittest.TestCase):
 
     def pattern_test(self):
         with chdir(self.client_cache.store):
-            refs = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
-            refs = [ConanFileReference.loads(ref) for ref in refs]
+            references = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
+            refs = [ConanFileReference.loads(reference) for reference in references]
             for ref in refs:
                 root_folder = str(ref).replace("@", "/")
                 reg1 = "%s/%s" % (root_folder, EXPORT_FOLDER)

@@ -4,38 +4,38 @@ from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-def download(reference, package_ids, remote_name, recipe, remote_manager,
+def download(ref, package_ids, remote_name, recipe, remote_manager,
              client_cache, out, recorder, loader, hook_manager):
 
-    assert(isinstance(reference, ConanFileReference))
-    output = ScopedOutput(str(reference), out)
+    assert(isinstance(ref, ConanFileReference))
+    output = ScopedOutput(str(ref), out)
     registry = client_cache.registry
     remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
 
-    hook_manager.execute("pre_download", reference=reference, remote=remote)
+    hook_manager.execute("pre_download", reference=ref, remote=remote)
     # First of all download package recipe
     try:
-        remote_manager.get_recipe(reference, remote)
+        remote_manager.get_recipe(ref, remote)
     except NotFoundException:
-        raise NotFoundException("'%s' not found in remote '%s'" % (str(reference), remote.name))
-    registry.refs.set(reference, remote.name)
-    conan_file_path = client_cache.conanfile(reference)
+        raise NotFoundException("'%s' not found in remote '%s'" % (str(ref), remote.name))
+    registry.refs.set(ref, remote.name)
+    conan_file_path = client_cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
 
     if not recipe:  # Not only the recipe
         # Download the sources too, don't be lazy
-        complete_recipe_sources(remote_manager, client_cache, conanfile, reference)
+        complete_recipe_sources(remote_manager, client_cache, conanfile, ref)
 
         if not package_ids:  # User didnt specify a specific package binary
-            output.info("Getting the complete package list from '%s'..." % str(reference))
-            packages_props = remote_manager.search_packages(remote, reference, None)
+            output.info("Getting the complete package list from '%s'..." % str(ref))
+            packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:
                 output.warn("No remote binary packages found in remote")
 
-        _download_binaries(conanfile, reference, package_ids, client_cache, remote_manager,
+        _download_binaries(conanfile, ref, package_ids, client_cache, remote_manager,
                            remote, output, recorder)
-    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=reference,
+    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
 
 
