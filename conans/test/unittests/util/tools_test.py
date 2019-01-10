@@ -18,7 +18,7 @@ from six import StringIO
 from six.moves.urllib.parse import quote
 
 from conans.client import tools
-from conans.client.cache import CONAN_CONF
+from conans.client.client_cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
@@ -1165,6 +1165,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "aarch64-linux-gnu_ilp32")
 
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+        
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+        
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-linux-android")
