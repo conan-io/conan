@@ -44,11 +44,13 @@ class ConanServiceV2(object):
         # If the upload was ok, update the pointer to the latest
         self._server_store.update_last_revision(reference)
 
-    def get_recipe_revisions(self, reference):
+    def get_recipe_revisions(self, reference, auth_user):
+        self._authorizer.check_read_conan(auth_user, reference)
         ret = self._server_store.get_recipe_revisions(reference)
         return ret
 
-    def get_package_revisions(self, p_reference):
+    def get_package_revisions(self, p_reference, auth_user):
+        self._authorizer.check_read_conan(auth_user, p_reference.conan)
         ret = self._server_store.get_package_revisions(p_reference)
         return ret
 

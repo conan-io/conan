@@ -7,6 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.files import save
+from conans.util.time import datetime_to_str
 
 
 class CommandOutputer(object):
@@ -115,6 +116,12 @@ class CommandOutputer(object):
             printer = Printer(self.user_io.out)
             printer.print_search_packages(search_info, reference, packages_query,
                                           outdated=outdated)
+
+    def print_revisions(self, ref, revisions, remote_name=None):
+        remote_test = " at remote '%s'" % remote_name if remote_name else ""
+        self.user_io.out.info("Revisions for '%s'%s:" % (ref, remote_test))
+        lines = ["%s (%s)" % (r["revision"], datetime_to_str(r["time"])) for r in revisions]
+        self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:

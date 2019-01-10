@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import time
@@ -14,6 +15,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
+from conans.util.time import from_iso8601_to_datetime
 
 
 class RestV2Methods(RestCommonMethods):
@@ -245,8 +247,20 @@ class RestV2Methods(RestCommonMethods):
             self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                   verify=self.verify_ssl)
 
-    def get_recipe_revisions(self, reference):
-        pass
+    def get_recipe_revisions(self, ref):
+        url = self.conans_router.recipe_revisions(ref)
+        data = self.get_json(url)
+        return self._format_dates_in_revision_list(data)
 
-    def get_package_revisions(self, package_reference):
-        pass
+    def get_package_revisions(self, pref):
+        url = self.conans_router.package_revisions(pref)
+        data = self.get_json(url)
+        return self._format_dates_in_revision_list(data)
+
+    @staticmethod
+    def _format_dates_in_revision_list(data):
+        ret = {"reference": data["reference"],
+               "revisions": [{"revision": r["revision"],
+                              "time": from_iso8601_to_datetime(r["time"])}
+                             for r in data["revisions"]]}
+        return ret

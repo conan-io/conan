@@ -3,6 +3,7 @@ from collections import defaultdict
 from conans import CHECKSUM_DEPLOY, REVISIONS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
+from conans.errors import ConanException
 from conans.util.env_reader import get_env
 
 

@@ -196,8 +196,11 @@ class ServerStore(SimplePaths):
 
     def get_recipe_revisions(self, reference):
         rev_file_path = self._recipe_revisions_file(reference)
-        return [reference.copy_with_rev(rev.revision)
-                for rev in self._get_revisions(rev_file_path).items()]
+        revs = self._get_revisions(rev_file_path)
+        if not revs:
+            return []
+        return [(rev.revision, rev.time)
+                for rev in revs.items()]
 
     def get_latest_package_reference(self, package_ref):
         assert(isinstance(package_ref, PackageReference))
