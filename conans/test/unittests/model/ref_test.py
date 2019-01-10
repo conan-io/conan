@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference, ConanName, InvalidNameException
 
 class RefTest(unittest.TestCase):
     def basic_test(self):
-        ref = ConanFileReference.loads("opencv/2.4.10 @ lasote/testing")
+        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         self.assertEqual(ref.name, "opencv")
         self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.user, "lasote")
@@ -37,7 +37,7 @@ class RefTest(unittest.TestCase):
     def errors_test(self):
         self.assertRaises(ConanException, ConanFileReference.loads, "")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10 @ lasote")
+        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, ".opencv/2.4.10@lasote/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10 @ lasote/testing")
