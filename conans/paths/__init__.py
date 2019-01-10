@@ -54,7 +54,7 @@ DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
 LINKED_PACKAGE_SENTINEL = '.linked_package'
-CONAN_PACKAGE_LAYOUT_FILE = '.conan_package_layout'
+CONAN_PACKAGE_LAYOUT_FILE = '.conan_layout'
 
 # Directories
 EXPORT_FOLDER = "export"

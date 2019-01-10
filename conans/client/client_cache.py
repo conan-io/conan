@@ -29,7 +29,9 @@ REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
-LINKED_PACKAGES_LAYOUT_FILE = "linked_packages_layout.ini"
+LAYOUTS_FOLDER = 'layouts'
+
+DEFAULT_LAYOUT_FILE = "default"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -167,7 +169,7 @@ class ClientCache(SimplePaths):
 
     @property
     def default_editable_path(self):
-        return os.path.join(self.conan_folder, LINKED_PACKAGES_LAYOUT_FILE)
+        return os.path.join(self.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
 
     @property
     def hooks_path(self):
