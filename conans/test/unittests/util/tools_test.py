@@ -1628,6 +1628,19 @@ class HelloConan(ConanFile):
 @attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
+
+    def test_check_svn_repo(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        with self.assertRaisesRegexp(ConanException, "Not a valid SVN repository"):
+            svn._check_svn_repo()
+        svn.checkout(url=project_url)
+        try:
+            svn._check_svn_repo()
+        except Exception:
+            self.fail("After checking out, it should be a valid SVN repository")
+
     def test_clone(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -1820,6 +1833,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("tags/v12.3.4", svn.get_branch())
+
 
 @attr("slow")
 @attr('svn')
