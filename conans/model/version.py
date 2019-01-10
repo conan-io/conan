@@ -31,7 +31,7 @@ class Version(str):
     def major(self, fill=True):
         """
         Get the major item from the version string
-        :param fill: Fill full version format with major.minor.patch
+        :param fill: Fill full version format with major.Y.Z
         :return: version class
         """
         self_list = self.as_list
@@ -45,7 +45,7 @@ class Version(str):
     def stable(self):
         """
         Same as major but semver 0.Y.Z is not considered stable
-        :return: version class
+        :return: version class with .Y.Z as ending
         """
         if self.as_list[0] == 0:
             return self
@@ -54,7 +54,7 @@ class Version(str):
     def minor(self, fill=True):
         """
         Get the minor item from the version string
-        :param fill: Fill full version format with major.minor.patch
+        :param fill: Fill full version format with major.minor.Z
         :return: version class
         """
         self_list = self.as_list
