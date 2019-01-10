@@ -287,8 +287,10 @@ class HelloConan(ConanFile):
                            # ranges
                            ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
                            ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
+                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True),
                            ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
                            ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = hello_content % ">0.1, <1"
