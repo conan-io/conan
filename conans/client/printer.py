@@ -5,7 +5,7 @@ from conans.client.installer import build_id
 from conans.client.output import Color
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.util.env_reader import get_env
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 

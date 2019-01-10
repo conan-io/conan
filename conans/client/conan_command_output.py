@@ -2,6 +2,7 @@ import json
 import os
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
@@ -74,7 +75,7 @@ class CommandOutputer(object):
         ret = {}
         for node in sorted(deps_graph.nodes):
             ref = node.conan_ref
-            if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
                 manifest = self.client_cache.load_manifest(ref)
                 ret[ref] = manifest.time_str
         return ret

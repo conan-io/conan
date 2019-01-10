@@ -99,6 +99,10 @@ class ConanRemover(object):
             return tmp
 
     def _local_remove(self, reference, src, build_ids, package_ids):
+        if self._client_cache.installed_as_editable(reference):
+            raise ConanException("Package '{r}' is installed as editable, unlink it first using "
+                                 "command 'conan link {r} --remove'".format(r=reference))
+
         # Make sure to clean the locks too
         self._client_cache.remove_package_locks(reference)
         remover = DiskRemover(self._client_cache)

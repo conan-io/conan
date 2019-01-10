@@ -9,8 +9,8 @@ from parameterized import parameterized
 
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import (BUILD_FOLDER, EXPORT_FOLDER, PACKAGES_FOLDER, SimplePaths,
-                          conan_expand_user)
+from conans.paths import BUILD_FOLDER, EXPORT_FOLDER, PACKAGES_FOLDER, conan_expand_user
+from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
 from conans.util.windows import path_shortener
 
@@ -32,7 +32,7 @@ class PathsTest(unittest.TestCase):
         folder = temp_folder()
         paths = SimplePaths(folder)
         self.assertEqual(paths._store_folder, folder)
-        conan_ref = ConanFileReference.loads("opencv/2.4.10 @ lasote /testing")
+        conan_ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         package_ref = PackageReference(conan_ref, "456fa678eae68")
         expected_base = os.path.join(folder, os.path.sep.join(["opencv", "2.4.10",
                                                                "lasote", "testing"]))
@@ -84,4 +84,3 @@ class PathShortenerTest(unittest.TestCase):
 
             self.assertEqual(self.home_short in r, short_paths)
             self.assertEqual(self.home in r, not short_paths)
-
