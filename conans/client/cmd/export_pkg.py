@@ -8,14 +8,14 @@ from conans.util.files import rmdir
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
-               reference, source_folder, build_folder, package_folder, install_folder,
+               ref, source_folder, build_folder, package_folder, install_folder,
                graph_info, force):
 
-    conan_file_path = cache.conanfile(reference)
+    conan_file_path = cache.conanfile(ref)
     if not os.path.exists(conan_file_path):
-        raise ConanException("Package recipe '%s' does not exist" % str(reference))
+        raise ConanException("Package recipe '%s' does not exist" % str(ref))
 
-    deps_graph = graph_manager.load_simple_graph(reference, graph_info.profile, recorder)
+    deps_graph = graph_manager.load_simple_graph(ref, graph_info.profile, recorder)
 
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
@@ -26,7 +26,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
         load_deps_info(install_folder, conanfile, required=True)
     pkg_id = conanfile.info.package_id()
     output.info("Packaging to %s" % pkg_id)
-    pref = PackageReference(reference, pkg_id)
+    pref = PackageReference(ref, pkg_id)
     dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
 
     if os.path.exists(dest_package_folder):
@@ -36,14 +36,14 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
 
-    recipe_hash = cache.load_manifest(reference).summary_hash
+    recipe_hash = cache.load_manifest(ref).summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
         packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
-                            hook_manager, conan_file_path, reference)
+                            hook_manager, conan_file_path, ref)
     else:
         packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
                                 install_folder, hook_manager, conan_file_path,
-                                reference, local=True)
+                                ref, local=True)
     recorder.package_exported(pref)

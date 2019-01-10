@@ -716,7 +716,7 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
-        ref = ConanFileReference.loads(str(reference))
+        ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self._cache,
                  self._user_io, self._remote_manager, self._loader, force=force)
 
@@ -750,46 +750,45 @@ class ConanAPIV1(object):
 
     @api_method
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
-        recorder = SearchRecorder()
+        search_recorder = SearchRecorder()
         search = Search(self._cache, self._remote_manager)
 
         try:
             references = search.search_recipes(pattern, remote_name, case_sensitive)
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
+            search_recorder.error = True
+            exc.info = search_recorder.get_info()
             raise
 
         for remote_name, refs in references.items():
             for ref in refs:
-                recorder.add_recipe(remote_name, ref, with_packages=False)
-        return recorder.get_info()
+                search_recorder.add_recipe(remote_name, ref, with_packages=False)
+        return search_recorder.get_info()
 
     @api_method
     def search_packages(self, reference, query=None, remote_name=None, outdated=False):
-        recorder = SearchRecorder()
+        search_recorder = SearchRecorder()
         search = Search(self._cache, self._remote_manager)
 
         try:
-            ref = ConanFileReference.loads(str(reference))
-            references = search.search_packages(ref, remote_name, query=query,
-                                                outdated=outdated)
+            ref = ConanFileReference.loads(reference)
+            references = search.search_packages(ref, remote_name, query=query, outdated=outdated)
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
+            search_recorder.error = True
+            exc.info = search_recorder.get_info()
             raise
 
         for remote_name, remote_ref in references.items():
-            recorder.add_recipe(remote_name, ref)
+            search_recorder.add_recipe(remote_name, ref)
             if remote_ref.ordered_packages:
                 for package_id, properties in remote_ref.ordered_packages.items():
                     package_recipe_hash = properties.get("recipe_hash", None)
-                    recorder.add_package(remote_name, ref,
-                                         package_id, properties.get("options", []),
-                                         properties.get("settings", []),
-                                         properties.get("full_requires", []),
-                                         remote_ref.recipe_hash != package_recipe_hash)
-        return recorder.get_info()
+                    search_recorder.add_package(remote_name, ref,
+                                                package_id, properties.get("options", []),
+                                                properties.get("settings", []),
+                                                properties.get("full_requires", []),
+                                                remote_ref.recipe_hash != package_recipe_hash)
+        return search_recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
@@ -797,16 +796,16 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 
-        recorder = UploadRecorder()
+        upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
                              self._loader, self._hook_manager)
         try:
-            uploader.upload(recorder, pattern, package, all_packages, confirm, retry,
+            uploader.upload(upload_recorder, pattern, package, all_packages, confirm, retry,
                             retry_wait, integrity_check, policy, remote_name, query=query)
-            return recorder.get_info()
+            return upload_recorder.get_info()
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
+            upload_recorder.error = True
+            exc.info = upload_recorder.get_info()
             raise
 
     @api_method
@@ -835,26 +834,26 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
-        ref = ConanFileReference.loads(str(reference), validate=True)
+        ref = ConanFileReference.loads(reference, validate=True)
         return self._cache.registry.refs.set(ref, remote_name, check_exists=True)
 
     @api_method
     def remote_remove_ref(self, reference):
-        ref = ConanFileReference.loads(str(reference), validate=True)
+        ref = ConanFileReference.loads(reference, validate=True)
         return self._cache.registry.refs.remove(ref)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
-        ref = ConanFileReference.loads(str(reference), validate=True)
+        ref = ConanFileReference.loads(reference, validate=True)
         return self._cache.registry.refs.update(ref, remote_name)
 
     @api_method
     def remote_list_pref(self, reference):
-        ref = ConanFileReference.loads(str(reference), validate=True)
+        ref = ConanFileReference.loads(reference, validate=True)
         ret = {}
         tmp = self._cache.registry.prefs.list
-        for r, remote in tmp.items():
-            pref = PackageReference.loads(r)
+        for package_reference, remote in tmp.items():
+            pref = PackageReference.loads(package_reference)
             if pref.ref == ref:
                 ret[pref.full_repr()] = remote
         return ret

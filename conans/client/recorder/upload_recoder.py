@@ -36,10 +36,10 @@ class UploadRecorder(object):
         self.error = False
         self._info = OrderedDict()
 
-    def add_recipe(self, reference, remote_name, remote_url):
+    def add_recipe(self, ref, remote_name, remote_url):
 
-        self._info[str(reference)] = {"recipe": _UploadElement(reference, remote_name, remote_url),
-                                      "packages": []}
+        self._info[str(ref)] = {"recipe": _UploadElement(ref, remote_name, remote_url),
+                                "packages": []}
 
     def add_package(self, pref, remote_name, remote_url):
         self._info[str(pref.ref)]["packages"].append(_UploadElement(pref, remote_name, remote_url))

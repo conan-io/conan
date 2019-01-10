@@ -25,7 +25,7 @@ class CmdUpload(object):
         self._loader = loader
         self._hook_manager = hook_manager
 
-    def upload(self, recorder, reference_or_pattern, package_id=None, all_packages=None,
+    def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
                remote_name=None, query=None):
         """ If package_id is provided, reference_or_pattern is a ConanFileReference """
@@ -67,12 +67,12 @@ class CmdUpload(object):
                 else:
                     packages_ids = []
                 self._upload(conan_file, ref, packages_ids, retry, retry_wait,
-                             integrity_check, policy, remote_name, recorder)
+                             integrity_check, policy, remote_name, upload_recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _upload(self, conan_file, ref, packages_ids, retry, retry_wait,
-                integrity_check, policy, remote_name, recorder):
+                integrity_check, policy, remote_name, upload_recorder):
         """Uploads the recipes and binaries identified by ref"""
 
         default_remote = self._registry.remotes.default
@@ -99,7 +99,7 @@ class CmdUpload(object):
         ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
 
-        recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
+        upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
@@ -124,7 +124,7 @@ class CmdUpload(object):
                 p_remote = recipe_remote
                 self._upload_package(pref, metadata, index + 1, total, retry, retry_wait,
                                      integrity_check, policy, p_remote)
-                recorder.add_package(pref, p_remote.name, p_remote.url)
+                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one

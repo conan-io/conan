@@ -20,31 +20,31 @@ class GraphBinariesAnalyzer(object):
         self._registry = cache.registry
         self._workspace = workspace
 
-    def _get_package_info(self, package_ref, remote):
+    def _get_package_info(self, pref, remote):
         try:
-            remote_info = self._remote_manager.get_package_info(package_ref, remote)
+            remote_info = self._remote_manager.get_package_info(pref, remote)
             return remote_info
         except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
             return False
 
-    def _check_update(self, package_folder, package_ref, remote, output, node):
+    def _check_update(self, package_folder, pref, remote, output, node):
 
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled:
-            metadata = self._cache.load_metadata(package_ref.ref)
-            rec_rev = metadata.packages[package_ref.package_id].recipe_revision
+            metadata = self._cache.load_metadata(pref.ref)
+            rec_rev = metadata.packages[pref.package_id].recipe_revision
             if rec_rev != node.ref.revision:
                 output.warn("Outdated package! The package doesn't belong "
-                            "to the installed recipe revision: %s" % str(package_ref))
+                            "to the installed recipe revision: %s" % str(pref))
 
         try:  # get_conan_digest can fail, not in server
             # FIXME: This can iterate remotes to get and associate in registry
             if not revisions_enabled and not node.revision_pinned:
                 # Compatibility mode and user hasn't specified the revision, so unlock
                 # it to find any binary for any revision
-                package_ref = package_ref.copy_clear_rev()
+                pref = pref.copy_clear_rev()
 
-            upstream_manifest = self._remote_manager.get_package_manifest(package_ref, remote)
+            upstream_manifest = self._remote_manager.get_package_manifest(pref, remote)
         except NotFoundException:
             output.warn("Can't update, no package in remote")
         except NoRemoteAvailable:
@@ -59,7 +59,7 @@ class GraphBinariesAnalyzer(object):
                 else:
                     output.warn("Current package is newer than remote upstream one")
 
-    def _evaluate_node(self, node, build_mode, update, evaluated_references, remote_name):
+    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
         assert node.binary is None
 
         ref, conanfile = node.ref, node.conanfile
@@ -67,12 +67,12 @@ class GraphBinariesAnalyzer(object):
         package_id = conanfile.info.package_id()
         pref = PackageReference(ref, package_id)
         # Check that this same reference hasn't already been checked
-        previous_node = evaluated_references.get(pref)
+        previous_node = evaluated_nodes.get(pref)
         if previous_node:
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             return
-        evaluated_references[pref] = node
+        evaluated_nodes[pref] = node
 
         output = conanfile.output
 
@@ -163,13 +163,13 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
-        evaluated_references = {}
+        evaluated_nodes = {}
         for node in deps_graph.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
             private_neighbours = node.private_neighbors()
             if private_neighbours:
-                self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
+                self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
                 if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                     for neigh in private_neighbours:
                         neigh.binary = BINARY_SKIP
@@ -180,4 +180,4 @@ class GraphBinariesAnalyzer(object):
         for node in deps_graph.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_references, remote_name)
+            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)

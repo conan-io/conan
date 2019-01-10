@@ -17,31 +17,31 @@ class ServerStore(SimplePaths):
         super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
         self._storage_adapter = storage_adapter
 
-    def conan(self, reference, resolve_latest=True):
-        reference = self.ref_with_rev(reference) if resolve_latest else reference
-        tmp = normpath(join(self.store, reference.dir_repr()))
-        return join(tmp, reference.revision) if reference.revision else tmp
+    def conan(self, ref, resolve_latest=True):
+        ref = self.ref_with_rev(ref) if resolve_latest else ref
+        tmp = normpath(join(self.store, ref.dir_repr()))
+        return join(tmp, ref.revision) if ref.revision else tmp
 
-    def packages(self, reference):
-        reference = self.ref_with_rev(reference)
-        return join(self.conan(reference), PACKAGES_FOLDER)
+    def packages(self, ref):
+        ref = self.ref_with_rev(ref)
+        return join(self.conan(ref), PACKAGES_FOLDER)
 
-    def package(self, p_reference, short_paths=None):
-        p_reference = self.p_ref_with_rev(p_reference)
-        tmp = join(self.packages(p_reference.ref), p_reference.package_id)
-        return join(tmp, p_reference.revision) if p_reference.revision else tmp
+    def package(self, pref, short_paths=None):
+        pref = self.p_ref_with_rev(pref)
+        tmp = join(self.packages(pref.ref), pref.package_id)
+        return join(tmp, pref.revision) if pref.revision else tmp
 
-    def export(self, reference):
-        return join(self.conan(reference), EXPORT_FOLDER)
+    def export(self, ref):
+        return join(self.conan(ref), EXPORT_FOLDER)
 
-    def get_conanfile_file_path(self, reference, filename):
-        reference = self.ref_with_rev(reference)
-        abspath = join(self.export(reference), filename)
+    def get_conanfile_file_path(self, ref, filename):
+        ref = self.ref_with_rev(ref)
+        abspath = join(self.export(ref), filename)
         return abspath
 
-    def get_package_file_path(self, p_reference, filename):
-        p_reference = self.p_ref_with_rev(p_reference)
-        p_path = self.package(p_reference)
+    def get_package_file_path(self, pref, filename):
+        pref = self.p_ref_with_rev(pref)
+        p_path = self.package(pref)
         abspath = join(p_path, filename)
         return abspath
 
@@ -119,8 +119,8 @@ class ServerStore(SimplePaths):
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
-    def remove_conanfile_files(self, reference, files):
-        subpath = self.export(reference)
+    def remove_conanfile_files(self, ref, files):
+        subpath = self.export(ref)
         for filepath in files:
             path = join(subpath, filepath)
             self._storage_adapter.delete_file(path)
