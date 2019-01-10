@@ -29,7 +29,7 @@ class ManifestManager(object):
                 self._handle_package(node, verify, interactive)
 
     def _handle_recipe(self, node, verify, interactive):
-        ref = node.conan_ref
+        ref = node.ref
         export = self._cache.export(ref)
         exports_sources_folder = self._cache.export_sources(ref)
         read_manifest = FileTreeManifest.load(export)
@@ -39,7 +39,7 @@ class ManifestManager(object):
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
 
     def _handle_package(self, node, verify, interactive):
-        ref = node.conan_ref
+        ref = node.ref
         pref = PackageReference(ref, node.conanfile.info.package_id())
         package_folder = self._cache.package(pref)
         read_manifest = FileTreeManifest.load(package_folder)

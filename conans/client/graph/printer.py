@@ -23,7 +23,7 @@ def print_graph(deps_graph, out):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
-        pref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
+        pref = PackageReference(node.ref, node.conanfile.info.package_id())
         if node.build_require:
             build_requires.setdefault(pref, []).append(node)
         else:
@@ -38,7 +38,7 @@ def print_graph(deps_graph, out):
                 from_text = "from '%s'" % WORKSPACE_FILE
             else:
                 from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
-            out.writeln("    %s %s - %s" % (repr(node.conan_ref), from_text, node.recipe),
+            out.writeln("    %s %s - %s" % (repr(node.ref), from_text, node.recipe),
                         Color.BRIGHT_CYAN)
 
     _recipes(requires)

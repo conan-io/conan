@@ -73,7 +73,7 @@ class CommandOutputer(object):
     def _read_dates(self, deps_graph):
         ret = {}
         for node in sorted(deps_graph.nodes):
-            ref = node.conan_ref
+            ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
                 manifest = self.cache.load_manifest(ref)
                 ret[ref] = manifest.time_str

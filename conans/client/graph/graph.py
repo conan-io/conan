@@ -28,7 +28,7 @@ BINARY_EDITABLE = "Editable"
 
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
-        self.conan_ref = ref
+        self.ref = ref
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -40,7 +40,7 @@ class Node(object):
         self.revision_pinned = False  # The revision has been specified by the user
 
     def partial_copy(self):
-        result = Node(self.conan_ref, self.conanfile)
+        result = Node(self.ref, self.conanfile)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
@@ -71,14 +71,14 @@ class Node(object):
         return [edge.src for edge in self.dependants]
 
     def __eq__(self, other):
-        return (self.conan_ref == other.conan_ref and
+        return (self.ref == other.ref and
                 self.conanfile == other.conanfile)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self.conan_ref, self.conanfile))
+        return hash((self.ref, self.conanfile))
 
     def __repr__(self):
         return repr(self.conanfile)
@@ -86,26 +86,26 @@ class Node(object):
     def __cmp__(self, other):
         if other is None:
             return -1
-        elif self.conan_ref is None:
-            return 0 if other.conan_ref is None else -1
-        elif other.conan_ref is None:
+        elif self.ref is None:
+            return 0 if other.ref is None else -1
+        elif other.ref is None:
             return 1
 
-        if self.conan_ref == other.conan_ref:
+        if self.ref == other.ref:
             return 0
 
         # Cannot compare None with str
-        if self.conan_ref.revision is None and other.conan_ref.revision is not None:
+        if self.ref.revision is None and other.ref.revision is not None:
             return 1
 
-        if self.conan_ref.revision is not None and other.conan_ref.revision is None:
+        if self.ref.revision is not None and other.ref.revision is None:
             return -1
 
         if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return 1
         if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return -1
-        if self.conan_ref < other.conan_ref:
+        if self.ref < other.ref:
             return -1
 
         return 1
@@ -177,7 +177,7 @@ class DepsGraph(object):
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
                 for neighbor in neighbors:
-                    ref, nconan = neighbor.conan_ref, neighbor.conanfile
+                    ref, nconan = neighbor.ref, neighbor.conanfile
                     package_id = nconan.info.package_id()
                     pref = PackageReference(ref, package_id)
                     direct_reqs.append(pref)
@@ -225,18 +225,18 @@ class DepsGraph(object):
         while current:
             new_current = []
             for n in current:
-                closure[n.conan_ref.name] = n
+                closure[n.ref.name] = n
             for n in current:
                 neighs = n.public_neighbors()
                 for neigh in neighs:
-                    if neigh not in new_current and neigh.conan_ref.name not in closure:
+                    if neigh not in new_current and neigh.ref.name not in closure:
                         new_current.append(neigh)
             current = new_current
         return closure
 
     def _inverse_closure(self, references):
         closure = set()
-        current = [n for n in self.nodes if str(n.conan_ref) in references or "ALL" in references]
+        current = [n for n in self.nodes if str(n.ref) in references or "ALL" in references]
         closure.update(current)
         while current:
             new_current = set()
@@ -261,7 +261,7 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            pref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
+            pref = PackageReference(node.ref, node.conanfile.info.package_id())
             if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
@@ -290,7 +290,7 @@ class DepsGraph(object):
         closure = new_graph._inverse_closure(references)
         result = []
         for level in reversed(levels):
-            new_level = [n.conan_ref for n in level
+            new_level = [n.ref for n in level
                          if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
             if new_level:
                 result.append(new_level)
@@ -301,8 +301,8 @@ class DepsGraph(object):
         for level in self.by_levels():
             for node in level:
                 if node.binary == BINARY_BUILD:
-                    if node.conan_ref.copy_clear_rev() not in ret:
-                        ret.append(node.conan_ref.copy_clear_rev())
+                    if node.ref.copy_clear_rev() not in ret:
+                        ret.append(node.ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

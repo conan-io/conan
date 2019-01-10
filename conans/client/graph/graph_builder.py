@@ -100,7 +100,7 @@ class DepsGraphBuilder(object):
                 # RECURSION!
                 # Make sure the subgraph is truly private
                 new_public_deps = {} if require.private else public_deps
-                self._load_deps(new_node, new_reqs, dep_graph, new_public_deps, node.conan_ref,
+                self._load_deps(new_node, new_reqs, dep_graph, new_public_deps, node.ref,
                                 new_options, new_loop_ancestors, aliased, check_updates, update,
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
@@ -109,19 +109,18 @@ class DepsGraphBuilder(object):
                 # Necessary to make sure that it is pointing to the correct aliased
                 if alias_ref:
                     require.ref = alias_ref
-                conflict = self._conflicting_references(previous_node.conan_ref,
-                                                        require.ref)
+                conflict = self._conflicting_references(previous_node.ref, require.ref)
                 if conflict == REVISION_CONFLICT:  # Revisions conflict
                     raise ConanException("Conflict in %s\n"
                                          "    Different revisions of %s has been requested"
-                                         % (node.conan_ref, require.ref))
+                                         % (node.ref, require.ref))
                 elif conflict == REFERENCE_CONFLICT:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
                                          "    To change it, override it in your base requirements"
-                                         % (node.conan_ref, require.ref,
-                                            previous_node.conan_ref, previous_node.conan_ref))
+                                         % (node.ref, require.ref,
+                                            previous_node.ref, previous_node.ref))
 
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
@@ -129,7 +128,7 @@ class DepsGraphBuilder(object):
                     closure = dep_graph.closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
-                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
+                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.ref,
                                     new_options, new_loop_ancestors, aliased, check_updates, update,
                                     remote_name, processed_profile)
 
@@ -151,7 +150,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.ref.name)
-            if n and self._conflicting_references(n.conan_ref, req.ref):
+            if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
@@ -168,7 +167,7 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            conanfile, ref = node.conanfile, node.conan_ref
+            conanfile, ref = node.conanfile, node.ref
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
@@ -237,7 +236,7 @@ class DepsGraphBuilder(object):
                 result = self._proxy.get_recipe(requirement.ref,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                if current_node.conan_ref:
+                if current_node.ref:
                     self._output.error("Failed requirement '%s' from '%s'"
                                        % (requirement.ref,
                                           current_node.conanfile.display_name))

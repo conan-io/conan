@@ -33,7 +33,7 @@ class GraphBinariesAnalyzer(object):
         if revisions_enabled:
             metadata = self._cache.load_metadata(package_ref.ref)
             rec_rev = metadata.packages[package_ref.package_id].recipe_revision
-            if rec_rev != node.conan_ref.revision:
+            if rec_rev != node.ref.revision:
                 output.warn("Outdated package! The package doesn't belong "
                             "to the installed recipe revision: %s" % str(package_ref))
 
@@ -62,7 +62,7 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_node(self, node, build_mode, update, evaluated_references, remote_name):
         assert node.binary is None
 
-        ref, conanfile = node.conan_ref, node.conanfile
+        ref, conanfile = node.ref, node.conanfile
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
         pref = PackageReference(ref, package_id)

@@ -278,7 +278,7 @@ class BinaryInstaller(object):
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
-                ref, conan_file = node.conan_ref, node.conanfile
+                ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
                 package_id = conan_file.info.package_id()
                 if node.binary == BINARY_MISSING:
@@ -290,7 +290,7 @@ class BinaryInstaller(object):
                     self._handle_node_editable(node)
                     continue
 
-                workspace_package = self._workspace[node.conan_ref] if self._workspace else None
+                workspace_package = self._workspace[node.ref] if self._workspace else None
                 if workspace_package:
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
                                                 graph_info)
@@ -321,7 +321,7 @@ class BinaryInstaller(object):
 
     def _handle_node_editable(self, node):
         # Get source of information
-        package_layout = self._cache.package_layout(node.conan_ref)
+        package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
@@ -412,7 +412,7 @@ class BinaryInstaller(object):
         report_copied_files(copied_files, output)
 
     def _build_package(self, node, pref, output, keep_build):
-        ref, conan_file = node.conan_ref, node.conanfile
+        ref, conan_file = node.ref, node.conanfile
 
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
@@ -477,14 +477,14 @@ class BinaryInstaller(object):
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
-                conan_file.output.info("Applying build-requirement: %s" % str(n.conan_ref))
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
-            conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
-            conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
+                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
+            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+            conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+            conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
-        subtree_libnames = [node.conan_ref.name for node in node_order]
+        subtree_libnames = [node.ref.name for node in node_order]
         for package_name, env_vars in conan_file._conan_env_values.data.items():
             for name, value in env_vars.items():
                 if not package_name or package_name in subtree_libnames or \

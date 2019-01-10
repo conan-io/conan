@@ -82,8 +82,7 @@ class Printer(object):
 
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.conan_ref,
-                                      node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
 
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -145,8 +144,8 @@ class Printer(object):
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
             if revisions_enabled:
                 if (isinstance(ref, ConanFileReference) and show("revision") and
-                        node.conan_ref.revision):
-                    self._out.writeln("    Revision: %s" % node.conan_ref.revision)
+                        node.ref.revision):
+                    self._out.writeln("    Revision: %s" % node.ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
@@ -172,11 +171,11 @@ class Printer(object):
                 if requires:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
                 if build_requires:
                     self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
                     for d in build_requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
