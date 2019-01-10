@@ -4,7 +4,8 @@ from os.path import join, normpath, relpath
 from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER, SimplePaths
+from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths.simple_paths import SimplePaths
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"

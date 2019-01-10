@@ -49,7 +49,7 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
@@ -932,6 +932,26 @@ class ConanAPIV1(object):
     @api_method
     def get_remote_by_name(self, remote_name):
         return self._client_cache.registry.remotes.get(remote_name)
+
+    @api_method
+    def link(self, target_path, target_reference, cwd):
+        # Retrieve conanfile.py from target_path
+        target_path = _get_conanfile_path(path=target_path, cwd=cwd, py=True)
+
+        ref = ConanFileReference.loads(target_reference, validate=True)
+        target_conanfile = self._graph_manager._loader.load_class(target_path)
+        if (target_conanfile.name and target_conanfile.name != ref.name) or \
+                (target_conanfile.version and target_conanfile.version != ref.version):
+            raise ConanException("Name and version from reference ({}) and target "
+                                 "conanfile.py ({}/{}) must match".
+                                 format(ref, target_conanfile.name, target_conanfile.version))
+
+        self._client_cache.install_as_editable(ref, os.path.dirname(target_path))
+
+    @api_method
+    def unlink(self, reference):
+        ref = ConanFileReference.loads(reference, validate=True)
+        return self._client_cache.remove_editable(ref)
 
 
 Conan = ConanAPIV1

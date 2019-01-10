@@ -10,7 +10,7 @@ from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput, test_processed_profile
 
