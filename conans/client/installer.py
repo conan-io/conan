@@ -7,7 +7,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
-    BINARY_SKIP, BINARY_UPDATE
+    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
 from conans.client.importer import remove_imports
 from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
@@ -19,6 +19,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
+from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -265,6 +266,7 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
+        self._editable_cpp_info = self._load_editables_cpp_info()
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (conan_ref=None) from the rest
@@ -288,6 +290,10 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
+                if node.binary == BINARY_EDITABLE:
+                    self._handle_node_editable(node)
+                    continue
+
                 workspace_package = self._workspace[node.conan_ref] if self._workspace else None
                 if workspace_package:
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
@@ -310,6 +316,41 @@ class BinaryInstaller(object):
             read_manifest = FileTreeManifest.load(package_folder)
             if node.update_manifest == read_manifest:
                 return True
+
+    def _load_editables_cpp_info(self):
+        editables_path = self._client_cache.default_editable_path
+        if os.path.exists(editables_path):
+            return EditableCppInfo.load(editables_path, require_namespace=True)
+        return None
+
+    def _handle_node_editable(self, node):
+        # Get source of information
+        package_layout = self._client_cache.package_layout(node.conan_ref)
+        base_path = package_layout.conan()
+        self._call_package_info(node.conanfile, package_folder=base_path)
+
+        # Try with package-provided file
+        package_layout_file = package_layout.editable_package_layout_file()
+        if os.path.exists(package_layout_file):
+            editable_cpp_info = EditableCppInfo.load(package_layout_file,
+                                                     require_namespace=False)
+            editable_cpp_info.apply_to(node.conanfile.name,
+                                       node.conanfile.cpp_info,
+                                       base_path=base_path,
+                                       settings=node.conanfile.settings,
+                                       options=node.conanfile.options)
+
+        # Try with the profile-like file
+        elif self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
+            self._editable_cpp_info.apply_to(node.conanfile.name,
+                                             node.conanfile.cpp_info,
+                                             base_path=base_path,
+                                             settings=node.conanfile.settings,
+                                             options=node.conanfile.options)
+
+        # Use `package_info()` data
+        else:
+            pass  # It will use `package_info()` data relative to path used as 'package_folder'
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_file = node.conanfile

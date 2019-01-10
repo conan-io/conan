@@ -16,7 +16,8 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import CONAN_MANIFEST, PUT_HEADERS, SimplePaths, check_ref_case
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS
+from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
@@ -28,6 +29,9 @@ REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+LAYOUTS_FOLDER = 'layouts'
+
+DEFAULT_LAYOUT_FILE = "default"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -162,6 +166,10 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
+    def default_editable_path(self):
+        return os.path.join(self.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+
+    @property
     def hooks_path(self):
         """
         :return: Hooks folder in client cache
@@ -246,7 +254,6 @@ class ClientCache(SimplePaths):
         """conan_id = sha(zip file)"""
         assert isinstance(conan_reference, ConanFileReference)
         export_folder = self.export(conan_reference)
-        check_ref_case(conan_reference, export_folder, self.store)
         return FileTreeManifest.load(export_folder)
 
     def load_package_manifest(self, package_reference):
@@ -312,6 +319,17 @@ class ClientCache(SimplePaths):
         package_folder = self.package(package_ref, short_paths=None)
         readed_digest = FileTreeManifest.load(package_folder)
         return readed_digest.summary_hash
+
+    def install_as_editable(self, conan_reference, target_path):
+        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+        save(linked_folder_sentinel, content=target_path)
+
+    def remove_editable(self, conan_reference):
+        if self.installed_as_editable(conan_reference):
+            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(conan_reference)
+            os.remove(linked_folder_sentinel)
+            return True
+        return False
 
 
 def _mix_settings_with_env(settings):
