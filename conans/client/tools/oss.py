@@ -37,6 +37,8 @@ def detected_architecture():
         return "ppc64le"
     elif "ppc64" in machine:
         return "ppc64"
+    elif "ppc" in machine:
+        return "ppc32"
     elif "mips64" in machine:
         return "mips64"
     elif "mips" in machine:
@@ -341,7 +343,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
     # Calculate the arch
     machine = {"x86": "i686" if os_ != "Linux" else "x86",
                "x86_64": "x86_64",
-               "armv8": "aarch64"}.get(arch, None)
+               "armv8": "aarch64",
+               "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
+               "armv8.3": "aarch64"
+               }.get(arch, None)
 
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
@@ -351,7 +356,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "powerpc64le"
         elif "ppc64" in arch:
             machine = "powerpc64"
-        elif "powerpc" in arch:
+        elif "ppc32" in arch:
             machine = "powerpc"
         elif "mips64" in arch:
             machine = "mips64"
@@ -385,10 +390,13 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "tvOS": "apple-darwin"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
-        if "arm" in arch and arch != "armv8":
+        if "arm" in arch and "armv8" not in arch:
             op_system += "eabi"
 
         if arch == "armv7hf" and os_ == "Linux":
             op_system += "hf"
+
+        if arch == "armv8_32" and os_ == "Linux":
+            op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
