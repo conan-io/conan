@@ -9,5 +9,9 @@ def from_iso8601_to_datetime(iso_str):
     return datetime.datetime.strptime(iso_str, '%Y-%m-%dT%H:%M:%SZ')
 
 
+def from_timestamp_to_datetime(timestamp):
+    return datetime.datetime.fromtimestamp(timestamp)
+
+
 def datetime_to_str(dt):
     return dt.strftime('%Y-%m-%d %H:%M:%S UTC')

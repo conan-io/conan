@@ -49,12 +49,13 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
+from conans.util.time import from_timestamp_to_datetime
 from conans.util.tracer import log_command, log_exception
 
 default_manifest_folder = '.conan_manifests'
@@ -937,8 +938,13 @@ class ConanAPIV1(object):
     def get_recipe_revisions(self, ref, remote_name=None):
         ref = ConanFileReference.loads(ref.full_repr())
         if not remote_name:
+            ret = {"reference": ref,  "revisions": []}
+            if not os.path.exists(self._client_cache.export(ref)):
+                return ret
             metadata = self._client_cache.load_metadata(ref)
-            print(metadata)
+            ret["revisions"].append({"revision": metadata.recipe.revision,
+                                     "time": from_timestamp_to_datetime(metadata.recipe.time)})
+            return ret
         else:
             remote = self.get_remote_by_name(remote_name)
             if ref.revision:
@@ -949,7 +955,15 @@ class ConanAPIV1(object):
     def get_package_revisions(self, pref, remote_name=None):
         pref = PackageReference.loads(pref.full_repr(), validate=True)
         if not remote_name:
-            pass
+            ret = {"reference": pref, "revisions": []}
+            if not os.path.exists(self._client_cache.package(pref)):
+                return ret
+            metadata = self._client_cache.load_metadata(pref.conan)
+            print(metadata)
+            tm = from_timestamp_to_datetime(metadata.packages[pref.package_id].time)
+            ret["revisions"].append({"revision": metadata.packages[pref.package_id].revision,
+                                     "time": tm})
+            return ret
         else:
             remote = self.get_remote_by_name(remote_name)
             if not pref.conan.revision:
