@@ -94,3 +94,9 @@ class RestApiClient(object):
 
     def server_info(self):
         return self._get_api().server_info()
+
+    def get_recipe_revisions(self, ref):
+        return self._get_api().get_recipe_revisions(ref)
+
+    def get_package_revisions(self, pref):
+        return self._get_api().get_package_revisions(pref)

@@ -934,29 +934,27 @@ class ConanAPIV1(object):
         return self._client_cache.registry.remotes.get(remote_name)
 
     @api_method
-    def get_recipe_revisions(self, reference, remote_name=None):
-        reference = ConanFileReference.loads(reference)
+    def get_recipe_revisions(self, ref, remote_name=None):
+        ref = ConanFileReference.loads(ref.full_repr())
         if not remote_name:
-            pass
+            return None
         else:
             remote = self.get_remote_by_name(remote_name)
-            # VALIDATE NOT RREV PRESENT OR DIE
-            return self._remote_manager.xxxxxx(reference)
-            pass
-
-        return
+            if ref.revision:
+                raise ConanException("Cannot list the revisions of a specific revision")
+            return self._remote_manager.get_recipe_revisions(ref, remote=remote)
 
     @api_method
-    def get_package_revisions(self, package_reference, remote_name=None):
-        p_reference = PackageReference.loads(str(package_reference), validate=True)
+    def get_package_revisions(self, pref, remote_name=None):
+        pref = PackageReference.loads(pref.full_repr(), validate=True)
         if not remote_name:
             pass
         else:
             remote = self.get_remote_by_name(remote_name)
-            # VALIDATE RREV PRESENT OR DIE
-            return self._remote_manager.xxxxxx(package_reference)
+            if not pref.conan.revision:
+                raise ConanException("Specify a recipe reference with revision")
 
-        return
+            return self._remote_manager.get_package_revisions(pref, remote=remote)
 
 
 Conan = ConanAPIV1
