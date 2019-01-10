@@ -87,38 +87,38 @@ class SynchronizeTest(unittest.TestCase):
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server
-        package_reference = PackageReference(ref, str(package_ids[0]))
-        package_server_path = remote_paths.package(package_reference)
+        pref = PackageReference(ref, str(package_ids[0]))
+        package_server_path = remote_paths.package(pref)
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = client.client_cache.package(package_reference)
+        pack_path = client.client_cache.package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
 
-        self._create_manifest(client, package_reference)
+        self._create_manifest(client, pref)
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
         self.assertTrue(os.path.exists(remote_file_path))
 
         # Now modify the file and check again
         save(new_file_source_path, "othercontent")
-        self._create_manifest(client, package_reference)
+        self._create_manifest(client, pref)
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
         self.assertTrue(os.path.exists(remote_file_path))
         self.assertTrue(load(remote_file_path), "othercontent")
 
         # Now delete the file and check again
         os.remove(new_file_source_path)
-        self._create_manifest(client, package_reference)
+        self._create_manifest(client, pref)
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
 
         # With revisions makes no sense because there is a new revision always that sources change

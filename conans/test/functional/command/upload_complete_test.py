@@ -93,10 +93,10 @@ class UploadTest(unittest.TestCase):
         manifest.save(reg_folder)
         self.test_server.server_store.update_last_revision(self.ref)
 
-        self.package_ref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.pref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
-        package_folder = self.client.client_cache.package(self.package_ref)
+        package_folder = self.client.client_cache.package(self.pref)
         save(os.path.join(package_folder, "include", "lib1.h"), "//header")
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
@@ -104,13 +104,13 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
         save(os.path.join(package_folder, CONANINFO), """[recipe_hash]\n%s""" % manifest.summary_hash)
         FileTreeManifest.create(package_folder).save(package_folder)
-        self.test_server.server_store.update_last_package_revision(self.package_ref)
+        self.test_server.server_store.update_last_package_revision(self.pref)
 
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
-        package_path = self.client.client_cache.package(self.package_ref)
+        package_path = self.client.client_cache.package(self.pref)
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(package_folder)
 
@@ -217,8 +217,8 @@ class UploadTest(unittest.TestCase):
 
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package
-        pack_path = self.client.client_cache.package(self.package_ref)
-        package_path = self.client.client_cache.package(self.package_ref)
+        pack_path = self.client.client_cache.package(self.pref)
+        package_path = self.client.client_cache.package(self.pref)
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(pack_path)
 
@@ -252,7 +252,7 @@ class TestConan(ConanFile):
         """ basic installation of a new conans
         """
         # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.ref, str(self.package_ref.package_id)))
+        self.client.run('upload %s -p %s' % (self.ref, str(self.pref.package_id)))
         self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
     def simple_test(self):
@@ -263,8 +263,8 @@ class TestConan(ConanFile):
         if not self.client.block_v2:
             rev = self.client.get_revision(self.ref)
             self.ref = self.ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
@@ -274,9 +274,9 @@ class TestConan(ConanFile):
 
         # Upload package
         self.client.run('upload %s -p %s'
-                        % (str(self.ref), str(self.package_ref.package_id)))
+                        % (str(self.ref), str(self.pref.package_id)))
 
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
@@ -303,7 +303,7 @@ class TestConan(ConanFile):
             else:
                 self.assertFalse(os.path.exists(os.path.join(tmp, f)))
 
-        folder = uncompress_packaged_files(self.test_server.server_store, self.package_ref)
+        folder = uncompress_packaged_files(self.test_server.server_store, self.pref)
 
         self.assertTrue(os.path.exists(os.path.join(folder,
                                                     "include",
@@ -339,11 +339,11 @@ class TestConan(ConanFile):
         if not self.client.block_v2:
             rev = self.client.get_revision(self.ref)
             self.ref = self.ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.server_store.export(self.ref)
-        server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(server_reg_folder))
         self.assertTrue(os.path.exists(server_pack_folder))
@@ -356,11 +356,11 @@ class TestConan(ConanFile):
         if not self.client.block_v2:
             rev = self.client.get_revision(self.ref)
             self.ref = self.ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))

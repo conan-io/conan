@@ -26,8 +26,8 @@ def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
         load_deps_info(install_folder, conanfile, required=True)
     pkg_id = conanfile.info.package_id()
     output.info("Packaging to %s" % pkg_id)
-    pkg_reference = PackageReference(reference, pkg_id)
-    dest_package_folder = client_cache.package(pkg_reference, short_paths=conanfile.short_paths)
+    pref = PackageReference(reference, pkg_id)
+    dest_package_folder = client_cache.package(pref, short_paths=conanfile.short_paths)
 
     if os.path.exists(dest_package_folder):
         if force:
@@ -46,4 +46,4 @@ def export_pkg(client_cache, graph_manager, hook_manager, recorder, output,
         packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
                                 install_folder, hook_manager, conan_file_path,
                                 reference, local=True)
-    recorder.package_exported(pkg_reference)
+    recorder.package_exported(pref)

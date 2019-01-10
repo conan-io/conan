@@ -496,11 +496,11 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pid = PackageReference(ref, package, DEFAULT_REVISION_V1)
-                origin_path = client_store_path.package(pid)
-                dest_path = server_store.package(pid)
+                pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
+                origin_path = client_store_path.package(pref)
+                dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
-                server_store.update_last_package_revision(pid)
+                server_store.update_last_package_revision(pref)
 
     def package_search_all_remotes_test(self):
         os.rmdir(self.servers["local"].server_store.store)

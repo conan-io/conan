@@ -39,9 +39,9 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel)
-            package_reference = PackageReference(ref, package_id)
+            pref = PackageReference(ref, package_id)
 
-            urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
+            urls = conan_service.get_package_download_urls(pref, [CONAN_MANIFEST])
             if not urls:
                 raise NotFoundException("No digest found")
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}

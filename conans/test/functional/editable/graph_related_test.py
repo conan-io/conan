@@ -66,8 +66,8 @@ class RelatedToGraphBehavior(object):
     def test_do_nothing(self):
         self.t.save(files={'conanfile.py': conanfile,
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
-        self.t.run('link . {}'.format(self.reference))
-        self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
+        self.t.run('link . {}'.format(self.ref))
+        self.assertTrue(self.t.client_cache.installed_as_editable(self.ref))
 
     @parameterized.expand([(True, ), (False, )])
     def test_install_requirements(self, update):
@@ -83,11 +83,11 @@ class RelatedToGraphBehavior(object):
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
-        self.t.run('link . {}'.format(self.reference))
+        self.t.run('link . {}'.format(self.ref))
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
-        self.t.run('install {}{}'.format(self.reference, update))
+        self.t.run('install {}{}'.format(self.ref, update))
         self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
@@ -109,13 +109,13 @@ class RelatedToGraphBehavior(object):
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
                     path=path_to_lib)
-        self.t.run('link "{}" {}'.format(path_to_lib, self.reference))
+        self.t.run('link "{}" {}'.format(path_to_lib, self.ref))
 
         # Create a child an install it (in other folder, do not override the link!)
         path_to_child = os.path.join(self.t.current_folder, 'child')
         ref_child = ConanFileReference.loads("child/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile_base.
-                    format(body='requires = "{}"'.format(self.reference)), },
+                    format(body='requires = "{}"'.format(self.ref)), },
                     path=path_to_child)
 
         update = ' --update' if update else ''

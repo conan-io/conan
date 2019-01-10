@@ -316,9 +316,8 @@ def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
                 continue
             # Read conaninfo
             try:
-                package_reference = PackageReference(reference, package_id)
-                info_path = os.path.join(paths.package(package_reference,
-                                                       short_paths=None), CONANINFO)
+                pref = PackageReference(reference, package_id)
+                info_path = os.path.join(paths.package(pref, short_paths=None), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
                 conan_info_content = load(info_path)
@@ -327,7 +326,7 @@ def _get_local_infos_min(paths, reference, v2_compatibility_mode=False):
                 result[package_id] = conan_vars_info
 
             except Exception as exc:
-                logger.error("Package %s has no ConanInfo file" % str(package_reference))
+                logger.error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
                     logger.error(str(exc))
     return result

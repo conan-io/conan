@@ -35,13 +35,13 @@ class PackageIngrityTest(unittest.TestCase):
         client.save({"conanfile.py": str(TestConanFile())})
         client.run("export . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        pkg_ref = PackageReference(ref, "12345")
-        package_folder = client.client_cache.package(pkg_ref)
+        pref = PackageReference(ref, "12345")
+        package_folder = client.client_cache.package(pref)
         recipe_rev = client.get_revision(ref)
-        p_rev = client.get_package_revision(pkg_ref)
-        with client.client_cache.update_metadata(pkg_ref.ref) as metadata:
-            metadata.packages[pkg_ref.package_id].revision = p_rev
-            metadata.packages[pkg_ref.package_id].recipe_revision = recipe_rev
+        p_rev = client.get_package_revision(pref)
+        with client.client_cache.update_metadata(pref.ref) as metadata:
+            metadata.packages[pref.package_id].revision = p_rev
+            metadata.packages[pref.package_id].recipe_revision = recipe_rev
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 

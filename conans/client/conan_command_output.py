@@ -38,10 +38,10 @@ class CommandOutputer(object):
             ref = ConanFileReference.loads(reference)
             self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
-    def remote_pref_list(self, refs):
-        for reference, remote_name in refs.items():
-            ref = PackageReference.loads(reference)
-            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
+    def remote_pref_list(self, package_references):
+        for package_reference, remote_name in package_references.items():
+            pref = PackageReference.loads(package_reference)
+            self.user_io.out.info("%s: %s" % (pref.full_repr(), remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)

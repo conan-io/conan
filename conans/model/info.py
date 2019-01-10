@@ -16,13 +16,13 @@ class RequirementInfo(object):
     def __init__(self, value_str, indirect=False):
         """ parse the input into fields name, version...
         """
-        ref = PackageReference.loads(value_str)
-        self.package = ref
-        self.full_name = ref.ref.name
-        self.full_version = ref.ref.version
-        self.full_user = ref.ref.user
-        self.full_channel = ref.ref.channel
-        self.full_package_id = ref.package_id
+        pref = PackageReference.loads(value_str)
+        self.package = pref
+        self.full_name = pref.ref.name
+        self.full_version = pref.ref.version
+        self.full_user = pref.ref.user
+        self.full_channel = pref.ref.channel
+        self.full_package_id = pref.package_id
 
         # sha values
         if indirect:
@@ -205,7 +205,8 @@ class RequirementsList(list):
 
     @staticmethod
     def deserialize(data):
-        return RequirementsList([PackageReference.loads(line) for line in data])
+        return RequirementsList([PackageReference.loads(package_reference)
+                                 for package_reference in data])
 
 
 class ConanInfo(object):

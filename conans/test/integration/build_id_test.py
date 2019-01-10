@@ -60,30 +60,30 @@ class MyTest(ConanFile):
 class BuildIdTest(unittest.TestCase):
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                           "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
-        conaninfo = load(os.path.join(client.client_cache.package(ref_debug), "conaninfo.txt"))
+        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
+                                            "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
+        conaninfo = load(os.path.join(client.client_cache.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        ref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                             "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
-        conaninfo = load(os.path.join(client.client_cache.package(ref_release), "conaninfo.txt"))
+        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
+                                              "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
+        conaninfo = load(os.path.join(client.client_cache.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
-        ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                           "322de4b4a41f905f6b18f454ab5f498690b39c2a")
-        conaninfo = load(os.path.join(client.client_cache.package(ref_debug), "conaninfo.txt"))
+        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
+                                            "322de4b4a41f905f6b18f454ab5f498690b39c2a")
+        conaninfo = load(os.path.join(client.client_cache.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        ref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                             "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
-        conaninfo = load(os.path.join(client.client_cache.package(ref_release), "conaninfo.txt"))
+        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
+                                              "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
+        conaninfo = load(os.path.join(client.client_cache.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)

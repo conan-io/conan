@@ -81,7 +81,7 @@ class UploadCompressionTest(unittest.TestCase):
         conan_path = server_paths.export(ref)
         self.assertTrue(os.path.exists(conan_path))
         package_ids = self.client.client_cache.conan_packages(ref)
-        package_ref = PackageReference(ref, package_ids[0])
+        pref = PackageReference(ref, package_ids[0])
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
@@ -98,7 +98,7 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # Check library on server
-        self._assert_library_exists_in_server(package_ref, server_paths)
+        self._assert_library_exists_in_server(pref, server_paths)
 
     def _assert_library_exists_in_server(self, package_ref, paths):
         folder = uncompress_packaged_files(paths, package_ref)

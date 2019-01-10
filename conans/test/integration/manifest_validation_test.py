@@ -168,9 +168,8 @@ class ConanFileTest(ConanFile):
         paths = SimplePaths(output_folder)
         self.assertTrue(os.path.exists(os.path.join(paths.export(self.ref), CONAN_MANIFEST)))
 
-        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
-                                                   "%s" % NO_SETTINGS_PACKAGE_ID)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(package_reference), CONAN_MANIFEST)))
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), CONAN_MANIFEST)))
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -191,7 +190,7 @@ class ConanFileTest(ConanFile):
                         % str(self.ref),
                         assert_error=True)
         self.assertNotIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
-        self.assertNotIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
+        self.assertNotIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
         self.assertIn("Modified or new manifest 'Hello/0.1@lasote/stable' detected",
                       self.client.user_io.out)
 

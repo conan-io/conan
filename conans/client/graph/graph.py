@@ -177,14 +177,14 @@ class DepsGraph(object):
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
                 for neighbor in neighbors:
-                    nref, nconan = neighbor.conan_ref, neighbor.conanfile
+                    ref, nconan = neighbor.conan_ref, neighbor.conanfile
                     package_id = nconan.info.package_id()
-                    package_reference = PackageReference(nref, package_id)
-                    direct_reqs.append(package_reference)
+                    pref = PackageReference(ref, package_id)
+                    direct_reqs.append(pref)
                     indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(nref, nconan.info.full_options)
+                    conanfile.options.propagate_downstream(ref, nconan.info.full_options)
                     # Might be never used, but update original requirement, just in case
-                    conanfile.requires[nref.name].conan_reference = nref
+                    conanfile.requires[ref.name].conan_reference = ref
 
                 # Make sure not duplicated
                 indirect_reqs.difference_update(direct_reqs)
@@ -261,13 +261,13 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
-            if package_ref not in unique_nodes:
+            pref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
+            if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
-                unique_nodes[package_ref] = result_node
+                unique_nodes[pref] = result_node
             else:
-                result_node = unique_nodes[package_ref]
+                result_node = unique_nodes[pref]
             nodes_map[node] = result_node
 
         # Compute the new edges of the graph

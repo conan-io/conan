@@ -314,23 +314,23 @@ class ServerStore(SimplePaths):
 
         return rev_list.get_time(pref.revision)
 
-    def p_ref_with_rev(self, p_reference):
-        if p_reference.revision and p_reference.ref.revision:
-            return p_reference
+    def p_ref_with_rev(self, pref):
+        if pref.revision and pref.ref.revision:
+            return pref
 
-        if not p_reference.ref.revision:
+        if not pref.ref.revision:
             # Search the latest recipe revision with the requested package
-            p_reference = self.get_latest_package_reference(p_reference)
-            return p_reference
+            pref = self.get_latest_package_reference(pref)
+            return pref
 
-        reference = self.ref_with_rev(p_reference.ref)
-        ret = PackageReference(reference, p_reference.package_id)
+        ref = self.ref_with_rev(pref.ref)
+        ret = PackageReference(ref, pref.package_id)
 
         latest_p = self.get_last_package_revision(ret)
         if not latest_p:
-            raise NotFoundException("Package not found: '%s'" % str(p_reference))
+            raise NotFoundException("Package not found: '%s'" % str(pref))
 
-        return ret.copy_with_revs(reference.revision, latest_p.revision)
+        return ret.copy_with_revs(ref.revision, latest_p.revision)
 
     def _remove_revision_from_index(self, reference):
         rev_list = self._load_revision_list(reference)

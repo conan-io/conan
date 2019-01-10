@@ -64,10 +64,10 @@ def package_copy(src_ref, user_channel, package_ids, paths, user_io,
 
     # Copy packages
     for package_id in package_ids:
-        package_origin = PackageReference(src_ref, package_id)
-        package_dest = PackageReference(dest_ref, package_id)
-        package_path_origin = paths.package(package_origin, short_paths)
-        package_path_dest = paths.package(package_dest, short_paths)
+        pref_origin = PackageReference(src_ref, package_id)
+        pref_dest = PackageReference(dest_ref, package_id)
+        package_path_origin = paths.package(pref_origin, short_paths)
+        package_path_dest = paths.package(pref_dest, short_paths)
         if os.path.exists(package_path_dest):
             if not force and not user_io.request_boolean("Package '%s' already exist."
                                                          " Override?" % str(package_id)):

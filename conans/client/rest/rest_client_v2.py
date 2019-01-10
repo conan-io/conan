@@ -67,8 +67,8 @@ class RestV2Methods(RestCommonMethods):
         repr_ref = p_ref.full_repr()
         snap, p_reference, rev_time = self._get_snapshot(url, repr_ref)
 
-        reference = PackageReference.loads(p_reference)
-        return snap, reference, rev_time
+        pref = PackageReference.loads(p_reference)
+        return snap, pref, rev_time
 
     def get_conan_manifest(self, conan_reference):
         url = self.conans_router.recipe_manifest(conan_reference)
@@ -123,13 +123,12 @@ class RestV2Methods(RestCommonMethods):
         files = data["files"]
         rev_time = data["time"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
-        new_reference = PackageReference.loads(data["reference"])
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        new_pref = PackageReference.loads(data["reference"])
-        urls = {fn: self.conans_router.package_file(new_pref, fn) for fn in files}
+        pref = PackageReference.loads(data["reference"])
+        urls = {fn: self.conans_router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, new_reference, rev_time
+        return ret, pref, rev_time
 
     def get_path(self, ref, package_id, path):
 

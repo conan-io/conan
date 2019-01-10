@@ -150,7 +150,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
+        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
                                              NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
@@ -161,7 +161,7 @@ class UploadTest(unittest.TestCase):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
 
-            export_folder = client.client_cache.package(package_ref)
+            export_folder = client.client_cache.package(pref)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))

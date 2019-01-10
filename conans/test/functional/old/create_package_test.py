@@ -71,9 +71,9 @@ class ExporterTest(unittest.TestCase):
                      "modules/opencv_mod.hpp":                     "copy"}, path=reg_folder)
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
-        package_ref = PackageReference(ref, "myfakeid")
-        build_folder = client.client_cache.build(package_ref)
-        package_folder = client.client_cache.package(package_ref)
+        pref = PackageReference(ref, "myfakeid")
+        build_folder = client.client_cache.build(pref)
+        package_folder = client.client_cache.package(pref)
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)

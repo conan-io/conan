@@ -110,13 +110,13 @@ class PackageCopierTest(unittest.TestCase):
     def _assert_conanfile_exists(self, reference, paths):
         self.assertTrue(os.path.exists(paths.conanfile(reference)))
 
-    def _assert_package_exists(self, reference, package_id, paths):
-        p1 = PackageReference(reference, package_id)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(p1), "package.lib")))
+    def _assert_package_exists(self, ref, package_id, paths):
+        pref = PackageReference(ref, package_id)
+        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), "package.lib")))
 
-    def _assert_package_doesnt_exists(self, reference, package_id, paths):
-        p1 = PackageReference(reference, package_id)
-        self.assertFalse(os.path.exists(os.path.join(paths.package(p1), "package.lib")))
+    def _assert_package_doesnt_exists(self, ref, package_id, paths):
+        pref = PackageReference(ref, package_id)
+        self.assertFalse(os.path.exists(os.path.join(paths.package(pref), "package.lib")))
 
     def _create_conanfile(self, ref, paths, content="default_content"):
         origin_reg = paths.export(ref)
@@ -125,7 +125,7 @@ class PackageCopierTest(unittest.TestCase):
         mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
-        package1_ref = PackageReference(ref, package_id)
-        package1_dir = paths.package(package1_ref)
+        pref = PackageReference(ref, package_id)
+        package1_dir = paths.package(pref)
         mkdir(package1_dir)
         save(os.path.join(package1_dir, "package.lib"), content)

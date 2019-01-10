@@ -136,7 +136,7 @@ class RemoveTest(unittest.TestCase):
                             "O": 'Other/1.2@myuser/testing'}
 
         files = {}
-        pack_refs = []
+        prefs = []
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
@@ -146,7 +146,7 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                pack_refs.append(PackageReference(ref, str(pack_id)))
+                prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
@@ -158,12 +158,12 @@ class RemoveTest(unittest.TestCase):
         client.save(files, client.client_cache.store)
 
         # Create the manifests to be able to upload
-        for pack_ref in pack_refs:
-            pkg_folder = client.client_cache.package(pack_ref)
+        for pref in prefs:
+            pkg_folder = client.client_cache.package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
-            files["%s/%s/%s/%s" % (pack_ref.ref.dir_repr(),
+            files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
-                                   pack_ref.package_id,
+                                   pref.package_id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
 
         client.save(files, client.client_cache.store)

@@ -40,13 +40,13 @@ class ManifestManager(object):
 
     def _handle_package(self, node, verify, interactive):
         ref = node.conan_ref
-        ref = PackageReference(ref, node.conanfile.info.package_id())
-        package_folder = self._client_cache.package(ref)
+        pref = PackageReference(ref, node.conanfile.info.package_id())
+        package_folder = self._client_cache.package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
-        self._check_not_corrupted(ref, read_manifest, expected_manifest)
-        folder = self._paths.package(ref)
-        self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
+        self._check_not_corrupted(pref, read_manifest, expected_manifest)
+        folder = self._paths.package(pref)
+        self._handle_folder(folder, pref, read_manifest, interactive, node.remote, verify)
 
     def _handle_folder(self, folder, ref, read_manifest, interactive, remote, verify):
         assert(isinstance(remote, Remote) or remote is None)

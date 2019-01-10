@@ -62,22 +62,22 @@ class DiskRemover(object):
                 pkg_path = self._paths.build(PackageReference(conan_ref, id_))
                 self._remove(pkg_path, conan_ref, "package:%s" % id_)
 
-    def remove_packages(self, conan_ref, ids_filter=None):
+    def remove_packages(self, ref, ids_filter=None):
         if not ids_filter:  # Remove all
-            path = self._paths.packages(conan_ref)
+            path = self._paths.packages(ref)
             # Necessary for short_paths removal
-            for package in self._paths.conan_packages(conan_ref):
-                self._remove(os.path.join(path, package), conan_ref, "package folder:%s" % package)
-            self._remove(path, conan_ref, "packages")
-            self._remove_file(self._paths.system_reqs(conan_ref), conan_ref, SYSTEM_REQS)
+            for package in self._paths.conan_packages(ref):
+                self._remove(os.path.join(path, package), ref, "package folder:%s" % package)
+            self._remove(path, ref, "packages")
+            self._remove_file(self._paths.system_reqs(ref), ref, SYSTEM_REQS)
         else:
             for id_ in ids_filter:  # remove just the specified packages
-                package_ref = PackageReference(conan_ref, id_)
-                pkg_folder = self._paths.package(package_ref)
-                self._remove(pkg_folder, conan_ref, "package:%s" % id_)
-                self._remove_file(pkg_folder + ".dirty", conan_ref, "dirty flag")
-                self._remove_file(self._paths.system_reqs_package(package_ref),
-                                  conan_ref, "%s/%s" % (id_, SYSTEM_REQS))
+                pref = PackageReference(ref, id_)
+                pkg_folder = self._paths.package(pref)
+                self._remove(pkg_folder, ref, "package:%s" % id_)
+                self._remove_file(pkg_folder + ".dirty", ref, "dirty flag")
+                self._remove_file(self._paths.system_reqs_package(pref), ref,
+                                  "%s/%s" % (id_, SYSTEM_REQS))
 
 
 class ConanRemover(object):

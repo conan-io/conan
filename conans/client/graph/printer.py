@@ -23,16 +23,16 @@ def print_graph(deps_graph, out):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
-        package_id = PackageReference(node.conan_ref, node.conanfile.info.package_id())
+        pref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
         if node.build_require:
-            build_requires.setdefault(package_id, []).append(node)
+            build_requires.setdefault(pref, []).append(node)
         else:
-            requires.setdefault(package_id, []).append(node)
+            requires.setdefault(pref, []).append(node)
 
     out.writeln("Requirements", Color.BRIGHT_YELLOW)
 
     def _recipes(nodes):
-        for package_id, list_nodes in nodes.items():
+        for _, list_nodes in nodes.items():
             node = list_nodes[0]  # For printing recipes, we can use the first one
             if node.remote == WORKSPACE_FILE:
                 from_text = "from '%s'" % WORKSPACE_FILE

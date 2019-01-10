@@ -66,14 +66,14 @@ class GraphBinariesAnalyzer(object):
         conan_ref, conanfile = node.conan_ref, node.conanfile
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
-        package_ref = PackageReference(conan_ref, package_id)
+        pref = PackageReference(conan_ref, package_id)
         # Check that this same reference hasn't already been checked
-        previous_node = evaluated_references.get(package_ref)
+        previous_node = evaluated_references.get(pref)
         if previous_node:
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             return
-        evaluated_references[package_ref] = node
+        evaluated_references[pref] = node
 
         output = conanfile.output
 
@@ -86,7 +86,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_BUILD
             return
 
-        package_folder = self._client_cache.package(package_ref,
+        package_folder = self._client_cache.package(pref,
                                                     short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
@@ -95,7 +95,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_WORKSPACE
             return
 
-        with self._client_cache.package_lock(package_ref):
+        with self._client_cache.package_lock(pref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
@@ -107,16 +107,16 @@ class GraphBinariesAnalyzer(object):
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            remote = self._registry.prefs.get(package_ref) or self._registry.refs.get(conan_ref)
+            remote = self._registry.prefs.get(pref) or self._registry.refs.get(conan_ref)
         remotes = self._registry.remotes.list
 
         if os.path.exists(package_folder):
             if update:
                 if remote:
-                    if self._check_update(package_folder, package_ref, remote, output, node):
+                    if self._check_update(package_folder, pref, remote, output, node):
                         node.binary = BINARY_UPDATE
                         if build_mode.outdated:
-                            package_hash = self._get_package_info(package_ref, remote).recipe_hash
+                            package_hash = self._get_package_info(pref, remote).recipe_hash
                 elif remotes:
                     pass
                 else:
@@ -128,17 +128,17 @@ class GraphBinariesAnalyzer(object):
         else:  # Binary does NOT exist locally
             if not revisions_enabled and not node.revision_pinned:
                 # Do not search for packages for the specific resolved recipe revision but all
-                package_ref = package_ref.copy_clear_rev()
+                pref = pref.copy_clear_rev()
 
             remote_info = None
             if remote:
-                remote_info = self._get_package_info(package_ref, remote)
+                remote_info = self._get_package_info(pref, remote)
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
             if not remote or (not remote_info and revisions_enabled and not remote_name):
                 for r in remotes:
-                    remote_info = self._get_package_info(package_ref, r)
+                    remote_info = self._get_package_info(pref, r)
                     if remote_info:
                         remote = r
                         break
@@ -154,7 +154,7 @@ class GraphBinariesAnalyzer(object):
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                local_recipe_hash = self._client_cache.load_manifest(package_ref.ref).summary_hash
+                local_recipe_hash = self._client_cache.load_manifest(pref.ref).summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD
