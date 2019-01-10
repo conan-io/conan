@@ -30,13 +30,13 @@ class EmptyCacheTestMixin(object):
         self.servers = {"default": TestServer()}
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                             path_with_spaces=False)
-        self.reference = ConanFileReference.loads('lib/version@user/channel')
-        self.assertFalse(os.path.exists(self.t.client_cache.conan(self.reference)))
+        self.ref = ConanFileReference.loads('lib/version@user/channel')
+        self.assertFalse(os.path.exists(self.t.client_cache.conan(self.ref)))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.reference))
-        self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
-        self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
+        self.t.run('link {} --remove'.format(self.ref))
+        self.assertFalse(self.t.client_cache.installed_as_editable(self.ref))
+        self.assertFalse(os.listdir(self.t.client_cache.conan(self.ref)))
 
 
 class ExistingCacheTestMixin(object):
@@ -45,18 +45,18 @@ class ExistingCacheTestMixin(object):
         self.servers = {"default": TestServer()}
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                             path_with_spaces=False)
-        self.reference = ConanFileReference.loads('lib/version@user/channel')
+        self.ref = ConanFileReference.loads('lib/version@user/channel')
         self.t.save(files={'conanfile.py': conanfile})
-        self.t.run('create . {}'.format(self.reference))
-        self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
-        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.reference))),
+        self.t.run('create . {}'.format(self.ref))
+        self.assertTrue(os.path.exists(self.t.client_cache.conan(self.ref)))
+        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.reference))
-        self.assertTrue(os.path.exists(self.t.client_cache.conan(self.reference)))
-        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.reference))),
+        self.t.run('link {} --remove'.format(self.ref))
+        self.assertTrue(os.path.exists(self.t.client_cache.conan(self.ref)))
+        self.assertListEqual(sorted(os.listdir(self.t.client_cache.conan(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 

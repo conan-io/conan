@@ -25,7 +25,7 @@ class LinkedPackageAsProject(unittest.TestCase):
 
     def setUp(self):
         self.ref_parent = ConanFileReference.loads("parent/version@user/name")
-        self.reference = ConanFileReference.loads('lib/version@user/name')
+        self.ref = ConanFileReference.loads('lib/version@user/name')
 
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile})
@@ -35,13 +35,13 @@ class LinkedPackageAsProject(unittest.TestCase):
                            self.conanfile_base.format(
                                body='requires = "{}"'.format(self.ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
-        self.t.run('link . {}'.format(self.reference))
-        self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
+        self.t.run('link . {}'.format(self.ref))
+        self.assertTrue(self.t.client_cache.installed_as_editable(self.ref))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.reference))
-        self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
-        self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
+        self.t.run('link {} --remove'.format(self.ref))
+        self.assertFalse(self.t.client_cache.installed_as_editable(self.ref))
+        self.assertFalse(os.listdir(self.t.client_cache.conan(self.ref)))
 
 
 class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
@@ -72,7 +72,7 @@ class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
 class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
-        self.t.run('info {}'.format(self.reference))
+        self.t.run('info {}'.format(self.ref))
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
@@ -84,11 +84,11 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
                       "        parent/version@user/name\n", self.t.out)
 
     def test_only_none(self):
-        self.t.run('info {} --only None'.format(self.reference))
+        self.t.run('info {} --only None'.format(self.ref))
         self.assertListEqual(sorted(str(self.t.out).splitlines()),
                              sorted(["lib/version@user/name", "parent/version@user/name"]))
 
     def test_paths(self):
-        self.t.run('info {} --paths'.format(self.reference), assert_error=True)
+        self.t.run('info {} --paths'.format(self.ref), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
         # TODO: Cannot show paths for a linked/editable package... what to do here?
