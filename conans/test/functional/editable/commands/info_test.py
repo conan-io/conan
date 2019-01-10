@@ -32,8 +32,9 @@ class LinkedPackageAsProject(unittest.TestCase):
         self.t.run('create . {}'.format(self.ref_parent))
 
         self.t.save(files={'conanfile.py':
-                          self.conanfile_base.format(body='requires = "{}"'.format(self.ref_parent)),
-                      CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+                           self.conanfile_base.format(
+                               body='requires = "{}"'.format(self.ref_parent)),
+                           CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
         self.t.run('link . {}'.format(self.reference))
         self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
 

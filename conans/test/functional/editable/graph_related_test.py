@@ -81,7 +81,7 @@ class RelatedToGraphBehavior(object):
 
         # Create our project and link it
         self.t.save(files={'conanfile.py':
-                              conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
+                           conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
         self.t.run('link . {}'.format(self.reference))
 
@@ -106,7 +106,7 @@ class RelatedToGraphBehavior(object):
         # Create our project and link it
         path_to_lib = os.path.join(self.t.current_folder, 'lib')
         self.t.save(files={'conanfile.py':
-                               conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
+                           conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
                     path=path_to_lib)
         self.t.run('link "{}" {}'.format(path_to_lib, self.reference))

@@ -11,7 +11,7 @@ class CreateEditablePackageTest(unittest.TestCase):
 
     conanfile_base = textwrap.dedent("""\
         from conans import ConanFile
-        
+
         class APck(ConanFile):
             {body}
         """)
@@ -35,7 +35,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t = TestClient()
         t.save(files={'conanfile.py': textwrap.dedent("""\
             from conans import ConanFile
-            
+
             class Pck(ConanFile):
                 name = "lib"
                 version = "version"

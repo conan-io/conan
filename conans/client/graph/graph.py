@@ -101,6 +101,10 @@ class Node(object):
         if self.conan_ref.revision is not None and other.conan_ref.revision is None:
             return -1
 
+        if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return 1
+        if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return -1
         if self.conan_ref < other.conan_ref:
             return -1
 
