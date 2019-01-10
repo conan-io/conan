@@ -12,26 +12,6 @@ from conans.util.files import load
 
 class VersionRangesUpdatingTest(unittest.TestCase):
 
-    def space_separator_test(self):
-        # https://github.com/conan-io/conan/issues/4270
-        conanfile = """from conans import ConanFile
-class HelloReuseConan(ConanFile):
-    pass
-"""
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/1.1@myuser/testing")
-        client.run("create . Pkg/1.2@myuser/testing")
-
-        conanfile = """from conans import ConanFile
-class HelloReuseConan(ConanFile):
-    requires = "Pkg/[>1.0 <1.3]@myuser/testing"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        # Resolves to local package
-        self.assertIn("Pkg/1.2@myuser/testing: Already installed!", client.out)
-
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
