@@ -28,8 +28,7 @@ class ConanProxy(object):
             status = RECIPE_EDITABLE
             # TODO: log_recipe_got_from_editable(reference)
             # TODO: recorder.recipe_fetched_as_editable(reference)
-            metadata = self._client_cache.load_metadata(conan_reference)
-            return conanfile_path, status, None, conan_reference.copy_with_rev(metadata.recipe.revision)
+            return conanfile_path, status, None, conan_reference
 
         with self._client_cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference, check_updates, update, remote_name, recorder)

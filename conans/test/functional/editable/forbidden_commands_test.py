@@ -55,4 +55,3 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.t.run('remove {} --force'.format(self.reference), assert_error=True)
         self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
                       "using command 'conan link lib/version@user/name --remove'", self.t.out)
-

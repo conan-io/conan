@@ -118,7 +118,7 @@ class TestConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder="src")
-        cmake.build()   
+        cmake.build()
 
         os.chdir("bin")
         self.run(".%shello" % os.sep)
