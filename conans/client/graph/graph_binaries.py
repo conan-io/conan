@@ -2,7 +2,9 @@ import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+                                       RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
+from conans.client.output import ScopedOutput
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -74,6 +76,11 @@ class GraphBinariesAnalyzer(object):
         evaluated_references[package_ref] = node
 
         output = conanfile.output
+
+        if node.recipe == RECIPE_EDITABLE:
+            node.binary = BINARY_EDITABLE
+            return
+
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
@@ -91,7 +98,8 @@ class GraphBinariesAnalyzer(object):
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                rmdir(package_folder)
+                assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
+                rmdir(package_folder)  # Do not remove if it is EDITABLE
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
@@ -116,6 +124,7 @@ class GraphBinariesAnalyzer(object):
             if not node.binary:
                 node.binary = BINARY_CACHE
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
+
         else:  # Binary does NOT exist locally
             if not revisions_enabled and not node.revision_pinned:
                 # Do not search for packages for the specific resolved recipe revision but all

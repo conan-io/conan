@@ -4,7 +4,7 @@ from requests.exceptions import RequestException
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
-                                       RECIPE_UPDATED)
+                                       RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
@@ -23,6 +23,13 @@ class ConanProxy(object):
         self._registry = client_cache.registry
 
     def get_recipe(self, conan_reference, check_updates, update, remote_name, recorder):
+        if self._client_cache.installed_as_editable(conan_reference):
+            conanfile_path = self._client_cache.conanfile(conan_reference)
+            status = RECIPE_EDITABLE
+            # TODO: log_recipe_got_from_editable(reference)
+            # TODO: recorder.recipe_fetched_as_editable(reference)
+            return conanfile_path, status, None, conan_reference
+
         with self._client_cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference, check_updates, update, remote_name, recorder)
             conanfile_path, status, remote, reference = result

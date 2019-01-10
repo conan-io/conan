@@ -466,16 +466,17 @@ class TestClient(object):
 
         if cpu_count:
             self.client_cache.conan_config
-            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
+            replace_in_file(self.client_cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput())
+                            output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
             self.client_cache.invalidate()
         if self.revisions:
             # Generate base file
             self.client_cache.conan_config
-            replace_in_file(os.path.join(self.client_cache.conan_conf_path),
-                            "revisions_enabled = False", "revisions_enabled = True", strict=False)
+            replace_in_file(self.client_cache.conan_conf_path,
+                            "revisions_enabled = False", "revisions_enabled = True",
+                            output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
             self.client_cache.invalidate()
 
