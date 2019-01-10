@@ -39,6 +39,8 @@ class RefTest(unittest.TestCase):
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
+        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10 @ laso/testing")
+        self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10@laso/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, ".opencv/2.4.10@lasote/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10 @ lasote/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "lib/1.0@user&surname/channel")
