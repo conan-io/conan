@@ -81,6 +81,10 @@ rule project-define ( id )
         : constant-if call-in-project
         : $(id-mod)
         : constant-if call-in-project ;
+    if [ project.is-jamroot-module $(base-project-mod) ]
+    {
+        use-project /$(id) : $(id) ;
+    }
     return $(id-mod) ;
 }
 
@@ -137,13 +141,11 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 # mypkg
 # mypkg
 project-define mypkg ;
-use-project /mypkg : mypkg ;
 
 
 # mypkg2
 # mypkg2
 project-define mypkg2 ;
-use-project /mypkg2 : mypkg2 ;
 
 {
     local __define_targets__ = yes ;
