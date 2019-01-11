@@ -84,7 +84,7 @@ class RemoteManager(object):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
 
-        layout = self._client_cache.package_layout(pref.ref)
+        layout = self._cache.package_layout(pref.ref)
         read_manifest, expected_manifest = layout.package_manifests(pref)
 
         if read_manifest != expected_manifest:

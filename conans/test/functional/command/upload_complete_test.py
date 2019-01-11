@@ -367,7 +367,7 @@ class TestConan(ConanFile):
 
         # Fake datetime from exported date and upload again
 
-        old_digest = self.client.client_cache.package_layout(self.ref).load_manifest()
+        old_digest = self.client.cache.package_layout(self.ref).load_manifest()
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
         fake_digest.save(self.client.cache.export(self.ref))
