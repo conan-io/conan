@@ -143,15 +143,15 @@ class GoCompleteTest(unittest.TestCase):
             reuse_conan.runner(command, cwd=os.path.join(reuse_conan.current_folder, 'bin'))
         self.assertIn("Hello, Go!", reuse_conan.user_io.out)
 
-    def _assert_package_exists(self, package_ref, paths, files):
-        package_path = paths.package(package_ref)
+    def _assert_package_exists(self, pref, paths, files):
+        package_path = paths.package(pref)
         self.assertTrue(os.path.exists(os.path.join(package_path)))
         real_files = scan_folder(package_path)
         for f in files:
             self.assertIn(f, real_files)
 
-    def _assert_package_exists_in_server(self, package_ref, paths, files):
-        folder = uncompress_packaged_files(paths, package_ref)
+    def _assert_package_exists_in_server(self, pref, paths, files):
+        folder = uncompress_packaged_files(paths, pref)
         real_files = scan_folder(folder)
         for f in files:
             self.assertIn(f, real_files)

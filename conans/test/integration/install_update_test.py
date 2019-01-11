@@ -167,15 +167,15 @@ class Pkg(ConanFile):
         self.client.run("remote list_ref")
         self.assertIn("Hello0/1.0@lasote/stable", self.client.out)
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
-        ref = "Hello0/1.0@lasote/stable"
-        pref = "%s:55a3af76272ead64e6f543c12ecece30f94d3eda" % ref
-        self.assertIn(pref, self.client.out)
+        reference = "Hello0/1.0@lasote/stable"
+        package_reference = "%s:55a3af76272ead64e6f543c12ecece30f94d3eda" % reference
+        self.assertIn(package_reference, self.client.out)
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-        package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
+        pref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
         export_folder = self.client.cache.export(ref)
         recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-        package_folder = self.client.cache.package(package_ref)
+        package_folder = self.client.cache.package(pref)
         package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
         def timestamps():
@@ -188,7 +188,7 @@ class Pkg(ConanFile):
         time.sleep(1)
 
         # Change and rebuild package
-        files0["helloHello0.h"] = files0["helloHello0.h"] + " // useless comment"
+        files0["helloHello0.h"] += " // useless comment"
         self.client.save(files0, clean_first=True)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")

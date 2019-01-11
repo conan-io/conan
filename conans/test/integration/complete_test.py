@@ -137,6 +137,6 @@ class CompleteFlowTest(unittest.TestCase):
         libraries = os.listdir(os.path.join(path, "lib"))
         self.assertEquals(len(libraries), 1)
 
-    def _assert_library_exists_in_server(self, package_ref, paths):
-        folder = uncompress_packaged_files(paths, package_ref)
+    def _assert_library_exists_in_server(self, pref, paths):
+        folder = uncompress_packaged_files(paths, pref)
         self._assert_library_files(folder)

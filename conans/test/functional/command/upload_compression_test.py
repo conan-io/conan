@@ -100,8 +100,8 @@ class UploadCompressionTest(unittest.TestCase):
         # Check library on server
         self._assert_library_exists_in_server(pref, server_paths)
 
-    def _assert_library_exists_in_server(self, package_ref, paths):
-        folder = uncompress_packaged_files(paths, package_ref)
+    def _assert_library_exists_in_server(self, pref, paths):
+        folder = uncompress_packaged_files(paths, pref)
         self._assert_library_files(folder)
 
     def _assert_library_files(self, path):

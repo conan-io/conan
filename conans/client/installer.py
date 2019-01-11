@@ -196,7 +196,7 @@ class _ConanPackageBuilder(object):
             remove_imports(self._conan_file, copied_files, self._out)
 
 
-def _handle_system_requirements(conan_file, package_reference, cache, out):
+def _handle_system_requirements(conan_file, pref, cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -205,8 +205,8 @@ def _handle_system_requirements(conan_file, package_reference, cache, out):
     if "system_requirements" not in type(conan_file).__dict__:
         return
 
-    system_reqs_path = cache.system_reqs(package_reference.ref)
-    system_reqs_package_path = cache.system_reqs_package(package_reference)
+    system_reqs_path = cache.system_reqs(pref.ref)
+    system_reqs_package_path = cache.system_reqs_package(pref)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
         return
 
@@ -459,11 +459,11 @@ class BinaryInstaller(object):
                                         time.time() - t1)
                 # FIXME: Conan 2.0 Clear the registry entry (package ref)
 
-    def _log_built_package(self, build_folder, package_ref, duration):
+    def _log_built_package(self, build_folder, pref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)
         log_file = log_file if os.path.exists(log_file) else None
-        log_package_built(package_ref, duration, log_file)
-        self._recorder.package_built(package_ref)
+        log_package_built(pref, duration, log_file)
+        self._recorder.package_built(pref)
 
     @staticmethod
     def _propagate_info(node, inverse_levels, deps_graph):
