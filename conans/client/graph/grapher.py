@@ -15,7 +15,7 @@ class ConanGrapher(object):
         for node in self._deps_graph.nodes:
             depends = node.neighbors()
             if depends:
-                depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
+                depends = " ".join('"%s"' % str(d.ref) for d in depends)
                 graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
 
         graph_lines.append('}\n')
@@ -48,7 +48,7 @@ class ConanHTMLGrapher(object):
         graph_nodes = self._deps_graph.by_levels()
         graph_nodes = reversed([n for level in graph_nodes for n in level])
         for i, node in enumerate(graph_nodes):
-            ref, conanfile = node.conan_ref, node.conanfile
+            ref, conanfile = node.ref, node.conanfile
             nodes_map[node] = i
 
             label = "%s/%s" % (ref.name, ref.version) if ref else conanfile.display_name

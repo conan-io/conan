@@ -177,15 +177,15 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
         remotes, refs, _ = self._load()
         self._save(remotes, refs, prefs)
 
-    def update(self, ref, remote_name):
-        assert(isinstance(ref, PackageReference))
+    def update(self, pref, remote_name):
+        assert(isinstance(pref, PackageReference))
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, rrefs, prefs = self._load()
-            if self._key(ref) not in prefs:
-                raise ConanException("%s does not exist. Use add" % str(ref))
+            if self._key(pref) not in prefs:
+                raise ConanException("%s does not exist. Use add" % str(pref))
             if remote_name not in remotes:
                 raise ConanException("%s not in remotes" % remote_name)
-            prefs[self._key(ref)] = remote_name
+            prefs[self._key(pref)] = remote_name
             self._save(remotes, rrefs, prefs)
 
     def remove_all(self, ref):
@@ -194,7 +194,7 @@ class _PackageReferencesRegistry(_GenericReferencesRegistry):
             remotes, rrefs, prefs = self._load()
             ret = {}
             for p, r in prefs.items():
-                if PackageReference.loads(p).conan != ref.copy_clear_rev():
+                if PackageReference.loads(p).ref != ref.copy_clear_rev():
                     ret[p] = r
             self._save(remotes, rrefs, ret)
 

@@ -181,11 +181,11 @@ class PrivateDepsTest(unittest.TestCase):
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
                                       private_includes=True, dll_export=dll_export, build=build,
                                       cmake_targets=False)
-        conan_ref = ConanFileReference(name, version, "lasote", "stable")
+        ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export . lasote/stable")
         if upload:
-            self.client.run("upload %s" % str(conan_ref))
+            self.client.run("upload %s" % str(ref))
 
     def _export(self, name=0, version=None, deps=None):
         files = cpp_hello_conan_files(name, version, deps,

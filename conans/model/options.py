@@ -591,6 +591,6 @@ class Options(object):
         """ remove all options not related to the passed references,
         that should be the upstream requirements
         """
-        existing_names = [r.conan.name for r in references]
+        existing_names = [r.ref.name for r in references]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}

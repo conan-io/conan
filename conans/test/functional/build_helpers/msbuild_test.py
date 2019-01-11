@@ -51,8 +51,8 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         # Try to not update the project
-        client.client_cache._conan_config = None  # Invalidate cached config
-        tools.replace_in_file(client.client_cache.conan_conf_path, "[general]",
+        client.cache._conan_config = None  # Invalidate cached config
+        tools.replace_in_file(client.cache.conan_conf_path, "[general]",
                               "[general]\nskip_vs_projects_upgrade = True")
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build")
@@ -90,7 +90,7 @@ class HelloConan(ConanFile):
         self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
         full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
         pref = PackageReference.loads(full_ref)
-        build_folder = client.client_cache.build(pref)
+        build_folder = client.cache.build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "myprops.props")))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
