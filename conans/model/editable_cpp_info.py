@@ -1,9 +1,9 @@
 # coding=utf-8
-import configparser
 import ntpath
 import os
 import posixpath
 from collections import defaultdict
+import six.moves.configparser
 
 from conans.client.tools.files import load
 
