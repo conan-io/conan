@@ -205,7 +205,6 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
-               "CONAN_CLIENT_REVISIONS_ENABLED": self._env_c("general.revisions_enabled", "CONAN_CLIENT_REVISIONS_ENABLED", "False"),
                }
 
         # Filter None values
