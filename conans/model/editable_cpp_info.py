@@ -2,8 +2,12 @@
 import ntpath
 import os
 import posixpath
+import six
 from collections import defaultdict
-from six.moves import configparser
+if six.PY2:
+    from backports import configparser  # To use 'delimiters' in ConfigParser
+else:
+    import configparser
 
 from conans.client.tools.files import load
 
