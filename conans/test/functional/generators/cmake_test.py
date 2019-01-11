@@ -14,6 +14,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         file_content = '''from conans import ConanFile, CMake
 
 class ConanFileToolsTest(ConanFile):
+    generators = "cmake"
 
     def build(self):
         cmake = CMake(self)
