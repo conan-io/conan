@@ -55,11 +55,11 @@ class RestV2Methods(RestCommonMethods):
             rev_time = None
         return files_list, reference, rev_time
 
-    def _get_recipe_snapshot(self, reference):
-        url = self.conans_router.recipe_snapshot(reference)
-        repr_ref = reference.full_repr()
-        snap, reference, rev_time = self._get_snapshot(url, repr_ref)
-        ref = ConanFileReference.loads(reference)
+    def _get_recipe_snapshot(self, ref):
+        url = self.conans_router.recipe_snapshot(ref)
+        ref_str = ref.full_repr()
+        snap, reference, rev_time = self._get_snapshot(url, ref_str)
+        ref = ConanFileReference.loads(ref_str)
         return snap, ref, rev_time
 
     def _get_package_snapshot(self, pref):

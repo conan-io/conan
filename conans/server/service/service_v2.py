@@ -45,17 +45,17 @@ class ConanServiceV2(object):
         self._server_store.update_last_revision(reference)
 
     # PACKAGE METHODS
-    def get_package_file_list(self, p_reference, auth_user):
-        self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        file_list = self._server_store.get_package_file_list(p_reference)
+    def get_package_file_list(self, pref, auth_user):
+        self._authorizer.check_read_conan(auth_user, pref.ref)
+        file_list = self._server_store.get_package_file_list(pref)
         if not file_list:
             raise NotFoundException("conanfile not found")
 
-        p_reference = self._server_store.p_ref_with_rev(p_reference)
-        the_time = self._server_store.get_package_revision_time(p_reference)
+        pref = self._server_store.p_ref_with_rev(pref)
+        the_time = self._server_store.get_package_revision_time(pref)
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
-                "reference": p_reference.full_repr(),
+                "reference": pref.full_repr(),
                 "time": the_time}
 
     def get_package_file(self, p_reference, filename, auth_user):
