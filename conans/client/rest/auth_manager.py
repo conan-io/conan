@@ -126,62 +126,62 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
-        return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
+    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
+        return self._rest_client.upload_recipe(ref, the_files, retry, retry_wait,
                                                policy, remote_manifest)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
-        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait,
+    def upload_package(self, pref, the_files, retry, retry_wait, policy):
+        return self._rest_client.upload_package(pref, the_files, retry, retry_wait,
                                                 policy)
 
     @input_credentials_if_unauthorized
-    def get_conan_manifest(self, conan_reference):
-        return self._rest_client.get_conan_manifest(conan_reference)
+    def get_conan_manifest(self, ref):
+        return self._rest_client.get_conan_manifest(ref)
 
     @input_credentials_if_unauthorized
-    def get_package_manifest(self, package_reference):
-        return self._rest_client.get_package_manifest(package_reference)
+    def get_package_manifest(self, ref):
+        return self._rest_client.get_package_manifest(ref)
 
     @input_credentials_if_unauthorized
-    def get_package(self, package_reference, dest_folder):
-        return self._rest_client.get_package(package_reference, dest_folder)
+    def get_package(self, pref, dest_folder):
+        return self._rest_client.get_package(pref, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_recipe(self, reference, dest_folder):
-        return self._rest_client.get_recipe(reference, dest_folder)
+    def get_recipe(self, ref, dest_folder):
+        return self._rest_client.get_recipe(ref, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_recipe_sources(self, reference, dest_folder):
-        return self._rest_client.get_recipe_sources(reference, dest_folder)
+    def get_recipe_sources(self, ref, dest_folder):
+        return self._rest_client.get_recipe_sources(ref, dest_folder)
 
     @input_credentials_if_unauthorized
     def download_files_to_folder(self, urls, dest_folder):
         return self._rest_client.download_files_to_folder(urls, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_package_info(self, package_reference):
-        return self._rest_client.get_package_info(package_reference)
+    def get_package_info(self, pref):
+        return self._rest_client.get_package_info(pref)
 
     @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):
         return self._rest_client.search(pattern, ignorecase)
 
     @input_credentials_if_unauthorized
-    def search_packages(self, reference, query):
-        return self._rest_client.search_packages(reference, query)
+    def search_packages(self, ref, query):
+        return self._rest_client.search_packages(ref, query)
 
     @input_credentials_if_unauthorized
-    def remove(self, conan_refernce):
-        return self._rest_client.remove_conanfile(conan_refernce)
+    def remove(self, ref):
+        return self._rest_client.remove_conanfile(ref)
 
     @input_credentials_if_unauthorized
-    def remove_packages(self, conan_reference, package_ids):
-        return self._rest_client.remove_packages(conan_reference, package_ids)
+    def remove_packages(self, ref, package_ids):
+        return self._rest_client.remove_packages(ref, package_ids)
 
     @input_credentials_if_unauthorized
-    def get_path(self, conan_reference, path, package_id):
-        return self._rest_client.get_path(conan_reference, path, package_id)
+    def get_path(self, ref, path, package_id):
+        return self._rest_client.get_path(ref, path, package_id)
 
     @input_credentials_if_unauthorized
     def get_recipe_revisions(self, ref):

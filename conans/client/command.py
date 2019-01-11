@@ -98,10 +98,10 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, client_cache, user_io, outputer):
+    def __init__(self, conan_api, cache, user_io, outputer):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._client_cache = client_cache
+        self._cache = cache
         self._user_io = user_io
         self._outputer = outputer
 
@@ -370,7 +370,7 @@ class Command(object):
         info = None
         try:
             try:
-                reference = ConanFileReference.loads(args.path_or_reference)
+                ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
                 info = self._conan.install(path=args.path_or_reference,
                                            settings=args.settings, options=args.options,
@@ -383,7 +383,7 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
             else:
-                info = self._conan.install_reference(reference, settings=args.settings,
+                info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
                                                      remote_name=args.remote,
@@ -838,8 +838,7 @@ class Command(object):
 
         # NOTE: returns the expanded pattern (if a pattern was given), and checks
         # that the query parameter wasn't abused
-        reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
-                                                                  args.query)
+        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -853,14 +852,14 @@ class Command(object):
         if args.locks:
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._client_cache.remove_locks()
+            self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=reference or args.pattern_or_reference, query=args.query,
+        return self._conan.remove(pattern=ref or args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
@@ -997,13 +996,13 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            reference = ConanFileReference.loads(args.pattern_or_reference)
-            if "*" in reference:
+            ref = ConanFileReference.loads(args.pattern_or_reference)
+            if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable
-                reference = None
+                ref = None
         except (TypeError, ConanException):
-            reference = None
+            ref = None
 
         cwd = os.getcwd()
         info = None
@@ -1019,13 +1018,13 @@ class Command(object):
                                                              remote_name=args.remote)
 
                 if not info:
-                    if not reference:
+                    if not ref:
                         msg = "With --revision, specify a reference (e.g {ref}) or a package " \
                               "reference with " \
                               "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
                               "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
                         raise ConanException(msg)
-                    info = self._conan.get_recipe_revisions(reference.full_repr(),
+                    info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
 
                 if args.json and info:
@@ -1036,12 +1035,12 @@ class Command(object):
                                                    remote_name=args.remote)
                 return
 
-            if reference:
-                info = self._conan.search_packages(reference.full_repr(), query=args.query,
+            if ref:
+                info = self._conan.search_packages(ref.full_repr(), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                self._outputer.print_search_packages(info["results"], reference, args.query,
+                self._outputer.print_search_packages(info["results"], ref, args.query,
                                                      args.table, outdated=args.outdated)
             else:
                 if args.table:
@@ -1108,7 +1107,6 @@ class Command(object):
                             help='json file path where the upload information will be written to')
 
         args = parser.parse_args(*args)
-
 
         if args.query and args.package:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -1461,16 +1459,16 @@ class Command(object):
 
     @staticmethod
     def _check_query_parameter_and_get_reference(pattern, query):
-        reference = None
+        ref = None
         if pattern:
             try:
-                reference = ConanFileReference.loads(pattern)
+                ref = ConanFileReference.loads(pattern)
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
                                          "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
-        return reference
+        return ref
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1616,12 +1614,12 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, client_cache, user_io = Conan.factory()
+        conan_api, cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
         sys.exit(ERROR_MIGRATION)
 
-    outputer = CommandOutputer(user_io, client_cache)
-    command = Command(conan_api, client_cache, user_io, outputer)
+    outputer = CommandOutputer(user_io, cache)
+    command = Command(conan_api, cache, user_io, outputer)
     current_dir = get_cwd()
     try:
         import signal

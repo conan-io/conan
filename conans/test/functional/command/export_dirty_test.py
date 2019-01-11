@@ -25,7 +25,7 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         # Check that we can debug and see the folder
-        self.assertEqual(load(os.path.join(client.client_cache.source(ref), "somefile.txt")),
+        self.assertEqual(load(os.path.join(client.cache.source(ref), "somefile.txt")),
                          "hello world!!!")
         client.run("create . pkg/1.0@user/channel", assert_error=True)
         self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
@@ -35,7 +35,7 @@ class Pkg(ConanFile):
         self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
                       client.out)
         # Check that it is empty
-        self.assertEqual(os.listdir(os.path.join(client.client_cache.source(ref))), [])
+        self.assertEqual(os.listdir(os.path.join(client.cache.source(ref))), [])
 
 
 class ExportDirtyTest(unittest.TestCase):
@@ -54,7 +54,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build")
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        source_path = self.client.client_cache.source(ref)
+        source_path = self.client.cache.source(ref)
         file_open = os.path.join(source_path, "main.cpp")
 
         self.f = open(file_open, 'wb')

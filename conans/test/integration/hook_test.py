@@ -153,7 +153,7 @@ class HookTest(unittest.TestCase):
 
     def default_hook_test(self):
         client = TestClient()
-        self.assertTrue(client.client_cache.hooks_path.endswith("hooks"))
+        self.assertTrue(client.cache.hooks_path.endswith("hooks"))
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
         self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
@@ -166,11 +166,11 @@ class HookTest(unittest.TestCase):
     def complete_hook_test(self):
         server = TestServer([], users={"danimtb": "pass"})
         client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
-        hook_path = os.path.join(client.client_cache.hooks_path, "complete_hook",
+        hook_path = os.path.join(client.cache.hooks_path, "complete_hook",
                                  "complete_hook.py")
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        conanfile_cache_path = client.client_cache.conanfile(
+        conanfile_cache_path = client.cache.conanfile(
             ConanFileReference("basic", "0.1", "danimtb", "testing"))
         client.run("config set hooks.complete_hook/complete_hook.py")
 
@@ -385,10 +385,10 @@ class HookTest(unittest.TestCase):
 
     def import_hook_test(self):
         client = TestClient()
-        hook_path = os.path.join(client.client_cache.hooks_path, "my_hook", "my_hook.py")
-        init_path = os.path.join(client.client_cache.hooks_path, "my_hook", "custom_module",
+        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "my_hook.py")
+        init_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module",
                                  "__init__.py")
-        custom_path = os.path.join(client.client_cache.hooks_path, "my_hook", "custom_module",
+        custom_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module",
                                    "custom.py")
         client.save({init_path: "",
                      custom_path: custom_module,

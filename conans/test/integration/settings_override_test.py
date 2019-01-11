@@ -35,13 +35,13 @@ class SettingsOverrideTest(unittest.TestCase):
         self.assertIn("COMPILER=> VisualBuild Visual Studio", self.client.user_io.out)
 
         # CHECK CONANINFO FILE
-        packs_dir = self.client.client_cache.packages(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
+        packs_dir = self.client.cache.packages(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
         self.assertIn("compiler=gcc", conaninfo)
 
         # CHECK CONANINFO FILE
-        packs_dir = self.client.client_cache.packages(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
+        packs_dir = self.client.cache.packages(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
         self.assertIn("compiler=Visual Studio", conaninfo)
