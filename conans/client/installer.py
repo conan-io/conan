@@ -139,12 +139,12 @@ class _ConanPackageBuilder(object):
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        p_hash = self._cache.package_summary_hash(self._pref)
-        p_id = self._pref.package_id
+        package_hash = self._cache.package_summary_hash(self._pref)
+        package_id = self._pref.id
 
         with self._cache.update_metadata(self._ref) as metadata:
-            metadata.packages[p_id].revision = p_hash
-            metadata.packages[p_id].recipe_revision = self._ref.revision
+            metadata.packages[package_id].revision = package_hash
+            metadata.packages[package_id].recipe_revision = self._ref.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(self.package_folder)
@@ -172,7 +172,7 @@ class _ConanPackageBuilder(object):
             # than for packages
             self._hook_manager.execute("pre_build", conanfile=self._conan_file,
                                        reference=self._ref,
-                                       package_id=self._pref.package_id)
+                                       package_id=self._pref.id)
             logger.debug("Call conanfile.build() with files in build folder: %s",
                          os.listdir(self.build_folder))
             self._out.highlight("Calling build()")
@@ -183,7 +183,7 @@ class _ConanPackageBuilder(object):
             self._out.info("Build folder %s" % self.build_folder)
             self._hook_manager.execute("post_build", conanfile=self._conan_file,
                                        reference=self._ref,
-                                       package_id=self._pref.package_id)
+                                       package_id=self._pref.id)
         except Exception as exc:
             self._out.writeln("")
             self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())

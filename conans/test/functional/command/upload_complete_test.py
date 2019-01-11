@@ -252,7 +252,7 @@ class TestConan(ConanFile):
         """ basic installation of a new conans
         """
         # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.ref, str(self.pref.package_id)))
+        self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
         self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
     def simple_test(self):
@@ -274,7 +274,7 @@ class TestConan(ConanFile):
 
         # Upload package
         self.client.run('upload %s -p %s'
-                        % (str(self.ref), str(self.pref.package_id)))
+                        % (str(self.ref), str(self.pref.id)))
 
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
 

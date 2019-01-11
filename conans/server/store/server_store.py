@@ -28,7 +28,7 @@ class ServerStore(SimplePaths):
 
     def package(self, pref, short_paths=None):
         pref = self.p_ref_with_rev(pref)
-        tmp = join(self.packages(pref.ref), pref.package_id)
+        tmp = join(self.packages(pref.ref), pref.id)
         return join(tmp, pref.revision) if pref.revision else tmp
 
     def export(self, ref):
@@ -208,8 +208,7 @@ class ServerStore(SimplePaths):
             raise NotFoundException("Recipe not found: '%s'" % str(pref.ref))
 
         for rev in revs.items():
-            pref = PackageReference(pref.ref.copy_with_rev(rev.revision),
-                                    pref.package_id)
+            pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
                 pref = pref.copy_with_revs(rev.revision, tmp.revision)
@@ -236,22 +235,22 @@ class ServerStore(SimplePaths):
         rev_file_path = self._package_revisions_file(pref)
         self._update_last_revision(rev_file_path, pref)
 
-    def _update_last_revision(self, rev_file_path, reference):
+    def _update_last_revision(self, rev_file_path, ref):
         if self._storage_adapter.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
                                                        lock_file=rev_file_path + ".lock")
             rev_list = RevisionList.loads(rev_file)
         else:
             rev_list = RevisionList()
-        if reference.revision is None:
-            raise ConanException("Invalid revision for: %s" % reference.full_repr())
-        rev_list.add_revision(reference.revision)
+        if ref.revision is None:
+            raise ConanException("Invalid revision for: %s" % ref.full_repr())
+        rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
 
-    def get_package_revisions(self, p_reference):
-        assert p_reference.ref.revision is not None
-        tmp = self._package_revisions_file(p_reference)
+    def get_package_revisions(self, pref):
+        assert pref.ref.revision is not None
+        tmp = self._package_revisions_file(pref)
         ret = self._get_revisions(tmp)
         return ret.items()
 
@@ -279,32 +278,32 @@ class ServerStore(SimplePaths):
                 return None
         return rev_list.latest_revision()
 
-    def _recipe_revisions_file(self, reference):
-        recipe_folder = normpath(join(self._store_folder, reference.dir_repr()))
+    def _recipe_revisions_file(self, ref):
+        recipe_folder = normpath(join(self._store_folder, ref.dir_repr()))
         return join(recipe_folder, REVISIONS_FILE)
 
-    def _package_revisions_file(self, p_reference):
-        tmp = normpath(join(self._store_folder, p_reference.ref.dir_repr()))
-        revision = {None: ""}.get(p_reference.ref.revision, p_reference.ref.revision)
-        p_folder = join(tmp, revision, PACKAGES_FOLDER, p_reference.package_id)
+    def _package_revisions_file(self, pref):
+        tmp = normpath(join(self._store_folder, pref.ref.dir_repr()))
+        revision = {None: ""}.get(pref.ref.revision, pref.ref.revision)
+        p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.id)
         return join(p_folder, REVISIONS_FILE)
 
-    def ref_with_rev(self, reference):
-        if reference.revision:
-            return reference
+    def ref_with_rev(self, ref):
+        if ref.revision:
+            return ref
 
-        latest = self.get_last_revision(reference)
+        latest = self.get_last_revision(ref)
         if not latest:
-            raise NotFoundException("Recipe not found: '%s'" % reference.full_repr())
+            raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
 
-        return reference.copy_with_rev(latest.revision)
+        return ref.copy_with_rev(latest.revision)
 
-    def get_revision_time(self, reference):
+    def get_revision_time(self, ref):
         try:
-            rev_list = self._load_revision_list(reference)
+            rev_list = self._load_revision_list(ref)
         except IOError:
             return None
-        return rev_list.get_time(reference.revision)
+        return rev_list.get_time(ref.revision)
 
     def get_package_revision_time(self, pref):
         try:
@@ -324,7 +323,7 @@ class ServerStore(SimplePaths):
             return pref
 
         ref = self.ref_with_rev(pref.ref)
-        ret = PackageReference(ref, pref.package_id)
+        ret = PackageReference(ref, pref.id)
 
         latest_p = self.get_last_package_revision(ret)
         if not latest_p:
@@ -332,27 +331,27 @@ class ServerStore(SimplePaths):
 
         return ret.copy_with_revs(ref.revision, latest_p.revision)
 
-    def _remove_revision_from_index(self, reference):
-        rev_list = self._load_revision_list(reference)
-        rev_list.remove_revision(reference.revision)
-        self._save_revision_list(rev_list, reference)
+    def _remove_revision_from_index(self, ref):
+        rev_list = self._load_revision_list(ref)
+        rev_list.remove_revision(ref.revision)
+        self._save_revision_list(rev_list, ref)
 
-    def _remove_package_revision_from_index(self, p_reference):
-        rev_list = self._load_package_revision_list(p_reference)
-        rev_list.remove_revision(p_reference.revision)
-        self._save_package_revision_list(rev_list, p_reference)
+    def _remove_package_revision_from_index(self, pref):
+        rev_list = self._load_package_revision_list(pref)
+        rev_list.remove_revision(pref.revision)
+        self._save_package_revision_list(rev_list, pref)
 
-    def _load_revision_list(self, reference):
-        path = self._recipe_revisions_file(reference)
+    def _load_revision_list(self, ref):
+        path = self._recipe_revisions_file(ref)
         rev_file = self._storage_adapter.read_file(path, lock_file=path + ".lock")
         return RevisionList.loads(rev_file)
 
-    def _save_revision_list(self, rev_list, reference):
-        path = self._recipe_revisions_file(reference)
+    def _save_revision_list(self, rev_list, ref):
+        path = self._recipe_revisions_file(ref)
         self._storage_adapter.write_file(path, rev_list.dumps(), lock_file=path + ".lock")
 
-    def _save_package_revision_list(self, rev_list, p_reference):
-        path = self._package_revisions_file(p_reference)
+    def _save_package_revision_list(self, rev_list, pref):
+        path = self._package_revisions_file(pref)
         self._storage_adapter.write_file(path, rev_list.dumps(), lock_file=path + ".lock")
 
     def _load_package_revision_list(self, pref):

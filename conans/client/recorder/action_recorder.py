@@ -169,7 +169,7 @@ class ActionRecorder(object):
 
             packages = self._get_installed_packages(ref)
             for pref, p_action in packages:
-                p_doc = get_doc_for_ref(pref.package_id, [p_action])
+                p_doc = get_doc_for_ref(pref.id, [p_action])
                 package_data = self._inst_packages_info.get(pref, {})
                 p_doc.update(package_data)
                 tmp["packages"].append(p_doc)

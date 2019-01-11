@@ -21,7 +21,7 @@ def _id_dict(ref):
     if isinstance(ref, ConanFileReference):
         ret = {"id": str(ref)}
     else:
-        ret = {"id": ref.package_id}
+        ret = {"id": ref.id}
 
     # FIXME: When revisions feature is completely release this field should be always there
     # with None if needed

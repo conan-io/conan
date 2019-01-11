@@ -133,8 +133,7 @@ class SimplePaths(object):
 
     def build(self, pref, short_paths=False):
         assert isinstance(pref, PackageReference)
-        p = normpath(join(self.conan(pref.ref), BUILD_FOLDER,
-                          pref.package_id))
+        p = normpath(join(self.conan(pref.ref), BUILD_FOLDER, pref.id))
         return path_shortener(p, short_paths)
 
     def system_reqs(self, ref):
@@ -143,7 +142,7 @@ class SimplePaths(object):
 
     def system_reqs_package(self, pref):
         assert isinstance(pref, PackageReference)
-        return normpath(join(self.conan(pref.ref), SYSTEM_REQS_FOLDER, pref.package_id, SYSTEM_REQS))
+        return normpath(join(self.conan(pref.ref), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS))
 
     def packages(self, ref):
         assert isinstance(ref, ConanFileReference)
@@ -151,7 +150,7 @@ class SimplePaths(object):
 
     def package(self, pref, short_paths=False):
         assert isinstance(pref, PackageReference)
-        p = normpath(join(self.conan(pref.ref), PACKAGES_FOLDER, pref.package_id))
+        p = normpath(join(self.conan(pref.ref), PACKAGES_FOLDER, pref.id))
         return path_shortener(p, short_paths)
 
     def scm_folder(self, ref):

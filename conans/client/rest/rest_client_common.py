@@ -216,7 +216,7 @@ class RestCommonMethods(object):
         if not revisions_enabled and policy == UPLOAD_POLICY_NO_OVERWRITE:
             # Check if the latest revision is not the one we are uploading, with the compatibility
             # mode this is supposed to fail if someone tries to upload a different recipe
-            latest_pref = PackageReference(pref.ref, pref.package_id)
+            latest_pref = PackageReference(pref.ref, pref.id)
             latest_snapshot, ref_latest_snapshot, _ = self._get_package_snapshot(latest_pref)
             server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \

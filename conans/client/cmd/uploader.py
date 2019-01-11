@@ -151,14 +151,13 @@ class CmdUpload(object):
                         integrity_check=False, policy=None, p_remote=None):
         """Uploads the package identified by package_id"""
 
-        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(pref.package_id),
-                                                        p_remote.name))
+        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(pref.id), p_remote.name))
         t1 = time.time()
         self._user_io.out.info(msg)
 
         if pref.ref.revision:
             # Read the revisions and build a correct package reference for the server
-            package_revision = metadata.packages[pref.package_id].revision
+            package_revision = metadata.packages[pref.id].revision
             # Copy to not modify the original with the revisions
             pref = pref.copy_with_revs(pref.ref.revision, package_revision)
         else:

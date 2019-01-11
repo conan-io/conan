@@ -32,7 +32,7 @@ class ClientBaseRouterBuilder(object):
     def format_pref(url, pref):
         ref = pref.ref
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                         channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
+                         channel=ref.channel, revision=ref.revision, package_id=pref.id,
                          p_revision=pref.revision)
         return url
 
@@ -40,7 +40,7 @@ class ClientBaseRouterBuilder(object):
     def format_pref_path(url, pref, path):
         ref = pref.ref
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                         channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
+                         channel=ref.channel, revision=ref.revision, package_id=pref.id,
                          p_revision=pref.revision, path=path)
         return url
 

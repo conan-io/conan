@@ -193,24 +193,24 @@ class ConanService(object):
         for ref in references:
             self._server_store.remove_packages(ref, package_ids_filter)
 
-    def remove_package(self, package_reference):
-        self._authorizer.check_delete_package(self._auth_user, package_reference)
+    def remove_package(self, pref):
+        self._authorizer.check_delete_package(self._auth_user, pref)
 
-        if not package_reference.ref.revision:
-            recipe_revisions = self._server_store.get_recipe_revisions(package_reference.ref)
+        if not pref.ref.revision:
+            recipe_revisions = self._server_store.get_recipe_revisions(pref.ref)
         else:
-            recipe_revisions = [package_reference.ref, ]
+            recipe_revisions = [pref.ref, ]
 
         for ref in recipe_revisions:
-            if not package_reference.revision:
-                pref = PackageReference(ref, package_reference.package_id)
+            if not pref.revision:
+                pref = PackageReference(ref, pref.id)
                 package_revisions = [r.revision
                                      for r in self._server_store.get_package_revisions(pref)]
             else:
-                package_revisions = [package_reference.revision]
+                package_revisions = [pref.revision]
 
             for prev in package_revisions:
-                full_pref = PackageReference(ref, package_reference.package_id, prev)
+                full_pref = PackageReference(ref, pref.id, prev)
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, ref):

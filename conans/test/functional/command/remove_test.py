@@ -163,7 +163,7 @@ class RemoveTest(unittest.TestCase):
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
-                                   pref.package_id,
+                                   pref.id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
 
         client.save(files, client.cache.store)

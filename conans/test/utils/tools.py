@@ -42,7 +42,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
-from conans.model.version import Version
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
@@ -640,9 +639,9 @@ servers["r2"] = TestServer()
     def get_revision(self, ref):
         return self.cache.load_metadata(ref).recipe.revision
 
-    def get_package_revision(self, package_ref):
-        metadata = self.cache.load_metadata(package_ref.ref)
-        return metadata.packages[package_ref.package_id].revision
+    def get_package_revision(self, pref):
+        metadata = self.cache.load_metadata(pref.ref)
+        return metadata.packages[pref.id].revision
 
 
 class StoppableThreadBottle(threading.Thread):

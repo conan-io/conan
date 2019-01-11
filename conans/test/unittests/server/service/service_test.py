@@ -143,7 +143,7 @@ class ConanServiceTest(unittest.TestCase):
             return (self.fake_url
                     + "/" + self.pref.ref.dir_repr()
                     + "/" + self.pref.ref.revision
-                    + "/package/" + self.pref.package_id
+                    + "/package/" + self.pref.id
                     + "/" + self.pref.revision
                     + "/" + filename)
 
@@ -180,7 +180,7 @@ class ConanServiceTest(unittest.TestCase):
             return (self.fake_url
                     + "/" + self.pref.ref.dir_repr()
                     + "/" + self.pref.ref.revision
-                    + "/package/" + self.pref.package_id
+                    + "/package/" + self.pref.id
                     + "/" + self.pref.revision
                     + "/" + filename)
 

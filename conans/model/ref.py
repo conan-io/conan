@@ -132,7 +132,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
 
-class PackageReference(namedtuple("PackageReference", "ref package_id revision")):
+class PackageReference(namedtuple("PackageReference", "ref id revision")):
     """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
@@ -161,16 +161,16 @@ class PackageReference(namedtuple("PackageReference", "ref package_id revision")
         return PackageReference(ref, package_id, validate=validate)
 
     def __repr__(self):
-        return "%s:%s" % (self.ref, self.package_id)
+        return "%s:%s" % (self.ref, self.id)
 
     def full_repr(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (self.ref.full_repr(), self.package_id, str_rev)
+        tmp = "%s:%s%s" % (self.ref.full_repr(), self.id, str_rev)
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
-        return PackageReference(self.ref.copy_with_rev(revision), self.package_id, p_revision)
+        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision)
 
     def copy_clear_rev(self):
         ref = self.ref.copy_clear_rev()
-        return PackageReference(ref, self.package_id, revision=None)
+        return PackageReference(ref, self.id, revision=None)

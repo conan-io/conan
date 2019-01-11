@@ -22,7 +22,7 @@ class RequirementInfo(object):
         self.full_version = pref.ref.version
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
-        self.full_package_id = pref.package_id
+        self.full_package_id = pref.id
 
         # sha values
         if indirect:

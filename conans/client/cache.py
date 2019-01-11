@@ -92,7 +92,7 @@ class ClientCache(SimplePaths):
     def package_lock(self, pref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(join(self.conan(pref.ref), "locks", pref.package_id))
+        return SimpleLock(join(self.conan(pref.ref), "locks", pref.id))
 
     @property
     def put_headers_path(self):

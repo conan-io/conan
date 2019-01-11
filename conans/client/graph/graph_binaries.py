@@ -32,7 +32,7 @@ class GraphBinariesAnalyzer(object):
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         if revisions_enabled:
             metadata = self._cache.load_metadata(pref.ref)
-            rec_rev = metadata.packages[pref.package_id].recipe_revision
+            rec_rev = metadata.packages[pref.id].recipe_revision
             if rec_rev != node.ref.revision:
                 output.warn("Outdated package! The package doesn't belong "
                             "to the installed recipe revision: %s" % str(pref))

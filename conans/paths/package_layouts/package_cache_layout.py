@@ -56,7 +56,7 @@ class PackageCacheLayout(object):
     def build(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), BUILD_FOLDER, pref.package_id)
+        return os.path.join(self.conan(), BUILD_FOLDER, pref.id)
 
     def system_reqs(self):
         return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, SYSTEM_REQS)
@@ -64,7 +64,7 @@ class PackageCacheLayout(object):
     def system_reqs_package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, pref.package_id, SYSTEM_REQS)
+        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
 
     def packages(self):
         return os.path.join(self.conan(), PACKAGES_FOLDER)
@@ -73,7 +73,7 @@ class PackageCacheLayout(object):
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), PACKAGES_FOLDER, pref.package_id)
+        return os.path.join(self.conan(), PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
         return os.path.join(self.conan(), SCM_FOLDER)

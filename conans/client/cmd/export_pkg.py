@@ -24,9 +24,9 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     from conans.client.conan_api import existing_info_files
     if install_folder and existing_info_files(install_folder):
         load_deps_info(install_folder, conanfile, required=True)
-    pkg_id = conanfile.info.package_id()
-    output.info("Packaging to %s" % pkg_id)
-    pref = PackageReference(ref, pkg_id)
+    package_id = conanfile.info.package_id()
+    output.info("Packaging to %s" % package_id)
+    pref = PackageReference(ref, package_id)
     dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
 
     if os.path.exists(dest_package_folder):
@@ -40,10 +40,10 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
-        packager.export_pkg(conanfile, pkg_id, package_folder, dest_package_folder,
+        packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
                             hook_manager, conan_file_path, ref)
     else:
-        packager.create_package(conanfile, pkg_id, source_folder, build_folder, dest_package_folder,
+        packager.create_package(conanfile, package_id, source_folder, build_folder, dest_package_folder,
                                 install_folder, hook_manager, conan_file_path,
                                 ref, local=True)
     recorder.package_exported(pref)
