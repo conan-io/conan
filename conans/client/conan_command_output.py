@@ -121,7 +121,14 @@ class CommandOutputer(object):
     def print_revisions(self, ref, revisions, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
         self.user_io.out.info("Revisions for '%s'%s:" % (ref, remote_test))
-        lines = ["%s (%s)" % (r["revision"], datetime_to_str(r["time"])) for r in revisions]
+
+        def dt_str(dt):
+            if not dt:
+                return "No time"
+            else:
+                return datetime_to_str(dt)
+
+        lines = ["%s (%s)" % (r["revision"], dt_str(r["time"])) for r in revisions]
         self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):

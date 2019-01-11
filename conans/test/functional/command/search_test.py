@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import shutil
@@ -10,6 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import list_folder_subdirs, load
+from conans.util.time import datetime_to_str
 
 conan_vars1 = '''
 [settings]
@@ -1082,7 +1084,6 @@ class Test(ConanFile):
                      "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
-
     def search_recipe_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -1094,25 +1095,36 @@ class Test(ConanFile):
     pass
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export . lib/1.0@user/testing")
+        client.run("create . lib/1.0@user/testing")
         client.run("upload lib/1.0@user/testing -c")
 
+        # List locally
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("WHATEVER")
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
 
+        # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
-        client.run("export . lib/1.0@user/testing")
-        client.run("upload lib/1.0@user/testing -c")
+        client.run("create . lib/1.0@user/testing")
 
         client.run("search lib/1.0@user/testing --revisions")
+        self.assertNotIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
+        self.assertIn("a94417fca6b55779c3b158f2ff50c40a (No time)", client.out)
 
-        client.run("search lib/1.0@user/testing --revisions --json")
+        # List remote
+        client.run("upload lib/1.0@user/testing -c")
+        client.run("search lib/1.0@user/testing -r default --revisions")
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
+        self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
+        self.assertNotIn("(No time)", client.out)
+        now = datetime.datetime.now()
+        # Checking at least the today's date appears in the test
+        today_str = "(%s" % datetime_to_str(now).split(" ")[0]
+        self.assertIn(today_str, client.out)
+
+        #client.run("search lib/1.0@user/testing --revisions --json")
         # WHAT ABOUT THE JSON?
 
         # ALSO LOCAL SEARCH
-
-    def local_search(self):
-        pass
 
     def search_not_found(self):
         # Search not found for both package and recipe

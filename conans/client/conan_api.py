@@ -935,15 +935,17 @@ class ConanAPIV1(object):
         return self._client_cache.registry.remotes.get(remote_name)
 
     @api_method
-    def get_recipe_revisions(self, ref, remote_name=None):
-        ref = ConanFileReference.loads(ref.full_repr())
+    def get_recipe_revisions(self, reference, remote_name=None):
+        ref = ConanFileReference.loads(str(reference))
         if not remote_name:
             ret = {"reference": ref,  "revisions": []}
             if not os.path.exists(self._client_cache.export(ref)):
                 return ret
             metadata = self._client_cache.load_metadata(ref)
+            the_time = from_timestamp_to_datetime(metadata.recipe.time) \
+                if metadata.recipe.time else None
             ret["revisions"].append({"revision": metadata.recipe.revision,
-                                     "time": from_timestamp_to_datetime(metadata.recipe.time)})
+                                     "time": the_time})
             return ret
         else:
             remote = self.get_remote_by_name(remote_name)
@@ -952,15 +954,17 @@ class ConanAPIV1(object):
             return self._remote_manager.get_recipe_revisions(ref, remote=remote)
 
     @api_method
-    def get_package_revisions(self, pref, remote_name=None):
-        pref = PackageReference.loads(pref.full_repr(), validate=True)
+    def get_package_revisions(self, reference, remote_name=None):
+        pref = PackageReference.loads(str(reference), validate=True)
         if not remote_name:
             ret = {"reference": pref, "revisions": []}
             if not os.path.exists(self._client_cache.package(pref)):
                 return ret
             metadata = self._client_cache.load_metadata(pref.conan)
-            print(metadata)
-            tm = from_timestamp_to_datetime(metadata.packages[pref.package_id].time)
+            if metadata.packages[pref.package_id].time:
+                tm = from_timestamp_to_datetime(metadata.packages[pref.package_id].time)
+            else:
+                tm = None
             ret["revisions"].append({"revision": metadata.packages[pref.package_id].revision,
                                      "time": tm})
             return ret

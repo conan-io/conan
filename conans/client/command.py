@@ -1010,26 +1010,30 @@ class Command(object):
 
         try:
             if not v2_blocked and args.revisions:
-                pref = None
                 try:
                     pref = PackageReference.loads(args.pattern_or_reference)
                 except (TypeError, ConanException):
                     pass
                 else:
-                    info = self._conan.get_package_revisions(pref, remote_name=args.remote)
+                    info = self._conan.get_package_revisions(pref.full_repr(),
+                                                             remote_name=args.remote)
+
+                if not info:
+                    if not reference:
+                        msg = "With --revision, specify a reference (e.g {ref}) or a package " \
+                              "reference with " \
+                              "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
+                              "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
+                        raise ConanException(msg)
+                    info = self._conan.get_recipe_revisions(reference.full_repr(),
+                                                            remote_name=args.remote)
+
+                if args.json and info:
+                    info["reference"] = info["reference"].full_repr()
+                    self._outputer.json_output(info, args.json, cwd)
+                else:
                     self._outputer.print_revisions(info["reference"], info["revisions"],
                                                    remote_name=args.remote)
-                    return
-
-                if not reference:
-                    msg = "With --revision, specify a reference (e.g {ref}) or a package " \
-                          "reference with " \
-                          "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
-                          "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
-                    raise ConanException(msg)
-                info = self._conan.get_recipe_revisions(reference, remote_name=args.remote)
-                self._outputer.print_revisions(info["reference"], info["revisions"],
-                                               remote_name=args.remote)
                 return
 
             if reference:
