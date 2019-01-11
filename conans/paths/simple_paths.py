@@ -5,6 +5,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import LINKED_PACKAGE_SENTINEL, is_case_insensitive_os
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.util.files import load
 
 if is_case_insensitive_os():
     def check_ref_case(conan_reference, store_folder):
@@ -35,6 +36,7 @@ class SimplePaths(object):
     """
     def __init__(self, store_folder):
         self._store_folder = store_folder
+        self._workspace_refs = {}
 
     @property
     def store(self):
@@ -53,7 +55,10 @@ class SimplePaths(object):
             "It is a {}".format(type(conan_reference))
         linked_package_file = self._build_path_to_linked_folder_sentinel(conan_reference)
         if os.path.exists(linked_package_file):
-            return PackageEditableLayout(linked_package_file=linked_package_file,
+            return PackageEditableLayout(base_folder=load(linked_package_file),
+                                         conan_ref=conan_reference)
+        elif conan_reference in self._workspace_refs:
+            return PackageEditableLayout(base_folder=self._workspace_refs[conan_reference],
                                          conan_ref=conan_reference)
         else:
             check_ref_case(conan_reference, self.store)

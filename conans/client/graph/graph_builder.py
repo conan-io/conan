@@ -1,12 +1,11 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.client.graph.graph import DepsGraph, Node
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.model.workspace import WORKSPACE_FILE
 from conans.util.log import logger
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
@@ -15,12 +14,11 @@ REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, proxy, output, loader, resolver, workspace, recorder):
+    def __init__(self, proxy, output, loader, resolver, recorder):
         self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
-        self._workspace = workspace
         self._recorder = recorder
 
     def load_graph(self, root_node, check_updates, update, remote_name, processed_profile):
@@ -227,30 +225,20 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
-
-        if workspace_package:
-            conanfile_path = workspace_package.conanfile_path
-            recipe_status = RECIPE_WORKSPACE
-            remote = WORKSPACE_FILE
-            new_ref = requirement.conan_reference
-        else:
-            try:
-                result = self._proxy.get_recipe(requirement.conan_reference,
-                                                check_updates, update, remote_name, self._recorder)
-            except ConanException as e:
-                if current_node.conan_ref:
-                    self._output.error("Failed requirement '%s' from '%s'"
-                                       % (requirement.conan_reference,
-                                          current_node.conanfile.display_name))
-                raise e
-            conanfile_path, recipe_status, remote, new_ref = result
+        try:
+            result = self._proxy.get_recipe(requirement.conan_reference,
+                                            check_updates, update, remote_name, self._recorder)
+        except ConanException as e:
+            if current_node.conan_ref:
+                self._output.error("Failed requirement '%s' from '%s'"
+                                   % (requirement.conan_reference,
+                                      current_node.conanfile.display_name))
+            raise e
+        conanfile_path, recipe_status, remote, new_ref = result
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
                                                     ref=requirement.conan_reference)
 
-        if workspace_package:
-            workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
             alias_reference = alias_ref or new_ref.copy_clear_rev()
             requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)

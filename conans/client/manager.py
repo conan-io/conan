@@ -73,7 +73,7 @@ class ConanManager(object):
         self._user_io.out.writeln(graph_info.profile.dumps())
         result = self._graph_manager.load_graph(reference, create_reference, graph_info,
                                                 build_modes, False, update, remote_name,
-                                                self._recorder, None)
+                                                self._recorder)
         deps_graph, conanfile = result
 
         if conanfile.display_name == "virtual":

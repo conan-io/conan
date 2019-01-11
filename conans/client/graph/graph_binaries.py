@@ -3,8 +3,7 @@ import os
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
-from conans.client.output import ScopedOutput
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_WORKSPACE)
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -14,12 +13,11 @@ from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, client_cache, output, remote_manager, workspace):
+    def __init__(self, client_cache, output, remote_manager):
         self._client_cache = client_cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = client_cache.registry
-        self._workspace = workspace
 
     def _get_package_info(self, package_ref, remote):
         try:
@@ -81,6 +79,10 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_EDITABLE
             return
 
+        if node.recipe == RECIPE_WORKSPACE:
+            node.binary = BINARY_WORKSPACE
+            return
+
         if build_mode.forced(conanfile, conan_ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
@@ -90,11 +92,6 @@ class GraphBinariesAnalyzer(object):
                                                     short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
-        local_project = self._workspace[conan_ref] if self._workspace else None
-        if local_project:
-            node.binary = BINARY_WORKSPACE
-            return
-
         with self._client_cache.package_lock(package_ref):
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)

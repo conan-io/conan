@@ -49,7 +49,7 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
@@ -584,7 +584,7 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                        check_updates, False, remote_name,
-                                                       recorder, workspace=None)
+                                                       recorder)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -596,8 +596,7 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
                                                                build_modes, check_updates,
-                                                               False, remote_name, recorder,
-                                                               workspace=None)
+                                                               False, remote_name, recorder)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
@@ -609,7 +608,7 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remote_name,
-                                                               recorder, workspace=None)
+                                                               recorder)
         return deps_graph, conanfile
 
     @api_method

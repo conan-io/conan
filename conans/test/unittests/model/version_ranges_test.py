@@ -168,7 +168,7 @@ class VersionRangesTest(unittest.TestCase):
         paths = SimplePaths(self.retriever.folder)
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
-                                        None, None)
+                                        None)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """

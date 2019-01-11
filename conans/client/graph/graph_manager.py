@@ -90,7 +90,7 @@ class GraphManager(object):
         # export-pkg command, not hitting the server
         # # https://github.com/conan-io/conan/issues/3432
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   workspace=None, recorder=recorder)
+                                   recorder=recorder)
         processed_profile = ProcessedProfile(profile, create_reference=None)
         conanfile = self._loader.load_virtual([reference], processed_profile)
         root_node = Node(None, conanfile, recipe=RECIPE_VIRTUAL)
@@ -99,7 +99,7 @@ class GraphManager(object):
         return graph
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remote_name, recorder, workspace):
+                   remote_name, recorder):
 
         def _inject_require(conanfile, reference):
             """ test_package functionality requires injecting the tested package as requirement
@@ -140,7 +140,7 @@ class GraphManager(object):
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
-                                      recorder=recorder, workspace=workspace,
+                                      recorder=recorder,
                                       processed_profile=processed_profile)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
@@ -168,7 +168,7 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
-                                profile_build_requires, recorder, workspace, processed_profile):
+                                profile_build_requires, recorder, processed_profile):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
@@ -202,7 +202,7 @@ class GraphManager(object):
                 build_requires_package_graph = self._load_graph(virtual_node, check_updates, update,
                                                                 build_mode, remote_name,
                                                                 profile_build_requires,
-                                                                recorder, workspace,
+                                                                recorder,
                                                                 processed_profile)
                 graph.add_graph(node, build_requires_package_graph, build_require=True)
 
@@ -217,23 +217,23 @@ class GraphManager(object):
                 build_requires_profile_graph = self._load_graph(virtual_node, check_updates, update,
                                                                 build_mode, remote_name,
                                                                 new_profile_build_requires,
-                                                                recorder, workspace,
+                                                                recorder,
                                                                 processed_profile)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, recorder, workspace, processed_profile):
+                    profile_build_requires, recorder, processed_profile):
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   workspace, recorder)
+                                   recorder)
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         if build_mode is None:
             return graph
         binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
-                                                  self._remote_manager, workspace)
+                                                  self._remote_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
         self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
-                                     profile_build_requires, recorder, workspace, processed_profile)
+                                     profile_build_requires, recorder, processed_profile)
         return graph
 
 

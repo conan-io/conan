@@ -5,15 +5,14 @@ import os
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
-from conans.util.files import load
 
 
 class PackageEditableLayout(object):
 
-    def __init__(self, linked_package_file, conan_ref):
+    def __init__(self, base_folder, conan_ref):
         assert isinstance(conan_ref, ConanFileReference)
         self._conan_ref = conan_ref
-        self._base_folder = os.path.normpath(load(linked_package_file))
+        self._base_folder = base_folder
 
     def conan(self):
         """ Returns the base folder for this package reference """

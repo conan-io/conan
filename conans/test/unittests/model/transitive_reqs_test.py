@@ -112,7 +112,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None, None)
+                                        MockRequireResolver(), None)
 
     def root(self, content):
         self.loader.cached_conanfiles = {}
@@ -1504,7 +1504,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None, None)
+                                        MockRequireResolver(), None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1632,7 +1632,7 @@ class CoreSettingsTest(unittest.TestCase):
         profile.options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         retriever = Retriever(loader)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None)
         processed_profile = test_processed_profile(profile=profile)
         root_conan = retriever.root(content, processed_profile)
         deps_graph = builder.load_graph(root_conan, False, False, None, processed_profile)
@@ -1919,7 +1919,7 @@ class ChatConan(ConanFile):
                                               "myoption_chat=on")
         loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
         retriever = Retriever(loader)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
