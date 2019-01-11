@@ -1,10 +1,9 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER,\
-    RECIPE_VIRTUAL, RECIPE_WORKSPACE
+from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER, RECIPE_VIRTUAL,\
+    RECIPE_EDITABLE
 from conans.client.output import Color
 from conans.model.ref import PackageReference
-from conans.model.workspace import WORKSPACE_FILE
 
 
 def _get_python_requires(conanfile):
@@ -34,8 +33,8 @@ def print_graph(deps_graph, out):
     def _recipes(nodes):
         for package_id, list_nodes in nodes.items():
             node = list_nodes[0]  # For printing recipes, we can use the first one
-            if node.recipe == RECIPE_WORKSPACE:
-                from_text = "from '%s'" % WORKSPACE_FILE
+            if node.recipe == RECIPE_EDITABLE:
+                from_text = "from user"
             else:
                 from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
             out.writeln("    %s %s - %s" % (repr(node.conan_ref), from_text, node.recipe),

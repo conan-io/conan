@@ -1,9 +1,9 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+                                       BINARY_SKIP, BINARY_UPDATE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_WORKSPACE)
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -77,10 +77,6 @@ class GraphBinariesAnalyzer(object):
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
-            return
-
-        if node.recipe == RECIPE_WORKSPACE:
-            node.binary = BINARY_WORKSPACE
             return
 
         if build_mode.forced(conanfile, conan_ref):

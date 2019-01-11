@@ -142,6 +142,6 @@ int main() {
 
         # Build consumer project
         client.run("create . pkg/0.0@user/testing -s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
-        self.assertIn("    MyLib/0.1@user/editable from local cache - Editable", client.out)
+        self.assertIn("    MyLib/0.1@user/editable from user - Editable", client.out)
         self.assertIn("Hello {}!".format(build_type), client.out)
         self.assertIn(" - options.shared: {}".format(shared), client.out)
