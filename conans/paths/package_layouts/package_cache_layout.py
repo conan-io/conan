@@ -94,7 +94,7 @@ class PackageCacheLayout(object):
         expected_manifest = FileTreeManifest.create(package_folder)
         return readed_manifest, expected_manifest
 
-        # Metadata
+    # Metadata
     def load_metadata(self):
         try:
             text = load(self.package_metadata())
