@@ -455,10 +455,10 @@ class ConanAPIV1(object):
 
         workspace = Workspace(abs_path, None)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
-                                    self._client_cache, self._user_io.out)
+                                    self._cache, self._user_io.out)
         self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
 
-        self._client_cache._workspace_refs.update(workspace.get_editable_dict())
+        self._cache._workspace_refs.update(workspace.get_editable_dict())
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         manager.install_workspace(graph_info, workspace, remote_name, build, update)

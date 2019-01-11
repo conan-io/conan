@@ -336,7 +336,7 @@ class BinaryInstaller(object):
                                              settings=node.conanfile.settings,
                                              options=node.conanfile.options)
 
-        workspace_package = self._workspace[node.conan_ref] if self._workspace else None
+        workspace_package = self._workspace[node.ref] if self._workspace else None
         if workspace_package:
             output = node.conanfile.output
             build_folder = workspace_package.build_folder(node.conanfile)

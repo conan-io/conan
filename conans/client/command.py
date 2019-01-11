@@ -1390,7 +1390,8 @@ class Command(object):
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "link")),
+                ("Package development commands", ("source", "build", "package", "link",
+                                                  "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help"))]
 
