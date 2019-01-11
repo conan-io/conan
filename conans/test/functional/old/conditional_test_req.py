@@ -28,8 +28,8 @@ class TestConanLib(ConanFile):
         pass
 '''
         client = TestClient()
-        settings_path = client.client_cache.settings_path
-        client.client_cache.settings
+        settings_path = client.cache.settings_path
+        client.cache.settings
         settings = load(settings_path)
         settings += "\nproduct: [onion, potato]"
         save(settings_path, settings)

@@ -12,9 +12,9 @@ class ActionRecorderTest(unittest.TestCase):
         self.ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
         self.ref3 = ConanFileReference.loads("lib3/1.0@conan/stable")
 
-        self.ref_p1 = PackageReference(self.ref1, "1")
-        self.ref_p2 = PackageReference(self.ref2, "2")
-        self.ref_p3 = PackageReference(self.ref3, "3")
+        self.pref1 = PackageReference(self.ref1, "1")
+        self.pref2 = PackageReference(self.ref2, "2")
+        self.pref3 = PackageReference(self.ref3, "3")
 
     def incomplete_process_test(self):
         tracer = ActionRecorder()
@@ -29,8 +29,8 @@ class ActionRecorderTest(unittest.TestCase):
         tracer = ActionRecorder()
         tracer.recipe_downloaded(self.ref1, "http://drl.com")
         tracer.recipe_fetched_from_cache(self.ref1)
-        tracer.package_downloaded(self.ref_p1, "http://drl.com")
-        tracer.package_fetched_from_cache(self.ref_p1)
+        tracer.package_downloaded(self.pref1, "http://drl.com")
+        tracer.package_fetched_from_cache(self.pref1)
 
         install_info = tracer.get_info()
         self.assertFalse(install_info["error"])
@@ -50,13 +50,13 @@ class ActionRecorderTest(unittest.TestCase):
     def test_install(self):
         tracer = ActionRecorder()
         tracer.recipe_fetched_from_cache(self.ref1)
-        tracer.package_downloaded(self.ref_p1, "http://drl.com")
+        tracer.package_downloaded(self.pref1, "http://drl.com")
         tracer.recipe_downloaded(self.ref2, "http://drl.com")
-        tracer.package_install_error(self.ref_p2, INSTALL_ERROR_MISSING, "no package found",
+        tracer.package_install_error(self.pref2, INSTALL_ERROR_MISSING, "no package found",
                                      remote_name="https://drl.com")
 
         tracer.recipe_fetched_from_cache(self.ref3)
-        tracer.package_built(self.ref_p3)
+        tracer.package_built(self.pref3)
         tracer.add_recipe_being_developed(self.ref1)
 
         install_info = tracer.get_info()

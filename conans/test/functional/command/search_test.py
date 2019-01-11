@@ -166,24 +166,24 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/linx64/%s" % (root_folder_tool,
                                                PACKAGES_FOLDER,
                                                CONANINFO): conan_vars_tool_linx64},
-                         self.client.client_cache.store)
+                         self.client.cache.store)
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder1, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder2, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder3, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder4, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder5, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder11, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder12, EXPORT_FOLDER))
-        fake_manifest.save(os.path.join(self.client.client_cache.store, root_folder_tool, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder1, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder2, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder3, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder4, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder11, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder12, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder_tool, EXPORT_FOLDER))
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         def check():
             for remote in ("local", "search_able"):
@@ -301,9 +301,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
         html = load(os.path.join(self.client.current_folder, "table.html"))
@@ -345,7 +345,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         # Now search with a remote
         os.rmdir(self.servers["local"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
@@ -362,7 +362,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         # Now search in all remotes
         os.rmdir(self.servers["search_able"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
@@ -404,7 +404,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
             if remote:  # Simulate upload to remote
                 os.rmdir(self.servers[remote].server_store.store)
-                self._copy_to_server(self.client.client_cache, self.servers[remote].server_store)
+                self._copy_to_server(self.client.cache, self.servers[remote].server_store)
 
             q = ''
             self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
@@ -496,17 +496,17 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pid = PackageReference(ref, package, DEFAULT_REVISION_V1)
-                origin_path = client_store_path.package(pid)
-                dest_path = server_store.package(pid)
+                pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
+                origin_path = client_store_path.package(pref)
+                dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
-                server_store.update_last_package_revision(pid)
+                server_store.update_last_package_revision(pref)
 
     def package_search_all_remotes_test(self):
         os.rmdir(self.servers["local"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all")
         self.assertIn("Existing recipe in remote 'local':", self.client.out)
@@ -638,7 +638,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(os.path.join(client.client_cache.registry_path))
+        os.remove(os.path.join(client.cache.registry_path))
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -695,9 +695,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         # Test search recipes all remotes
         os.rmdir(self.servers["local"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["local"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
-        self._copy_to_server(self.client.client_cache, self.servers["search_able"].server_store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello* -r=all --json search.json")
         self.assertTrue(os.path.exists(json_path))
@@ -1043,7 +1043,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
-        os.remove(client.client_cache.registry_path)
+        os.remove(client.cache.registry_path)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)

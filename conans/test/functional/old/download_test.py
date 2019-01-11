@@ -42,21 +42,21 @@ class DownloadTest(unittest.TestCase):
                 return Response(False, 404)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
-        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        installer = ConanProxy(client2.client_cache, client2.user_io.out, client2.remote_manager)
+        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
 
         with self.assertRaises(NotFoundException):
-            installer.get_recipe(conan_ref, False, False, None, ActionRecorder())
+            installer.get_recipe(ref, False, False, None, ActionRecorder())
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
                 return Response(False, 500)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        installer = ConanProxy(client2.client_cache, client2.user_io.out, client2.remote_manager)
+        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
 
         try:
-            installer.get_recipe(conan_ref, False, False, None, ActionRecorder())
+            installer.get_recipe(ref, False, False, None, ActionRecorder())
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:

@@ -39,11 +39,11 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile.format("False"),
                      "source_file.cpp": ""})
         client.run("create . danimtb/testing")
-        conan_ref = ConanFileReference("test", "1.0", "danimtb", "testing")
-        source_folder = os.path.join(client.client_cache.conan(conan_ref), "source")
-        build_folder = os.path.join(client.client_cache.conan(conan_ref), "build",
+        ref = ConanFileReference("test", "1.0", "danimtb", "testing")
+        source_folder = os.path.join(client.cache.conan(ref), "source")
+        build_folder = os.path.join(client.cache.conan(ref), "build",
                                     NO_SETTINGS_PACKAGE_ID)
-        package_folder = os.path.join(client.client_cache.conan(conan_ref), "package",
+        package_folder = os.path.join(client.cache.conan(ref), "package",
                                       NO_SETTINGS_PACKAGE_ID)
         self.assertIn("SOURCE: source_file.cpp", client.out)
         self.assertEqual(["source_file.cpp"], os.listdir(source_folder))

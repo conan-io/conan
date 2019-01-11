@@ -43,9 +43,9 @@ Hello/0.1@lasote/stable
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
-        folders = [client.client_cache.package(ref), client.current_folder]
+        folders = [client.cache.package(ref), client.current_folder]
         if build:
-            folders.append(client.client_cache.build(ref))
+            folders.append(client.cache.build(ref))
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
@@ -73,12 +73,12 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        self._check(client, ref)
+        self._check(client, pref)
 
         client.run("install conanfile.txt --build")
-        self._check(client, ref)
+        self._check(client, pref)
 
     def package_files_test(self):
         client = TestClient()
@@ -103,9 +103,9 @@ class TestConan(ConanFile):
         os.symlink("version1", latest)
         os.symlink("latest", edge)
         client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        self._check(client, ref, build=False)
+        self._check(client, pref, build=False)
 
     def export_and_copy_test(self):
         lib_name = "libtest.so.2"
@@ -123,17 +123,17 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
-        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
-        package_ref = PackageReference(conan_ref, NO_SETTINGS_PACKAGE_ID)
-        team_package_ref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        team_pref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
 
-        for folder in [client.client_cache.export(conan_ref),
-                       client.client_cache.source(conan_ref),
-                       client.client_cache.build(package_ref),
-                       client.client_cache.package(package_ref),
-                       client.client_cache.export(team_ref),
-                       client.client_cache.package(team_package_ref)]:
+        for folder in [client.cache.export(ref),
+                       client.cache.source(ref),
+                       client.cache.build(pref),
+                       client.cache.package(pref),
+                       client.cache.export(team_ref),
+                       client.cache.package(team_pref)]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)
@@ -141,7 +141,7 @@ class TestConan(ConanFile):
             self.assertEqual(load(exported_lib), load(exported_link))
             self.assertTrue(os.path.islink(exported_link))
 
-        self._check(client, package_ref)
+        self._check(client, pref)
 
     def upload_test(self):
         test_server = TestServer()
@@ -153,13 +153,13 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         client.run("upload Hello/0.1@lasote/stable --all")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")
-        self._check(client, ref, build=False)
+        self._check(client, pref, build=False)
 
     def export_pattern_test(self):
         conanfile = """from conans import ConanFile
@@ -183,7 +183,7 @@ class ConanSymlink(ConanFile):
             os.symlink(symlinked_path, symlink_path)
             client.run("export . danimtb/testing")
             ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-            export_sources = client.client_cache.export_sources(ref)
+            export_sources = client.cache.export_sources(ref)
             cache_other_dir = os.path.join(export_sources, "another_other_directory")
             cache_src = os.path.join(export_sources, "src")
             cache_main = os.path.join(cache_src, "main.cpp")
@@ -216,17 +216,17 @@ class ConanSymlink(ConanFile):
         os.symlink(symlinked_path, symlink_path)
         client.run("create . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-        cache_file = os.path.join(client.client_cache.export_sources(ref), "another_directory",
+        cache_file = os.path.join(client.cache.export_sources(ref), "another_directory",
                                   "not_to_copy.txt")
         self.assertTrue(os.path.exists(cache_file))
-        cache_other_dir = os.path.join(client.client_cache.export_sources(ref),
+        cache_other_dir = os.path.join(client.cache.export_sources(ref),
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
-        pkg_ref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_file = os.path.join(client.client_cache.package(pkg_ref), "another_directory",
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_file = os.path.join(client.cache.package(pref), "another_directory",
                                     "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))
-        package_other_dir = os.path.join(client.client_cache.package(pkg_ref),
+        package_other_dir = os.path.join(client.cache.package(pref),
                                          "another_other_directory")
         self.assertFalse(os.path.exists(package_other_dir))
         client.save({"conanfile.py": conanfile % "True"})

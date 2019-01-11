@@ -9,9 +9,9 @@ from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
 
 class PackageEditableLayout(object):
 
-    def __init__(self, base_folder, conan_ref):
-        assert isinstance(conan_ref, ConanFileReference)
-        self._conan_ref = conan_ref
+    def __init__(self, base_folder, ref):
+        assert isinstance(ref, ConanFileReference)
+        self.ref = ref
         self._base_folder = base_folder
 
     def conan(self):
@@ -36,9 +36,9 @@ class PackageEditableLayout(object):
     def source(self):
         raise RuntimeError("Operation not allowed on a package installed as editable")
 
-    def package(self, package_reference):
-        assert isinstance(package_reference, PackageReference)
-        assert package_reference.conan == self._conan_ref
+    def package(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
         raise RuntimeError("Operation not allowed on a package installed as editable")
 
     def package_metadata(self):
