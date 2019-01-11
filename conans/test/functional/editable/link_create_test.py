@@ -23,14 +23,14 @@ class CreateEditablePackageTest(unittest.TestCase):
         """)
 
     def test_install_ok(self):
-        reference = ConanFileReference.loads('lib/version@user/name')
+        ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile, CONAN_PACKAGE_LAYOUT_FILE: ""})
-        t.run('link . {}'.format(reference))
+        t.run('link . {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
 
     def test_install_wrong_reference(self):
-        reference = ConanFileReference.loads('lib/version@user/name')
+        ref = ConanFileReference.loads('lib/version@user/name')
 
         t = TestClient()
         t.save(files={'conanfile.py': textwrap.dedent("""\
@@ -40,7 +40,7 @@ class CreateEditablePackageTest(unittest.TestCase):
                 name = "lib"
                 version = "version"
             """)})
-        t.run('export  . {}'.format(reference))
+        t.run('export  . {}'.format(ref))
         t.run('link . wrong/version@user/channel', assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)

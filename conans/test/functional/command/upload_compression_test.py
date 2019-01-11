@@ -20,18 +20,18 @@ class UploadCompressionTest(unittest.TestCase):
         again'''
 
         # UPLOAD A PACKAGE
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(conan_reference))
-        self.client.run("upload %s --all" % str(conan_reference))
+        self.client.run("install %s --build missing" % str(ref))
+        self.client.run("upload %s --all" % str(ref))
         self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
 
         # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-        self.client.run("copy %s lasote/testing" % str(conan_reference))
+        self.client.run("copy %s lasote/testing" % str(ref))
         self.client.run("upload Hello0/0.1@lasote/testing --all")
         self.assertNotIn("Compressing recipe", self.client.user_io.out)
         self.assertNotIn("Compressing package", self.client.user_io.out)
@@ -41,13 +41,13 @@ class UploadCompressionTest(unittest.TestCase):
         and reupload them. It needs to compress it again, not tgz is kept'''
 
         # UPLOAD A PACKAGE
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(conan_reference))
-        self.client.run("upload %s --all" % str(conan_reference))
+        self.client.run("install %s --build missing" % str(ref))
+        self.client.run("upload %s --all" % str(ref))
         self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
 
@@ -61,47 +61,47 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertIn("Compressing package", self.client.user_io.out)
 
     def upload_only_tgz_if_needed_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["lib/another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(conan_reference))
+        self.client.run("install %s --build missing" % str(ref))
 
         # Upload conans
-        self.client.run("upload %s" % str(conan_reference))
+        self.client.run("upload %s" % str(ref))
         self.assertIn("Compressing recipe", str(self.client.user_io.out))
 
         # Not needed to tgz again
-        self.client.run("upload %s" % str(conan_reference))
+        self.client.run("upload %s" % str(ref))
         self.assertNotIn("Compressing recipe", str(self.client.user_io.out))
 
         # Check that conans exists on server
         server_paths = self.servers["default"].server_store
-        conan_path = server_paths.export(conan_reference)
+        conan_path = server_paths.export(ref)
         self.assertTrue(os.path.exists(conan_path))
-        package_ids = self.client.client_cache.conan_packages(conan_reference)
-        package_ref = PackageReference(conan_reference, package_ids[0])
+        package_ids = self.client.cache.conan_packages(ref)
+        pref = PackageReference(ref, package_ids[0])
 
         # Upload package
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertIn("Compressing package", str(self.client.user_io.out))
 
         # Not needed to tgz again
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # If we install the package again will be removed and re tgz
-        self.client.run("install %s --build missing" % str(conan_reference))
+        self.client.run("install %s --build missing" % str(ref))
         # Upload package
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # Check library on server
-        self._assert_library_exists_in_server(package_ref, server_paths)
+        self._assert_library_exists_in_server(pref, server_paths)
 
-    def _assert_library_exists_in_server(self, package_ref, paths):
-        folder = uncompress_packaged_files(paths, package_ref)
+    def _assert_library_exists_in_server(self, pref, paths):
+        folder = uncompress_packaged_files(paths, pref)
         self._assert_library_files(folder)
 
     def _assert_library_files(self, path):

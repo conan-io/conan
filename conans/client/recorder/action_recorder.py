@@ -40,69 +40,69 @@ class ActionRecorder(object):
         self._inst_packages_info = defaultdict(dict)
 
     # ###### INSTALL METHODS ############
-    def add_recipe_being_developed(self, reference):
-        assert(isinstance(reference, ConanFileReference))
-        self._inst_recipes_develop.add(reference)
+    def add_recipe_being_developed(self, ref):
+        assert(isinstance(ref, ConanFileReference))
+        self._inst_recipes_develop.add(ref)
 
-    def _add_recipe_action(self, reference, action):
-        assert(isinstance(reference, ConanFileReference))
-        reference = reference.copy_clear_rev()
-        if reference not in self._inst_recipes_actions:
-            self._inst_recipes_actions[reference] = []
-        self._inst_recipes_actions[reference].append(action)
+    def _add_recipe_action(self, ref, action):
+        assert(isinstance(ref, ConanFileReference))
+        ref = ref.copy_clear_rev()
+        if ref not in self._inst_recipes_actions:
+            self._inst_recipes_actions[ref] = []
+        self._inst_recipes_actions[ref].append(action)
 
-    def _add_package_action(self, reference, action):
-        reference = reference.copy_clear_rev()
-        assert(isinstance(reference, PackageReference))
-        if reference not in self._inst_packages_actions:
-            self._inst_packages_actions[reference] = []
-        self._inst_packages_actions[reference].append(action)
+    def _add_package_action(self, pref, action):
+        assert(isinstance(pref, PackageReference))
+        pref = pref.copy_clear_rev()
+        if pref not in self._inst_packages_actions:
+            self._inst_packages_actions[pref] = []
+        self._inst_packages_actions[pref].append(action)
 
     # RECIPE METHODS
-    def recipe_exported(self, reference):
-        self._add_recipe_action(reference, Action(INSTALL_EXPORTED))
+    def recipe_exported(self, ref):
+        self._add_recipe_action(ref, Action(INSTALL_EXPORTED))
 
-    def recipe_fetched_from_cache(self, reference):
-        self._add_recipe_action(reference, Action(INSTALL_CACHE))
+    def recipe_fetched_from_cache(self, ref):
+        self._add_recipe_action(ref, Action(INSTALL_CACHE))
 
-    def recipe_downloaded(self, reference, remote_name):
-        self._add_recipe_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
+    def recipe_downloaded(self, ref, remote_name):
+        self._add_recipe_action(ref, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
 
-    def recipe_install_error(self, reference, error_type, description, remote_name):
+    def recipe_install_error(self, ref, error_type, description, remote_name):
         doc = {"type": error_type, "description": description, "remote": remote_name}
-        self._add_recipe_action(reference, Action(INSTALL_ERROR, doc))
+        self._add_recipe_action(ref, Action(INSTALL_ERROR, doc))
 
     # PACKAGE METHODS
-    def package_exported(self, reference):
-        self._add_package_action(reference, Action(INSTALL_EXPORTED))
+    def package_exported(self, pref):
+        self._add_package_action(pref, Action(INSTALL_EXPORTED))
 
-    def package_built(self, reference):
-        self._add_package_action(reference, Action(INSTALL_BUILT))
+    def package_built(self, pref):
+        self._add_package_action(pref, Action(INSTALL_BUILT))
 
-    def package_fetched_from_cache(self, reference):
-        self._add_package_action(reference, Action(INSTALL_CACHE))
+    def package_fetched_from_cache(self, pref):
+        self._add_package_action(pref, Action(INSTALL_CACHE))
 
-    def package_downloaded(self, reference, remote_name):
-        self._add_package_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
+    def package_downloaded(self, pref, remote_name):
+        self._add_package_action(pref, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
 
-    def package_install_error(self, reference, error_type, description, remote_name=None):
-        assert(isinstance(reference, PackageReference))
-        reference = reference.copy_clear_rev()
-        if reference not in self._inst_packages_actions:
-            self._inst_packages_actions[reference] = []
+    def package_install_error(self, pref, error_type, description, remote_name=None):
+        assert(isinstance(pref, PackageReference))
+        pref = pref.copy_clear_rev()
+        if pref not in self._inst_packages_actions:
+            self._inst_packages_actions[pref] = []
         doc = {"type": error_type, "description": description, "remote": remote_name}
-        self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
+        self._inst_packages_actions[pref].append(Action(INSTALL_ERROR, doc))
 
-    def package_cpp_info(self, reference, cpp_info):
-        assert isinstance(reference, PackageReference)
-        reference = reference.copy_clear_rev()
+    def package_cpp_info(self, pref, cpp_info):
+        assert isinstance(pref, PackageReference)
+        pref = pref.copy_clear_rev()
         # assert isinstance(cpp_info, CppInfo)
         doc = {}
         for it, value in vars(cpp_info).items():
             if it.startswith("_") or not value:
                 continue
             doc[it] = value
-        self._inst_packages_info[reference]['cpp_info'] = doc
+        self._inst_packages_info[pref]['cpp_info'] = doc
 
     @property
     def install_errored(self):
@@ -113,18 +113,18 @@ class ActionRecorder(object):
                     return True
         return False
 
-    def _get_installed_packages(self, reference):
-        assert(isinstance(reference, ConanFileReference))
+    def _get_installed_packages(self, ref):
+        assert(isinstance(ref, ConanFileReference))
         ret = []
-        for _package_ref, _package_actions in self._inst_packages_actions.items():
+        for _pref, _package_actions in self._inst_packages_actions.items():
             # Could be a download and then an access to cache, we want the first one
             _package_action = _package_actions[0]
-            if _package_ref.conan == reference:
-                ret.append((_package_ref, _package_action))
+            if _pref.ref == ref:
+                ret.append((_pref, _package_action))
         return ret
 
-    def in_development_recipe(self, reference):
-        return reference in self._inst_recipes_develop
+    def in_development_recipe(self, ref):
+        return ref in self._inst_recipes_develop
 
     def get_info(self):
         return self.get_install_info()
@@ -168,9 +168,9 @@ class ActionRecorder(object):
                    "packages": []}
 
             packages = self._get_installed_packages(ref)
-            for p_ref, p_action in packages:
-                p_doc = get_doc_for_ref(p_ref.package_id, [p_action])
-                package_data = self._inst_packages_info.get(p_ref, {})
+            for pref, p_action in packages:
+                p_doc = get_doc_for_ref(pref.id, [p_action])
+                package_data = self._inst_packages_info.get(pref, {})
                 p_doc.update(package_data)
                 tmp["packages"].append(p_doc)
 
