@@ -65,7 +65,7 @@ class RemoteManager(object):
                                           the_files, retry, retry_wait, policy, remote_manifest)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.update_metadata(ref) as metadata:
+        with self._cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.time = rev_time
 
         duration = time.time() - t1
@@ -84,7 +84,8 @@ class RemoteManager(object):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
 
-        layout = self._cache.package_layout(pref.ref)
+        # short_paths = None is enough if there exist short_paths
+        layout = self._cache.package_layout(pref.ref, short_paths=None)
         read_manifest, expected_manifest = layout.package_manifests(pref)
 
         if read_manifest != expected_manifest:
@@ -152,7 +153,7 @@ class RemoteManager(object):
                                                          the_files, retry, retry_wait, policy)
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.update_metadata(new_pref.ref) as metadata:
+        with self._cache.package_layout(new_pref.ref).update_metadata() as metadata:
             metadata.packages[new_pref.id].time = rev_time
 
         duration = time.time() - t1
@@ -214,7 +215,7 @@ class RemoteManager(object):
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
-        with self._cache.update_metadata(ref) as metadata:
+        with self._cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
             metadata.recipe.time = rev_time
 
@@ -250,13 +251,13 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
-                                                                pref, dest_folder)
+            zipped_files, new_pref, rev_time = self._call_remote(remote, "get_package",
+                                                                 pref, dest_folder)
 
-            with self._cache.update_metadata(new_ref.ref) as metadata:
-                metadata.packages[new_ref.id].revision = new_ref.revision
-                metadata.packages[new_ref.id].recipe_revision = new_ref.ref.revision
-                metadata.packages[new_ref.id].time = rev_time
+            with self._cache.package_layout(new_pref.ref).update_metadata() as metadata:
+                metadata.packages[new_pref.id].revision = new_pref.revision
+                metadata.packages[new_pref.id].recipe_revision = new_pref.ref.revision
+                metadata.packages[new_pref.id].time = rev_time
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
@@ -282,7 +283,7 @@ class RemoteManager(object):
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=package_id, remote=remote)
-        return new_ref
+        return new_pref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

@@ -139,10 +139,11 @@ class _ConanPackageBuilder(object):
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        package_hash = self._cache.package_summary_hash(self._pref)
+        package_hash = self._cache.package_layout(self._pref.ref,
+                                                  self._conan_file.short_paths).package_summary_hash(self._pref)
         package_id = self._pref.id
 
-        with self._cache.update_metadata(self._ref) as metadata:
+        with self._cache.package_layout(self._ref).update_metadata() as metadata:
             metadata.packages[package_id].revision = package_hash
             metadata.packages[package_id].recipe_revision = self._ref.revision
 

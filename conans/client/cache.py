@@ -1,7 +1,6 @@
 import os
 import shutil
 from collections import OrderedDict
-from contextlib import contextmanager
 from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
@@ -11,8 +10,6 @@ from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
     RemoteRegistry
 from conans.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -275,26 +272,6 @@ class ClientCache(SimplePaths):
     def invalidate(self):
         self._conan_config = None
         self._no_lock = None
-
-    # Metadata
-    def load_metadata(self, ref):
-        try:
-            text = load(self.package_metadata(ref))
-            return PackageMetadata.loads(text)
-        except IOError:
-            return PackageMetadata()
-
-    @contextmanager
-    def update_metadata(self, ref):
-        metadata = self.load_metadata(ref)
-        yield metadata
-        save(self.package_metadata(ref), metadata.dumps())
-
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref, short_paths=None)
-        readed_digest = FileTreeManifest.load(package_folder)
-        return readed_digest.summary_hash
 
     def install_as_editable(self, ref, target_path):
         linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)

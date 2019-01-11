@@ -95,7 +95,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
 
-        metadata = self._cache.load_metadata(ref)
+        metadata = self._cache.package_layout(ref).load_metadata()
         ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
 
