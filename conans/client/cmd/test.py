@@ -30,7 +30,7 @@ class PackageTester(object):
             build_modes = ["never"]
         try:
             self._manager.install(create_reference=reference,
-                                  reference=conanfile_abs_path,
+                                  ref_or_path=conanfile_abs_path,
                                   install_folder=test_build_folder,
                                   remote_name=remote_name,
                                   graph_info=graph_info,
