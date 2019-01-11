@@ -3,7 +3,7 @@ import ntpath
 import os
 import posixpath
 from collections import defaultdict
-import six.moves.configparser
+from six.moves import configparser
 
 from conans.client.tools.files import load
 
