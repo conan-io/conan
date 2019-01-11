@@ -41,7 +41,7 @@ class InfoCommandTest(unittest.TestCase):
                            CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, },
                     path=lib_folder)
         self.t.run('link "{}" {}'.format(lib_folder, self.ref))
-        self.assertTrue(self.t.client_cache.installed_as_editable(self.ref))
+        self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
         # Create child
         self.t.save(files={'conanfile.py':
@@ -50,8 +50,8 @@ class InfoCommandTest(unittest.TestCase):
 
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
-        self.assertFalse(self.t.client_cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.client_cache.conan(self.ref)))
+        self.assertFalse(self.t.cache.installed_as_editable(self.ref))
+        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
     @parameterized.expand([(True, ), (False, )])
     def test_no_args(self, use_local_path):

@@ -25,9 +25,9 @@ def short_path(func):
 class PackageCacheLayout(object):
     """ This is the package layout for Conan cache """
 
-    def __init__(self, base_folder, conan_ref, short_paths):
-        assert isinstance(conan_ref, ConanFileReference)
-        self._conan_ref = conan_ref
+    def __init__(self, base_folder, ref, short_paths):
+        assert isinstance(ref, ConanFileReference)
+        self._ref = ref
         self._base_folder = os.path.normpath(base_folder)
         self._short_paths = short_paths
 
@@ -54,28 +54,27 @@ class PackageCacheLayout(object):
         return os.path.join(self.conan(), BUILD_FOLDER)
 
     @short_path
-    def build(self, package_reference):
-        assert isinstance(package_reference, PackageReference)
-        assert package_reference.conan == self._conan_ref
-        return os.path.join(self.conan(), BUILD_FOLDER, package_reference.package_id)
+    def build(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
+        return os.path.join(self.conan(), BUILD_FOLDER, pref.id)
 
     def system_reqs(self):
         return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, SYSTEM_REQS)
 
-    def system_reqs_package(self, package_reference):
-        assert isinstance(package_reference, PackageReference)
-        assert package_reference.conan == self._conan_ref
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER,
-                            package_reference.package_id, SYSTEM_REQS)
+    def system_reqs_package(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
+        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
 
     def packages(self):
         return os.path.join(self.conan(), PACKAGES_FOLDER)
 
     @short_path
-    def package(self, package_reference):
-        assert isinstance(package_reference, PackageReference)
-        assert package_reference.conan == self._conan_ref
-        return os.path.join(self.conan(), PACKAGES_FOLDER, package_reference.package_id)
+    def package(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
+        return os.path.join(self.conan(), PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
         return os.path.join(self.conan(), SCM_FOLDER)

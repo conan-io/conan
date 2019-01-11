@@ -79,8 +79,8 @@ class HelloReuseConan(ConanFile):
 
         # Make sure timestamp increases, in some machines in testing,
         # it can fail due to same timestamp
-        inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
-        inc_package_manifest_timestamp(client2.client_cache,
+        inc_recipe_manifest_timestamp(client2.cache, "Pkg/1.2@lasote/testing", 1)
+        inc_package_manifest_timestamp(client2.cache,
                                        "Pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                                        1)
 

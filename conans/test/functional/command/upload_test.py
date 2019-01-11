@@ -133,7 +133,7 @@ class UploadTest(unittest.TestCase):
             client.run("upload * --confirm", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
 
-            export_folder = client.client_cache.export(ref)
+            export_folder = client.cache.export(ref)
             tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
@@ -150,8 +150,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        package_ref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
-                                             NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -161,7 +160,7 @@ class UploadTest(unittest.TestCase):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
 
-            export_folder = client.client_cache.package(package_ref)
+            export_folder = client.cache.package(pref)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
@@ -180,7 +179,7 @@ class UploadTest(unittest.TestCase):
                      "include/hello.h": ""})
         client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        packages_folder = client.client_cache.packages(ref)
+        packages_folder = client.cache.packages(ref)
         pkg_id = os.listdir(packages_folder)[0]
         package_folder = os.path.join(packages_folder, pkg_id)
         save(os.path.join(package_folder, "added.txt"), "")
@@ -208,7 +207,7 @@ class UploadTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         manifest = client2.client_cache.package_layout(ref).load_manifest()
         manifest.time += 10
-        manifest.save(client2.client_cache.export(ref))
+        manifest.save(client2.cache.export(ref))
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client2.user_io.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
@@ -237,7 +236,7 @@ class UploadTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         manifest = client2.client_cache.package_layout(ref).load_manifest()
         manifest.time += 10
-        manifest.save(client2.client_cache.export(ref))
+        manifest.save(client2.cache.export(ref))
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
         self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
