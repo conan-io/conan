@@ -7,12 +7,12 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.errors import ConanException
 
-PythonRequire = namedtuple("PythonRequire", "conan_ref module conanfile")
+PythonRequire = namedtuple("PythonRequire", "ref module conanfile")
 
 
 class ConanPythonRequire(object):
     def __init__(self, proxy, range_resolver):
-        self._cached_requires = {}  # {conan_ref: PythonRequire}
+        self._cached_requires = {}  # {reference: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
         self._requires = None
@@ -29,14 +29,14 @@ class ConanPythonRequire(object):
         try:
             python_require = self._cached_requires[require]
         except KeyError:
-            r = ConanFileReference.loads(require)
-            requirement = Requirement(r)
+            ref = ConanFileReference.loads(require)
+            requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
-            r = requirement.conan_reference
-            result = self._proxy.get_recipe(r, False, False, remote_name=None,
+            ref = requirement.ref
+            result = self._proxy.get_recipe(ref, False, False, remote_name=None,
                                             recorder=ActionRecorder())
-            path, _, _, reference = result
+            path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
 
             # Check for alias
@@ -44,7 +44,7 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                python_require = PythonRequire(reference, module, conanfile)
+                python_require = PythonRequire(new_ref, module, conanfile)
             self._cached_requires[require] = python_require
 
         return python_require

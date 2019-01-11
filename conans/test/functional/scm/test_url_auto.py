@@ -1,12 +1,10 @@
 # coding=utf-8
 
-import unittest
 import textwrap
+import unittest
 
-from conans.test.utils.tools import TestClient
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    create_local_git_repo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, create_local_git_repo
 
 
 class RemoveCredentials(unittest.TestCase):

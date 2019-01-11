@@ -78,7 +78,7 @@ def hello_source_files(number=0, deps=None, lang='cpp'):
         return go_hello_source_files(number, deps)
 
 
-def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cpp'):
+def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -89,6 +89,6 @@ def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cp
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     if lang == 'cpp':
-        return cpp_hello_conan_files(conan_reference, number, deps, language)
+        return cpp_hello_conan_files(ref, number, deps, language)
     elif lang == 'go':
-        return go_hello_conan_files(conan_reference, number, deps)
+        return go_hello_conan_files(ref, number, deps)
