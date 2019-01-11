@@ -2,9 +2,8 @@ import os
 import unittest
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, mkdir, path_exists
+from conans.util.files import load
 
 
 class PathExistsTest(unittest.TestCase):

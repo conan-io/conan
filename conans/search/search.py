@@ -88,18 +88,18 @@ def search_recipes(paths, pattern=None, ignorecase=True):
     else:
         ret = []
         for subdir in subdirs:
-            conan_ref = ConanFileReference(*subdir.split("/"))
-            if _partial_match(pattern, conan_ref):
-                ret.append(conan_ref)
+            ref = ConanFileReference(*subdir.split("/"))
+            if _partial_match(pattern, ref):
+                ret.append(ref)
 
         return sorted(ret)
 
 
-def _partial_match(pattern, conan_ref):
+def _partial_match(pattern, ref):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(conan_ref).replace('/', ' / ').replace('@', ' @ ').split()
+    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').split()
 
     def partial_sums(iterable):
         partial = ''
@@ -110,44 +110,43 @@ def _partial_match(pattern, conan_ref):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(client_cache, reference, query):
+def search_packages(cache, ref, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param conan_ref: ConanFileReference object
+    param ref: ConanFileReference object
     """
-    if not os.path.exists(client_cache.conan(reference)):
-        raise NotFoundException("Recipe not found: %s" % str(reference))
-    infos = _get_local_infos_min(client_cache, reference)
+    if not os.path.exists(cache.conan(ref)):
+        raise NotFoundException("Recipe not found: %s" % str(ref))
+    infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(client_cache, reference):
+def _get_local_infos_min(cache, ref):
     result = {}
-    packages_path = client_cache.packages(reference)
+    packages_path = cache.packages(ref)
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
         try:
-            package_reference = PackageReference(reference, package_id)
-            info_path = os.path.join(client_cache.package(package_reference,
-                                                          short_paths=None), CONANINFO)
+            pref = PackageReference(ref, package_id)
+            info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
             if not os.path.exists(info_path):
                 raise NotFoundException("")
             conan_info_content = load(info_path)
 
-            metadata = client_cache.load_metadata(package_reference.conan)
+            metadata = cache.load_metadata(pref.ref)
             recipe_revision = metadata.packages[package_id].recipe_revision
             info = ConanInfo.loads(conan_info_content)
-            if reference.revision and recipe_revision and recipe_revision != reference.revision:
+            if ref.revision and recipe_revision and recipe_revision != ref.revision:
                 continue
             conan_vars_info = info.serialize_min()
             result[package_id] = conan_vars_info
 
         except Exception as exc:
-            logger.error("Package %s has no ConanInfo file" % str(package_reference))
+            logger.error("Package %s has no ConanInfo file" % str(pref))
             if str(exc):
                 logger.error(str(exc))
     return result
