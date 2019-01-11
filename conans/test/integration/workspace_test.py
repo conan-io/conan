@@ -11,6 +11,7 @@ from conans.client import tools
 from conans.model.workspace import WORKSPACE_FILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+import textwrap
 
 conanfile = """from conans import ConanFile
 import os
@@ -95,6 +96,63 @@ target_link_libraries(hello{name} {dep})
 
 
 class WorkspaceTest(unittest.TestCase):
+    def simple_test(self):
+        client = TestClient()
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = textwrap.dedent("""
+                                    HelloB/0.1@lasote/stable:
+                                        folder: B
+                                    HelloC/0.1@lasote/stable:
+                                        folder: C
+                                    HelloA/0.1@lasote/stable:
+                                        folder: A
+                                    root: HelloA/0.1@lasote/stable
+                                  """)
+        client.save({WORKSPACE_FILE: project})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user - Editable", client.out)
+        for sub in ("A", "B", "C"):
+            for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
+                self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
+
+    def simple_build_test(self):
+        client = TestClient()
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = textwrap.dedent("""
+                                    HelloB/0.1@lasote/stable:
+                                        folder: B
+                                    HelloC/0.1@lasote/stable:
+                                        folder: C
+                                    HelloA/0.1@lasote/stable:
+                                        folder: A
+                                    root: HelloA/0.1@lasote/stable
+                                  """)
+        client.save({WORKSPACE_FILE: project})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user - Editable", client.out)
+        for sub in ("A", "B", "C"):
+            for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
+                self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     def build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3075

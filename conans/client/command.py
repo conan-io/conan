@@ -1333,6 +1333,26 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
+    def workspace(self, *args):
+        """ handle worksapces
+
+        """
+        parser = argparse.ArgumentParser(description=self.workspace.__doc__,
+                                         prog="conan workspace")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        # create the parser for the "a" command
+        install_parser = subparsers.add_parser('install', help='install this workspace')
+        install_parser.add_argument('path', help='path to workspace file or folder')
+        _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+
+        args = parser.parse_args(*args)
+
+        if args.subcommand == "install":
+            self._conan.install_workspace(args.path, args.settings, args.options, args.env,
+                                          args.remote, args.build,
+                                          args.profile, args.update)
+
     def link(self, *args):
         """ Links a conan reference (e.g lib/1.0@conan/stable) with a local folder path.
 

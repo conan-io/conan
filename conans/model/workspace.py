@@ -14,7 +14,6 @@ class LocalPackage(object):
         self._base_folder = base_folder
         self._install_folder = install_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
-        self._source_folder = data.get("source")  # By default the conanfile_folder
         self._build_folder = data.get("build", "")
         # package_folder can be None, then it will directly use build_folder
         self._package_folder = data.get("package", "")
@@ -23,7 +22,6 @@ class LocalPackage(object):
         self._includedirs = [includedirs] if not isinstance(includedirs, list) else includedirs
         libdirs = data.get("libdirs", [])  # To override libdirs...
         self._libdirs = [libdirs] if not isinstance(libdirs, list) else libdirs
-        self.conanfile = None
 
     @property
     def root_folder(self):
@@ -33,9 +31,8 @@ class LocalPackage(object):
     def conanfile_path(self):
         return os.path.join(self.root_folder, "conanfile.py")
 
-    @property
-    def build_folder(self):
-        folder = self._evaluate(self._build_folder)
+    def build_folder(self, conanfile):
+        folder = self._evaluate(self._build_folder, conanfile)
         if self._install_folder:
             pkg_folder = os.path.join(self._install_folder, self._conanfile_folder, folder)
         else:
@@ -57,17 +54,8 @@ class LocalPackage(object):
     def install_folder(self):
         return self._evaluate(self._install_folder)
 
-    @property
-    def includedirs(self):
-        return [os.path.join(self._base_folder, self._conanfile_folder, v)
-                for v in self._includedirs]
-
-    @property
-    def libdirs(self):
-        return [self._evaluate(v) for v in self._libdirs]
-
-    def _evaluate(self, value):
-        settings = self.conanfile.settings
+    def _evaluate(self, value, conanfile):
+        settings = conanfile.settings
         v = value.format(build_type=settings.get_safe("build_type"),
                          arch=settings.get_safe("arch"),
                          os=platform.system())
@@ -88,19 +76,6 @@ WORKSPACE_FILE = "conanws.yml"
 
 
 class Workspace(object):
-    @staticmethod
-    def get_workspace(folder, install_folder):
-        if isinstance(folder, ConanFileReference):
-            return None
-        if not os.path.exists(folder):
-            return None
-        path = os.path.join(folder, WORKSPACE_FILE)
-        if os.path.exists(path):
-            return Workspace(path, install_folder)
-        parent = os.path.dirname(folder)
-        if parent and parent != folder:
-            return Workspace.get_workspace(parent, install_folder)
-        return None
 
     def generate(self):
         if self._generator == "cmake":
@@ -124,14 +99,19 @@ project({name} CXX)
         self._generator = None
         self._name = "ConanWorkspace"
         self._workspace_packages = OrderedDict()  # {reference: LocalPackage}
-        if not path:
-            return
         self._base_folder = os.path.dirname(path)
-        content = load(path)
+        try:
+            content = load(path)
+        except IOError:
+            raise ConanException("Couldn't load workwspace file in %s" % path)
         self._loads(content)
 
+    def get_editable_dict(self):
+        return {ref: local_package.root_folder
+                for ref, local_package in self._workspace_packages.items()}
+
     def __getitem__(self, reference):
-        return self._workspace_packages.get(reference.name)
+        return self._workspace_packages.get(reference)
 
     @property
     def root(self):
@@ -142,11 +122,13 @@ project({name} CXX)
             yml = yaml.load(text)
             self._generator = yml.pop("generator", None)
             self._name = yml.pop("name", None)
-            self._root = [s.strip() for s in yml.pop("root", "").split(",") if s.strip()]
+            self._root = [ConanFileReference.loads(s.strip())
+                          for s in yml.pop("root", "").split(",") if s.strip()]
             if not self._root:
                 raise ConanException("Conan workspace needs at least 1 root conanfile")
             for package_name, data in yml.items():
                 workspace_package = LocalPackage(self._base_folder, self._install_folder, data)
+                package_name = ConanFileReference.loads(package_name)
                 self._workspace_packages[package_name] = workspace_package
             for package_name in self._root:
                 if package_name not in self._workspace_packages:

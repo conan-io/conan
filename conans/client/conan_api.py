@@ -447,6 +447,26 @@ class ConanAPIV1(object):
             raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
+    def install_workspace(self, path, settings=None, options=None, env=None,
+                          remote_name=None, build=None, profile_name=None,
+                          update=False, cwd=None):
+        cwd = cwd or get_cwd()
+        if os.path.isabs(path):
+            abs_path = path
+        else:
+            abs_path = os.path.normpath(os.path.join(cwd, path))
+
+        workspace = Workspace(abs_path, None)
+        graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
+                                    self._client_cache, self._user_io.out)
+        self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
+
+        self._client_cache._workspace_refs.update(workspace.get_editable_dict())
+        recorder = ActionRecorder()
+        manager = self._init_manager(recorder)
+        manager.install_workspace(graph_info, workspace, remote_name, build, update)
+
+    @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
@@ -494,21 +514,6 @@ class ConanAPIV1(object):
 
             graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                         self._client_cache, self._user_io.out)
-
-            wspath = _make_abs_path(path, cwd)
-            if install_folder:
-                if os.path.isabs(install_folder):
-                    wsinstall_folder = install_folder
-                else:
-                    wsinstall_folder = os.path.join(cwd, install_folder)
-            else:
-                wsinstall_folder = None
-            workspace = Workspace.get_workspace(wspath, wsinstall_folder)
-            if workspace:
-                self._user_io.out.success("Using conanws.yml file from %s" % workspace._base_folder)
-                manager = self._init_manager(recorder)
-                manager.install_workspace(graph_info, workspace, remote_name, build, update)
-                return
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)

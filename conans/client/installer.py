@@ -9,7 +9,6 @@ from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
 from conans.client.importer import remove_imports
-from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
@@ -28,8 +27,7 @@ from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty)
 from conans.util.log import logger
-from conans.util.tracer import log_package_built, \
-    log_package_got_from_local_cache
+from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
 
 def build_id(conan_file):
@@ -290,16 +288,10 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, conan_ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
+                self._propagate_info(node, inverse_levels, deps_graph)
                 if node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node)
-                    continue
-
-                workspace_package = self._workspace[node.conan_ref] if self._workspace else None
-                if workspace_package:
-                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
-                                                graph_info)
+                    self._handle_node_editable(node, graph_info)
                 else:
-                    self._propagate_info(node, inverse_levels, deps_graph)
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     package_ref = PackageReference(conan_ref, package_id)
@@ -323,7 +315,7 @@ class BinaryInstaller(object):
             return EditableCppInfo.load(editables_path, require_namespace=True)
         return None
 
-    def _handle_node_editable(self, node):
+    def _handle_node_editable(self, node, graph_info):
         # Get source of information
         package_layout = self._client_cache.package_layout(node.conan_ref)
         base_path = package_layout.conan()
@@ -348,9 +340,22 @@ class BinaryInstaller(object):
                                              settings=node.conanfile.settings,
                                              options=node.conanfile.options)
 
-        # Use `package_info()` data
-        else:
-            pass  # It will use `package_info()` data relative to path used as 'package_folder'
+        workspace_package = self._workspace[node.conan_ref] if self._workspace else None
+        if workspace_package:
+            output = node.conanfile.output
+            build_folder = workspace_package.build_folder(node.conanfile)
+            write_generators(node.conanfile, build_folder, output)
+            save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
+            output.info("Generated %s" % CONANINFO)
+            graph_info.save(build_folder)
+            output.info("Generated graphinfo")
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
+            output.info("Generated %s" % BUILD_INFO)
+            # Build step might need DLLs, binaries as protoc to generate source files
+            # So execute imports() before build, storing the list of copied_files
+            from conans.client.importer import run_imports
+            copied_files = run_imports(node.conanfile, build_folder)
+            report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, package_ref, keep_build, processed_package_references):
         conan_file = node.conanfile
@@ -381,39 +386,6 @@ class BinaryInstaller(object):
             # Call the info method
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(package_ref, conan_file.cpp_info)
-
-    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph,
-                               graph_info):
-        conan_file = node.conanfile
-        output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
-        include_dirs = workspace_package.includedirs
-        lib_dirs = workspace_package.libdirs
-        self._call_package_info(conan_file, workspace_package.package_folder)
-        if include_dirs:
-            conan_file.cpp_info.includedirs = include_dirs
-        if lib_dirs:
-            conan_file.cpp_info.libdirs = lib_dirs
-            # Make sure the folders exists, otherwise they will be filtered out
-            lib_paths = [os.path.join(conan_file.cpp_info.rootpath, p)
-                         if not os.path.isabs(p) else p for p in lib_dirs]
-            for p in lib_paths:
-                mkdir(p)
-
-        self._propagate_info(node, inverse_levels, deps_graph)
-
-        build_folder = workspace_package.build_folder
-        write_generators(conan_file, build_folder, output)
-        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-        output.info("Generated %s" % CONANINFO)
-        graph_info.save(build_folder)
-        output.info("Generated graphinfo")
-        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
-        output.info("Generated %s" % BUILD_INFO)
-        # Build step might need DLLs, binaries as protoc to generate source files
-        # So execute imports() before build, storing the list of copied_files
-        from conans.client.importer import run_imports
-        copied_files = run_imports(conan_file, build_folder)
-        report_copied_files(copied_files, output)
 
     def _build_package(self, node, package_ref, output, keep_build):
         conan_ref, conan_file = node.conan_ref, node.conanfile

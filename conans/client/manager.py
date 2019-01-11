@@ -30,10 +30,9 @@ class ConanManager(object):
         self._hook_manager = hook_manager
 
     def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
-        references = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
+        references = workspace.root
         deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
-                                                       False, update, remote_name, self._recorder,
-                                                       workspace)
+                                                       False, update, remote_name, self._recorder)
 
         output = ScopedOutput(str("Workspace"), self._user_io.out)
         output.highlight("Installing...")
