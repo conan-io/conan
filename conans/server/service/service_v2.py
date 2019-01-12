@@ -58,28 +58,26 @@ class ConanServiceV2(object):
                 "reference": pref.full_repr(),
                 "time": the_time}
 
-    def get_package_file(self, p_reference, filename, auth_user):
-        self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        path = self._server_store.get_package_file_path(p_reference, filename)
+    def get_package_file(self, pref, filename, auth_user):
+        self._authorizer.check_read_conan(auth_user, pref.ref)
+        path = self._server_store.get_package_file_path(pref, filename)
         return static_file(os.path.basename(path), root=os.path.dirname(path),
                            mimetype=get_mime_type(path))
 
-    def upload_package_file(self, body, headers, p_reference, filename, auth_user):
-        self._authorizer.check_write_conan(auth_user, p_reference.conan)
+    def upload_package_file(self, body, headers, pref, filename, auth_user):
+        self._authorizer.check_write_conan(auth_user, pref.ref)
         # FIXME: Check that reference contains revisions (MANDATORY TO UPLOAD)
 
         # Check if the recipe exists
-        recipe_path = self._server_store.export(p_reference.conan)
+        recipe_path = self._server_store.export(pref.ref)
         if not os.path.exists(recipe_path):
-            raise NotFoundException("Recipe %s with revision "
-                                    "%s doesn't exist in "
-                                    "remote" % (str(p_reference.conan),
-                                                str(p_reference.conan.revision)))
-        path = self._server_store.get_package_file_path(p_reference, filename)
+            raise NotFoundException("Recipe %s with revision %s doesn't exist in "
+                                    "remote" % (str(pref.ref), str(pref.ref.revision)))
+        path = self._server_store.get_package_file_path(pref, filename)
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_package_revision(p_reference)
+        self._server_store.update_last_package_revision(pref)
 
     # Misc
     @staticmethod

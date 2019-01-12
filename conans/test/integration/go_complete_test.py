@@ -5,9 +5,9 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import scan_folder, uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.tools.env import environment_append
 
 stringutil_conanfile = '''
 from conans import ConanFile
@@ -132,9 +132,7 @@ class GoCompleteTest(unittest.TestCase):
         reuse_conan.save(files)
         reuse_conan.run("install . --build missing")
 
-        with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
-                           var_to_add=[('GOPATH', reuse_conan.current_folder), ]):
-
+        with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': reuse_conan.current_folder}):
             if platform.system() == "Windows":
                 command = "hello"
             else:

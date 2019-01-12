@@ -470,14 +470,6 @@ class TestClient(object):
                             output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
             self.cache.invalidate()
-        if self.revisions:
-            # Generate base file
-            self.cache.conan_config
-            replace_in_file(self.cache.conan_conf_path,
-                            "revisions_enabled = False", "revisions_enabled = True",
-                            output=TestBufferConanOutput(), strict=not bool(base_folder))
-            # Invalidate the cached config
-            self.cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
