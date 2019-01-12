@@ -5,15 +5,15 @@ import os
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
-from conans.util.files import load
 
 
 class PackageEditableLayout(object):
 
-    def __init__(self, linked_package_file, ref):
+    def __init__(self, base_folder, layout_file, ref):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
-        self._base_folder = os.path.normpath(load(linked_package_file))
+        self._base_folder = base_folder
+        self._layout_file = layout_file or CONAN_PACKAGE_LAYOUT_FILE
 
     def conan(self):
         """ Returns the base folder for this package reference """
@@ -26,7 +26,7 @@ class PackageEditableLayout(object):
         return os.path.join(self.conan(), CONANFILE)
 
     def editable_package_layout_file(self):
-        return os.path.join(self.conan(), CONAN_PACKAGE_LAYOUT_FILE)
+        return os.path.join(self.conan(), self._layout_file)
 
     def export(self):
         raise RuntimeError("Operation not allowed on a package installed as editable")

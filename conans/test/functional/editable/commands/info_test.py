@@ -1,6 +1,5 @@
 # coding=utf-8
 
-import os
 import textwrap
 import unittest
 
@@ -41,7 +40,6 @@ class LinkedPackageAsProject(unittest.TestCase):
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
 
 class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):

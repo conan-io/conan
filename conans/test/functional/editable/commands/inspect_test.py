@@ -41,7 +41,6 @@ class InspectCommandTest(unittest.TestCase):
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
     def test_reference(self):
         self.t.run('inspect {}'.format(self.ref))

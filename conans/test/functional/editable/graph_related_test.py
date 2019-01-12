@@ -36,7 +36,6 @@ class EmptyCacheTestMixin(object):
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
 
 class ExistingCacheTestMixin(object):

@@ -16,11 +16,12 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import CONAN_MANIFEST, PUT_HEADERS
+from conans.paths import CONAN_MANIFEST, PUT_HEADERS, EDITED_PACKAGES
 from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
+import json
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -57,6 +58,7 @@ class ClientCache(SimplePaths):
         self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
+        self._load_edited()
 
     @property
     def registry(self):
@@ -319,14 +321,30 @@ class ClientCache(SimplePaths):
         readed_digest = FileTreeManifest.load(package_folder)
         return readed_digest.summary_hash
 
-    def install_as_editable(self, ref, target_path):
-        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
-        save(linked_folder_sentinel, content=target_path)
+    def _load_edited(self):
+        edited_path = normpath(join(self.conan_folder, EDITED_PACKAGES))
+        if not os.path.exists(edited_path):
+            return
+        edited = load(edited_path)
+        edited_js = json.loads(edited)
+        self._edited_refs = {ConanFileReference.loads(r, validate=False): (d["path"], d["layout"])
+                             for r, d in edited_js.items()}
+
+    def _save_edited(self):
+        d = {str(ref): {"path": path, "layout": layout}
+             for ref, (path, layout) in self._edited_refs.items()}
+        edited_path = normpath(join(self.conan_folder, EDITED_PACKAGES))
+        save(edited_path, json.dumps(d))
+
+    def install_as_editable(self, ref, target_path, layout):
+        assert isinstance(ref, ConanFileReference)
+        self._edited_refs[ref] = target_path, layout
+        self._save_edited()
 
     def remove_editable(self, ref):
-        if self.installed_as_editable(ref):
-            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
-            os.remove(linked_folder_sentinel)
+        if ref in self._edited_refs:
+            del self._edited_refs[ref]
+            self._save_edited()
             return True
         return False
 

@@ -51,7 +51,6 @@ class InfoCommandTest(unittest.TestCase):
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
     @parameterized.expand([(True, ), (False, )])
     def test_no_args(self, use_local_path):

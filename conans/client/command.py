@@ -1342,6 +1342,8 @@ class Command(object):
         parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
         parser.add_argument("--remove", action='store_true', default=False,
                             help='Remove linked reference (target not required)')
+        parser.add_argument("-l", "--layout",
+                            help='Define an alternative layout filename')
 
         args = parser.parse_args(*args)
         self._warn_python2()
@@ -1354,7 +1356,7 @@ class Command(object):
             raise ConanException("Argument 'target' is required to link a reference")
 
         if not args.remove:
-            self._conan.link(args.target, args.reference, cwd=os.getcwd())
+            self._conan.link(args.target, args.reference, args.layout, cwd=os.getcwd())
             self._outputer.writeln("Reference '{}' linked to directory "
                                    "'{}'".format(args.reference, os.path.dirname(args.target)))
         else:

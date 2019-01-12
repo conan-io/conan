@@ -1,6 +1,5 @@
 # coding=utf-8
 
-import os
 import unittest
 import tempfile
 import itertools
@@ -9,7 +8,7 @@ from parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.test import CONAN_TEST_FOLDER
 from conans.util.files import save
-from conans.paths import LINKED_PACKAGE_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.model.ref import ConanFileReference
 
 
@@ -77,8 +76,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
 
     def make_editable(self, full_reference):
         ref = ConanFileReference.loads(full_reference)
-        cache_dir = self.cache.conan(ref)
-        save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
+        self.cache.install_as_editable(ref, self.current_folder, None)
 
 
 class SettingsAndOptionsTest(unittest.TestCase):
