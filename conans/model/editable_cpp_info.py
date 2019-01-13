@@ -70,7 +70,8 @@ class EditableCppInfo(object):
         else:
             return True
 
-    def apply_to(self, pkg_name, cpp_info, base_path, settings=None, options=None, use_wildcard=True):
+    def apply_to(self, pkg_name, cpp_info, base_path, settings=None, options=None,
+                 use_wildcard=True):
         if self._uses_namespace:
             if pkg_name in self._data:
                 data_to_apply = self._data[pkg_name]

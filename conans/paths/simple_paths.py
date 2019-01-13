@@ -44,7 +44,8 @@ class SimplePaths(object):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self._edited_refs.get(ref.copy_clear_rev())
         if edited_ref:
-            base_path, layout_file = edited_ref
+            base_path = edited_ref["path"]
+            layout_file = edited_ref["layout"]
             return PackageEditableLayout(base_path, layout_file, ref)
         else:
             check_ref_case(ref, self.store)

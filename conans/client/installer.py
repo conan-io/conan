@@ -30,6 +30,7 @@ from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmd
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
+from conans.client.cache import DEFAULT_LAYOUT_FILE
 
 
 def build_id(conan_file):
@@ -262,7 +263,6 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
-        self._editable_cpp_info = self._load_editables_cpp_info()
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
@@ -325,28 +325,22 @@ class BinaryInstaller(object):
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
+        node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
-        package_layout_file = package_layout.editable_package_layout_file()
-        if os.path.exists(package_layout_file):
-            editable_cpp_info = EditableCppInfo.load(package_layout_file,
-                                                     require_namespace=False)
+        editable_cpp_info = package_layout.editable_cpp_info()
+        layout_file = package_layout.layout_file()
+        if not editable_cpp_info:
+            cache_file = layout_file or DEFAULT_LAYOUT_FILE
+            editable_cpp_info = self._cache.editable_cpp_info(cache_file)
+
+        if editable_cpp_info:
             editable_cpp_info.apply_to(node.conanfile.name,
                                        node.conanfile.cpp_info,
                                        base_path=base_path,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
-
-        # Try with the profile-like file
-        elif self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
-            self._editable_cpp_info.apply_to(node.conanfile.name,
-                                             node.conanfile.cpp_info,
-                                             base_path=base_path,
-                                             settings=node.conanfile.settings,
-                                             options=node.conanfile.options)
-
-        # Use `package_info()` data
-        else:
-            pass  # It will use `package_info()` data relative to path used as 'package_folder'
+        elif layout_file:
+            raise ConanException("Layout file not found: %s" % layout_file)
 
     def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
         conan_file = node.conanfile

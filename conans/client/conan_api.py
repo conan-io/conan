@@ -49,7 +49,7 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
@@ -930,9 +930,9 @@ class ConanAPIV1(object):
         return self._cache.registry.remotes.get(remote_name)
 
     @api_method
-    def link(self, target_path, reference, layout, cwd):
+    def link(self, path, reference, layout, cwd):
         # Retrieve conanfile.py from target_path
-        target_path = _get_conanfile_path(path=target_path, cwd=cwd, py=True)
+        target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
         ref = ConanFileReference.loads(reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)

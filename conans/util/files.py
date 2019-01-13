@@ -7,7 +7,6 @@ import stat
 import sys
 import tarfile
 import tempfile
-from contextlib import contextmanager
 from errno import ENOENT
 from os.path import abspath, join as joinpath, realpath
 
