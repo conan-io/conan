@@ -1,7 +1,6 @@
 # coding=utf-8
-import ntpath
+
 import os
-import posixpath
 import six
 from collections import defaultdict
 if six.PY2:
@@ -57,7 +56,7 @@ class EditableCppInfo(object):
     @staticmethod
     def _work_on_item(value, base_path, settings, options):
         value = value.replace('\\', '/')
-        isabs = ntpath.isabs(value) or posixpath.isabs(value)
+        isabs = os.path.isabs(value)
         if base_path and not isabs:
             value = os.path.abspath(os.path.join(base_path, value))
         value = os.path.normpath(value)
