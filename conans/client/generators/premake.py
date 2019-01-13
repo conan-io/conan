@@ -53,7 +53,6 @@ class PremakeGenerator(Generator):
         template_deps = template + 'conan_rootpath{dep} = "{deps.rootpath}"\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            deps = PremakeDeps(dep_cpp_info)
             dep_name = dep_name.replace("-", "_")
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
             sections.append(dep_flags)
