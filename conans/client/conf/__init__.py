@@ -209,7 +209,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
                "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
                                                       "CONAN_MSBUILD_VERBOSITY",
-                                                      "minimal")
+                                                      None)
                }
 
         # Filter None values
