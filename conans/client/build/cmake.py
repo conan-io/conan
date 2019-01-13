@@ -223,7 +223,7 @@ class CMake(object):
                     compiler_version and Version(compiler_version) >= "10":
                 if "--" not in args:
                     args.append("--")
-                    args.append("/verbosity:%s" % self.msbuild_verbosity)
+                args.append("/verbosity:%s" % self.msbuild_verbosity)
 
         arg_list = join_arguments([
             args_to_string([build_dir]),

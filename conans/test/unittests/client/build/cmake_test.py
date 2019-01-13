@@ -1160,3 +1160,28 @@ build_type: [ Release]
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
+
+    def test_msbuild_verbosity(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "10"
+        settings.compiler.runtime = "MDd"
+        settings.arch = "x86"
+        settings.build_type = None
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        cmake.build()
+        self.assertIn("/verbosity:minimal", conan_file.command)
+
+        cmake = CMake(conan_file, msbuild_verbosity="quiet")
+        cmake.build()
+        self.assertIn("/verbosity:quiet", conan_file.command)
+
+        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
+            cmake = CMake(conan_file)
+            cmake.build()
+            self.assertIn("/verbosity:detailed", conan_file.command)
