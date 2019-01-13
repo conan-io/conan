@@ -328,7 +328,7 @@ class BinaryInstaller(object):
         node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
-        layout_file = package_layout.layout_file()
+        layout_file = package_layout.layout_file
         if not editable_cpp_info:
             cache_file = layout_file or DEFAULT_LAYOUT_FILE
             editable_cpp_info = self._cache.editable_cpp_info(cache_file)
@@ -336,7 +336,6 @@ class BinaryInstaller(object):
         if editable_cpp_info:
             editable_cpp_info.apply_to(node.conanfile.name,
                                        node.conanfile.cpp_info,
-                                       base_path=base_path,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
         elif layout_file:

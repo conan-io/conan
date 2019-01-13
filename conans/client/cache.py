@@ -358,7 +358,7 @@ class ClientCache(SimplePaths):
             layout = self._editable_cpp_info[layout_name]
         except KeyError:
             layout_file = os.path.join(self.conan_folder, LAYOUTS_FOLDER, layout_name)
-            layout = EditableCppInfo.load(layout_file, True) if os.path.exists(layout_file) else None
+            layout = EditableCppInfo.load(layout_file, True) if os.path.isfile(layout_file) else None
             self._editable_cpp_info[layout_name] = layout
         return layout
 

@@ -38,28 +38,25 @@ class LayoutTest(unittest.TestCase):
             class Pkg(ConanFile):
                 pass
             """)
-        layout_win = textwrap.dedent("""
+        layout_repo = textwrap.dedent("""
             [includedirs]
-            include_win
+            include_{}
             """)
-        layout_linux = textwrap.dedent("""
-            [includedirs]
-            include_linux
-            """)
-        layout_win_cache = textwrap.dedent("""
-            [*:includedirs]
-            include_win_cache
-            """)
-        layout_linux_cache = textwrap.dedent("""
-            [*:includedirs]
-            include_linux_cache
+        layout_cache = textwrap.dedent("""
+            [{}:includedirs]
+            include_{}
             """)
         layout_folder = os.path.join(client.base_folder, ".conan", LAYOUTS_FOLDER)
-        save_files(layout_folder, {"layout_win_cache": layout_win_cache,
-                                   "layout_linux_cache": layout_linux_cache})
+        save_files(layout_folder, {"layout_win_cache": layout_cache.format("*", "win_cache"),
+                                   "layout_linux_cache": layout_cache.format("*", "linux_cache"),
+                                   "layout_win_cache2": layout_cache.format("mytool", "win_cache2"),
+                                   "layout_linux_cache2": layout_cache.format("mytool",
+                                                                              "linux_cache2"),
+                                   "layout_win_cache3": layout_repo.format("win_cache3"),
+                                   "layout_linux_cache3": layout_repo.format("linux_cache3")})
         client.save({"conanfile.py": conanfile,
-                     "layout_win": layout_win,
-                     "layout_linux": layout_linux})
+                     "layout_win": layout_repo.format("win"),
+                     "layout_linux": layout_repo.format("linux")})
         client.run("link . mytool/0.1@user/testing")
         client2 = TestClient(client.base_folder)
         consumer = textwrap.dedent("""
@@ -74,7 +71,8 @@ class LayoutTest(unittest.TestCase):
         self.assertTrue(include_dirs.endswith("include"))
 
         # Using the repo file layouts
-        for layout in ("win", "linux", "win_cache", "linux_cache"):
+        for layout in ("win", "linux", "win_cache", "linux_cache", "win_cache2", "linux_cache2",
+                       "win_cache3", "linux_cache3"):
             client.run("link . mytool/0.1@user/testing -l=layout_%s" % layout)
             client2.run("install . -g cmake")
             self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)

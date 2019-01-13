@@ -1,36 +1,36 @@
 # coding=utf-8
 
-import os
 import six
-from collections import defaultdict
+
+from conans.errors import ConanException
+from conans.client.tools.files import load
+
 if six.PY2:
     from backports import configparser  # To use 'delimiters' in ConfigParser
 else:
     import configparser
-
-from conans.client.tools.files import load
 
 
 class EditableCppInfo(object):
     WILDCARD = "*"
     cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs']
 
-    def __init__(self, data, uses_namespace):
+    def __init__(self, data):
         self._data = data
-        self._uses_namespace = uses_namespace
+
+    @staticmethod
+    def load(filepath, allow_wildcard=False):
+        return EditableCppInfo.loads(load(filepath), allow_wildcard=allow_wildcard)
 
     @classmethod
-    def load(cls, filepath, require_namespace):
-        data = cls._loads(content=load(filepath), require_namespace=require_namespace)
-        return EditableCppInfo(data, uses_namespace=require_namespace)
+    def loads(cls, content, allow_wildcard):
+        data = cls._loads(content)
+        if not allow_wildcard and [d for d in data if d]:
+            raise ConanException("Repository layout file doesn't allow patterns")
+        return EditableCppInfo(data)
 
     @classmethod
-    def loads(cls, content, require_namespace):
-        data = cls._loads(content=content, require_namespace=require_namespace)
-        return EditableCppInfo(data, uses_namespace=require_namespace)
-
-    @classmethod
-    def _loads(cls, content, require_namespace):
+    def _loads(cls, content):
         """ Returns a dictionary containing information about paths for a CppInfo object: includes,
         libraries, resources, binaries,... """
 
@@ -38,49 +38,24 @@ class EditableCppInfo(object):
         parser.optionxform = str
         parser.read_string(content)
 
-        if not require_namespace:
-            ret = {k: [] for k in cls.cpp_info_dirs}
-            for section in ret.keys():
-                if section in parser:
-                    ret[section] = parser[section]
-            return ret
-        else:
-            ret = defaultdict(lambda: {k: [] for k in cls.cpp_info_dirs})
-            for section in parser:
-                if ':' in section:
-                    namespace, key = section.split(':', 1)
-                    if key in cls.cpp_info_dirs:
-                        ret[namespace][key] = parser[section]
-            return ret
+        ret = {}
+        for section in parser.sections():
+            pkg, key = section.split(":", 1) if ':' in section else (None, section)
+            if key not in cls.cpp_info_dirs:
+                raise ConanException("Wrong cpp_info field: %s" % key)
+            ret.setdefault(pkg, {})[key] = parser[section]
+        return ret
 
     @staticmethod
-    def _work_on_item(value, base_path, settings, options):
-        value = value.replace('\\', '/')
-        isabs = os.path.isabs(value)
-        if base_path and not isabs:
-            value = os.path.abspath(os.path.join(base_path, value))
-        value = os.path.normpath(value)
+    def _work_on_item(value, settings, options):
         value = value.format(settings=settings, options=options)
+        value = value.replace('\\', '/')
         return value
 
-    def has_info_for(self, pck_name, use_wildcard=True):
-        if self._uses_namespace:
-            return pck_name in self._data or (use_wildcard and self.WILDCARD in self._data)
-        else:
-            return True
+    def apply_to(self, pkg_name, cpp_info, settings=None, options=None):
+        d = self._data
+        data = d.get(None) or d.get(pkg_name) or d.get(self.WILDCARD) or {}
 
-    def apply_to(self, pkg_name, cpp_info, base_path, settings=None, options=None,
-                 use_wildcard=True):
-        if self._uses_namespace:
-            if pkg_name in self._data:
-                data_to_apply = self._data[pkg_name]
-            elif use_wildcard and self.WILDCARD in self._data:
-                data_to_apply = self._data[self.WILDCARD]
-            else:
-                data_to_apply = {k: [] for k in self.cpp_info_dirs}
-        else:
-            data_to_apply = self._data
-
-        for key, items in data_to_apply.items():
-            setattr(cpp_info, key, [self._work_on_item(item, base_path, settings, options)
+        for key, items in data.items():
+            setattr(cpp_info, key, [self._work_on_item(item, settings, options)
                                     for item in items])

@@ -26,6 +26,7 @@ class PackageEditableLayout(object):
         """
         return os.path.join(self.conan(), CONANFILE)
 
+    @property
     def layout_file(self):
         return self._layout_file
 
@@ -33,7 +34,7 @@ class PackageEditableLayout(object):
         local_file = self._layout_file or CONAN_PACKAGE_LAYOUT_FILE
         local_file = os.path.join(self.conan(), local_file)
         if os.path.exists(local_file):
-            return EditableCppInfo.load(local_file, require_namespace=False)
+            return EditableCppInfo.load(local_file)
 
     def export(self):
         raise RuntimeError("Operation not allowed on a package installed as editable")
