@@ -142,37 +142,6 @@ class BuildSLNCommandTest(unittest.TestCase):
                                            '/p:PlatformToolset="v110" '
                                            '/p:ForceImportBeforeCppTargets='), command)
 
-    def toolset_from_settings_test(self):
-        new_out = StringIO()
-        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
-                                                  "compiler.version": "17",
-                                                  "build_type": "Debug",
-                                                  "compiler.runtime": "MDd",
-                                                  "compiler.toolset": "v140_xp",
-                                                  "cppstd": "17"}),
-                                    sln_path='dummy.sln', targets=None,
-                                    upgrade_project=False, build_type='Debug', arch='armv7',
-                                    parallel=False, output=ConanOutput(new_out))
-        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
-                                           '/p:Platform="ARM" '
-                                           '/p:PlatformToolset="v140_xp" '
-                                           '/p:ForceImportBeforeCppTargets='), command)
-
-    def toolset_default_test(self):
-        new_out = StringIO()
-        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
-                                                  "compiler.version": "15",
-                                                  "build_type": "Debug",
-                                                  "compiler.runtime": "MDd",
-                                                  "cppstd": "17"}),
-                                    sln_path='dummy.sln', targets=None,
-                                    upgrade_project=False, build_type='Debug', arch='armv7',
-                                    parallel=False, output=ConanOutput(new_out))
-        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
-                                           '/p:Platform="ARM" '
-                                           '/p:PlatformToolset="v141" '
-                                           '/p:ForceImportBeforeCppTargets='), command)
-
     def properties_file_test(self):
         new_out = StringIO()
         command = build_sln_command(MockSettings({"compiler": "Visual Studio",
