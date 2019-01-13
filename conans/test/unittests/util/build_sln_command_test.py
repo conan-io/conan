@@ -163,37 +163,3 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", contents)
         self.assertIn("<AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>",
                       contents)
-
-    def verbosity_test(self):
-        new_out = StringIO()
-        command = build_sln_command(MockSettings({"compiler": "Visual Studio",
-                                                  "compiler.version": "17",
-                                                  "build_type": "Debug",
-                                                  "compiler.runtime": "MDd",
-                                                  "cppstd": "17"}),
-                                    sln_path='dummy.sln', targets=None,
-                                    upgrade_project=False, build_type='Debug', arch='armv7',
-                                    parallel=False, toolset="v110", output=ConanOutput(new_out),
-                                    verbosity="detailed")
-        self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
-                                           '/p:Platform="ARM" '
-                                           '/p:PlatformToolset="v110" '
-                                           '/verbosity:detailed '
-                                           '/p:ForceImportBeforeCppTargets='), command)
-
-    def verbosity_from_env_test(self):
-        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "normal"}):
-            new_out = StringIO()
-            command = build_sln_command(MockSettings({"compiler": "Visual Studio",
-                                                      "compiler.version": "17",
-                                                      "build_type": "Debug",
-                                                      "compiler.runtime": "MDd",
-                                                      "cppstd": "17"}),
-                                        sln_path='dummy.sln', targets=None,
-                                        upgrade_project=False, build_type='Debug', arch='armv7',
-                                        parallel=False, toolset="v110", output=ConanOutput(new_out))
-            self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
-                                               '/p:Platform="ARM" '
-                                               '/p:PlatformToolset="v110" '
-                                               '/verbosity:normal '
-                                               '/p:ForceImportBeforeCppTargets='), command)
