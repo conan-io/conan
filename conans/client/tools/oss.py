@@ -393,7 +393,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
         if "arm" in arch and "armv8" not in arch:
             op_system += "eabi"
 
-        if arch == "armv7hf" and os_ == "Linux":
+        if (arch == "armv5hf" or arch == "armv7hf") and os_ == "Linux":
             op_system += "hf"
 
         if arch == "armv8_32" and os_ == "Linux":
