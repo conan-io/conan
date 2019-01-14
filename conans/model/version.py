@@ -44,7 +44,8 @@ class Version(str):
 
     def stable(self):
         """
-        Same as major but semver 0.Y.Z is not considered stable
+        Get the stable version in a <major>.Y.Z format, otherwise return the version (semver 0.Y.Z
+        is not considered stable)
         :return: version class with .Y.Z as ending
         """
         if self.as_list[0] == 0:
@@ -113,7 +114,9 @@ class Version(str):
 
     def compatible(self, other):
         """
-        Determine if one version is compatible to other regarding to semver
+        Determine if one version is compatible to other regarding to semver Compare two This will
+        check for same major, minor and patch items and discard additional items.
+        Useful to check compatibility with major/minor versions with `<major>.Y.Z` format.
         :param other: version to compare to (string or version class)
         :return: compatible true or false
         """
