@@ -33,10 +33,10 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": conanfile % server_name,
                          "data.data": "MyData%s" % server})
             client.run("create . Pkg/0.1@lasote/testing")
-            inc_recipe_manifest_timestamp(client.client_cache, "Pkg/0.1@lasote/testing", (server-1)*20)
-            inc_package_manifest_timestamp(client.client_cache,
+            inc_recipe_manifest_timestamp(client.cache, "Pkg/0.1@lasote/testing", (server - 1) * 20)
+            inc_package_manifest_timestamp(client.cache,
                                            "Pkg/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
-                                           (server-1)*20)
+                                           (server-1) * 20)
             client.run("upload Pkg* -r=server%s --confirm --all" % server)
 
         # Fresh install from server1

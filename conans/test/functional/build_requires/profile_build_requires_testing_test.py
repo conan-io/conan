@@ -23,9 +23,10 @@ class MyLib(ConanFile):
         cmake.build()
         if enable_testing:
             cmake.test()
-
 """
-cmake = """
+
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(PackageTest CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
@@ -61,10 +62,10 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_test_framework(self):
         client = TestClient()
-        files = cpp_hello_conan_files("Test0")
+        files = cpp_hello_conan_files("Test0", with_exe=False)
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
-        files = cpp_hello_conan_files("Test1", deps=["Test0/0.1@lasote/stable"])
+        files = cpp_hello_conan_files("Test1", deps=["Test0/0.1@lasote/stable"], with_exe=False)
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         # client.run("install Test1/0.1@lasote/stable --build=missing")
@@ -75,13 +76,13 @@ class BuildRequiresTest(unittest.TestCase):
                      "profile.txt": test_profile}, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install MyLib/0.1@lasote/stable --build=missing")
-        self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.user_io.out)
-        self.assertNotIn("100% tests passed", client.user_io.out)
-        self.assertNotIn("Test0/0.1@lasote/stable", client.user_io.out)
-        self.assertNotIn("Test1/0.1@lasote/stable", client.user_io.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.out)
+        self.assertNotIn("100% tests passed", client.out)
+        self.assertNotIn("Test0/0.1@lasote/stable", client.out)
+        self.assertNotIn("Test1/0.1@lasote/stable", client.out)
 
         client.run("install MyLib/0.1@lasote/stable -pr=./profile.txt --build")
-        self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.user_io.out)
-        self.assertIn("Test0/0.1@lasote/stable", client.user_io.out)
-        self.assertIn("Test1/0.1@lasote/stable", client.user_io.out)
-        self.assertIn("100% tests passed", client.user_io.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.out)
+        self.assertIn("Test0/0.1@lasote/stable", client.out)
+        self.assertIn("Test1/0.1@lasote/stable", client.out)
+        self.assertIn("100% tests passed", client.out)

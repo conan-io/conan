@@ -374,7 +374,7 @@ conan_set_std()
             return cmake_version < Version("3.12")
 
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
-               "-s compiler.libcxx=libstdc++11")
+                   "-s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
         else:
@@ -403,7 +403,6 @@ class MyLib(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.build()
 """
         cmakelists = """
 set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -431,4 +430,4 @@ conan_basic_setup()
         tmp = cmakelists.replace("conan_basic_setup()", "conan_basic_setup(SKIP_FPIC)")
         client.save({"CMakeLists.txt": tmp, "conanfile.py": conanfile}, clean_first=True)
         client.run("create . user/channel -o MyLib:fPIC=True")
-        self.assertNotIn("Conan: Adjusting fPIC flag (ON)", client.out)
+        self.assertNotIn("Conan: Adjusting fPIC flag", client.out)

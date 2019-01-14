@@ -4,7 +4,7 @@ import shutil
 import time
 
 from conans import SERVER_CAPABILITIES
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
@@ -24,8 +24,6 @@ class TestServerLauncher(object):
 
     def __init__(self, base_path=None, read_permissions=None,
                  write_permissions=None, users=None, base_url=None, plugins=None,
-                 server_version=None,
-                 min_client_compatible_version=None,
                  server_capabilities=None):
 
         plugins = plugins or []
@@ -78,7 +76,6 @@ class TestServerLauncher(object):
         self.paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.server_store,
-                              server_version, min_client_compatible_version,
                               server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)

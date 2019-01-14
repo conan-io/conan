@@ -35,11 +35,11 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Source files: myfile.h contents", client.user_io.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        builds = client.client_cache.builds(ref)
+        builds = client.cache.builds(ref)
         pid = os.listdir(builds)[0]
         build_folder = os.path.join(builds, pid)
         self.assertNotIn("file.h", os.listdir(build_folder))
-        packages = client.client_cache.packages(ref)
+        packages = client.cache.packages(ref)
         package_folder = os.path.join(packages, pid)
         self.assertIn("file.h", os.listdir(package_folder))
         self.assertIn("myartifact.lib", os.listdir(package_folder))
@@ -66,7 +66,7 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        packages = client.client_cache.packages(ref)
+        packages = client.cache.packages(ref)
         pid = os.listdir(packages)[0]
         package_folder = os.path.join(packages, pid, "include")
         self.assertIn("header.h", os.listdir(package_folder))
@@ -76,7 +76,7 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        packages = client.client_cache.packages(ref)
+        packages = client.cache.packages(ref)
         pid = os.listdir(packages)[0]
         package_folder = os.path.join(packages, pid, "include")
         self.assertIn("header.h", os.listdir(package_folder))

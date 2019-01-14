@@ -33,12 +33,17 @@ class ConanFileLoader(object):
         self._runner = runner
         self._output = output
         self._python_requires = python_requires
-        sys.modules["conans"].python_requires = self._python_requires
+        sys.modules["conans"].python_requires = python_requires
+        self.cached_conanfiles = {}
 
     def load_class(self, conanfile_path):
-        self._python_requires.valid = True
-        _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
-        self._python_requires.valid = False
+        try:
+            return self.cached_conanfiles[conanfile_path]
+        except KeyError:
+            self._python_requires.valid = True
+            _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+            self._python_requires.valid = False
+            self.cached_conanfiles[conanfile_path] = conanfile
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel):
@@ -142,14 +147,14 @@ class ConanFileLoader(object):
             parser = ConanFileTextLoader(contents)
         except Exception as e:
             raise ConanException("%s:\n%s" % (path, str(e)))
-        for requirement_text in parser.requirements:
-            ConanFileReference.loads(requirement_text)  # Raise if invalid
-            conanfile.requires.add(requirement_text)
-        for build_requirement_text in parser.build_requirements:
-            ConanFileReference.loads(build_requirement_text)
+        for reference in parser.requirements:
+            ConanFileReference.loads(reference)  # Raise if invalid
+            conanfile.requires.add(reference)
+        for build_reference in parser.build_requirements:
+            ConanFileReference.loads(build_reference)
             if not hasattr(conanfile, "build_requires"):
                 conanfile.build_requires = []
-            conanfile.build_requires.append(build_requirement_text)
+            conanfile.build_requires.append(build_reference)
 
         conanfile.generators = parser.generators
 

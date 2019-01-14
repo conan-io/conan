@@ -11,7 +11,6 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.client import tools
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text

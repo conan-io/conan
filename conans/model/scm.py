@@ -79,8 +79,8 @@ class SCM(object):
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output
 
-    def get_remote_url(self):
-        return self.repo.get_remote_url()
+    def get_remote_url(self, remove_credentials):
+        return self.repo.get_remote_url(remove_credentials=remove_credentials)
 
     def get_revision(self):
         return self.repo.get_revision()
@@ -91,11 +91,11 @@ class SCM(object):
     def get_repo_root(self):
         return self.repo.get_repo_root()
 
-    def get_qualified_remote_url(self):
+    def get_qualified_remote_url(self, remove_credentials):
         if self._data.type == "git":
-            return self.repo.get_remote_url()
+            return self.repo.get_remote_url(remove_credentials=remove_credentials)
         else:
-            return self.repo.get_qualified_remote_url()
+            return self.repo.get_qualified_remote_url(remove_credentials=remove_credentials)
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
