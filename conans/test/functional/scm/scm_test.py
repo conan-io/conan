@@ -862,9 +862,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
 
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
-        project_url, _ = self.create_project(files={"conanfile.py": conanfile,
-                                                      "myfile.txt": "My file is copied",
-                                                      "subdir/otherfile.txt": "More and more"})
+        project_url, _ = self.create_project(files={"conanfile.py": conanfile,})
         project_url = project_url.replace(" ", "%20")
 
         # Add property needs-lock to my own copy
