@@ -1,12 +1,12 @@
 import os
 
+from conans.client.conf.detect import detect_defaults_settings
+from conans.client.profile_loader import get_profile_path, read_profile
 from conans.errors import ConanException
-from conans.client.profile_loader import read_profile, get_profile_path
-from conans.util.files import save
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
-from conans.client.conf.detect import detect_defaults_settings
 from conans.unicode import get_cwd
+from conans.util.files import save
 
 
 def _get_profile_keys(key):

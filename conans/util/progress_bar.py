@@ -1,7 +1,8 @@
 
 import os
-from tqdm import tqdm
 from contextlib import contextmanager
+
+from tqdm import tqdm
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'

@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from datetime import datetime
 
 from conans.model.ref import ConanFileReference
@@ -21,7 +21,7 @@ def _id_dict(ref):
     if isinstance(ref, ConanFileReference):
         ret = {"id": str(ref)}
     else:
-        ret = {"id": ref.package_id}
+        ret = {"id": ref.id}
 
     # FIXME: When revisions feature is completely release this field should be always there
     # with None if needed
@@ -36,12 +36,13 @@ class UploadRecorder(object):
         self.error = False
         self._info = OrderedDict()
 
-    def add_recipe(self, reference, remote_name, remote_url):
-        self._info[str(reference)] = {"recipe": _UploadElement(reference, remote_name, remote_url),
-                                 "packages": []}
+    def add_recipe(self, ref, remote_name, remote_url):
 
-    def add_package(self, p_ref, remote_name, remote_url):
-        self._info[str(p_ref.conan)]["packages"].append(_UploadElement(p_ref, remote_name, remote_url))
+        self._info[str(ref)] = {"recipe": _UploadElement(ref, remote_name, remote_url),
+                                "packages": []}
+
+    def add_package(self, pref, remote_name, remote_url):
+        self._info[str(pref.ref)]["packages"].append(_UploadElement(pref, remote_name, remote_url))
 
     def get_info(self):
         info = {"error": self.error, "uploaded": []}

@@ -1,90 +1,89 @@
 import os
+import shutil
 import stat
 import tarfile
+import time
 import traceback
 
-import shutil
-import time
 from requests.exceptions import ConnectionError
 
+from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.remote_registry import Remote
-from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.client.source import merge_directories
+from conans.errors import ConanConnectionError, ConanException, NotFoundException
 from conans.model.manifest import gather_files
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
-
-from conans.util.files import gzopen_without_timestamps, is_dirty,\
-    make_read_only, set_dirty, clean_dirty
-
-from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
-from conans.util.files import touch_folder
+from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
+    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+from conans.search.search import filter_packages
+from conans.util import progress_bar
+from conans.util.env_reader import get_env
+from conans.util.files import clean_dirty, exception_message_safe, gzopen_without_timestamps, \
+    is_dirty, make_read_only, mkdir, rmdir, set_dirty, tar_extract, touch_folder
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
-from conans.util.tracer import (log_package_upload, log_recipe_upload,
-                                log_recipe_sources_download,
-                                log_uncompressed_file, log_compressed_files, log_recipe_download,
-                                log_package_download)
-
-from conans.client.source import merge_directories
-from conans.util.env_reader import get_env
-from conans.search.search import filter_packages
-from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.util import progress_bar
+from conans.util.tracer import (log_compressed_files, log_package_download, log_package_upload,
+                                log_recipe_download, log_recipe_sources_download, log_recipe_upload,
+                                log_uncompressed_file)
 
 
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
-    def __init__(self, client_cache, auth_manager, output, plugin_manager):
-        self._client_cache = client_cache
+    def __init__(self, cache, auth_manager, output, hook_manager):
+        self._cache = cache
         self._output = output
         self._auth_manager = auth_manager
-        self._plugin_manager = plugin_manager
+        self._hook_manager = hook_manager
 
+    def upload_recipe(self, ref, remote, retry, retry_wait, policy, remote_manifest):
+        conanfile_path = self._cache.conanfile(ref)
+        self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
+                                   reference=ref, remote=remote)
 
-    def upload_recipe(self, conan_reference, remote, retry, retry_wait, policy, remote_manifest):
-        conanfile_path = self._client_cache.conanfile(conan_reference)
-        self._plugin_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                     reference=conan_reference, remote=remote)
         t1 = time.time()
-        export_folder = self._client_cache.export(conan_reference)
+        export_folder = self._cache.export(ref)
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
             if is_dirty(tgz_path):
-                self._output.warn("%s: Removing %s, marked as dirty" % (str(conan_reference), f))
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
-            raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        export_src_folder = self._client_cache.export_sources(conan_reference, short_paths=None)
+            raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
+        export_src_folder = self._cache.export_sources(ref, short_paths=None)
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
-        if policy == UPLOAD_POLICY_SKIP:
-            return None
 
-        ret, new_ref = self._call_remote(remote, "upload_recipe", conan_reference, the_files, retry,
-                                         retry_wait, policy, remote_manifest)
+        if policy == UPLOAD_POLICY_SKIP:
+            return ref
+
+        ret, rev_time = self._call_remote(remote, "upload_recipe", ref,
+                                          the_files, retry, retry_wait, policy, remote_manifest)
+
+        # Update package revision with the rev_time (Created locally but with rev_time None)
+        with self._cache.update_metadata(ref) as metadata:
+            metadata.recipe.time = rev_time
+
         duration = time.time() - t1
-        log_recipe_upload(new_ref, duration, the_files, remote.name)
+        log_recipe_upload(ref, duration, the_files, remote.name)
         if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(new_ref), remote.name)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
             url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
             msg += ": %s" % url
         else:
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
-        self._plugin_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
-                                     reference=conan_reference, remote=remote)
-        return new_ref
+        self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
+                                   reference=ref, remote=remote)
 
-    def _package_integrity_check(self, package_reference, files, package_folder):
+    def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")
-        read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+        read_manifest, expected_manifest = self._cache.package_manifests(pref)
 
         if read_manifest != expected_manifest:
             self._output.writeln("")
@@ -102,31 +101,31 @@ class RemoteManager(object):
             error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                         % (fname, h1, h2) for fname, (h1, h2) in diff.items())
             logger.error("Manifests doesn't match!\n%s" % error_msg)
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
         else:
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def upload_package(self, package_reference, remote, retry, retry_wait,
-                       integrity_check=False, policy=None):
+    def upload_package(self, pref, remote, retry, retry_wait, integrity_check=False, policy=None):
+
         """Will upload the package to the first remote"""
-        conanfile_path = self._client_cache.conanfile(package_reference.conan)
-        self._plugin_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan,
-                                     package_id=package_reference.package_id,
-                                     remote=remote)
+        conanfile_path = self._cache.conanfile(pref.ref)
+        self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
+                                   reference=pref.ref,
+                                   package_id=pref.id,
+                                   remote=remote)
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        package_folder = self._cache.package(pref, short_paths=None)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'" % (package_reference,
-                                                                             package_reference.conan,
-                                                                             package_reference.package_id))
+                                 "Remove it with 'conan remove %s -p=%s'"
+                                 % (pref, pref.ref, pref.id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
-            self._output.warn("%s: Removing %s, marked as dirty" % (str(package_reference), PACKAGE_TGZ_NAME))
+            self._output.warn("%s: Removing %s, marked as dirty"
+                              % (str(pref), PACKAGE_TGZ_NAME))
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
@@ -134,165 +133,181 @@ class RemoteManager(object):
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         if integrity_check:
-            self._package_integrity_check(package_reference, files, package_folder)
-            logger.debug("====> Time remote_manager check package integrity : %f"
+            self._package_integrity_check(pref, files, package_folder)
+            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait, policy)
+        uploaded, new_pref, rev_time = self._call_remote(remote, "upload_package", pref,
+                                                         the_files, retry, retry_wait, policy)
+
+        # Update package revision with the rev_time (Created locally but with rev_time None)
+        with self._cache.update_metadata(new_pref.ref) as metadata:
+            metadata.packages[new_pref.id].time = rev_time
+
         duration = time.time() - t1
-        log_package_upload(package_reference, duration, the_files, remote)
-        logger.debug("====> Time remote_manager upload_package: %f" % duration)
-        if not tmp:
+        log_package_upload(pref, duration, the_files, remote)
+        logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
+        if not uploaded:
             self._output.rewrite_line("Package is up to date, upload skipped")
             self._output.writeln("")
 
-        self._plugin_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan,
-                                     package_id=package_reference.package_id, remote=remote)
-        return tmp
+        self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
+                                   reference=pref.ref, package_id=pref.id, remote=remote)
+        return new_pref
 
-    def get_conan_manifest(self, conan_reference, remote):
+    def get_conan_manifest(self, ref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        return self._call_remote(remote, "get_conan_manifest", conan_reference)
+        return self._call_remote(remote, "get_conan_manifest", ref)
 
-    def get_package_manifest(self, package_reference, remote):
+    def get_package_manifest(self, pref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        return self._call_remote(remote, "get_package_manifest", package_reference)
+        return self._call_remote(remote, "get_package_manifest", pref)
 
-    def get_package_info(self, package_reference, remote):
+    def get_package_info(self, pref, remote):
         """
         Read a package ConanInfo from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanInfo, remote_name)"""
-        return self._call_remote(remote, "get_package_info", package_reference)
+        return self._call_remote(remote, "get_package_info", pref)
 
-    def get_recipe(self, conan_reference, remote):
+    def get_recipe(self, ref, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        self._plugin_manager.execute("pre_download_recipe", reference=conan_reference, remote=remote)
-        dest_folder = self._client_cache.export(conan_reference)
+        self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
+        dest_folder = self._cache.export(ref)
         rmdir(dest_folder)
 
         t1 = time.time()
-        zipped_files, conan_reference = self._call_remote(remote, "get_recipe", conan_reference,
-                                                          dest_folder)
+        tmp = self._call_remote(remote, "get_recipe", ref, dest_folder)
+        zipped_files, ref, rev_time = tmp
         duration = time.time() - t1
-        log_recipe_download(conan_reference, duration, remote.name, zipped_files)
+        log_recipe_download(ref, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
-        rm_conandir(self._client_cache.source(conan_reference))
+        rm_conandir(self._cache.source(ref))
         touch_folder(dest_folder)
-        conanfile_path = self._client_cache.conanfile(conan_reference)
-        self._plugin_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                     reference=conan_reference, remote=remote)
-        return conan_reference
+        conanfile_path = self._cache.conanfile(ref)
+        self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
+                                   reference=ref, remote=remote)
 
-    def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
+        with self._cache.update_metadata(ref) as metadata:
+            metadata.recipe.revision = ref.revision
+            metadata.recipe.time = rev_time
+
+        return ref
+
+    def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
-        zipped_files = self._call_remote(remote, "get_recipe_sources", conan_reference,
-                                         export_folder)
+        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
-            return conan_reference
+            return ref
 
         duration = time.time() - t1
-        log_recipe_sources_download(conan_reference, duration, remote.name, zipped_files)
+        log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
                             output=self._output)
+        # REMOVE in Conan 2.0
         c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
-        return conan_reference
+        return ref
 
-    def get_package(self, package_reference, dest_folder, remote, output, recorder):
-        package_id = package_reference.package_id
-        conanfile_path = self._client_cache.conanfile(package_reference.conan)
-        self._plugin_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan, package_id=package_id,
-                                     remote=remote)
+    def get_package(self, pref, dest_folder, remote, output, recorder):
+        package_id = pref.id
+        conanfile_path = self._cache.conanfile(pref.ref)
+        self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
+                                   reference=pref.ref, package_id=package_id, remote=remote)
         output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+            zipped_files, new_ref, rev_time = self._call_remote(remote, "get_package",
+                                                                pref, dest_folder)
+
+            with self._cache.update_metadata(new_ref.ref) as metadata:
+                metadata.packages[new_ref.id].revision = new_ref.revision
+                metadata.packages[new_ref.id].recipe_revision = new_ref.ref.revision
+                metadata.packages[new_ref.id].time = rev_time
+
             duration = time.time() - t1
-            log_package_download(package_reference, duration, remote, zipped_files)
+            log_package_download(pref, duration, remote, zipped_files)
             unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(dest_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(dest_folder)
-            recorder.package_downloaded(package_reference, remote.url)
+            recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % package_id)
         except NotFoundException:
-            raise NotFoundException("Package binary '%s' not found in '%s'" % (package_reference, remote.name))
+            raise NotFoundException("Package binary '%s' not found in '%s'" % (pref,
+                                                                               remote.name))
         except BaseException as e:
-            output.error("Exception while getting package: %s" % str(package_reference.package_id))
+            output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
             try:
                 output.warn("Trying to remove package folder: %s" % dest_folder)
                 rmdir(dest_folder)
             except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
-                                     "using it, and retry" % (str(e), dest_folder))
+                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
+                                     "Close any app using it, and retry" % (str(e), dest_folder))
             raise
-        self._plugin_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                     reference=package_reference.conan, package_id=package_id,
-                                     remote=remote)
+        self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
+                                   reference=pref.ref, package_id=package_id, remote=remote)
+        return new_ref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
         Search exported conans information from remotes
 
-        returns (dict str(conan_ref): {packages_info}"""
+        returns (dict str(ref): {packages_info}"""
         return self._call_remote(remote, "search", pattern, ignorecase)
 
-    def search_packages(self, remote, reference, query):
-        packages = self._call_remote(remote, "search_packages", reference, query)
+    def search_packages(self, remote, ref, query):
+        packages = self._call_remote(remote, "search_packages", ref, query)
         packages = filter_packages(query, packages)
         return packages
 
-    def remove(self, conan_ref, remote):
+    def remove(self, ref, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove", conan_ref)
+        return self._call_remote(remote, "remove", ref)
 
-    def remove_packages(self, conan_ref, remove_ids, remote):
+    def remove_packages(self, ref, remove_ids, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove_packages", conan_ref, remove_ids)
+        return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
-    def get_path(self, conan_ref, package_id, path, remote):
-        return self._call_remote(remote, "get_path", conan_ref, package_id, path)
+    def get_path(self, ref, package_id, path, remote):
+        return self._call_remote(remote, "get_path", ref, package_id, path)
 
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)

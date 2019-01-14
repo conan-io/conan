@@ -1,17 +1,19 @@
-import os
-import shutil
-import tempfile
-from contextlib import contextmanager
-from errno import ENOENT, EEXIST
 import hashlib
-import sys
-from os.path import abspath, realpath, join as joinpath
+import os
 import platform
 import re
-import six
-from conans.util.log import logger
-import tarfile
+import shutil
 import stat
+import sys
+import tarfile
+import tempfile
+from contextlib import contextmanager
+from errno import ENOENT
+from os.path import abspath, join as joinpath, realpath
+
+import six
+
+from conans.util.log import logger
 
 
 def walk(top, **kwargs):
@@ -153,23 +155,6 @@ def mkdir_tmp():
     return tempfile.mkdtemp(suffix='tmp_conan')
 
 
-@contextmanager
-def tmp_file(contents):
-    """ Usage:
-
-    with tmp_file("mycontents") as filepath:
-        # Here exists filepath tmp file with "mycontents" inside
-
-    """
-    try:
-        tmp_dir = mkdir_tmp()
-        path = os.path.join(tmp_dir, "t")
-        save(path, contents)
-        yield path
-    finally:
-        rmdir(tmp_dir)
-
-
 def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
@@ -229,11 +214,9 @@ def rmdir(path):
 
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
-    try:
-        os.makedirs(path)
-    except OSError as err:
-        if err.errno != EEXIST:
-            raise
+    if os.path.exists(path):
+        return
+    os.makedirs(path)
 
 
 def path_exists(path, basedir):

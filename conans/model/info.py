@@ -16,13 +16,13 @@ class RequirementInfo(object):
     def __init__(self, value_str, indirect=False):
         """ parse the input into fields name, version...
         """
-        ref = PackageReference.loads(value_str)
-        self.package = ref
-        self.full_name = ref.conan.name
-        self.full_version = ref.conan.version
-        self.full_user = ref.conan.user
-        self.full_channel = ref.conan.channel
-        self.full_package_id = ref.package_id
+        pref = PackageReference.loads(value_str)
+        self.package = pref
+        self.full_name = pref.ref.name
+        self.full_version = pref.ref.version
+        self.full_user = pref.ref.user
+        self.full_channel = pref.ref.channel
+        self.full_package_id = pref.id
 
         # sha values
         if indirect:
@@ -124,7 +124,7 @@ class RequirementsInfo(object):
 
     def _get_key(self, item):
         for reference in self._data:
-            if reference.conan.name == item:
+            if reference.ref.name == item:
                 return reference
         raise ConanException("No requirement matching for %s" % (item))
 
@@ -137,7 +137,7 @@ class RequirementsInfo(object):
 
     @property
     def pkg_names(self):
-        return [r.conan.name for r in self._data.keys()]
+        return [r.ref.name for r in self._data.keys()]
 
     @property
     def sha(self):
@@ -205,7 +205,8 @@ class RequirementsList(list):
 
     @staticmethod
     def deserialize(data):
-        return RequirementsList([PackageReference.loads(line) for line in data])
+        return RequirementsList([PackageReference.loads(package_reference)
+                                 for package_reference in data])
 
 
 class ConanInfo(object):
@@ -242,8 +243,8 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "scope", "recipe_hash",
-                                     "env"], raise_unexpected_field=False)
+                                     "requires", "full_requires", "scope", "recipe_hash", "env"],
+                              raise_unexpected_field=False)
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)

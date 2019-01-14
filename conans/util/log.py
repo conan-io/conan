@@ -1,6 +1,6 @@
 import logging
-from logging import StreamHandler
 import sys
+from logging import StreamHandler
 
 
 class MultiLineFormatter(logging.Formatter):

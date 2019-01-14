@@ -3,7 +3,7 @@ import traceback
 
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import DepsCppInfo, CppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO

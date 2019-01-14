@@ -2,11 +2,13 @@ import os
 import subprocess
 import tempfile
 
-from conans.util.files import load, mkdir, save, rmdir
 from conans.util.env_reader import get_env
-
+from conans.util.files import load, mkdir, rmdir, save
+from conans.util.log import logger
+from conans.util.sha import sha256
 
 CONAN_LINK = ".conan_link"
+CONAN_REAL_PATH = "real_path.txt"
 
 
 def conan_expand_user(path):
@@ -58,18 +60,27 @@ def path_shortener(path, short_paths):
         short_home = os.path.join(drive, os.sep, ".conan")
     mkdir(short_home)
 
-    # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
+    # Workaround for short_home living in NTFS file systems. Give full control permission
+    # to current user to avoid
     # access problems in cygwin/msys2 windows subsystems when using short_home folder
     try:
-        username = os.getenv("USERDOMAIN")
-        domainname = "%s\%s" % (username, os.environ["USERNAME"]) if username else os.environ["USERNAME"]
+        userdomain, username = os.getenv("USERDOMAIN"), os.environ["USERNAME"]
+        domainname = "%s\%s" % (userdomain, username) if userdomain else username
         cmd = r'cacls %s /E /G "%s":F' % (short_home, domainname)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, quiet
     except subprocess.CalledProcessError:
         # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
         pass
 
-    redirect = tempfile.mkdtemp(dir=short_home, prefix="")
+    redirect = hashed_redirect(short_home, path)
+    if not redirect:
+        logger.warn("Failed to create a deterministic short path in %s", short_home)
+        redirect = tempfile.mkdtemp(dir=short_home, prefix="")
+
+    # Save the full path of the local cache directory where the redirect is from.
+    # This file is for debugging purposes and not used by Conan.
+    save(os.path.join(redirect, CONAN_REAL_PATH), path)
+
     # This "1" is the way to have a non-existing directory, so commands like
     # shutil.copytree() to it, works. It can be removed without compromising the
     # temp folder generator and conan-links consistency
@@ -102,3 +113,17 @@ def rm_conandir(path):
         short_path = load(link)
         rmdir(os.path.dirname(short_path))
     rmdir(path)
+
+
+def hashed_redirect(base, path, min_length=6, attempts=10):
+    max_length = min_length + attempts
+
+    full_hash = sha256(path.encode())
+    assert len(full_hash) > max_length
+
+    for length in range(min_length, max_length):
+        redirect = os.path.join(base, full_hash[:length])
+        if not os.path.exists(redirect):
+            return redirect
+    else:
+        return None

@@ -1,20 +1,22 @@
 from collections import OrderedDict
+
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-import six
 
 
 class Requirement(object):
     """ A reference to a package plus some attributes of how to
     depend on that package
     """
-    def __init__(self, conan_reference, private=False, override=False):
+    def __init__(self, ref, private=False, override=False):
         """
         param override: True means that this is not an actual requirement, but something to
                         be passed upstream and override possible existing values
         """
-        self.conan_reference = conan_reference
-        self.range_reference = conan_reference
+        self.ref = ref
+        self.range_ref = ref
         self.override = override
         self.private = private
 
@@ -23,7 +25,7 @@ class Requirement(object):
         """ returns the version range expression, without brackets []
         or None if it is not an expression
         """
-        version = self.range_reference.version
+        version = self.range_ref.version
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
@@ -32,14 +34,14 @@ class Requirement(object):
         """ returns True if the version_range reference has been already resolved to a
         concrete reference
         """
-        return self.conan_reference != self.range_reference
+        return self.ref != self.range_ref
 
     def __repr__(self):
-        return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
+        return ("%s" % str(self.ref) + (" P" if self.private else ""))
 
     def __eq__(self, other):
         return (self.override == other.override and
-                self.conan_reference == other.conan_reference and
+                self.ref == other.ref and
                 self.private == other.private)
 
     def __ne__(self, other):
@@ -85,10 +87,10 @@ class Requirements(OrderedDict):
         """
         assert isinstance(reference, six.string_types)
 
-        conan_reference = ConanFileReference.loads(reference)
-        name = conan_reference.name
+        ref = ConanFileReference.loads(reference)
+        name = ref.name
 
-        new_requirement = Requirement(conan_reference, private, override)
+        new_requirement = Requirement(ref, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
             raise ConanException("Duplicated requirement %s != %s"
@@ -118,18 +120,18 @@ class Requirements(OrderedDict):
             if name in down_reqs:
                 other_req = down_reqs[name]
                 # update dependency
-                other_ref = other_req.conan_reference
-                if other_ref and other_ref != req.conan_reference:
+                other_ref = other_req.ref
+                if other_ref and other_ref != req.ref:
                     output.info("%s requirement %s overridden by %s to %s "
-                                % (own_ref, req.conan_reference, down_ref or "your conanfile",
+                                % (own_ref, req.ref, down_ref or "your conanfile",
                                    other_ref))
-                    req.conan_reference = other_ref
+                    req.ref = other_ref
 
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, conan_reference, private=False, override=False):
-        self.add(conan_reference, private, override)
+    def __call__(self, reference, private=False, override=False):
+        self.add(reference, private, override)
 
     def __repr__(self):
         result = []

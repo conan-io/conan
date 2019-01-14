@@ -1,14 +1,15 @@
-from conans.test.utils.cpp_test_files import cpp_hello_source_files, cpp_hello_conan_files
-from conans.test.utils.go_test_files import go_hello_source_files, go_hello_conan_files
 import os
-from conans.paths import PACKAGE_TGZ_NAME
-import tempfile
-from conans.test import CONAN_TEST_FOLDER
-from conans.tools import untargz
-from conans.errors import ConanException
-import time
-import shutil
 import platform
+import shutil
+import tempfile
+import time
+
+from conans.client.tools.files import untargz
+from conans.errors import ConanException
+from conans.paths import PACKAGE_TGZ_NAME
+from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.utils.go_test_files import go_hello_conan_files, go_hello_source_files
 
 
 def wait_until_removed(folder):
@@ -77,7 +78,7 @@ def hello_source_files(number=0, deps=None, lang='cpp'):
         return go_hello_source_files(number, deps)
 
 
-def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cpp'):
+def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -88,6 +89,6 @@ def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cp
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     if lang == 'cpp':
-        return cpp_hello_conan_files(conan_reference, number, deps, language)
+        return cpp_hello_conan_files(ref, number, deps, language)
     elif lang == 'go':
-        return go_hello_conan_files(conan_reference, number, deps)
+        return go_hello_conan_files(ref, number, deps)

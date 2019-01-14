@@ -1,9 +1,10 @@
 import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict
 from time import sleep
+
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class MultiRemotesTest(unittest.TestCase):
@@ -35,13 +36,13 @@ class MultiRemotesTest(unittest.TestCase):
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
         client_a.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: local", str(client_a.user_io.out))
+        self.assertIn(": local", str(client_a.user_io.out))
         sleep(1)  # For timestamp and updates checks
 
         # Download Hello0 from local with client_b
         client_b.run("install Hello0/0.0@lasote/stable -r local --build missing")
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
+        self.assertIn(": local", str(client_b.user_io.out))
 
         # Update Hello0 with client_a and reupload
         self._create(client_a, "Hello0", "0.0", modifier="\n")
@@ -54,10 +55,10 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
+        self.assertIn(": local", str(client_b.user_io.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
+        self.assertIn(": local", str(client_b.user_io.out))
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload Hello0 to local and default from client_a
@@ -74,7 +75,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("info Hello0/0.0@lasote/stable -r default -u")
         self.assertIn("Remote: local", str(client_b.user_io.out))
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
+        self.assertIn(": local", str(client_b.user_io.out))
 
         # Well, now try to update the package with -r default -u
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")

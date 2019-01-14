@@ -1,16 +1,16 @@
-import unittest
-
-from conans import tools
-from conans.test.utils.tools import TestClient, TestServer
-from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
-from parameterized.parameterized import parameterized
-from conans.util.files import load, save, md5sum
-from conans.model.manifest import FileTreeManifest
+import unittest
 from collections import OrderedDict
-from conans.test.utils.test_files import scan_folder
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.test.utils.test_files import scan_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, md5sum, save
 
 conanfile_py = """
 from conans import ConanFile
@@ -76,13 +76,12 @@ class ExportsSourcesTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
                                                     "other": [("lasote", "mypass")]})
         self.client = client
-        self.reference = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        self.package_reference = PackageReference(self.reference,
-                                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.source_folder = self.client.client_cache.source(self.reference)
-        self.package_folder = self.client.client_cache.package(self.package_reference)
-        self.export_folder = self.client.client_cache.export(self.reference)
-        self.export_sources_folder = self.client.client_cache.export_sources(self.reference)
+        self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
+        self.source_folder = self.client.cache.source(self.ref)
+        self.package_folder = self.client.cache.package(self.pref)
+        self.export_folder = self.client.cache.export(self.ref)
+        self.export_sources_folder = self.client.cache.export_sources(self.ref)
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
@@ -119,7 +118,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                'conanmanifest.txt']
 
         server = server or self.server
-        self.assertEqual(scan_folder(server.paths.export(self.reference)), expected_server)
+        self.assertEqual(scan_folder(server.server_store.export(self.ref)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
@@ -261,9 +260,9 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing")
 
         # new copied package data
-        reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        source_folder = self.client.client_cache.source(reference)
-        export_folder = self.client.client_cache.export(reference)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        source_folder = self.client.cache.source(ref)
+        export_folder = self.client.cache.export(ref)
 
         self.client.run("copy Hello/0.1@lasote/testing lasote/stable")
         self._check_export_folder(mode, export_folder)
@@ -388,7 +387,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.user_io.out)
         self._check_export_installed_folder(mode)
 
-        server_path = self.server.paths.export(self.reference)
+        server_path = self.server.server_store.export(self.ref)
         save(os.path.join(server_path, "license.txt"), "mylicense")
         manifest = FileTreeManifest.load(server_path)
         manifest.time += 1

@@ -18,7 +18,7 @@ A distributed, open-source, C/C++ package manager.
 
 
 Setup
-======
+=====
 
 From binaries
 -------------
@@ -37,6 +37,14 @@ Conan is compatible with Python 2 and Python 3.
     .. code-block:: bash
 
         $ pip install conan
+
+You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+
+
+    .. code-block:: bash
+
+        $ pip install --index-url https://test.pypi.org/simple/ conan
+
 
 From Homebrew (OSx)
 -------------------
@@ -104,8 +112,31 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
     Conan commands. Type "conan <command> -h" for help
 
+Contributing to the project
+===========================
+
+Feedback and contribution is always welcome in this project.
+Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+
 Running the tests
 =================
+
+Using tox
+---------
+
+.. code-block:: bash
+
+    $ tox
+
+It will install the needed requirements and launch `nose` skipping some heavy and slow test.
+If you want to run the full test suite:
+
+.. code-block:: bash
+
+    $ tox -e full
+
+Without tox
+-----------
 
 **Install python requirements**
 
@@ -117,7 +148,6 @@ Running the tests
 
 
 Only in OSX:
-
 
 .. code-block:: bash
 

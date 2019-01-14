@@ -1,9 +1,11 @@
+import getpass
 import os
 import sys
-from conans.client.output import ConanOutput
-from conans.errors import InvalidNameException, ConanException
-import getpass
+
 from six.moves import input as raw_input
+
+from conans.client.output import ConanOutput
+from conans.errors import ConanException
 
 
 class UserIO(object):

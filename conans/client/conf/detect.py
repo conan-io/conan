@@ -1,11 +1,11 @@
 import os
 import platform
 import re
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
-from conans.model.version import Version
 from conans.client.tools.win import latest_visual_studio_version_installed
+from conans.model.version import Version
 
 
 def _execute(command):

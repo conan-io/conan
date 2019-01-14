@@ -1,5 +1,5 @@
-from conans.util.sha import sha1
 from conans.errors import ConanException
+from conans.util.sha import sha1
 
 
 class Values(object):

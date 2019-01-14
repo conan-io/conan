@@ -1,25 +1,24 @@
 import os
 
-from six.moves.configparser import ConfigParser, NoSectionError
 from six.moves import urllib
+from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
+from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
-MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -44,7 +43,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -140,7 +139,7 @@ path = ~/.conan/data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
-[plugins]  # environment CONAN_PLUGINS
+[hooks]    # environment CONAN_HOOKS
 attribute_checker
 
 # Default settings now declared in the default profile
@@ -205,7 +204,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None)
+               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
                }
 
         # Filter None values
@@ -232,7 +231,7 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("'%s' is not a section of conan.conf" % section_name)
         if len(tokens) == 1:
             result = []
-            if section_name == "plugins":
+            if section_name == "hooks":
                 for key, _ in section:
                     result.append(key)
                 return ",".join(result)
@@ -260,7 +259,12 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("You can't set a full section, please specify a key=value")
 
         key = tokens[1]
-        super(ConanClientConfigParser, self).set(section_name, key, value)
+        try:
+            super(ConanClientConfigParser, self).set(section_name, key, value)
+        except ValueError:
+            # https://github.com/conan-io/conan/issues/4110
+            value = value.replace("%", "%%")
+            super(ConanClientConfigParser, self).set(section_name, key, value)
 
         with open(self.filename, "w") as f:
             self.write(f)
@@ -294,13 +298,13 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                from conans.client.client_cache import PROFILES_FOLDER
+                from conans.client.cache import PROFILES_FOLDER
                 profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 
             if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                                     "an existing profile file.")
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
+                                     "must point to an existing profile file.")
             return ret
         else:
             try:

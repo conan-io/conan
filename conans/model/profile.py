@@ -1,10 +1,10 @@
 import copy
-from collections import OrderedDict
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.values import Values
+from conans.client import settings_preprocessor
 
 
 class Profile(object):
@@ -13,15 +13,21 @@ class Profile(object):
 
     def __init__(self):
         # Sections
+        self.processed_settings = None
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
         self.env_values = EnvValues()
         self.options = OptionsValues()
-        self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
+        self.build_requires = OrderedDict()  # ref pattern: list of ref
 
-    @property
-    def settings_values(self):
-        return Values.from_list(list(self.settings.items()))
+    def process_settings(self, cache, preprocess=True):
+        self.processed_settings = cache.settings.copy()
+        self.processed_settings.values = Values.from_list(list(self.settings.items()))
+        if preprocess:
+            settings_preprocessor.preprocess(self.processed_settings)
+            # Redefine the profile settings values with the preprocessed ones
+            # FIXME: Simplify the values.as_list()
+            self.settings = OrderedDict(self.processed_settings.values.as_list())
 
     @property
     def package_settings_values(self):

@@ -1,12 +1,13 @@
 import fnmatch
-
 from collections import OrderedDict
 
-from conans.paths import SimplePaths
-from conans.client.output import Color
-from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
 from conans.client.installer import build_id
+from conans.client.output import Color
+from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths.simple_paths import SimplePaths
+from conans.util.env_reader import get_env
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
 
 class Printer(object):
@@ -25,10 +26,17 @@ class Printer(object):
 
     def print_inspect(self, inspect):
         for k, v in inspect.items():
-            if isinstance(v, dict):
-                self._out.writeln("%s" % k)
-                for sk, sv in sorted(v.items()):
-                    self._out.writeln("    %s: %s" % (sk, str(sv)))
+            if k == "default_options":
+                if isinstance(v, str):
+                    v = OptionsValues.loads(v)
+                elif isinstance(v, tuple):
+                    v = OptionsValues(v)
+                elif isinstance(v, list):
+                    v = OptionsValues(tuple(v))
+            if isinstance(v, (dict, OptionsValues)):
+                self._out.writeln("%s:" % k)
+                for ok, ov in sorted(v.items()):
+                    self._out.writeln("    %s: %s" % (ok, ov))
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 
@@ -52,8 +60,8 @@ class Printer(object):
                 path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
-    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None, package_filter=None,
-                   show_paths=False):
+    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None,
+                   package_filter=None, show_paths=False):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -74,21 +82,19 @@ class Printer(object):
 
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.conan_ref, node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
 
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
             conan = node.conanfile
-            if not ref:
-                # ref is only None iff info is being printed for a project directory, and
-                # not a passed in reference
-                if conan.output is None:  # Identification of "virtual" node
-                    continue
+            if node.recipe == RECIPE_VIRTUAL:
+                continue
+            if node.recipe == RECIPE_CONSUMER:
                 ref = str(conan)
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
 
-            self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
+            self._out.writeln("%s" % node.conanfile.display_name, Color.BRIGHT_CYAN)
             try:
                 # Excludes PROJECT fake reference
                 reg_remote = registry.refs.get(ref)
@@ -135,10 +141,16 @@ class Printer(object):
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
+            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            if revisions_enabled:
+                if (isinstance(ref, ConanFileReference) and show("revision") and
+                        node.ref.revision):
+                    self._out.writeln("    Revision: %s" % node.ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
-                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name if node.binary_remote else "None"))
+                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name
+                                                             if node.binary_remote else "None"))
 
             if node_times and node_times.get(ref, None) and show("date"):
                 self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
@@ -146,10 +158,11 @@ class Printer(object):
 
             dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
-                self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
-                for d in dependants:
-                    ref = d.conan_ref if d.conan_ref else str(d.conanfile)
-                    self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
+                required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
+                if required:
+                    self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
+                    for d in required:
+                        self._out.writeln("        %s" % d.display_name, Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 depends = node.neighbors()
@@ -158,11 +171,11 @@ class Printer(object):
                 if requires:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
                 if build_requires:
                     self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
                     for d in build_requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
@@ -186,27 +199,27 @@ class Printer(object):
                 if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
-                    self._out.writeln(conan_item["recipe"]["id"])
+                    self._out.writeln(str(conan_item["recipe"]["id"]))
 
-    def print_search_packages(self, search_info, reference, packages_query,
+    def print_search_packages(self, search_info, ref, packages_query,
                               outdated=False):
-        assert(isinstance(reference, ConanFileReference))
-        self._out.info("Existing packages for recipe %s:\n" % str(reference))
+        assert(isinstance(ref, ConanFileReference))
+        self._out.info("Existing packages for recipe %s:\n" % str(ref))
         for remote_info in search_info:
             if remote_info["remote"]:
                 self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" % \
-                                ("outdated " if outdated else "", str(reference), packages_query)
+                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" \
+                               % ("outdated " if outdated else "", str(ref), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no %spackages for reference '%s', but package recipe found." % \
-                            ("outdated " if outdated else "", str(reference))
+                    warn_msg = "There are no %spackages for reference '%s', but package recipe " \
+                               "found." % ("outdated " if outdated else "", str(ref))
                 self._out.info(warn_msg)
                 continue
 
-            reference = remote_info["items"][0]["recipe"]["id"]
+            ref = remote_info["items"][0]["recipe"]["id"]
             packages = remote_info["items"][0]["packages"]
 
             # Each package
@@ -227,7 +240,8 @@ class Printer(object):
                 # Always compare outdated with local recipe, simplification,
                 # if a remote check is needed install recipe first
                 if "outdated" in package:
-                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"], indent=2)
+                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"],
+                                             indent=2)
                 self._out.writeln("")
 
     def print_profile(self, name, profile):

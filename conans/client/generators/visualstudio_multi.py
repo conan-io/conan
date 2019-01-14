@@ -1,9 +1,10 @@
 import os
-from conans.model import Generator
-from conans.client.generators import VisualStudioGenerator
 from xml.dom import minidom
-from conans.util.files import load
+
+from conans.client.generators import VisualStudioGenerator
 from conans.errors import ConanException
+from conans.model import Generator
+from conans.util.files import load
 
 
 class _VSSettings(object):

@@ -1,14 +1,17 @@
 import json
 import os
-import unittest
 import sys
+import unittest
+from collections import OrderedDict
 
-from conans import tools
+from nose.plugins.attrib import attr
+
 from conans.build_info.conan_build_info import get_build_info
-from conans.test.utils.tools import TestServer, TestClient
+from conans.client import tools
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class MyBuildInfo(unittest.TestCase):
@@ -16,7 +19,9 @@ class MyBuildInfo(unittest.TestCase):
     def setUp(self):
         test_server = TestServer(users={"lasote": "lasote"})
         test_server2 = TestServer(users={"lasote": "lasote"})
-        self.servers = {"default": test_server, "alternative": test_server2}
+        self.servers = OrderedDict()
+        self.servers["default"] = test_server
+        self.servers["alternative"] = test_server2
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "lasote")],
                                                               "alternative": [("lasote", "lasote")]})
 
@@ -119,6 +124,7 @@ class MyBuildInfo(unittest.TestCase):
             module = _get_module(data, "Hello1/1.0@lasote/stable")
             self.assertEquals(0, len(module["dependencies"]))
 
+    @attr('ide_fail')
     def trace_command_test(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")

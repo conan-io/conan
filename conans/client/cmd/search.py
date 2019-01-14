@@ -1,21 +1,21 @@
-from conans.search.search import filter_outdated, search_recipes,\
-    search_packages
 from collections import OrderedDict, namedtuple
+
 from conans.errors import NotFoundException
+from conans.search.search import filter_outdated, search_packages, search_recipes
 
 
 class Search(object):
-    def __init__(self, client_cache, remote_manager, remote_registry):
-        self._client_cache = client_cache
+    def __init__(self, cache, remote_manager):
+        self._cache = cache
         self._remote_manager = remote_manager
-        self._registry = remote_registry
+        self._registry = cache.registry
 
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         ignorecase = not case_sensitive
 
         references = OrderedDict()
         if not remote_name:
-            references[None] = search_recipes(self._client_cache, pattern, ignorecase)
+            references[None] = search_recipes(self._cache, pattern, ignorecase)
             return references
 
         if remote_name == 'all':
@@ -55,10 +55,10 @@ class Search(object):
         return self._search_packages_in(remote_name, reference, query, outdated)
 
     def _search_packages_in_local(self, reference=None, query=None, outdated=False):
-        packages_props = search_packages(self._client_cache, reference, query)
+        packages_props = search_packages(self._cache, reference, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
         try:
-            recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+            recipe_hash = self._cache.load_manifest(reference).summary_hash
         except IOError:  # It could not exist in local
             recipe_hash = None
 

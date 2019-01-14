@@ -1,30 +1,25 @@
 import os
 
-from conans.client.output import ScopedOutput
-from conans.util.log import logger
-from conans.errors import (NotFoundException, ConanException,
-                           conanfile_exception_formatter)
+from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
+from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.util.files import mkdir
-from conans.model.conan_file import get_env_context_manager
+from conans.util.log import logger
 
 
-def build(graph_manager, plugin_manager, conanfile_path, output,
+def build(graph_manager, hook_manager, conanfile_path,
           source_folder, build_folder, package_folder, install_folder,
           test=False, should_configure=True, should_build=True, should_install=True,
           should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
-    logger.debug("Building in %s" % build_folder)
-    logger.debug("Conanfile in %s" % conanfile_path)
+    logger.debug("BUILD: folder '%s'" % build_folder)
+    logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
 
     try:
-        # Append env_vars to execution environment and clear when block code ends
-        output = ScopedOutput(("%s (test package)" % test) if test else "Project",
-                              output)
         conan_file = graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                           output, deps_info_required=True)
+                                                           deps_info_required=True, test=test)
     except NotFoundException:
         # TODO: Auto generate conanfile from requirements file
         raise ConanException("'%s' file is needed for build.\n"
@@ -50,16 +45,16 @@ def build(graph_manager, plugin_manager, conanfile_path, output,
         conan_file.source_folder = source_folder
         conan_file.package_folder = package_folder
         conan_file.install_folder = install_folder
-        plugin_manager.execute("pre_build", conanfile=conan_file,
-                               conanfile_path=conanfile_path)
+        hook_manager.execute("pre_build", conanfile=conan_file,
+                             conanfile_path=conanfile_path)
         with get_env_context_manager(conan_file):
-            output.highlight("Running build()")
+            conan_file.output.highlight("Running build()")
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
-            plugin_manager.execute("post_build", conanfile=conan_file,
-                                   conanfile_path=conanfile_path)
+            hook_manager.execute("post_build", conanfile=conan_file,
+                                 conanfile_path=conanfile_path)
             if test:
-                output.highlight("Running test()")
+                conan_file.output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
                     conan_file.test()
     except ConanException:

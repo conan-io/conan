@@ -1,11 +1,11 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 
 
-class _SearchRecipe(namedtuple("SearchRecipe", "reference")):
+class _SearchRecipe(namedtuple("SearchRecipe", "ref")):
     with_packages = True
 
     def to_dict(self):
-        data = {"id": str(self.reference)}
+        data = {"id": str(self.ref)}
         return data
 
 
@@ -24,16 +24,16 @@ class SearchRecorder(object):
         self.keyword = "results"
         self._info = OrderedDict()
 
-    def add_recipe(self, remote_name, reference, with_packages=True):
-        recipe = _SearchRecipe(reference)
+    def add_recipe(self, remote_name, ref, with_packages=True):
+        recipe = _SearchRecipe(ref)
         recipe.with_packages = with_packages
         if remote_name not in self._info:
             self._info[remote_name] = OrderedDict()
-        self._info[remote_name][reference] = {"recipe": recipe, "packages": []}
+        self._info[remote_name][ref.full_repr()] = {"recipe": recipe, "packages": []}
 
-    def add_package(self, remote_name, reference, package_id, options, settings, requires, outdated):
+    def add_package(self, remote_name, ref, package_id, options, settings, requires, outdated):
         sp = _SearchPackage(package_id, options, settings, requires, outdated)
-        self._info[remote_name][reference]["packages"].append(sp)
+        self._info[remote_name][ref.full_repr()]["packages"].append(sp)
 
     def get_info(self):
         info = {"error": self.error, self.keyword: []}

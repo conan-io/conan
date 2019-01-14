@@ -1,13 +1,13 @@
 import os
-from conans.model.ref import ConanFileReference, PackageReference
-from os.path import join, normpath
 import platform
+from os.path import join, normpath
+
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
-
 if platform.system() == "Windows":
-    from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
+    from conans.util.windows import conan_expand_user,  rm_conandir, path_shortener
 else:
     def path_shortener(x, _):
         return x
@@ -35,11 +35,13 @@ BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_PREMAKE = 'conanbuildinfo.lua'
+BUILD_INFO_MAKE = 'conanbuildinfo.mak'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 PUT_HEADERS = "artifacts.properties"
 SCM_FOLDER = "scm_folder.txt"
+PACKAGE_METADATA = "metadata.json"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -47,7 +49,6 @@ EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 EXPORT_SOURCES_DIR_OLD = ".c_src"
 
 RUN_LOG_NAME = "conan_run.log"
-
 DEFAULT_PROFILE_NAME = "default"
 
 
@@ -67,12 +68,12 @@ def is_case_insensitive_os():
 
 
 if is_case_insensitive_os():
-    def check_ref_case(conan_reference, conan_folder, store_folder):
+    def check_ref_case(ref, conan_folder, store_folder):
         if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
             return
         # If exists, lets check path
         tmp = store_folder
-        for part in conan_reference:
+        for part in ref.dir_repr().split("/"):
             items = os.listdir(tmp)
             if part not in items:
                 offending = ""
@@ -82,10 +83,10 @@ if is_case_insensitive_os():
                         break
                 raise ConanException("Requested '%s' but found case incompatible '%s'\n"
                                      "Case insensitive filesystem can't manage this"
-                                     % (str(conan_reference), offending))
+                                     % (str(ref), offending))
             tmp = os.path.normpath(tmp + os.sep + part)
 else:
-    def check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
+    def check_ref_case(ref, conan_folder, store_folder):  # @UnusedVariable
         pass
 
 
@@ -101,59 +102,59 @@ class SimplePaths(object):
     def store(self):
         return self._store_folder
 
-    def conan(self, conan_reference):
+    def conan(self, ref):
         """ the base folder for this package reference, for each ConanFileReference
         """
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self._store_folder, "/".join(conan_reference)))
+        assert isinstance(ref, ConanFileReference)
+        return normpath(join(self._store_folder, ref.dir_repr()))
 
-    def export(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
+    def export(self, ref):
+        assert isinstance(ref, ConanFileReference)
+        return normpath(join(self.conan(ref), EXPORT_FOLDER))
 
-    def export_sources(self, conan_reference, short_paths=False):
-        assert isinstance(conan_reference, ConanFileReference)
-        p = normpath(join(self.conan(conan_reference), EXPORT_SRC_FOLDER))
+    def export_sources(self, ref, short_paths=False):
+        assert isinstance(ref, ConanFileReference)
+        p = normpath(join(self.conan(ref), EXPORT_SRC_FOLDER))
         return path_shortener(p, short_paths)
 
-    def source(self, conan_reference, short_paths=False):
-        assert isinstance(conan_reference, ConanFileReference)
-        p = normpath(join(self.conan(conan_reference), SRC_FOLDER))
+    def source(self, ref, short_paths=False):
+        assert isinstance(ref, ConanFileReference)
+        p = normpath(join(self.conan(ref), SRC_FOLDER))
         return path_shortener(p, short_paths)
 
-    def conanfile(self, conan_reference):
-        export = self.export(conan_reference)
-        check_ref_case(conan_reference, export, self.store)
+    def conanfile(self, ref):
+        export = self.export(ref)
+        check_ref_case(ref, export, self.store)
         return normpath(join(export, CONANFILE))
 
-    def builds(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self.conan(conan_reference), BUILD_FOLDER))
+    def builds(self, ref):
+        assert isinstance(ref, ConanFileReference)
+        return normpath(join(self.conan(ref), BUILD_FOLDER))
 
-    def build(self, package_reference, short_paths=False):
-        assert isinstance(package_reference, PackageReference)
-        p = normpath(join(self.conan(package_reference.conan), BUILD_FOLDER,
-                          package_reference.package_id))
+    def build(self, pref, short_paths=False):
+        assert isinstance(pref, PackageReference)
+        p = normpath(join(self.conan(pref.ref), BUILD_FOLDER, pref.id))
         return path_shortener(p, short_paths)
 
-    def system_reqs(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self.conan(conan_reference), SYSTEM_REQS_FOLDER, SYSTEM_REQS))
+    def system_reqs(self, ref):
+        assert isinstance(ref, ConanFileReference)
+        return normpath(join(self.conan(ref), SYSTEM_REQS_FOLDER, SYSTEM_REQS))
 
-    def system_reqs_package(self, package_reference):
-        assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.conan(package_reference.conan), SYSTEM_REQS_FOLDER,
-                             package_reference.package_id, SYSTEM_REQS))
+    def system_reqs_package(self, pref):
+        assert isinstance(pref, PackageReference)
+        return normpath(join(self.conan(pref.ref), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS))
 
-    def packages(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        return normpath(join(self.conan(conan_reference), PACKAGES_FOLDER))
+    def packages(self, ref):
+        assert isinstance(ref, ConanFileReference)
+        return normpath(join(self.conan(ref), PACKAGES_FOLDER))
 
-    def package(self, package_reference, short_paths=False):
-        assert isinstance(package_reference, PackageReference)
-        p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
-                          package_reference.package_id))
+    def package(self, pref, short_paths=False):
+        assert isinstance(pref, PackageReference)
+        p = normpath(join(self.conan(pref.ref), PACKAGES_FOLDER, pref.id))
         return path_shortener(p, short_paths)
 
-    def scm_folder(self, conan_reference):
-        return normpath(join(self.conan(conan_reference), SCM_FOLDER))
+    def scm_folder(self, ref):
+        return normpath(join(self.conan(ref), SCM_FOLDER))
+
+    def package_metadata(self, ref):
+        return normpath(join(self.conan(ref), PACKAGE_METADATA))
