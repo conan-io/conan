@@ -19,14 +19,18 @@ class EditableCppInfo(object):
         self._data = data
 
     @staticmethod
-    def load(filepath, allow_wildcard=False):
-        return EditableCppInfo.loads(load(filepath), allow_wildcard=allow_wildcard)
+    def load(filepath, allow_package_name=False):
+        return EditableCppInfo.loads(load(filepath), allow_package_name=allow_package_name)
 
     @classmethod
-    def loads(cls, content, allow_wildcard):
+    def loads(cls, content, allow_package_name=False):
         data = cls._loads(content)
-        if not allow_wildcard and [d for d in data if d]:
+        if not allow_package_name and [d for d in data if d]:
             raise ConanException("Repository layout file doesn't allow patterns")
+        else:
+            if data.get(None) and data.get(cls.WILDCARD):
+                raise ConanException("Using both generic '[includedirs]' "
+                                     "and wildcard '[*:includedirs]' syntax. Use just one")
         return EditableCppInfo(data)
 
     @classmethod
@@ -54,7 +58,7 @@ class EditableCppInfo(object):
 
     def apply_to(self, pkg_name, cpp_info, settings=None, options=None):
         d = self._data
-        data = d.get(None) or d.get(pkg_name) or d.get(self.WILDCARD) or {}
+        data = d.get(pkg_name) or d.get(self.WILDCARD) or d.get(None) or {}
 
         for key, items in data.items():
             setattr(cpp_info, key, [self._work_on_item(item, settings, options)

@@ -19,7 +19,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
-from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -312,12 +311,6 @@ class BinaryInstaller(object):
             read_manifest = FileTreeManifest.load(package_folder)
             if node.update_manifest == read_manifest:
                 return True
-
-    def _load_editables_cpp_info(self):
-        editables_path = self._cache.default_editable_path
-        if os.path.exists(editables_path):
-            return EditableCppInfo.load(editables_path, require_namespace=True)
-        return None
 
     def _handle_node_editable(self, node):
         # Get source of information
