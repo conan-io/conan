@@ -40,6 +40,10 @@ class EditableCppInfo(object):
 
         parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
         parser.optionxform = str
+        try:
+            content = content.decode("utf-8")
+        except:
+            pass
         parser.read_string(content)
 
         ret = {}

@@ -14,13 +14,13 @@ class ParseTest(unittest.TestCase):
                             [includedrs]
                             something
                             """)
-        with self.assertRaisesRegex(ConanException, "Wrong cpp_info field: includedrs"):
+        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field: includedrs"):
             _ = EditableCppInfo.loads(content, allow_package_name=False)
         content = textwrap.dedent("""
                             [*:includedrs]
                             something
                             """)
-        with self.assertRaisesRegex(ConanException, "Wrong cpp_info field: includedrs"):
+        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field: includedrs"):
             _ = EditableCppInfo.loads(content, allow_package_name=True)
 
     def namespace_error_test(self):
@@ -28,5 +28,5 @@ class ParseTest(unittest.TestCase):
                             [*:includedirs]
                             something
                             """)
-        with self.assertRaisesRegex(ConanException, "Repository layout file doesn't allow pattern"):
+        with self.assertRaisesRegexp(ConanException, "Repository layout file doesn't allow pattern"):
             _ = EditableCppInfo.loads(content, allow_package_name=False)
