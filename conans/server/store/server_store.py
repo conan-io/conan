@@ -330,7 +330,7 @@ class ServerStore(SimplePaths):
 
         latest_p = self.get_last_package_revision(ret)
         if not latest_p:
-            raise NotFoundException("Package not found: '%s'" % str(pref))
+            raise NotFoundException("Package not found: '%s'" % pref.full_repr())
 
         return ret.copy_with_revs(ref.revision, latest_p.revision)
 

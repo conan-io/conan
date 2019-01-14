@@ -299,10 +299,10 @@ def _get_local_infos_min(paths, ref, v2_compatibility_mode=False):
     if not ref.revision and v2_compatibility_mode:
         recipe_revisions = paths.get_recipe_revisions(ref)
     else:
-        recipe_revisions = [ref]
+        recipe_revisions = [(None, None)]
 
-    for recipe_revision in recipe_revisions:
-        packages_path = paths.packages(recipe_revision)
+    for recipe_revision, _ in recipe_revisions:
+        packages_path = paths.packages(ref.copy_with_rev(recipe_revision))
         subdirs = list_folder_subdirs(packages_path, level=1)
         for package_id in subdirs:
             if package_id in result:

@@ -1026,13 +1026,8 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-
-                if args.json and info:
-                    info["reference"] = info["reference"].full_repr()
-                    self._outputer.json_output(info, args.json, cwd)
-                else:
-                    self._outputer.print_revisions(info["reference"], info["revisions"],
-                                                   remote_name=args.remote)
+                self._outputer.print_revisions(info["reference"], info["revisions"],
+                                               remote_name=args.remote)
                 return
 
             if ref:
