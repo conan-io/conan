@@ -53,7 +53,7 @@ class HelloConan(ConanFile):
         To reduce risk of false positive results:
         - package with shared library is deployed into different user folder via TestServer
         - The consumer tries to execute the imported shared library and executable in the same
-          directory, and it fails in Linux, but works on OSX and WIndows.
+          directory, and it fails in Linux and OSX, but works on Windows.
         - Then I move the shared library to a different directory, and it fails,
           I'm making sure that there is no harcoded rpaths messing.
         - Finally I use the virtualrunenvironment that declares de LD_LIBRARY_PATH,
@@ -181,13 +181,13 @@ lib, * -> ./bin
         with tools.chdir(os.path.join(client2.current_folder, "bin2")):
             if platform.system() == "Windows":
                 self.assertEqual(os.system("say_hello.exe"), 0)
-            elif platform.system() == "Darwin":
-                self.assertEqual(os.system("./say_hello"), 0)
             else:
+                path_var = {
+                    "Darwin": "DYLD_LIBRARY_PATH"
+                }.get(platform.system(), "LD_LIBRARY_PATH")
                 self.assertNotEqual(os.system("./say_hello"), 0)
-                self.assertEqual(
-                    os.system("LD_LIBRARY_PATH=$(pwd) ./say_hello"), 0)
-                self.assertEqual(os.system("LD_LIBRARY_PATH=. ./say_hello"), 0)
+                self.assertEqual(os.system("%s=$(pwd) ./say_hello" % path_var), 0)
+                self.assertEqual(os.system("%s=. ./say_hello" % path_var), 0)
 
             # If we move the shared library it won't work, at least we use the virtualrunenv
             os.mkdir(os.path.join(client2.current_folder, "bin2", "subdir"))
