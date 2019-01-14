@@ -34,8 +34,8 @@ class PremakeGenerator(Generator):
                     'conan_libdirs{dep} = {{{deps.lib_paths}}}\n'
                     'conan_bindirs{dep} = {{{deps.bin_paths}}}\n'
                     'conan_libs{dep} = {{{deps.libs}}}\n'
-                    'conan_cppdefines{dep} = {{{deps.defines}}}\n'
-                    'conan_cppflags{dep} = {{{deps.cppflags}}}\n'
+                    'conan_defines{dep} = {{{deps.defines}}}\n'
+                    'conan_cxxflags{dep} = {{{deps.cppflags}}}\n'
                     'conan_cflags{dep} = {{{deps.cflags}}}\n'
                     'conan_sharedlinkflags{dep} = {{{deps.sharedlinkflags}}}\n'
                     'conan_exelinkflags{dep} = {{{deps.exelinkflags}}}\n')
@@ -65,7 +65,7 @@ class PremakeGenerator(Generator):
             "    includedirs{conan_includedirs}\n"
             "    libdirs{conan_libdirs}\n"
             "    links{conan_libs}\n"
-            "    defines{conan_cppdefines}\n"
+            "    defines{conan_defines}\n"
             "    bindirs{conan_bindirs}\n"
             "end\n")
 
