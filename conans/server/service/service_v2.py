@@ -48,8 +48,7 @@ class ConanServiceV2(object):
         self._authorizer.check_read_conan(auth_user, ref)
         if not self._server_store.path_exists(self._server_store.conan(ref)):
             raise NotFoundException("Recipe not found: '%s'" % str(ref))
-        ret = self._server_store.get_recipe_revisions(ref)
-        return ret
+        return self._server_store.get_recipe_revisions(ref)
 
     def get_package_revisions(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
@@ -87,10 +86,8 @@ class ConanServiceV2(object):
         # Check if the recipe exists
         recipe_path = self._server_store.export(pref.ref)
         if not os.path.exists(recipe_path):
-            raise NotFoundException("Recipe %s with revision "
-                                    "%s doesn't exist in "
-                                    "remote" % (str(pref.ref),
-                                                str(pref.ref.revision)))
+            raise NotFoundException("Recipe %s with revision %s doesn't exist in "
+                                    "remote" % (str(pref.ref), str(pref.ref.revision)))
         path = self._server_store.get_package_file_path(pref, filename)
         self._upload_to_path(body, headers, path)
 

@@ -61,7 +61,7 @@ class RestV2Methods(RestCommonMethods):
         url = self.conans_router.recipe_snapshot(ref)
         ref_str = ref.full_repr()
         snap, reference, rev_time = self._get_snapshot(url, ref_str)
-        ref = ConanFileReference.loads(ref_str)
+        ref = ConanFileReference.loads(reference)
         return snap, ref, rev_time
 
     def _get_package_snapshot(self, pref):

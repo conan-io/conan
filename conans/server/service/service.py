@@ -185,41 +185,29 @@ class ConanService(object):
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, ref)
 
-        if ref.revision:
-            references = [ref]
-        else:
-            references = self._server_store.get_recipe_revisions(ref)
-
-        for ref in references:
-            self._server_store.remove_packages(ref, package_ids_filter)
+        for rrev in self._server_store.get_recipe_revisions(ref).items():
+            self._server_store.remove_packages(ref.copy_with_rev(rrev.revision),
+                                               package_ids_filter)
 
     def remove_package(self, pref):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
-        if not pref.ref.revision:
-            recipe_revisions = self._server_store.get_recipe_revisions(pref.ref)
-        else:
-            recipe_revisions = [pref.ref, ]
-
-        for ref in recipe_revisions:
+        for rrev in self._server_store.get_recipe_revisions(pref.ref).items():
+            ref_with_rev = pref.ref.copy_with_rev(rrev.revision)
             if not pref.revision:
-                pref = PackageReference(ref, pref.id)
-                package_revisions = [r.revision
-                                     for r in self._server_store.get_package_revisions(pref)]
+                pref = PackageReference(ref_with_rev, pref.id)
+                package_revisions = [prev for prev in
+                                     self._server_store.get_package_revisions(pref)]
             else:
                 package_revisions = [pref.revision]
 
             for prev in package_revisions:
-                full_pref = PackageReference(ref, pref.id, prev)
+                full_pref = PackageReference(ref_with_rev, pref.id, prev.revision)
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, ref):
-        if ref.revision:
-            refs = [ref]
-        else:
-            refs = self._server_store.get_recipe_revisions(ref)
-        for ref in refs:
-            self._server_store.remove_all_packages(ref)
+        for rrev in self._server_store.get_recipe_revisions(ref).items():
+            self._server_store.remove_all_packages(ref.copy_with_rev(rrev.revision))
 
     def remove_conanfile_files(self, ref, files):
         self._authorizer.check_delete_conan(self._auth_user, ref)
@@ -296,14 +284,11 @@ def _get_local_infos_min(paths, ref, v2_compatibility_mode=False):
 
     result = {}
 
-    if not ref.revision and v2_compatibility_mode:
-        recipe_revisions = paths.get_recipe_revisions(ref)
-    else:
-        recipe_revisions = [(None, None)]
+    rrevs = paths.get_recipe_revisions(ref).items() if v2_compatibility_mode else [None]
 
-    for recipe_revision, _ in recipe_revisions:
-        packages_path = paths.packages(ref.copy_with_rev(recipe_revision))
-        subdirs = list_folder_subdirs(packages_path, level=1)
+    for rrev in rrevs:
+        new_ref = ref.copy_with_rev(rrev.revision) if rrev else ref
+        subdirs = list_folder_subdirs(paths.packages(new_ref), level=1)
         for package_id in subdirs:
             if package_id in result:
                 continue

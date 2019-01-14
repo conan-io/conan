@@ -196,12 +196,16 @@ class ServerStore(SimplePaths):
         return self._get_latest_revision(rev_file_path)
 
     def get_recipe_revisions(self, ref):
+        """Returns a RevisionList"""
+        if ref.revision:
+            tmp = RevisionList()
+            tmp.add_revision(ref.revision)
+            return tmp
         rev_file_path = self._recipe_revisions_file(ref)
         revs = self._get_revisions(rev_file_path)
         if not revs:
             return []
-        return [(rev.revision, rev.time)
-                for rev in revs.items()]
+        return revs
 
     def get_latest_package_reference(self, pref):
         assert(isinstance(pref, PackageReference))
@@ -252,7 +256,13 @@ class ServerStore(SimplePaths):
                                          lock_file=rev_file_path + ".lock")
 
     def get_package_revisions(self, pref):
+        """Returns a RevisionList"""
         assert pref.ref.revision is not None
+        if pref.revision:
+            tmp = RevisionList()
+            tmp.add_revision(pref.reviion)
+            return tmp
+
         tmp = self._package_revisions_file(pref)
         ret = self._get_revisions(tmp)
         return ret.items()

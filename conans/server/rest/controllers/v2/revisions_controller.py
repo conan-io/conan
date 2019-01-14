@@ -22,7 +22,7 @@ class RevisionsController(Controller):
             """
             conan_reference = ConanFileReference(name, version, username, channel)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
-            revs = conan_service.get_recipe_revisions(conan_reference, auth_user)
+            revs = conan_service.get_recipe_revisions(conan_reference, auth_user).items()
             return _format_revs_return(conan_reference, revs)
 
         @app.route(r.package_revisions, method="GET")
@@ -32,7 +32,7 @@ class RevisionsController(Controller):
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision=None)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
-            revs = conan_service.get_package_revisions(package_reference, auth_user)
+            revs = conan_service.get_package_revisions(package_reference, auth_user).items()
             return _format_revs_return(package_reference, revs)
 
         def _format_revs_return(ref, revs):

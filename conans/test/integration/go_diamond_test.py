@@ -5,9 +5,9 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.tools.env import environment_append
 
 
 @attr('golang')
@@ -39,9 +39,7 @@ class GoDiamondTest(unittest.TestCase):
         client.run("install . --build missing")
         client.run("build .")
 
-        with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
-                           var_to_add=[('GOPATH', client.current_folder), ]):
-
+        with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': client.current_folder}):
             client.runner('go install hello4_main', cwd=os.path.join(client.current_folder, 'src'))
         if platform.system() == "Windows":
             command = "hello4_main"
@@ -69,8 +67,7 @@ class GoDiamondTest(unittest.TestCase):
         client2.save(files3)
 
         client2.run("install . --build missing")
-        with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
-                           var_to_add=[('GOPATH', client2.current_folder), ]):
+        with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': client2.current_folder}):
             client2.runner('go install hello4_main',
                            cwd=os.path.join(client2.current_folder, 'src'))
         if platform.system() == "Windows":
