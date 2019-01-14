@@ -192,6 +192,7 @@ class TestRequester(object):
             kwargs.pop("auth", None)
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
+            kwargs.pop("proxies", None)
             if "data" in kwargs:
                 if isinstance(kwargs["data"], IterableToFileAdapter):
                     data_accum = b""
