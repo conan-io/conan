@@ -193,16 +193,9 @@ class ConanService(object):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
         for rrev in self._server_store.get_recipe_revisions(pref.ref).items():
-            ref_with_rev = pref.ref.copy_with_rev(rrev.revision)
-            if not pref.revision:
-                pref = PackageReference(ref_with_rev, pref.id)
-                package_revisions = [prev for prev in
-                                     self._server_store.get_package_revisions(pref)]
-            else:
-                package_revisions = [pref.revision]
-
-            for prev in package_revisions:
-                full_pref = PackageReference(ref_with_rev, pref.id, prev.revision)
+            new_pref = pref.copy_with_revs(rrev.revision, pref.revision)
+            for prev in self._server_store.get_package_revisions(new_pref).items():
+                full_pref = new_pref.copy_with_revs(rrev.revision, prev.revision)
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, ref):

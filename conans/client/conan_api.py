@@ -13,8 +13,9 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.cmd.profile import cmd_profile_create, cmd_profile_delete_key, cmd_profile_get, \
-    cmd_profile_list, cmd_profile_update
+from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
+                                       cmd_profile_list, cmd_profile_update)
+from conans.client.cmd.revisions import get_local_recipe_revisions, get_local_package_revisions
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
@@ -43,7 +44,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -55,7 +56,6 @@ from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
-from conans.util.time import from_timestamp_to_datetime
 from conans.util.tracer import log_command, log_exception
 
 default_manifest_folder = '.conan_manifests'
@@ -934,15 +934,7 @@ class ConanAPIV1(object):
     def get_recipe_revisions(self, reference, remote_name=None):
         ref = ConanFileReference.loads(str(reference))
         if not remote_name:
-            if not os.path.exists(self._cache.export(ref)):
-                raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-            ret = {"reference": ref.full_repr(), "revisions": []}
-            metadata = self._cache.load_metadata(ref)
-            the_time = from_timestamp_to_datetime(metadata.recipe.time) \
-                if metadata.recipe.time else None
-            ret["revisions"].append({"revision": metadata.recipe.revision,
-                                     "time": the_time})
-            return ret
+            return get_local_recipe_revisions(ref, self._cache)
         else:
             remote = self.get_remote_by_name(remote_name)
             if ref.revision:
@@ -953,20 +945,7 @@ class ConanAPIV1(object):
     def get_package_revisions(self, reference, remote_name=None):
         pref = PackageReference.loads(str(reference), validate=True)
         if not remote_name:
-            ret = {"reference": pref.full_repr(), "revisions": []}
-            if not os.path.exists(self._cache.export(pref.ref)) or (pref.ref.revision and \
-                    self._cache.load_metadata(pref.ref).recipe.revision != pref.ref.revision):
-                raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
-            if not os.path.exists(self._cache.package(pref)):
-                raise NotFoundException("Package not found: '%s'" % pref.full_repr())
-            metadata = self._cache.load_metadata(pref.ref)
-            if metadata.packages[pref.id].time:
-                tm = from_timestamp_to_datetime(metadata.packages[pref.id].time)
-            else:
-                tm = None
-            ret["revisions"].append({"revision": metadata.packages[pref.id].revision,
-                                     "time": tm})
-            return ret
+            return get_local_package_revisions(pref, self._cache)
         else:
             remote = self.get_remote_by_name(remote_name)
             if not pref.ref.revision:

@@ -573,16 +573,21 @@ class HelloConan(ConanFile):
         # Now generate different package revisions also
         rev1, rev2 = self._upload_two_revisions(ref, different_binary=True)
         full_pref1 = PackageReference(ref.copy_with_rev(rev1), pid)
-        prevs = [el.revision for el in self.servers["remote0"].server_store.get_package_revisions(full_pref1)]
+        prevs = [el.revision
+                 for el in
+                 self.servers["remote0"].server_store.get_package_revisions(full_pref1).items()]
         self.assertEquals(len(prevs), 1)
         self._upload_two_revisions(ref, different_binary=True)
-        prevs = [el.revision for el in self.servers["remote0"].server_store.get_package_revisions(full_pref1)]
+        prevs = [el.revision
+                 for el in
+                 self.servers["remote0"].server_store.get_package_revisions(full_pref1).items()]
         self.assertEquals(len(prevs), 2)
 
         # Remove a concrete package reference
         self.client.run("remove %s#%s -f -r remote0 -p %s#%s" % (str(ref), rev1, pid, prevs[0]))
         prevs_now = [el.revision
-                     for el in self.servers["remote0"].server_store.get_package_revisions(full_pref1)]
+                     for el in
+                     self.servers["remote0"].server_store.get_package_revisions(full_pref1).items()]
         self.assertEquals(len(prevs_now), 1)
         self.assertEquals(prevs_now[0], prevs[1])
 

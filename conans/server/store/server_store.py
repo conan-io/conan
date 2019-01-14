@@ -260,12 +260,12 @@ class ServerStore(SimplePaths):
         assert pref.ref.revision is not None
         if pref.revision:
             tmp = RevisionList()
-            tmp.add_revision(pref.reviion)
+            tmp.add_revision(pref.revision)
             return tmp
 
         tmp = self._package_revisions_file(pref)
         ret = self._get_revisions(tmp)
-        return ret.items()
+        return ret
 
     def _get_revisions(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):
