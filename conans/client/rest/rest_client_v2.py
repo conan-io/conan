@@ -15,7 +15,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
-from conans.util.time import from_iso8601_to_datetime
+from conans.util.dates import from_iso8601_to_datetime
 
 
 class RestV2Methods(RestCommonMethods):

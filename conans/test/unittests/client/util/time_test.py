@@ -1,7 +1,7 @@
 import datetime
 import unittest
 
-from conans.util.time import from_timestamp_to_iso8601, from_iso8601_to_datetime
+from conans.util.dates import from_timestamp_to_iso8601, from_iso8601_to_datetime
 
 
 class TimeTest(unittest.TestCase):

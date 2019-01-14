@@ -1,7 +1,7 @@
 import os
 
 from conans.errors import NotFoundException
-from conans.util.time import from_timestamp_to_datetime
+from conans.util.dates import from_timestamp_to_datetime
 
 
 def get_local_recipe_revisions(ref, cache):

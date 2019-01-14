@@ -11,7 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import list_folder_subdirs, load
-from conans.util.time import datetime_to_str
+from conans.util.dates import datetime_to_str
 
 conan_vars1 = '''
 [settings]

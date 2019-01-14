@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.files import save
-from conans.util.time import datetime_to_str
+from conans.util.dates import datetime_to_str
 
 
 class CommandOutputer(object):

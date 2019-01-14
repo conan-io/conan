@@ -5,7 +5,7 @@ from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controllers.controller import Controller
 from conans.server.rest.controllers.v2 import get_package_ref
 from conans.server.service.service_v2 import ConanServiceV2
-from conans.util.time import from_timestamp_to_iso8601
+from conans.util.dates import from_timestamp_to_iso8601
 
 
 class RevisionsController(Controller):
