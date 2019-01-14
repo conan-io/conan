@@ -4,7 +4,6 @@ import unittest
 from collections import namedtuple
 
 from nose.plugins.attrib import attr
-from parameterized import parameterized
 
 from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
