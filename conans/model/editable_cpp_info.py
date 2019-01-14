@@ -4,10 +4,8 @@ import os
 import posixpath
 import six
 from collections import defaultdict
-if six.PY2:
-    from backports import configparser  # To use 'delimiters' in ConfigParser
-else:
-    import configparser
+from io import StringIO
+from six.moves import configparser
 
 from conans.client.tools.files import load
 
@@ -35,23 +33,25 @@ class EditableCppInfo(object):
         """ Returns a dictionary containing information about paths for a CppInfo object: includes,
         libraries, resources, binaries,... """
 
-        parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
+        parser = configparser.ConfigParser(allow_no_value=True)
         parser.optionxform = str
-        parser.read_string(content)
+        content_file_obj = StringIO(content)
+        parser.readfp(content_file_obj)  # FIXME: Deprecated in Python 3
 
         if not require_namespace:
             ret = {k: [] for k in cls.cpp_info_dirs}
             for section in ret.keys():
-                if section in parser:
-                    ret[section] = parser[section]
+                if section in parser.sections():
+                    ret[section] = [k for k, v in parser.items(section)]  # keys used as values
             return ret
         else:
             ret = defaultdict(lambda: {k: [] for k in cls.cpp_info_dirs})
-            for section in parser:
+            for section in parser.sections():
                 if ':' in section:
                     namespace, key = section.split(':', 1)
                     if key in cls.cpp_info_dirs:
-                        ret[namespace][key] = parser[section]
+                        # keys used as values
+                        ret[namespace][key] = [k for k, v in parser.items(section)]
             return ret
 
     @staticmethod

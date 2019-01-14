@@ -57,8 +57,7 @@ class NoNamespaceFileTest(unittest.TestCase):
         self.assertFalse(editable_cpp_info._uses_namespace)
 
         data = editable_cpp_info._data
-        self.assertListEqual(sorted(data.keys()),
-                             sorted(EditableCppInfo.cpp_info_dirs))
+        self.assertListEqual(sorted(data.keys()), sorted(EditableCppInfo.cpp_info_dirs))
         self.assertListEqual(list(data['includedirs']), ['dirs/includedirs', ])
         self.assertListEqual(list(data['libdirs']), ['dirs/libdirs', ])
         self.assertListEqual(list(data['resdirs']), ['dirs/resdirs', ])
