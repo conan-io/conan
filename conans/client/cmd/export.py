@@ -3,7 +3,6 @@ import os
 import shutil
 
 import six
-import stat
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -145,8 +144,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
-    if not os.access(conanfile_path, os.W_OK):
-        os.chmod(conanfile_path, stat.S_IRWXU)  # read, write, execute/search by owner
+
+    os.remove(conanfile_path)
     save(conanfile_path, content)
 
 
