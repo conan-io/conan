@@ -858,157 +858,23 @@ class ConanLib(ConanFile):
 
 @attr('svn')
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
-    def setUp(self):
-        self.reference = ConanFileReference.loads("lib/0.1@user/channel")
-        self.client = TestClient()
 
-    def _create_repo(self, auto_keywords):
+    def test_propset_own(self):
+        """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
+
         conanfile = base_svn.format(directory="None", url="auto", revision="auto")
-        project_url, rev = self.create_project(files={"conanfile.py": conanfile,
+        project_url, _ = self.create_project(files={"conanfile.py": conanfile,
                                                       "myfile.txt": "My file is copied",
                                                       "subdir/otherfile.txt": "More and more"})
-        if not auto_keywords:
-            client = TestClient()
-            with chdir(client.current_folder):
-                client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                               path=client.current_folder))
-                self._save_fixed_conanfile(client, needs_lock_set=False)
-
-        return project_url, rev
-
-    def _save_fixed_conanfile(self, client, needs_lock_set):
-        svn = SVN(client.current_folder)
-        url = svn.get_remote_url()
-        svn.update()
-        revision = int(svn.get_revision()) + 1
-
-        conanfile = base_svn.format(directory="None", url=url, revision=revision)
-        conanfile_path = os.path.join(client.current_folder, 'conanfile.py')
-        from subprocess import CalledProcessError
-        try:
-            if needs_lock_set:
-                svn.run('lock "{}"'.format(conanfile_path))
-            save(conanfile_path, conanfile)
-            if needs_lock_set:
-                svn.run('unlock "{}"'.format(conanfile_path))
-        except CalledProcessError as e:
-            raise
-        svn.run('commit -m "update conanfile to fix last revision"')
-        svn.update()
-        self.assertEquals(revision, int(svn.get_revision()))
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_lock_own_copy(self, auto_keywords):
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
-        project_url = project_url.replace(" ", "%20")
-
-        # Locked own copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        with chdir(self.client.current_folder):
-            self.client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
-            self.client.runner('svn commit -m "lock some files"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(self.client, needs_lock_set=False)
-
-        self.client.run("export . user/channel")
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_lock_other_copy(self, auto_keywords):
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
-        project_url = project_url.replace(" ", "%20")
-
-        # Lock other copy
-        client = TestClient()
-        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
-        with chdir(client.current_folder):
-            client.runner('svn lock conanfile.py myfile.txt subdir/otherfile.txt')
-            client.runner('svn commit -m "lock some files"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(client, needs_lock_set=False)
-
-        # Work on my copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        self.client.run("export . user/channel")
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_propset_own(self, auto_keywords):
-        """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
         project_url = project_url.replace(" ", "%20")
 
         # Add property needs-lock to my own copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        with chdir(self.client.current_folder):
-            for item in ['conanfile.py', 'myfile.txt', 'subdir', 'subdir/otherfile.txt']:
-                self.client.runner('svn propset svn:needs-lock yes {}'.format(item))
-            self.client.runner('svn commit -m "lock some files"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(self.client, needs_lock_set=True)
-
-        self.client.run("export . user/channel")
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_propset_other_copy(self, auto_keywords):
-        """ Apply svn:needs-lock property to every file in a different
-        working-copy of the repository """
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
-        project_url = project_url.replace(" ", "%20")
-
-        # Add property needs-lock to other copy
         client = TestClient()
-        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
+        client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                       path=client.current_folder))
         with chdir(client.current_folder):
-            for item in ['conanfile.py', 'myfile.txt', 'subdir', 'subdir/otherfile.txt']:
+            for item in ['conanfile.py', ]:
                 client.runner('svn propset svn:needs-lock yes {}'.format(item))
             client.runner('svn commit -m "lock some files"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(client, needs_lock_set=True)
 
-        # Work on my copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        self.client.run("export . user/channel")
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_propset_root_own(self, auto_keywords):
-        """ Apply svn:needs-lock property to the root folder of the own
-        working-copy of the repository """
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
-        project_url = project_url.replace(" ", "%20")
-
-        # Add property needs-lock to my own copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        with chdir(self.client.current_folder):
-            for item in ['.', 'conanfile.py']:
-                self.client.runner('svn propset svn:needs-lock yes {}'.format(item))
-            self.client.runner('svn commit -m "lock root folder"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(self.client, needs_lock_set=True)
-
-        self.client.run("export . user/channel")
-
-    @parameterized.expand([(True,), (False,), ])
-    def test_propset_root_other_copy(self, auto_keywords):
-        """ Apply svn:needs-lock property to the root folder of another
-        working-copy of the repository """
-        project_url, _ = self._create_repo(auto_keywords=auto_keywords)
-        project_url = project_url.replace(" ", "%20")
-
-        # Add property needs-lock to other copy
-        client = TestClient()
-        client.runner('svn co "{url}" "{path}"'.format(url=project_url, path=client.current_folder))
-        with chdir(client.current_folder):
-            for item in ['.', 'conanfile.py']:
-                client.runner('svn propset svn:needs-lock yes {}'.format(item))
-            client.runner('svn commit -m "lock some files"')
-            if not auto_keywords:
-                self._save_fixed_conanfile(client, needs_lock_set=True)
-
-        # Work on my copy
-        self.client.runner('svn co "{url}" "{path}"'.format(url=project_url,
-                                                            path=self.client.current_folder))
-        self.client.run("export . user/channel")
+        client.run("export . user/channel")
