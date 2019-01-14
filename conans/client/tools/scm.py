@@ -353,7 +353,7 @@ class SVN(SCMBase):
                                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 process.communicate()
         except FileNotFoundError:
-            raise ConanException("Not a valid SVN repository")
+            raise ConanException("Command 'svn' does not exists")
         else:
             if bool(process.returncode):
                 raise ConanException("Not a valid SVN repository")
