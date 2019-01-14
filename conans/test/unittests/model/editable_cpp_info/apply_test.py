@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import shutil
 import textwrap
 import unittest
 from collections import namedtuple
@@ -8,6 +9,8 @@ from collections import namedtuple
 import six
 
 from conans.model.editable_cpp_info import EditableCppInfo
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 base_content = six.u(textwrap.dedent("""\
     [{namespace}includedirs]
@@ -34,9 +37,13 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         base_content.format(namespace="libA:", path_prefix="libA/")
     ])
 
-    def test_require_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=False)
+    def setUp(self):
+        self.test_folder = temp_folder()
+        self.layout_filepath = os.path.join(self.test_folder, "layout")
+        save(self.layout_filepath, self.content)
 
+    def test_require_no_namespace(self):
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, require_namespace=False)
         cpp_info = namedtuple('_', EditableCppInfo.cpp_info_dirs)
         editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
         self.assertTrue(editable_cpp_info.has_info_for('any-thing'))
@@ -46,7 +53,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.bindirs, [])
 
     def test_require_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=True)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, require_namespace=True)
         self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=True))
         self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=False))
         self.assertTrue(editable_cpp_info.has_info_for('libOther', use_wildcard=True))
@@ -75,3 +82,6 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.libdirs, [])
         self.assertListEqual(cpp_info.resdirs, [])
         self.assertListEqual(cpp_info.bindirs, [])
+
+    def tearDown(self):
+        shutil.rmtree(self.test_folder)
