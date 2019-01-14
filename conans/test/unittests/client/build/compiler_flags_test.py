@@ -3,6 +3,7 @@
 
 import platform
 import unittest
+from parameterized.parameterized import parameterized
 
 from nose.plugins.attrib import attr
 
@@ -91,6 +92,18 @@ class CompilerFlagsTest(unittest.TestCase):
 
         arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstdc++')
         self.assertEqual(arch_flags, '-library=stdcpp')
+
+    @parameterized.expand([("cxx",),
+                           ("gpp",),
+                           ("cpp",),
+                           ("cpp-ne",),
+                           ("acpp",),
+                           ("acpp-ne",),
+                           ("ecpp",),
+                           ("ecpp-ne",)])
+    def test_libcxx_flags_qnx(self, libcxx):
+        arch_flags = libcxx_flag(compiler='qcc', libcxx=libcxx)
+        self.assertEqual(arch_flags, '-Y _%s' % libcxx)
 
     def test_pic_flags(self):
         flag = pic_flag()
