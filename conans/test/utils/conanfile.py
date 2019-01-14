@@ -1,9 +1,11 @@
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from conans import ConanFile, Options
-from conans.model.conan_file import ConanFile
+from conans.model.build_info import DepsCppInfo
+from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.options import PackageOptions
+from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -19,9 +21,20 @@ class MockSettings(object):
 MockOptions = MockSettings
 
 
-class MockDepsCppInfo(object):
-
+class MockCppInfo(object):
     def __init__(self):
+        self.bin_paths = []
+        self.lib_paths = []
+        self.include_paths = []
+        self.libs = []
+        self.cflags = []
+        self.cppflags = []
+        self.defines = []
+
+
+class MockDepsCppInfo(defaultdict):
+    def __init__(self):
+        super(MockDepsCppInfo, self).__init__(MockCppInfo)
         self.include_paths = []
         self.lib_paths = []
         self.libs = []
@@ -31,6 +44,10 @@ class MockDepsCppInfo(object):
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
+
+    @property
+    def deps(self):
+        return self.keys()
 
 
 class MockConanfile(ConanFile):
@@ -102,7 +119,6 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         self.install_folder = "myinstallfolder"
@@ -114,8 +130,17 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
+        self.deps_env_info = DepsEnvInfo()
+        self.deps_user_info = DepsUserInfo()
+        self.deps_cpp_info = MockDepsCppInfo()
+        self.env_info = EnvInfo()
+        self._env = {}
 
     def run(self, command):
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+
+    @property
+    def env(self):
+        return self._env

@@ -16,126 +16,6 @@ from conans.util.files import load
 
 class ConanEnvTest(unittest.TestCase):
 
-    @attr('slow')
-    def shared_in_current_directory_test(self):
-        """
-        - There is a package building a shared library
-        - There is a consumer project importing the shared library (and the executable)
-        - The consumer tries to execute the imported shared library and executable in the same
-          directory, and it fails in Linux, but works on OSX and WIndows.
-        - Then I move the shared library to a different directory, and it fails,
-          I'm making sure that there is no harcoded rpaths messing.
-        - Finally I use the virtualrunenvironment that declares de LD_LIBRARY_PATH,
-          PATH and DYLD_LIBRARY_PATH to run the executable, and.. magic!
-          it's running agains the shared in the local cache.
-        """
-
-        conanfile = """
-from conans import ConanFile, CMake, tools
-
-
-class LibConan(ConanFile):
-    name = "lib"
-    version = "1.0"
-    settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = "shared=True"
-    generators = "cmake"
-    exports_sources = "*"
-
-    def build(self):
-        cmake = CMake(self)
-        self.run('cmake %s' % cmake.command_line)
-        self.run("cmake --build . %s" % cmake.build_config)
-
-    def package(self):
-        self.copy("*.h", dst="include", src="hello")
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.dylib", dst="lib", keep_path=False)
-        self.copy("*main*", dst="bin", keep_path=False)
-
-"""
-        cmakelists = """
-set(CMAKE_CXX_COMPILER_WORKS 1)
-set(CMAKE_CXX_ABI_COMPILED 1)
-project(mytest)
-
-SET(CMAKE_SKIP_RPATH 1)
-ADD_LIBRARY(hello SHARED hello.c)
-ADD_EXECUTABLE(main main.c)
-TARGET_LINK_LIBRARIES(main hello)
-"""
-
-        hello_h = """#pragma once
-#ifdef WIN32
-  #define HELLO_EXPORT __declspec(dllexport)
-#else
-  #define HELLO_EXPORT
-#endif
-
-HELLO_EXPORT void hello();
-"""
-
-        client = TestClient()
-        files = {CONANFILE: conanfile,
-                 "CMakeLists.txt": cmakelists,
-                 "hello.c": '#include "hello.h"\nvoid hello(){\nreturn;}',
-                 "hello.h": hello_h,
-                 "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
-
-        client.save(files)
-        client.run("export . conan/stable")
-        client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
-        client.save({"conanfile.txt": '''
-[requires]
-lib/1.0@conan/stable
-[generators]
-virtualrunenv
-[imports]
-bin, * -> ./bin
-lib, * -> ./bin
-'''}, clean_first=True)
-
-        client.run("install .")
-        # Break possible rpaths built in the exe with absolute paths
-        os.rename(os.path.join(client.current_folder, "bin"),
-                  os.path.join(client.current_folder, "bin2"))
-
-        with tools.chdir(os.path.join(client.current_folder, "bin2")):
-            if platform.system() == "Windows":
-                self.assertEqual(os.system("main.exe"), 0)
-            elif platform.system() == "Darwin":
-                self.assertEqual(os.system("./main"), 0)
-            else:
-                self.assertNotEqual(os.system("./main"), 0)
-                self.assertEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
-                self.assertEqual(os.system("LD_LIBRARY_PATH=. ./main"), 0)
-
-            # If we move the shared library it won't work, at least we use the virtualrunenv
-            os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
-            name = {"Darwin": "libhello.dylib",
-                    "Windows": "hello.dll"}.get(platform.system(), "libhello.so")
-
-            os.rename(os.path.join(client.current_folder, "bin2", name),
-                      os.path.join(client.current_folder, "bin2", "subdir", name))
-
-            if platform.system() == "Windows":
-                self.assertNotEqual(os.system("main.exe"), 0)
-            elif platform.system() == "Darwin":
-                self.assertNotEqual(os.system("./main"), 0)
-            else:
-                self.assertNotEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
-
-            # Will use the shared from the local cache
-            if platform.system() != "Windows":
-                command = "bash -c 'source ../activate_run.sh && ./main'"
-            else:
-                command = "cd .. && activate_run.bat && cd bin2 && main.exe"
-
-            self.assertEqual(os.system(command), 0)
-
     def test_package_env_working(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -249,57 +129,6 @@ class MyTest(ConanFile):
                                            "OTHER_VALUE", "INITIAL VALUE"]),
                           client.out)
 
-    def test_run_env(self):
-        client = TestClient()
-        conanfile = '''
-from conans import ConanFile
-from conans.tools import mkdir
-import os
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    build_policy = "missing"
-
-    def package_info(self):
-        mkdir(os.path.join(self.package_folder, "bin2"))
-        mkdir(os.path.join(self.package_folder, "lib2"))
-        self.cpp_info.bindirs.append("bin2")
-        self.cpp_info.libdirs.append("lib2")
-
-'''
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
-
-        reuse = '''[requires]
-Hello/0.1@lasote/stable
-[generators]
-virtualrunenv
-'''
-
-        client.save({"conanfile.txt": reuse}, clean_first=True)
-        client.run("install .")
-
-        ext = "bat" if platform.system() == "Windows" else "sh"
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
-        activate_contents = load(os.path.join(client.current_folder, "activate_run.%s" % ext))
-
-        self.assertIn("PATH", activate_contents)
-        self.assertIn("LD_LIBRARY_PATH", activate_contents)
-        self.assertIn("DYLD_LIBRARY_PATH", activate_contents)
-
-        for line in activate_contents.splitlines():
-            if " PATH=" in line:
-                self.assertIn("bin2", line)
-                self.assertNotIn("lib2", line)
-            if " DYLD_LIBRARY_PATH=" in line:
-                self.assertNotIn("bin2", line)
-                self.assertIn("lib2", line)
-            if " LD_LIBRARY_PATH=" in line:
-                self.assertNotIn("bin2", line)
-                self.assertIn("lib2", line)
-
     def dual_compiler_settings_and_env_test(self):
 
         def patch_conanfile(conanfile):
@@ -387,70 +216,6 @@ CXXFLAGS=-fPIC -DPIC
             else:
                 ret = os.system("activate.bat")
         self.assertEquals(ret, 0)
-
-    def conan_env_deps_test(self):
-        client = TestClient()
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    def package_info(self):
-        self.env_info.var1="bad value"
-        self.env_info.var2.append("value2")
-        self.env_info.var3="Another value"
-        self.env_info.path = "/dir"
-'''
-        files = {"conanfile.py": conanfile}
-        client.save(files)
-        client.run("export . lasote/stable")
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello2"
-    version = "0.1"
-    def config(self):
-        self.requires("Hello/0.1@lasote/stable")
-
-    def package_info(self):
-        self.env_info.var1="good value"
-        self.env_info.var2.append("value3")
-        self.env_info.CPPFLAGS.append("MYCPPFLAG=1")
-    '''
-        files["conanfile.py"] = conanfile
-        client.save(files, clean_first=True)
-        client.run("export . lasote/stable")
-        client.run("install Hello2/0.1@lasote/stable --build "
-                   "-g virtualenv -e CPPFLAGS=[OtherFlag=2]")
-        ext = "bat" if platform.system() == "Windows" else "sh"
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
-        activate_contents = load(os.path.join(client.current_folder, "activate.%s" % ext))
-        deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
-        self.assertNotIn("bad value", activate_contents)
-        if platform.system() == "Windows":
-            self.assertIn("var1=good value", activate_contents)
-        else:
-            self.assertIn('var1="good value"', activate_contents)
-
-        if platform.system() == "Windows":
-            self.assertIn('var2=value3;value2;%var2%', activate_contents)
-        else:
-            self.assertIn('var2="value3":"value2":$var2', activate_contents)
-            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 $CPPFLAGS"', activate_contents)
-        self.assertIn("Another value", activate_contents)
-        if platform.system() == "Windows":
-            self.assertIn("PATH=/dir", activate_contents)
-        else:
-            self.assertIn("PATH=\"/dir\"", activate_contents)
-        if platform.system() == "Windows":
-            self.assertIn('var1=', deactivate_contents)
-            self.assertIn('var2=', deactivate_contents)
-        else:
-            self.assertIn('unset var1', deactivate_contents)
-            self.assertIn('unset var2', deactivate_contents)
 
     def test_conan_info_cache_and_priority(self):
         client = TestClient()
@@ -659,8 +424,6 @@ class LibConan(ConanFile):
         conanfile = """
 [requires]
 libA/1.0@user/channel
-[generators]
-virtualenv
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
@@ -671,12 +434,6 @@ virtualenv
 PATH=["path_from_A"]
 [ENV_libB]
 PATH=["path_from_B"]""", info)
-        if platform.system() != "Windows":
-            activate = load(os.path.join(client.current_folder, "activate.sh"))
-            self.assertIn('PATH="path_from_A":"path_from_B":$PATH', activate)
-        else:
-            activate = load(os.path.join(client.current_folder, "activate.bat"))
-            self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
     def check_conaninfo_completion_test(self):
         """
