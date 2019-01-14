@@ -1,9 +1,8 @@
 import os
-from collections import namedtuple, defaultdict
+from collections import defaultdict, namedtuple
 
 from conans import ConanFile, Options
-from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput

@@ -35,14 +35,16 @@ class VirtualBuildEnvGeneratorTest(unittest.TestCase):
         conanfile.settings = MockSettings({
             "compiler": "Visual Studio",
             "compiler.version": "15",
-            "compiler.runtime": "MD"
+            "compiler.runtime": "MD",
+            "build_type": "Release"
         })
 
         gen = VirtualBuildEnvGenerator(conanfile)
 
         self.assertEqual(["-MD", "-DNDEBUG", "-O2", "-Ob2"], gen.env["CL"])
-        self.assertEqual(
-            sorted(gen.env.keys()), sorted(["CL", "LIB", "_LINK"]))
+        self.assertIn("CL", gen.env)
+        self.assertIn("LIB", gen.env)
+        self.assertIn("_LINK_", gen.env)
 
         generated_files = gen.content
         ext = "bat" if platform.system() == "Windows" else "sh"

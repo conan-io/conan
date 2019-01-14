@@ -286,6 +286,7 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
         conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conan_file.deps_cpp_info.sysroot = "/path/to/sysroot"
         with tools.chdir(self.tempdir):
             linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
                           '-DCMAKE_SYSROOT="/path/to/sysroot" ' \
@@ -452,6 +453,7 @@ class CMakeTest(unittest.TestCase):
         settings.arch = "x86"
         conan_file = ConanFileMock()
         conan_file.settings = settings
+        conan_file.deps_cpp_info.sysroot = "/path/to/sysroot"
 
         def check(text, build_config, generator=None, set_cmake_flags=False):
             os = str(settings.os)
@@ -621,6 +623,7 @@ build_type: [ Release]
         settings.arch = "x86_64"
         conan_file = ConanFileMock()
         conan_file.settings = settings
+        conan_file.deps_cpp_info.sysroot = "/path/to/sysroot"
 
         cmake = CMake(conan_file)
         generator = "Unix" if platform.system() != "Windows" else "MinGW"
@@ -642,8 +645,9 @@ build_type: [ Release]
         settings.compiler.version = "12"
         settings.arch = "x86"
         settings.os = "Windows"
-        cmake = CMake(conan_file)
+        conan_file.deps_cpp_info.sysroot = "/path/to/sysroot"
         if platform.system() == "Windows":
+            cmake = CMake(conan_file)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
         # Now activate cross build and check sysroot and system processor
@@ -703,6 +707,7 @@ build_type: [ Release]
 
         conan_file = ConanFileMock()
         conan_file.settings = settings
+        conan_file.deps_cpp_info.sysroot = "/path/to/sysroot"
         cmake = CMake(conan_file)
 
         cross = '-DCMAKE_SYSTEM_NAME="Android"' \
