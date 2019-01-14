@@ -1,7 +1,7 @@
+import json
 import os
 import shutil
 from collections import OrderedDict
-from contextlib import contextmanager
 from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
@@ -11,18 +11,16 @@ from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
     RemoteRegistry
 from conans.errors import ConanException
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
+from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import CONAN_MANIFEST, PUT_HEADERS
+from conans.paths import PUT_HEADERS
 from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
-import json
-from conans.model.editable_cpp_info import EditableCppInfo
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -254,29 +252,6 @@ class ClientCache(SimplePaths):
             builds = []
         return builds
 
-    def load_manifest(self, ref):
-        """conan_id = sha(zip file)"""
-        assert isinstance(ref, ConanFileReference)
-        export_folder = self.export(ref)
-        return FileTreeManifest.load(export_folder)
-
-    def load_package_manifest(self, pref):
-        """conan_id = sha(zip file)"""
-        package_folder = self.package(pref, short_paths=None)
-        return FileTreeManifest.load(package_folder)
-
-    def package_manifests(self, pref):
-        package_folder = self.package(pref, short_paths=None)
-        if not os.path.exists(os.path.join(package_folder, CONAN_MANIFEST)):
-            return None, None
-        return self._digests(package_folder)
-
-    @staticmethod
-    def _digests(folder, exports_sources_folder=None):
-        readed_digest = FileTreeManifest.load(folder)
-        expected_digest = FileTreeManifest.create(folder, exports_sources_folder)
-        return readed_digest, expected_digest
-
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
             ref_path = self.conan(ref)
@@ -303,26 +278,6 @@ class ClientCache(SimplePaths):
     def invalidate(self):
         self._conan_config = None
         self._no_lock = None
-
-    # Metadata
-    def load_metadata(self, ref):
-        try:
-            text = load(self.package_metadata(ref))
-            return PackageMetadata.loads(text)
-        except IOError:
-            return PackageMetadata()
-
-    @contextmanager
-    def update_metadata(self, ref):
-        metadata = self.load_metadata(ref)
-        yield metadata
-        save(self.package_metadata(ref), metadata.dumps())
-
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref, short_paths=None)
-        readed_digest = FileTreeManifest.load(package_folder)
-        return readed_digest.summary_hash
 
     def _load_edited(self):
         edited_path = normpath(join(self.conan_folder, EDITED_PACKAGES))

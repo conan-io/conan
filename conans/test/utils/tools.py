@@ -629,10 +629,10 @@ servers["r2"] = TestServer()
             mkdir(self.current_folder)
 
     def get_revision(self, ref):
-        return self.cache.load_metadata(ref).recipe.revision
+        return self.cache.package_layout(ref).load_metadata().recipe.revision
 
     def get_package_revision(self, pref):
-        metadata = self.cache.load_metadata(pref.ref)
+        metadata = self.cache.package_layout(pref.ref).load_metadata()
         return metadata.packages[pref.id].revision
 
 

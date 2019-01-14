@@ -1,14 +1,8 @@
 # coding=utf-8
 
-import six
+from six.moves import configparser
 
 from conans.errors import ConanException
-from conans.client.tools.files import load
-
-if six.PY2:
-    from backports import configparser  # To use 'delimiters' in ConfigParser
-else:
-    import configparser
 
 
 class EditableCppInfo(object):
@@ -20,39 +14,24 @@ class EditableCppInfo(object):
 
     @staticmethod
     def load(filepath, allow_package_name=False):
-        return EditableCppInfo.loads(load(filepath), allow_package_name=allow_package_name)
+        parser = configparser.ConfigParser(allow_no_value=True)
+        parser.optionxform = str
+        parser.read(filepath)
 
-    @classmethod
-    def loads(cls, content, allow_package_name=False):
-        data = cls._loads(content)
+        data = {}
+        for section in parser.sections():
+            pkg, key = section.split(":", 1) if ':' in section else (None, section)
+            if key not in EditableCppInfo.cpp_info_dirs:
+                raise ConanException("Wrong cpp_info field: %s" % key)
+            data.setdefault(pkg, {})[key] = [k for k, _ in parser.items(section)]
+
         if not allow_package_name and [d for d in data if d]:
             raise ConanException("Repository layout file doesn't allow patterns")
         else:
-            if data.get(None) and data.get(cls.WILDCARD):
+            if data.get(None) and data.get(EditableCppInfo.WILDCARD):
                 raise ConanException("Using both generic '[includedirs]' "
                                      "and wildcard '[*:includedirs]' syntax. Use just one")
         return EditableCppInfo(data)
-
-    @classmethod
-    def _loads(cls, content):
-        """ Returns a dictionary containing information about paths for a CppInfo object: includes,
-        libraries, resources, binaries,... """
-
-        parser = configparser.ConfigParser(allow_no_value=True, delimiters=('#', ))
-        parser.optionxform = str
-        try:
-            content = content.decode("utf-8")
-        except:
-            pass
-        parser.read_string(content)
-
-        ret = {}
-        for section in parser.sections():
-            pkg, key = section.split(":", 1) if ':' in section else (None, section)
-            if key not in cls.cpp_info_dirs:
-                raise ConanException("Wrong cpp_info field: %s" % key)
-            ret.setdefault(pkg, {})[key] = parser[section]
-        return ret
 
     @staticmethod
     def _work_on_item(value, settings, options):
