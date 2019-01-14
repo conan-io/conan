@@ -20,7 +20,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         premake
         """)
         premake = textwrap.dedent("""
-        include("conanbuildinfo.lua")
+        include("conanbuildinfo.premake.lua")
 
         workspace("example")
             conan_basic_setup()
