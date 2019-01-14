@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+import stat
 
 import six
 
@@ -145,7 +146,9 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
 
-    os.remove(conanfile_path)
+    if not os.access(conanfile_path, os.W_OK):
+        os.chmod(conanfile_path, stat.S_IRWXU)  # read, write, execute/search by owner
+
     save(conanfile_path, content)
 
 
