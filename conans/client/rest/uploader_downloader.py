@@ -19,16 +19,21 @@ class Uploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+        # Send always the header with the Sha1
+        headers["X-Checksum-Sha1"] = sha1sum(abs_path)
         if dedup:
-            dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
+            dedup_headers = {"X-Checksum-Deploy": "true"}
             if headers:
                 dedup_headers.update(headers)
+            print(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
+                print("File already there")
                 return response
 
         headers = headers or {}
+
         self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
@@ -38,6 +43,7 @@ class Uploader(object):
         # Now it will print progress in each iteration
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
+        print(headers)
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
                               data=iterable_to_file, headers=headers, auth=auth)
 
