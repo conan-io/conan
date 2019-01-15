@@ -1,7 +1,6 @@
 import ast
 import os
 import shutil
-import stat
 
 import six
 
