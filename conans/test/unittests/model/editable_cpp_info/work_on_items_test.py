@@ -26,6 +26,10 @@ class WorkOnItemsTest(unittest.TestCase):
                          EditableCppInfo._work_on_item("C:\\{settings.compiler}\\include\\",
                                                        settings=settings,
                                                        options=None))
+        self.assertEqual('C:/Visual Studio/include/',
+                         EditableCppInfo._work_on_item("C:\{settings.compiler}\include\\",
+                                                       settings=settings,
+                                                       options=None))
         self.assertEqual('/usr/path with spaces/Visual Studio/dir',
                          EditableCppInfo._work_on_item("/usr/path with spaces/{settings.compiler}/dir",
                                                        settings=settings,

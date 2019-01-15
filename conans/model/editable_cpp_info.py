@@ -22,15 +22,17 @@ class EditableCppInfo(object):
         for section in parser.sections():
             pkg, key = section.split(":", 1) if ':' in section else (None, section)
             if key not in EditableCppInfo.cpp_info_dirs:
-                raise ConanException("Wrong cpp_info field: %s" % key)
+                raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
+                                     % (key, filepath))
             data.setdefault(pkg, {})[key] = [k for k, _ in parser.items(section)]
 
         if not allow_package_name and [d for d in data if d]:
-            raise ConanException("Repository layout file doesn't allow patterns")
+            raise ConanException("Repository layout file doesn't allow patterns: %s" % filepath)
         else:
             if data.get(None) and data.get(EditableCppInfo.WILDCARD):
                 raise ConanException("Using both generic '[includedirs]' "
-                                     "and wildcard '[*:includedirs]' syntax. Use just one")
+                                     "and wildcard '[*:includedirs]' syntax. Use just one in: %s"
+                                     % filepath)
         return EditableCppInfo(data)
 
     @staticmethod

@@ -25,14 +25,14 @@ class ParseTest(unittest.TestCase):
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field: includedrs"):
+        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
             _ = EditableCppInfo.load(self.layout_filepath, allow_package_name=False)
         content = textwrap.dedent("""
                             [*:includedrs]
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field: includedrs"):
+        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
             _ = EditableCppInfo.load(self.layout_filepath, allow_package_name=True)
 
     def namespace_error_test(self):

@@ -942,12 +942,12 @@ class ConanAPIV1(object):
                                  "conanfile.py ({}/{}) must match".
                                  format(ref, target_conanfile.name, target_conanfile.version))
 
-        self._cache.install_as_editable(ref, os.path.dirname(target_path), layout)
+        self._cache.edited_packages.link(ref, os.path.dirname(target_path), layout)
 
     @api_method
     def unlink(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
-        return self._cache.remove_editable(ref)
+        return self._cache.edited_packages.remove(ref)
 
 
 Conan = ConanAPIV1

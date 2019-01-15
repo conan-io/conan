@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 from collections import OrderedDict
@@ -6,17 +5,19 @@ from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.edited import EditedPackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
     RemoteRegistry
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS
-from conans.paths.simple_paths import SimplePaths
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.paths.simple_paths import SimplePaths, check_ref_case
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
@@ -29,10 +30,7 @@ REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
-LAYOUTS_FOLDER = 'layouts'
 
-DEFAULT_LAYOUT_FILE = "default"
-EDITED_PACKAGES = 'edited_packages'
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -58,8 +56,20 @@ class ClientCache(SimplePaths):
         self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
-        self._load_edited()
-        self._editable_cpp_info = {}  # Lazy dict
+        self.edited_packages = EditedPackages(self.conan_folder)
+
+    def package_layout(self, ref, short_paths=False):
+        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
+        edited_ref = self.edited_packages.get(ref.copy_clear_rev())
+        if edited_ref:
+            base_path = edited_ref["path"]
+            layout_file = edited_ref["layout"]
+            return PackageEditableLayout(base_path, layout_file, ref)
+        else:
+            check_ref_case(ref, self.store)
+            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
+            return PackageCacheLayout(base_folder=base_folder,
+                                      ref=ref, short_paths=short_paths)
 
     @property
     def registry(self):
@@ -168,10 +178,6 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
-    def default_editable_path(self):
-        return os.path.join(self.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
-
-    @property
     def hooks_path(self):
         """
         :return: Hooks folder in client cache
@@ -278,44 +284,6 @@ class ClientCache(SimplePaths):
     def invalidate(self):
         self._conan_config = None
         self._no_lock = None
-
-    def _load_edited(self):
-        edited_path = normpath(join(self.conan_folder, EDITED_PACKAGES))
-        if not os.path.exists(edited_path):
-            return
-        edited = load(edited_path)
-        edited_js = json.loads(edited)
-        self._edited_refs = {ConanFileReference.loads(r, validate=False): d
-                             for r, d in edited_js.items()}
-
-    def _save_edited(self):
-        d = {str(ref): d for ref, d in self._edited_refs.items()}
-        edited_path = normpath(join(self.conan_folder, EDITED_PACKAGES))
-        save(edited_path, json.dumps(d))
-
-    def install_as_editable(self, ref, path, layout):
-        assert isinstance(ref, ConanFileReference)
-        ref = ref.copy_clear_rev()
-        self._edited_refs[ref] = {"path": path, "layout": layout}
-        self._save_edited()
-
-    def remove_editable(self, ref):
-        assert isinstance(ref, ConanFileReference)
-        ref = ref.copy_clear_rev()
-        if ref in self._edited_refs:
-            del self._edited_refs[ref]
-            self._save_edited()
-            return True
-        return False
-
-    def editable_cpp_info(self, layout_name):
-        try:
-            layout = self._editable_cpp_info[layout_name]
-        except KeyError:
-            layout_file = os.path.join(self.conan_folder, LAYOUTS_FOLDER, layout_name)
-            layout = EditableCppInfo.load(layout_file, True) if os.path.isfile(layout_file) else None
-            self._editable_cpp_info[layout_name] = layout
-        return layout
 
 
 def _mix_settings_with_env(settings):

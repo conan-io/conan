@@ -38,6 +38,7 @@ class _CppInfo(object):
         self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
+        # When package is editable, filter_empty=False, so empty dirs are maintained
         self.filter_empty = True
 
     def _filter_paths(self, paths):

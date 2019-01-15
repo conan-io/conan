@@ -29,7 +29,6 @@ from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmd
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, \
     log_package_got_from_local_cache
-from conans.client.cache import DEFAULT_LAYOUT_FILE
 
 
 def build_id(conan_file):
@@ -139,8 +138,8 @@ class _ConanPackageBuilder(object):
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        package_hash = self._cache.package_layout(self._pref.ref,
-                                                  self._conan_file.short_paths).package_summary_hash(self._pref)
+        layout = self._cache.package_layout(self._pref.ref, self._conan_file.short_paths)
+        package_hash = layout.package_summary_hash(self._pref)
         package_id = self._pref.id
 
         with self._cache.package_layout(self._ref).update_metadata() as metadata:
@@ -324,8 +323,7 @@ class BinaryInstaller(object):
         editable_cpp_info = package_layout.editable_cpp_info()
         layout_file = package_layout.layout_file
         if not editable_cpp_info:
-            cache_file = layout_file or DEFAULT_LAYOUT_FILE
-            editable_cpp_info = self._cache.editable_cpp_info(cache_file)
+            editable_cpp_info = self._cache.edited_packages.editable_cpp_info(layout_file)
 
         if editable_cpp_info:
             editable_cpp_info.apply_to(node.conanfile.name,

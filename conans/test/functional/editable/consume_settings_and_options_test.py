@@ -1,15 +1,17 @@
 # coding=utf-8
 
-import unittest
-import tempfile
 import itertools
+import os
+import tempfile
+import unittest
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
-from conans.test import CONAN_TEST_FOLDER
-from conans.util.files import save
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
+from conans.client.edited import LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE
 from conans.model.ref import ConanFileReference
+from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
+from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -69,14 +71,15 @@ src/include/{{settings.build_type}}/{{options.shared}}
         if use_repo_file:
             files[CONAN_PACKAGE_LAYOUT_FILE] = self.conan_package_layout.format(namespace="")
         else:
-            save(self.cache.default_editable_path,
+            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            save(file_path,
                  self.conan_package_layout.format(namespace="MyLib:"))
 
         self.save(files)
 
     def make_editable(self, full_reference):
         ref = ConanFileReference.loads(full_reference)
-        self.cache.install_as_editable(ref, self.current_folder, None)
+        self.cache.edited_packages.link(ref, self.current_folder, None)
 
 
 class SettingsAndOptionsTest(unittest.TestCase):
@@ -139,7 +142,8 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # Build consumer project
-        client.run("create . pkg/0.0@user/testing -s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
+        client.run("create . pkg/0.0@user/testing "
+                   "-s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
         self.assertIn("    MyLib/0.1@user/editable from local cache - Editable", client.out)
         self.assertIn("Hello {}!".format(build_type), client.out)
         self.assertIn(" - options.shared: {}".format(shared), client.out)

@@ -34,24 +34,16 @@ class SimplePaths(object):
     """
     def __init__(self, store_folder):
         self._store_folder = store_folder
-        self._edited_refs = {}  # {ref: path, layout}
 
     @property
     def store(self):
         return self._store_folder
 
-    def package_layout(self, ref, short_paths=False):
+    def package_layout(self, ref):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        edited_ref = self._edited_refs.get(ref.copy_clear_rev())
-        if edited_ref:
-            base_path = edited_ref["path"]
-            layout_file = edited_ref["layout"]
-            return PackageEditableLayout(base_path, layout_file, ref)
-        else:
-            check_ref_case(ref, self.store)
-            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
-            return PackageCacheLayout(base_folder=base_folder,
-                                      ref=ref, short_paths=short_paths)
+        check_ref_case(ref, self.store)
+        base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
+        return PackageCacheLayout(base_folder=base_folder, ref=ref)
 
     def conan(self, ref):
         """ the base folder for this package reference, for each ConanFileReference

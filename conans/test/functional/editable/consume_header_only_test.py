@@ -11,6 +11,8 @@ from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans.model.ref import ConanFileReference
+from conans.client.edited import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
+import os
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -26,17 +28,17 @@ class HeaderOnlyLibTestClient(TestClient):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile, tools
-        
+
         class Pkg(ConanFile):
             name = "MyLib"
             version = "0.1"
-        
+
             exports_sources = "*"
-        
+
             def package(self):
                 self.copy("*.hpp", dst="include-inrepo", src="src/include-inrepo")
                 self.copy("*.hpp", dst="include-cache", src="src/include-cache")
-        
+
             def package_info(self):
                 self.cpp_info.libs = ["MyLib", "otra", ]
                 self.cpp_info.defines = ["MyLibDEFINES",]
@@ -70,7 +72,8 @@ class HeaderOnlyLibTestClient(TestClient):
             self.save({CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout, })
 
         if use_cache_file:
-            save(self.cache.default_editable_path, self.conan_cache_layout)
+            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            save(file_path, self.conan_cache_layout)
 
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
@@ -82,7 +85,7 @@ class HeaderOnlyLibTestClient(TestClient):
 
     def make_editable(self, full_reference):
         ref = ConanFileReference.loads(full_reference)
-        self.cache.install_as_editable(ref, self.current_folder, None)
+        self.cache.edited_packages.link(ref, self.current_folder, None)
 
 
 class EditableReferenceTest(unittest.TestCase):
