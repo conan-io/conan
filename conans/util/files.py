@@ -212,6 +212,21 @@ def rmdir(path):
         raise
 
 
+def _change_file_permissions(func, path, exc_info):
+    os.chmod(path, stat.S_IRWXU)
+    os.remove(path)
+
+
+def remove(path):
+    try:
+        assert os.path.isfile(path)
+        shutil.rmtree(path, onerror=_change_file_permissions)
+    except OSError as err:
+        if err.errno == ENOENT:
+            return
+        raise
+
+
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
     if os.path.exists(path):
