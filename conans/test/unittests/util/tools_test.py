@@ -1656,7 +1656,7 @@ class GitToolsTests(unittest.TestCase):
         No tags has been created in repo
         """
         git = Git(folder=self.folder)
-        with self.assertRaisesRegex(ConanException, "Unable to get git tag from"):
+        with self.assertRaisesRegexp(ConanException, "Unable to get git tag from"):
             git.get_tag()
 
     def test_in_tag(self):
