@@ -20,6 +20,7 @@ class Uploader(object):
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
         # Send always the header with the Sha1
+        headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
         if dedup:
             dedup_headers = {"X-Checksum-Deploy": "true"}
@@ -31,8 +32,6 @@ class Uploader(object):
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 print("File already there")
                 return response
-
-        headers = headers or {}
 
         self.output.info("")
         # Actual transfer of the real content
