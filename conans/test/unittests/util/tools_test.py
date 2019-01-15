@@ -1876,7 +1876,30 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
-        self.assertEqual("tags/v12.3.4", svn.get_branch())
+        self.assertIsNone(svn.get_branch())
+
+    def test_tag(self):
+        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
+                                                    'prj1/branches/my_feature/myfile': "",
+                                                    'prj1/branches/issue3434/myfile': "",
+                                                    'prj1/tags/v12.3.4/myfile': "",
+                                                    })
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
+        self.assertEqual("tags/v12.3.4", svn.get_tag())
+
 
 @attr("slow")
 @attr('svn')

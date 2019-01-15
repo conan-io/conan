@@ -342,17 +342,23 @@ class SVN(SCMBase):
             return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
+        return self.get_item("branches/[^/]+|trunk", "branch")
+
+    def get_tag(self):
+        return self.get_item("tags/[^/]+|trunk", "tag")
+
+    def get_item(self, pattern, item_name):
         url = self._show_item('relative-url')
         try:
-            pattern = "(tags|branches)/[^/]+|trunk"
-            branch = re.search(pattern, url)
-            
-            if branch is None:
+            item = re.search(pattern, url)
+
+            if item is None:
                 return None
             else:
-                return branch.group(0)
+                return item.group(0)
         except Exception as e:
-            raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
+            raise ConanException("Unable to get svn %s from %s: %s"
+                                 % (item_name, self.folder, str(e)))
 
     def _check_svn_repo(self):
         try:
