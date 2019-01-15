@@ -60,7 +60,7 @@ class GitSCMTest(unittest.TestCase):
         self.client.runner("git add .", cwd=self.client.current_folder)
         self.client.runner('git commit -m  "commiting"', cwd=self.client.current_folder)
 
-    def test_scm_other_type_ignored(self):
+    def test_scm_other_type_ignored(self):  # FIXME: is this test ok?
         conanfile = '''
 from conans import ConanFile, tools
 

@@ -199,7 +199,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
             local_sources_path = None
     else:
         # In user space, if revision="auto", then copy
-        if scm_data.capture_origin or scm_data.capture_revision:
+        if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
             scm = SCM(scm_data, local_sources_path, output)
             scm_url = scm_data.url if scm_data.url != "auto" else \
                 scm.get_qualified_remote_url(remove_credentials=True)
