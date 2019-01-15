@@ -1,6 +1,7 @@
 import os
 import unittest
 from collections import OrderedDict
+from textwrap import dedent
 
 from parameterized import parameterized
 
@@ -391,3 +392,112 @@ class DefaultNameConan(ConanFile):
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.user_io.out)
+
+
+class ProfileAggregationTest(unittest.TestCase):
+
+    profile1 = dedent("""
+    [settings]
+    os=Windows
+    arch=x86_64
+
+    [env]
+    ENV1=foo
+    ENV2=bar
+
+    """)
+
+    profile2 = dedent("""
+    [settings]
+    arch=x86
+    build_type=Debug
+    compiler=Visual Studio
+    compiler.version=15
+
+    [env]
+    ENV1=foo2
+    ENV3=bar2
+    """)
+
+    conanfile = dedent("""
+    from conans.model.conan_file import ConanFile
+    import os
+
+    class DefaultNameConan(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+
+        def build(self):
+            self.output.warn("ENV1:%s" % os.getenv("ENV1"))
+            self.output.warn("ENV2:%s" % os.getenv("ENV2"))
+            self.output.warn("ENV3:%s" % os.getenv("ENV3"))
+    """)
+
+    consumer = dedent("""
+    from conans.model.conan_file import ConanFile
+    import os
+
+    class DefaultNameConan(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        requires = "lib/1.0@user/channel"
+    """)
+
+    def setUp(self):
+        self.client = TestClient()
+        self.client.save({CONANFILE: self.conanfile,
+                          "profile1": self.profile1, "profile2": self.profile2})
+
+    def test_create(self):
+
+        # The latest declared profile has priority
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.assertIn(dedent("""
+        [env]
+        ENV1=foo2
+        ENV2=bar
+        ENV3=bar2
+        """), self.client.out)
+        self.client.run("search lib/1.0@user/channel")
+        self.assertIn("arch: x86", self.client.out)
+
+    def test_info(self):
+
+        # The latest declared profile has priority
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+
+        self.client.save({CONANFILE: self.consumer})
+        self.client.run("info . --profile profile1 --profile profile2")
+        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+
+        # Build order
+        self.client.run("info . --profile profile1 --profile profile2 "
+                        "--build-order lib/1.0@user/channel")
+        self.assertIn("[lib/1.0@user/channel]", self.client.out)
+
+    def test_install(self):
+        self.client.run("export . lib/1.0@user/channel")
+        # Install ref
+        self.client.run("install lib/1.0@user/channel -p profile1 -p profile2 --build missing")
+        self.assertIn(dedent("""
+               [env]
+               ENV1=foo2
+               ENV2=bar
+               ENV3=bar2
+               """), self.client.out)
+        self.client.run("search lib/1.0@user/channel")
+        self.assertIn("arch: x86", self.client.out)
+
+        # Install project
+        self.client.save({CONANFILE: self.consumer})
+        self.client.run("install . -p profile1 -p profile2 --build")
+        self.assertIn("arch=x86", self.client.out)
+        self.assertIn(dedent("""
+                       [env]
+                       ENV1=foo2
+                       ENV2=bar
+                       ENV3=bar2
+                       """), self.client.out)
+
+    def test_export_pkg(self):
+        self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
+        # ID for the expected settings applied: x86, Visual Studio 15,...
+        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
