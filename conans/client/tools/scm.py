@@ -342,12 +342,12 @@ class SVN(SCMBase):
             return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
-        return self.get_item("branches/[^/]+|trunk", "branch")
+        return self._get_item("branches/[^/]+|trunk", "branch")
 
     def get_tag(self):
-        return self.get_item("tags/[^/]+", "tag")
+        return self._get_item("tags/[^/]+", "tag")
 
-    def get_item(self, pattern, item_name):
+    def _get_item(self, pattern, item_name):
         url = self._show_item('relative-url')
         try:
             item = re.search(pattern, url)
