@@ -16,8 +16,10 @@ class EditableCppInfo(object):
     def load(filepath, allow_package_name=False):
         parser = configparser.ConfigParser(allow_no_value=True)
         parser.optionxform = str
-        parser.read(filepath)
-
+        try:
+            parser.read(filepath)
+        except configparser.Error:
+            raise ConanException("Error parsing layout file: %s" % filepath)
         data = {}
         for section in parser.sections():
             pkg, key = section.split(":", 1) if ':' in section else (None, section)

@@ -12,7 +12,7 @@ from conans.client.edited import LAYOUTS_FOLDER
 
 class LayoutTest(unittest.TestCase):
 
-    def test_missing_layouts(self):
+    def test_missing_wrong_layouts(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -20,7 +20,8 @@ class LayoutTest(unittest.TestCase):
                 pass
             """)
 
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": conanfile,
+                     "nonlayoutfile": "some random thing"})
         client.run("link . mytool/0.1@user/testing -l=missing")
         client2 = TestClient(client.base_folder)
         consumer = textwrap.dedent("""
@@ -30,6 +31,11 @@ class LayoutTest(unittest.TestCase):
         client2.save({"conanfile.txt": consumer})
         client2.run("install .", assert_error=True)
         self.assertIn("ERROR: Layout file not found: missing", client2.out)
+
+        # Test incorrect layout file
+        client.run("link . mytool/0.1@user/testing -l=nonlayoutfile")
+        client2.run("install .", assert_error=True)
+        self.assertIn("ERROR: Error parsing layout file", client2.out)
 
     def test_repo_layouts(self):
         client = TestClient()
