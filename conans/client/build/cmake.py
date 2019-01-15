@@ -233,14 +233,13 @@ class CMake(object):
                                  "defined" % cmake_install_prefix_var_name)
         self._build(args=args, build_dir=build_dir, target="install")
 
-    def test(self, args=None, build_dir=None, target=None, progress=False, output_on_failure=False):
+    def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
 
-        env = {'CTEST_PROGRESS_OUTPUT': '1' if progress else '0',
-               'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
+        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
         if self.parallel:
             env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
         with tools.environment_append(env):

@@ -1171,13 +1171,11 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, parallel=False, generator="NMake Makefiles")
         cmake.test()
-        self.assertEquals(conanfile.captured_env["CTEST_PROGRESS_OUTPUT"], "0")
         self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "0")
         self.assertNotIn("CTEST_PARALLEL_LEVEL", conanfile.captured_env)
 
         with tools.environment_append({"CONAN_CPU_COUNT": "666"}):
             cmake = CMake(conanfile, parallel=True, generator="NMake Makefiles")
-            cmake.test(progress=True, output_on_failure=True)
-            self.assertEquals(conanfile.captured_env["CTEST_PROGRESS_OUTPUT"], "1")
+            cmake.test(output_on_failure=True)
             self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "1")
             self.assertEquals(conanfile.captured_env["CTEST_PARALLEL_LEVEL"], "666")
