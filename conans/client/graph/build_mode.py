@@ -6,6 +6,7 @@ from conans.errors import ConanException
 class BuildMode(object):
     """ build_mode => ["*"] if user wrote "--build"
                    => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => ["hello/0.1@foo/bar"] if user wrote "--build hello/0.1@foo/bar"
                    => False if user wrote "never"
                    => True if user wrote "missing"
                    => "outdated" if user wrote "--build outdated"
@@ -53,7 +54,7 @@ class BuildMode(object):
         ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if fnmatch.fnmatch(ref, pattern):
+            if fnmatch.fnmatch(ref, pattern) or repr(reference) == pattern:
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
