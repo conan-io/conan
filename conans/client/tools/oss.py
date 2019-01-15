@@ -85,14 +85,18 @@ class OSInfo(object):
     """
 
     def __init__(self):
+        system = platform.system()
         self.os_version = None
         self.os_version_name = None
-        self.is_linux = platform.system() == "Linux"
+        self.is_linux = system == "Linux"
         self.linux_distro = None
-        self.is_windows = platform.system() == "Windows"
-        self.is_macos = platform.system() == "Darwin"
-        self.is_freebsd = platform.system() == "FreeBSD"
-        self.is_solaris = platform.system() == "SunOS"
+        self.is_msys = system.startswith("MINGW32_NT") or system.startswith("MINGW64_NT") or \
+                       system.startswith("MSYS_NT")
+        self.is_cygwin = system.startswith("CYGWIN_NT")
+        self.is_windows = system == "Windows" or self.is_msys or self.is_cygwin
+        self.is_macos = system == "Darwin"
+        self.is_freebsd = system == "FreeBSD"
+        self.is_solaris = system == "SunOS"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
@@ -143,7 +147,7 @@ class OSInfo(object):
         if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
             return True
         return False
-    
+
     @staticmethod
     def get_win_os_version():
         """
@@ -264,7 +268,7 @@ class OSInfo(object):
     @staticmethod
     def uname(options=None):
         options = " %s" % options if options else ""
-        if platform.system() != "Windows":
+        if not OSInfo().is_windows:
             raise ConanException("Command only for Windows operating system")
         custom_bash_path = OSInfo.bash_path()
         if not custom_bash_path:
@@ -305,7 +309,6 @@ class OSInfo(object):
 
 
 def cross_building(settings, self_os=None, self_arch=None):
-
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
