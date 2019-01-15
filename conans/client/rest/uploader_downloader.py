@@ -26,7 +26,6 @@ class Uploader(object):
             dedup_headers = {"X-Checksum-Deploy": "true"}
             if headers:
                 dedup_headers.update(headers)
-            print(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
@@ -42,7 +41,6 @@ class Uploader(object):
         # Now it will print progress in each iteration
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
-        print(headers)
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
                               data=iterable_to_file, headers=headers, auth=auth)
 
