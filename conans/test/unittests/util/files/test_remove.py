@@ -1,10 +1,11 @@
 # coding=utf-8
 
 import os
-from conans.util.files import remove, save
-from conans.test.utils.test_files import temp_folder
-import unittest
 import stat
+import unittest
+
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import remove, save
 
 
 class RemoveTest(unittest.TestCase):
@@ -20,7 +21,7 @@ class RemoveTest(unittest.TestCase):
 
     def test_remove_readonly(self):
         os.chmod(self.file, stat.S_IREAD|stat.S_IRGRP|stat.S_IROTH)
-        with self.assertRaisesRegexp(PermissionError, "Permission denied"):
+        with self.assertRaisesRegexp((IOError, OSError), "Permission denied"):
             save(self.file, "change the content")
         remove(self.file)
         self.assertFalse(os.path.exists(self.file))

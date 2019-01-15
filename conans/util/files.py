@@ -212,17 +212,14 @@ def rmdir(path):
         raise
 
 
-def _change_file_permissions(func, path, exc_info):
-    os.chmod(path, stat.S_IRWXU)
-    os.remove(path)
-
-
 def remove(path):
     try:
         assert os.path.isfile(path)
-        shutil.rmtree(path, onerror=_change_file_permissions)
-    except OSError as err:
-        if err.errno == ENOENT:
+        os.remove(path)
+    except (IOError, OSError) as e:  # for py3, handle just PermissionError
+        if e.errno == stat.EPERM or e.errno == stat.EACCES:
+            os.chmod(path, stat.S_IRWXU)
+            os.remove(path)
             return
         raise
 
