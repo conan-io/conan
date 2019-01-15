@@ -114,8 +114,7 @@ class Version(str):
 
     def compatible(self, other):
         """
-        Determine if one version is compatible to other regarding to semver Compare two This will
-        check for same major, minor and patch items and discard additional items.
+        Determine if one version is compatible to other regarding to semver.
         Useful to check compatibility with major/minor versions with `<major>.Y.Z` format.
         :param other: version to compare to (string or version class)
         :return: compatible true or false
