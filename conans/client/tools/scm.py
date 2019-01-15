@@ -345,7 +345,7 @@ class SVN(SCMBase):
         return self.get_item("branches/[^/]+|trunk", "branch")
 
     def get_tag(self):
-        return self.get_item("tags/[^/]+|trunk", "tag")
+        return self.get_item("tags/[^/]+", "tag")
 
     def get_item(self, pattern, item_name):
         url = self._show_item('relative-url')

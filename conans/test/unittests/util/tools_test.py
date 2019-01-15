@@ -1649,7 +1649,7 @@ class HelloConan(ConanFile):
 class GitToolsTests(unittest.TestCase):
 
     def setUp(self):
-        self.folder, self.rev = create_local_git_repo({'/myfile': "contents"})
+        self.folder, self.rev = create_local_git_repo({'myfile.txt': "contents"})
 
     def test_no_tag(self):
         """
