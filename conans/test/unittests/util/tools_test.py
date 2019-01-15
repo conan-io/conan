@@ -1678,8 +1678,7 @@ class GitToolsTests(unittest.TestCase):
         git.run("add .")
         git.run("commit -m \"new file\"")
         tag = git.get_tag()
-        print(tag)
-        self.assertRegex(tag, "0.0.0-1-\w{8}")
+        self.assertRegexpMatches(tag, "0.0.0-1-\w{8}")
 
 
 @attr("slow")
