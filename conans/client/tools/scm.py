@@ -176,6 +176,15 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
+    def get_tag(self):
+        self._check_git_repo()
+        try:
+            status = self.run("describe --tags")
+            tag = status.splitlines()[0].strip()  # 1.11.2-42-g326d3942
+            return tag
+        except Exception as e:
+            raise ConanException("Unable to get git tag from %s: %s" % (self.folder, str(e)))
+
     def _check_git_repo(self):
         try:
             self.run("status")

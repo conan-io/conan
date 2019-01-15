@@ -1646,6 +1646,42 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+class GitToolsTests(unittest.TestCase):
+
+    def setUp(self):
+        self.folder, self.rev = create_local_git_repo({'/myfile': "contents"})
+
+    def test_no_tag(self):
+        """
+        No tags has been created in repo
+        """
+        git = Git(folder=self.folder)
+        with self.assertRaisesRegex(ConanException, "Unable to get git tag from"):
+            git.get_tag()
+
+    def test_in_tag(self):
+        """
+        Current checkout is on a tag
+        """
+        git = Git(folder=self.folder)
+        git.run("tag 0.0.0")
+        tag = git.get_tag()
+        self.assertIn("0.0.0", tag)
+
+    def test_in_branch_with_tag(self):
+        """
+        Tag is defined but current commit is ahead of it
+        """
+        git = Git(folder=self.folder)
+        git.run("tag 0.0.0")
+        save(os.path.join(self.folder, "file.txt"), "")
+        git.run("add .")
+        git.run("commit -m \"new file\"")
+        tag = git.get_tag()
+        print(tag)
+        self.assertRegex(tag, "0.0.0-1-\w{8}")
+
+
 @attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
