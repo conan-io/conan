@@ -43,7 +43,7 @@ class SimplePaths(object):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         check_ref_case(ref, self.store)
         base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
-        return PackageCacheLayout(base_folder=base_folder, ref=ref)
+        return PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
 
     def conan(self, ref):
         """ the base folder for this package reference, for each ConanFileReference
