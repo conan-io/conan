@@ -90,8 +90,7 @@ class OSInfo(object):
         self.os_version_name = None
         self.is_linux = system == "Linux"
         self.linux_distro = None
-        self.is_msys = system.startswith("MINGW32_NT") or system.startswith("MINGW64_NT") or \
-                       system.startswith("MSYS_NT")
+        self.is_msys = system.startswith("MING") or system.startswith("MSYS_NT")
         self.is_cygwin = system.startswith("CYGWIN_NT")
         self.is_windows = system == "Windows" or self.is_msys or self.is_cygwin
         self.is_macos = system == "Darwin"
