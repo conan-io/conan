@@ -1,3 +1,4 @@
+import errno
 import hashlib
 import os
 import platform
@@ -7,8 +8,6 @@ import stat
 import sys
 import tarfile
 import tempfile
-from contextlib import contextmanager
-from errno import ENOENT
 from os.path import abspath, join as joinpath, realpath
 
 import six
@@ -207,7 +206,7 @@ def rmdir(path):
     try:
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
-        if err.errno == ENOENT:
+        if err.errno == errno.ENOENT:
             return
         raise
 
@@ -217,7 +216,7 @@ def remove(path):
         assert os.path.isfile(path)
         os.remove(path)
     except (IOError, OSError) as e:  # for py3, handle just PermissionError
-        if e.errno == stat.EPERM or e.errno == stat.EACCES:
+        if e.errno == errno.EPERM or e.errno == errno.EACCES:
             os.chmod(path, stat.S_IRWXU)
             os.remove(path)
             return
