@@ -29,7 +29,6 @@ class Uploader(object):
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
-                print("File already there")
                 return response
 
         self.output.info("")
