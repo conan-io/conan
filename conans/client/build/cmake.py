@@ -20,7 +20,7 @@ class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False):
+                 set_cmake_flags=False, cmake_program=None):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -32,6 +32,7 @@ class CMake(object):
                 applies only to certain generators (e.g. Visual Studio)
         :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS, CMAKE_C_FLAGS, etc.
                it's vital to set for certain projects (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
+        :param cmake_program: Path to the custom cmake executable
         """
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
@@ -39,6 +40,7 @@ class CMake(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
+        self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator = generator or get_generator(conanfile.settings)
         self.parallel = parallel
@@ -184,7 +186,7 @@ class CMake(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
         with tools.environment_append(pkg_env):
-            command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program, arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._run(command)
@@ -220,7 +222,7 @@ class CMake(object):
             self.build_config,
             args_to_string(args)
         ])
-        command = "cmake --build %s" % arg_list
+        command = "%s --build %s" % (self._cmake_program, arg_list)
         self._run(command)
 
     def install(self, args=None, build_dir=None):
