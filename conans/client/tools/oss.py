@@ -99,13 +99,7 @@ class OSInfo(object):
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
-            import distro
-            self.linux_distro = distro.id()
-            self.os_version = Version(distro.version())
-            version_name = distro.codename()
-            self.os_version_name = version_name if version_name != "n/a" else ""
-            if not self.os_version_name and self.linux_distro == "debian":
-                self.os_version_name = self.get_debian_version_name(self.os_version)
+            self._get_linux_distro_info()
         elif self.is_windows:
             self.os_version = self.get_win_os_version()
             self.os_version_name = self.get_win_version_name(self.os_version)
@@ -118,6 +112,15 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+
+    def _get_linux_distro_info(self):
+        import distro
+        self.linux_distro = distro.id()
+        self.os_version = Version(distro.version())
+        version_name = distro.codename()
+        self.os_version_name = version_name if version_name != "n/a" else ""
+        if not self.os_version_name and self.linux_distro == "debian":
+            self.os_version_name = self.get_debian_version_name(self.os_version)
 
     @property
     def with_apt(self):
