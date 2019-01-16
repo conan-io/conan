@@ -2,10 +2,11 @@
 
 import os
 
+from conans.errors import ConanException
+from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
-from conans.model.editable_cpp_info import EditableCppInfo
 
 
 class PackageEditableLayout(object):
@@ -37,21 +38,20 @@ class PackageEditableLayout(object):
             return EditableCppInfo.load(local_file)
 
     def export(self):
-        raise RuntimeError("Operation not allowed on a package installed as editable")
+        raise ConanException("Operation not allowed on a package installed as editable")
 
     def export_sources(self):
-        raise RuntimeError("Operation not allowed on a package installed as editable")
+        raise ConanException("Operation not allowed on a package installed as editable")
 
     def source(self):
-        raise RuntimeError("Operation not allowed on a package installed as editable")
+        raise ConanException("Operation not allowed on a package installed as editable")
 
     def load_metadata(self):
-        raise RuntimeError("Operation not allowed on a package installed as editable")
+        raise ConanException("Operation not allowed on a package installed as editable")
 
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        raise RuntimeError("Operation not allowed on a package installed as editable")
 
     def package_metadata(self):
         # FIXME: I know that downstream there is an except for IOError
