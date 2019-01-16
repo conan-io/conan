@@ -1656,8 +1656,8 @@ class GitToolsTests(unittest.TestCase):
         No tags has been created in repo
         """
         git = Git(folder=self.folder)
-        with self.assertRaisesRegexp(ConanException, "Unable to get git tag from"):
-            git.get_tag()
+        tag = git.get_tag()
+        self.assertIsNone(tag)
 
     def test_in_tag(self):
         """
@@ -1678,7 +1678,7 @@ class GitToolsTests(unittest.TestCase):
         git.run("add .")
         git.run("commit -m \"new file\"")
         tag = git.get_tag()
-        self.assertRegexpMatches(tag, "0.0.0-1-\w{8}")
+        self.assertIsNone(tag, "0.0.0-1-\w{8}")
 
 
 @attr("slow")
@@ -1867,11 +1867,11 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
-        self.assertEqual("branches/my_feature", svn.get_branch())
+        self.assertEqual("my_feature", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
-        self.assertEqual("branches/issue3434", svn.get_branch())
+        self.assertEqual("issue3434", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
@@ -1897,7 +1897,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
-        self.assertEqual("tags/v12.3.4", svn.get_tag())
+        self.assertEqual("v12.3.4", svn.get_tag())
 
 
 @attr("slow")
