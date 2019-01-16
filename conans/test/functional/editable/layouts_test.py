@@ -21,21 +21,22 @@ class LayoutTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile,
-                     "nonlayoutfile": "some random thing"})
-        client.run("link . mytool/0.1@user/testing -l=missing")
+                     "layout": ""})
+        client.run("link . mytool/0.1@user/testing -l=layout")
         client2 = TestClient(client.base_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
             """)
+        client.save({"conanfile.py": conanfile,
+                     "layout": " some garbage"})
         client2.save({"conanfile.txt": consumer})
         client2.run("install .", assert_error=True)
-        self.assertIn("ERROR: Layout file not found: missing", client2.out)
-
-        # Test incorrect layout file
-        client.run("link . mytool/0.1@user/testing -l=nonlayoutfile")
-        client2.run("install .", assert_error=True)
         self.assertIn("ERROR: Error parsing layout file", client2.out)
+
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client2.run("install .", assert_error=True)
+        self.assertIn("ERROR: Layout file not found: layout", client2.out)
 
     def test_repo_layouts(self):
         client = TestClient()

@@ -5,6 +5,8 @@ from os.path import join, normpath
 from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
+from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.errors import ConanException
 
 
 EDITED_PACKAGES = 'edited_packages'
@@ -36,6 +38,12 @@ class EditedPackages(object):
     def link(self, ref, path, layout):
         assert isinstance(ref, ConanFileReference)
         ref = ref.copy_clear_rev()
+        if layout:
+            # try to load the layout from package
+            edit_cpp_info = PackageEditableLayout(path, layout, ref).editable_cpp_info()
+            edit_cpp_info = edit_cpp_info or self.editable_cpp_info(layout)
+            if not edit_cpp_info:
+                raise ConanException("Couldn't find layout file: %s" % layout)
         self._edited_refs[ref] = {"path": path, "layout": layout}
         self.save()
 
