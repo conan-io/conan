@@ -28,7 +28,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         msbuild = MSBuild(self)
-        msbuild.build("MyProject.sln")
+        msbuild.build("MyProject.sln", verbosity="normal")
 
     def package(self):
         self.copy(pattern="*.exe")
@@ -45,7 +45,7 @@ class HelloConan(ConanFile):
                    'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                    '-s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
@@ -57,28 +57,28 @@ class HelloConan(ConanFile):
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build")
         self.assertNotIn("devenv", client.user_io.out)
-        self.assertIn("Skipped sln project upgrade", client.user_io.out)
+        self.assertIn("Skipped sln project upgrade", client.out)
 
         # Try with x86_64
         client.save(files)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
         self.assertIn("Release|x64", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with x86
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
         self.assertIn("Release|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with x86 debug
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with a custom property file name
         files[CONANFILE] = conan_build_vs.replace('msbuild.build("MyProject.sln")',
@@ -87,7 +87,7 @@ class HelloConan(ConanFile):
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.out)
         full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
         pref = PackageReference.loads(full_ref)
         build_folder = client.cache.build(pref)
