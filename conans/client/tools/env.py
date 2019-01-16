@@ -54,7 +54,8 @@ def environment_append(env_vars):
         old_env = dict(os.environ)
         os.environ.update(env_vars)
         for var in unset_vars:
-            os.environ.pop(var)
+            if var in os.environ:
+                os.environ.pop(var)
         try:
             yield
         finally:
