@@ -117,6 +117,8 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
 # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
 
+# msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
+
 # cpu_count = 1             # environment CONAN_CPU_COUNT
 
 # Change the default location for building test packages to a temporary folder
@@ -206,6 +208,9 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
+               "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
+                                                      "CONAN_MSBUILD_VERBOSITY",
+                                                      None)
                }
 
         # Filter None values
