@@ -140,6 +140,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
                                            '/p:PlatformToolset="v110" '
+                                           '/verbosity:minimal '
                                            '/p:ForceImportBeforeCppTargets='), command)
 
     def properties_file_test(self):
@@ -154,6 +155,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                                     parallel=False, output=ConanOutput(new_out))
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
                                            '/p:Platform="ARM" '
+                                           '/verbosity:minimal '
                                            '/p:ForceImportBeforeCppTargets='), command)
         path_tmp = command.split("/p:ForceImportBeforeCppTargets=")[1][1:-1]  # remove quotes
         self.assertTrue(os.path.exists(path_tmp))

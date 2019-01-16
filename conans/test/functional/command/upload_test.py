@@ -150,8 +150,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" +
-                                             NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -206,7 +205,7 @@ class UploadTest(unittest.TestCase):
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        manifest = client2.cache.load_manifest(ref)
+        manifest = client2.cache.package_layout(ref).load_manifest()
         manifest.time += 10
         manifest.save(client2.cache.export(ref))
         client2.run("upload Hello0/1.2.1@frodo/stable")
@@ -235,7 +234,7 @@ class UploadTest(unittest.TestCase):
         client2.save(files)
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        manifest = client2.cache.load_manifest(ref)
+        manifest = client2.cache.package_layout(ref).load_manifest()
         manifest.time += 10
         manifest.save(client2.cache.export(ref))
         client2.run("upload Hello0/1.2.1@frodo/stable")

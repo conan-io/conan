@@ -30,7 +30,7 @@ class MSBuild(object):
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
-              property_file_name=None, definitions=None):
+              property_file_name=None, verbosity=None, definitions=None):
         """
         :param project_file: Path to the .sln file.
         :param targets: List of targets to build.
@@ -60,6 +60,7 @@ class MSBuild(object):
         This parameter is only supported starting from MSBuild version 15.3 and onwards.
         :param property_file_name: When None it will generate a file named conan_build.props.
         You can specify a different name for the generated properties file.
+        :param verbosity: Specifies verbosity level (/verbosity: parameter)
         :param definitions: Dictionary with additional compiler definitions to be applied during the build.
         Use value of None to set compiler definition with no value.
         :return: status code of the MSBuild command invocation
@@ -78,13 +79,14 @@ class MSBuild(object):
                                        targets=targets, upgrade_project=upgrade_project,
                                        build_type=build_type, arch=arch, parallel=parallel,
                                        toolset=toolset, platforms=platforms,
-                                       use_env=use_env, properties=properties, output_binary_log=output_binary_log)
+                                       use_env=use_env, properties=properties, output_binary_log=output_binary_log,
+                                       verbosity=verbosity)
             command = "%s && %s" % (vcvars, command)
             return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None, output_binary_log=None):
+                    use_env=False, properties=None, output_binary_log=None, verbosity=None):
 
         targets = targets or []
         properties = properties or {}
@@ -97,6 +99,7 @@ class MSBuild(object):
 
         build_type = build_type or self._settings.get_safe("build_type")
         arch = arch or self._settings.get_safe("arch")
+        verbosity = verbosity or get_env("CONAN_MSBUILD_VERBOSITY", "minimal")
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
@@ -148,6 +151,9 @@ class MSBuild(object):
 
         if toolset:
             command.append('/p:PlatformToolset="%s"' % toolset)
+
+        if verbosity:
+            command.append('/verbosity:%s' % verbosity)
 
         if props_file_path:
             command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
