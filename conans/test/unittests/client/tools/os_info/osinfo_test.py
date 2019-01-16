@@ -28,10 +28,8 @@ class OSInfoTest(unittest.TestCase):
         self._uname = None
         self._version = None
         with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-            with mock.patch("conans.client.tools.oss.OSInfo.get_win_version_name",
-                            mock.MagicMock(return_value="Windows 98")):
-                with mock.patch("conans.client.tools.oss.OSInfo.get_win_os_version",
-                                mock.MagicMock(return_value="4.0")):
+            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
+                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
                     with remove_from_path("uname"):
                         with remove_from_path("bash"):
                             # FIXME: bug in environment_append removing variables which aren't exist (another PR)
@@ -55,10 +53,8 @@ class OSInfoTest(unittest.TestCase):
         self._uname = 'CYGWIN_NT-10.0'
         self._version = '2.11.2(0.329/5/3)'
         with mock.patch("platform.system", mock.MagicMock(return_value=self._uname)):
-            with mock.patch("conans.client.tools.oss.OSInfo.get_win_version_name",
-                            mock.MagicMock(return_value="Windows 98")):
-                with mock.patch("conans.client.tools.oss.OSInfo.get_win_os_version",
-                                mock.MagicMock(return_value="4.0")):
+            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
+                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
                     self.assertTrue(OSInfo().is_windows)
                     self.assertTrue(OSInfo().is_cygwin)
                     self.assertFalse(OSInfo().is_msys)
@@ -76,10 +72,8 @@ class OSInfoTest(unittest.TestCase):
         self._uname = 'MSYS_NT-10.0'
         self._version = '1.0.18(0.48/3/2)'
         with mock.patch("platform.system", mock.MagicMock(return_value=self._uname)):
-            with mock.patch("conans.client.tools.oss.OSInfo.get_win_version_name",
-                            mock.MagicMock(return_value="Windows 98")):
-                with mock.patch("conans.client.tools.oss.OSInfo.get_win_os_version",
-                                mock.MagicMock(return_value="4.0")):
+            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
+                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
                     self.assertTrue(OSInfo().is_windows)
                     self.assertFalse(OSInfo().is_cygwin)
                     self.assertTrue(OSInfo().is_msys)
@@ -97,10 +91,8 @@ class OSInfoTest(unittest.TestCase):
         self._uname = 'MINGW32_NT-10.0'
         self._version = '2.10.0(0.325/5/3)'
         with mock.patch("platform.system", mock.MagicMock(return_value=self._uname)):
-            with mock.patch("conans.client.tools.oss.OSInfo.get_win_version_name",
-                            mock.MagicMock(return_value="Windows 98")):
-                with mock.patch("conans.client.tools.oss.OSInfo.get_win_os_version",
-                                mock.MagicMock(return_value="4.0")):
+            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
+                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
                     self.assertTrue(OSInfo().is_windows)
                     self.assertFalse(OSInfo().is_cygwin)
                     self.assertTrue(OSInfo().is_msys)
@@ -118,10 +110,8 @@ class OSInfoTest(unittest.TestCase):
         self._uname = 'MINGW64_NT-10.0'
         self._version = '2.4.0(0.292/5/3)'
         with mock.patch("platform.system", mock.MagicMock(return_value=self._uname)):
-            with mock.patch("conans.client.tools.oss.OSInfo.get_win_version_name",
-                            mock.MagicMock(return_value="Windows 98")):
-                with mock.patch("conans.client.tools.oss.OSInfo.get_win_os_version",
-                                mock.MagicMock(return_value="4.0")):
+            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
+                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
                     self.assertTrue(OSInfo().is_windows)
                     self.assertFalse(OSInfo().is_cygwin)
                     self.assertTrue(OSInfo().is_msys)
@@ -137,7 +127,7 @@ class OSInfoTest(unittest.TestCase):
 
     def test_linux(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='Linux')):
-            with mock.patch('conans.client.tools.oss.OSInfo._get_linux_distro_info', mock.MagicMock()):
+            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
                 self.assertFalse(OSInfo().is_windows)
                 self.assertFalse(OSInfo().is_cygwin)
                 self.assertFalse(OSInfo().is_msys)
