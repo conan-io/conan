@@ -145,3 +145,31 @@ class MSBuildTest(unittest.TestCase):
                                                                       "MyProp2": "MyValue2"})
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
+
+    def verbosity_default_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("projecshould_flags_testt_file.sln")
+        self.assertIn('/verbosity:minimal', command)
+
+    def verbosity_env_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
+            conanfile = MockConanfile(settings)
+            msbuild = MSBuild(conanfile)
+            command = msbuild.get_command("projecshould_flags_testt_file.sln")
+            self.assertIn('/verbosity:detailed', command)
+
+    def verbosity_explicit_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
+        self.assertIn('/verbosity:quiet', command)
