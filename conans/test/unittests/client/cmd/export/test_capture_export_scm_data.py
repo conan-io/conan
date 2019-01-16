@@ -23,7 +23,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         tmp_dir = temp_folder()
 
         # Need a real repo to get a working SCM object
-        self.conanfile_dir = os.path.join(tmp_dir, 'git_repo')
+        self.conanfile_dir = os.path.join(tmp_dir, 'git_repo').replace('\\', '/')
         self.git = Git(folder=self.conanfile_dir)
         self.origin, self.rev = create_local_git_repo(files={'file1': "content"},
                                                       folder=self.git.folder)

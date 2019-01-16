@@ -7,7 +7,6 @@ import mock
 
 from conans.client.source import _run_scm
 from conans.client.tools.scm import Git
-from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
@@ -16,14 +15,12 @@ from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
 class RunSCMTest(unittest.TestCase):
 
     def setUp(self):
-        ref = ConanFileReference.loads("name/version@user/channel")
         self.tmp_dir = temp_folder()
-
         self.src_folder = os.path.join(self.tmp_dir, 'source')
 
     def test_in_cache_with_local_sources(self):
         output = TestBufferConanOutput()
-        local_sources_path = os.path.join(self.tmp_dir)
+        local_sources_path = self.tmp_dir.replace('\\', '/')
 
         # Mock the conanfile (return scm_data)
         conanfile = mock.MagicMock()
@@ -75,10 +72,10 @@ class RunSCMTest(unittest.TestCase):
 
     def test_user_space_with_local_sources(self):
         output = TestBufferConanOutput()
-        local_sources_path = os.path.join(self.tmp_dir)
+        local_sources_path = self.tmp_dir
 
         # Need a real repo to get a working SCM object
-        local_sources_path = os.path.join(self.tmp_dir, 'git_repo')
+        local_sources_path = os.path.join(self.tmp_dir, 'git_repo').replace('\\', '/')
         create_local_git_repo(files={'file1': "content"}, folder=local_sources_path)
         git = Git(local_sources_path)
         url = "https://remote.url"
@@ -92,7 +89,7 @@ class RunSCMTest(unittest.TestCase):
         def merge_directories(src, dst, excluded=None, symlinks=True):
             src = os.path.normpath(src)
             dst = os.path.normpath(dst)
-            self.assertEqual(src, local_sources_path)
+            self.assertEqual(src.replace('\\', '/'), local_sources_path)
             self.assertEqual(dst, self.src_folder)
 
         with mock.patch("conans.client.source.merge_directories", side_effect=merge_directories):
