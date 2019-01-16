@@ -146,6 +146,32 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
+    def definitions_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_WIN32_WINNT': "0x0501"})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_WIN32_WINNT=0x0501;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
+
+    def definitions_no_value_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_DEBUG': None})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_DEBUG;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
+
     def verbosity_default_test(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -173,3 +199,4 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
         self.assertIn('/verbosity:quiet', command)
+
