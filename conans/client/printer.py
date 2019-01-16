@@ -5,7 +5,7 @@ from conans.client.installer import build_id
 from conans.client.output import Color
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.util.env_reader import get_env
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 
@@ -82,8 +82,7 @@ class Printer(object):
 
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.conan_ref,
-                                      node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
 
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -145,8 +144,8 @@ class Printer(object):
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
             if revisions_enabled:
                 if (isinstance(ref, ConanFileReference) and show("revision") and
-                        node.conan_ref.revision):
-                    self._out.writeln("    Revision: %s" % node.conan_ref.revision)
+                        node.ref.revision):
+                    self._out.writeln("    Revision: %s" % node.ref.revision)
             if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
                 self._out.writeln("    Binary: %s" % node.binary)
             if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
@@ -172,11 +171,11 @@ class Printer(object):
                 if requires:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
                 if build_requires:
                     self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
                     for d in build_requires:
-                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
@@ -202,25 +201,25 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     self._out.writeln(str(conan_item["recipe"]["id"]))
 
-    def print_search_packages(self, search_info, reference, packages_query,
+    def print_search_packages(self, search_info, ref, packages_query,
                               outdated=False):
-        assert(isinstance(reference, ConanFileReference))
-        self._out.info("Existing packages for recipe %s:\n" % str(reference))
+        assert(isinstance(ref, ConanFileReference))
+        self._out.info("Existing packages for recipe %s:\n" % str(ref))
         for remote_info in search_info:
             if remote_info["remote"]:
                 self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" % \
-                                ("outdated " if outdated else "", str(reference), packages_query)
+                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" \
+                               % ("outdated " if outdated else "", str(ref), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no %spackages for reference '%s', but package recipe found." % \
-                            ("outdated " if outdated else "", str(reference))
+                    warn_msg = "There are no %spackages for reference '%s', but package recipe " \
+                               "found." % ("outdated " if outdated else "", str(ref))
                 self._out.info(warn_msg)
                 continue
 
-            reference = remote_info["items"][0]["recipe"]["id"]
+            ref = remote_info["items"][0]["recipe"]["id"]
             packages = remote_info["items"][0]["packages"]
 
             # Each package

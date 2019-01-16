@@ -7,13 +7,14 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.files import save
+from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class CommandOutputer(object):
 
-    def __init__(self, user_io, client_cache):
+    def __init__(self, user_io, cache):
         self.user_io = user_io
-        self.client_cache = client_cache
+        self.cache = cache
 
     def writeln(self, value):
         self.user_io.out.writeln(value)
@@ -33,14 +34,14 @@ class CommandOutputer(object):
                 self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
-        for ref, remote_name in refs.items():
-            ref = ConanFileReference.loads(ref)
+        for reference, remote_name in refs.items():
+            ref = ConanFileReference.loads(reference)
             self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
-    def remote_pref_list(self, refs):
-        for ref, remote_name in refs.items():
-            ref = PackageReference.loads(ref)
-            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
+    def remote_pref_list(self, package_references):
+        for package_reference, remote_name in package_references.items():
+            pref = PackageReference.loads(package_reference)
+            self.user_io.out.info("%s: %s" % (pref.full_repr(), remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
@@ -72,9 +73,9 @@ class CommandOutputer(object):
     def _read_dates(self, deps_graph):
         ret = {}
         for node in sorted(deps_graph.nodes):
-            ref = node.conan_ref
-            if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                manifest = self.client_cache.load_manifest(ref)
+            ref = node.ref
+            if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
+                manifest = self.cache.package_layout(ref).load_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -82,18 +83,18 @@ class CommandOutputer(object):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def info(self, deps_graph, only, package_filter, show_paths):
-        registry = self.client_cache.registry
+        registry = self.cache.registry
         Printer(self.user_io.out).print_info(deps_graph,
                                              only, registry,
                                              node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.client_cache,
+                                             path_resolver=self.cache,
                                              package_filter=package_filter,
                                              show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph, self.client_cache.conan_folder)
+            grapher = ConanHTMLGrapher(deps_graph, self.cache.conan_folder)
         else:
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(deps_graph)

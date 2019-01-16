@@ -126,7 +126,7 @@ class MyTest(ConanFile):
             export = False if name == "Hello0" else True
             self._create(name, "0.1", expanded_deps, export=export)
 
-        def check_conan_ref(ref):
+        def check_ref(ref):
             self.assertEqual(ref.version, "0.1")
             self.assertEqual(ref.user, "lasote")
             self.assertEqual(ref.channel, "stable")
@@ -136,17 +136,17 @@ class MyTest(ConanFile):
 
             node_matches = node_regex.findall(line)
 
-            parent = node_matches[0]
-            deps = [ConanFileReference.loads(ref) for ref in node_matches[1:]]
+            parent_reference = node_matches[0]
+            deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
-            if parent == "conanfile.py (Hello0/0.1@None/None)":
-                parent = ConanFileReference("Hello0", None, None, None, validate=False)
+            if parent_reference == "conanfile.py (Hello0/0.1@None/None)":
+                parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
-                parent = ConanFileReference.loads(parent)
-                check_conan_ref(parent)
-            for dep in deps:
-                check_conan_ref(dep)
-                self.assertIn(dep.name, test_deps[parent.name])
+                parent_ref = ConanFileReference.loads(parent_reference)
+                check_ref(parent_ref)
+            for dep in deps_ref:
+                check_ref(dep)
+                self.assertIn(dep.name, test_deps[parent_ref.name])
 
         def check_file(dot_file):
             with open(dot_file) as dot_file_contents:
@@ -199,8 +199,8 @@ class MyTest(ConanFile):
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
-        visjs_path = os.path.join(client.client_cache.conan_folder, "vis.min.js")
-        viscss_path = os.path.join(client.client_cache.conan_folder, "vis.min.css")
+        visjs_path = os.path.join(client.cache.conan_folder, "vis.min.js")
+        viscss_path = os.path.join(client.cache.conan_folder, "vis.min.css")
         save(visjs_path, "")
         save(viscss_path, "")
         client.save({"conanfile.txt": ""})

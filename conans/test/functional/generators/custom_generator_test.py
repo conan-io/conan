@@ -73,20 +73,20 @@ class CustomGeneratorTest(unittest.TestCase):
         self.servers = {"default": test_server}
 
     def reuse_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(conan_reference))
+        client.run("upload %s" % str(ref))
 
-        gen_reference = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
+        gen_ref = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         files = {CONANFILE: generator}
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(gen_reference))
+        client.run("upload %s" % str(gen_ref))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer}
@@ -105,12 +105,12 @@ class CustomGeneratorTest(unittest.TestCase):
         self.assertEqual(generated, "My custom generator content")
 
     def multifile_test(self):
-        gen_reference = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
+        gen_ref = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {CONANFILE: generator_multi}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(gen_reference))
+        client.run("upload %s" % str(gen_ref))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer_multi}

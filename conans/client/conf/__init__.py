@@ -13,12 +13,12 @@ from conans.util.files import load
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -43,7 +43,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -98,7 +98,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
-# cache_no_locks = True               # Disable locking mechanism of local cache
+# cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
@@ -168,6 +168,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
+               "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
@@ -205,7 +206,6 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
-               "CONAN_CLIENT_REVISIONS_ENABLED": self._env_c("general.revisions_enabled", "CONAN_CLIENT_REVISIONS_ENABLED", "False"),
                }
 
         # Filter None values
@@ -299,7 +299,7 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                from conans.client.client_cache import PROFILES_FOLDER
+                from conans.client.cache import PROFILES_FOLDER
                 profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 
@@ -316,7 +316,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def cache_no_locks(self):
         try:
-            return self.get_item("general.cache_no_locks")
+            return get_env("CONAN_CACHE_NO_LOCKS", False)
         except ConanException:
             return False
 

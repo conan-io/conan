@@ -18,7 +18,7 @@ from six import StringIO
 from six.moves.urllib.parse import quote
 
 from conans.client import tools
-from conans.client.client_cache import CONAN_CONF
+from conans.client.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
@@ -1025,6 +1025,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
+    @attr("slow")
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
 
@@ -1160,6 +1161,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "arm-linux-gnueabi")
 
+        build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "aarch64-linux-gnu_ilp32")
+
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-linux-android")
@@ -1219,6 +1224,22 @@ ProgramFiles(x86)=C:\Program Files (x86)
         build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "aarch64-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8.3")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        build, host = get_values("Darwin", "x86_64", "watchOS", "armv8_32")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
+
+        build, host = get_values("Linux", "x86_64", "Linux", "ppc32")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "powerpc-linux-gnu")
+
+        build, host = get_values("Linux", "x86", "Linux", "ppc64")
+        self.assertEquals(build, "x86-linux-gnu")
+        self.assertEquals(host, "powerpc64-linux-gnu")
 
         for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:

@@ -346,7 +346,7 @@ class MyPkg(ConanFile):
     requires = "Other/1.0@user/channel"
     def build(self):
         for r in self.requires.values():
-            self.output.info("build() Requires: %s" % str(r.conan_reference))
+            self.output.info("build() Requires: %s" % str(r.ref))
         import os
         for dep in self.deps_cpp_info.deps:
             self.output.info("build() cpp_info dep: %s" % dep)

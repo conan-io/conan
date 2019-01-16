@@ -18,7 +18,7 @@ class PutPropertiesTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
         client.run("export . lasote/stable")
-        props_file = client.client_cache.put_headers_path
+        props_file = client.cache.put_headers_path
         self.assertTrue(os.path.exists(props_file))
 
     def put_properties_test(self):
@@ -46,4 +46,4 @@ def _create_property_files(client, values):
     lines = ["#Some comment", " #Some comments"]
     for name, value in values.items():
         lines.append("%s=%s" % (name, value))
-    save(client.client_cache.put_headers_path, "\n".join(lines))
+    save(client.cache.put_headers_path, "\n".join(lines))

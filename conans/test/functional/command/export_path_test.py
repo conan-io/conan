@@ -15,15 +15,15 @@ class ExportPathTest(unittest.TestCase):
         source_folder = os.path.join(current_folder, "source")
         client = TestClient(current_folder=current_folder)
         files = cpp_hello_conan_files("Hello0", "0.1")
-        conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
+        ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         client.save(files, path=source_folder)
         client.run("export source lasote/stable")
-        reg_path = client.client_cache.export(conan_ref)
-        manif = FileTreeManifest.load(client.client_cache.export(conan_ref))
+        reg_path = client.cache.export(ref)
+        manif = FileTreeManifest.load(client.cache.export(ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
                       client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(conan_ref), reg_path), client.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(files.keys()):
@@ -44,15 +44,15 @@ class ExportPathTest(unittest.TestCase):
         os.makedirs(current_folder)
         client = TestClient(current_folder=current_folder)
         files = cpp_hello_conan_files("Hello0", "0.1")
-        conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
+        ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         client.save(files, path=source_folder)
         client.run("export ../source lasote/stable")
-        reg_path = client.client_cache.export(conan_ref)
-        manif = FileTreeManifest.load(client.client_cache.export(conan_ref))
+        reg_path = client.cache.export(ref)
+        manif = FileTreeManifest.load(client.cache.export(ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
                       client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(conan_ref), reg_path), client.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(files.keys()):
@@ -72,19 +72,19 @@ class ExportPathTest(unittest.TestCase):
         current_folder = os.path.join(base_folder, "current")
         client = TestClient(current_folder=current_folder)
         files = cpp_hello_conan_files("Hello0", "0.1")
-        conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
+        ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         conanfile = files.pop("conanfile.py")
         client.save(files, path=source_folder)
         conanfile = conanfile.replace("exports = '*'", 'exports = "../source*"')
 
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
-        reg_path = client.client_cache.export(conan_ref)
-        manif = FileTreeManifest.load(client.client_cache.export(conan_ref))
+        reg_path = client.cache.export(ref)
+        manif = FileTreeManifest.load(client.cache.export(ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
                       client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(conan_ref), reg_path), client.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp',
@@ -109,19 +109,19 @@ class ExportPathTest(unittest.TestCase):
 
         client = TestClient(current_folder=current_folder)
         files = cpp_hello_conan_files("Hello0", "0.1")
-        conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
+        ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         conanfile = files.pop("conanfile.py")
         client.save(files, path=source_folder)
         conanfile = conanfile.replace("exports = '*'", 'exports = "../source*"')
 
         client.save({"conanfile.py": conanfile}, path=conanfile_folder)
         client.run("export ../conan lasote/stable")
-        reg_path = client.client_cache.export(conan_ref)
-        manif = FileTreeManifest.load(client.client_cache.export(conan_ref))
+        reg_path = client.cache.export(ref)
+        manif = FileTreeManifest.load(client.cache.export(ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
                       client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(conan_ref), reg_path), client.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp',
