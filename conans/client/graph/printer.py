@@ -9,7 +9,7 @@ from conans.model.workspace import WORKSPACE_FILE
 
 def _get_python_requires(conanfile):
     result = set()
-    for py_require in getattr(conanfile, "python_requires", []):
+    for name, py_require in getattr(conanfile, "python_requires", {}).items():
         result.add(py_require.ref)
         result.update(_get_python_requires(py_require.conanfile))
     return result

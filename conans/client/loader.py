@@ -222,7 +222,7 @@ def parse_conanfile(conanfile_path, python_requires):
         module, filename = _parse_conanfile(conanfile_path)
         try:
             conanfile = _parse_module(module, filename)
-            conanfile.python_requires = py_requires
+            conanfile.python_requires = {it.ref.name: it for it in py_requires}
             return module, conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))

@@ -43,14 +43,14 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
                     # Reuse files exported (export_sources) from the python_requires
                     self.output.info("*"*20)
                     self.output.info(self.python_requires)
-                    pyreq = self.python_requires[0]
+                    pyreq = self.python_requires['{pyreq_name}']
                     self.output.info(str(pyreq.ref))
                     self.output.info(pyreq.module)
                     self.output.info(pyreq.conanfile)
                     self.output.info(pyreq.export_source_folder)
                     self.output.info("*"*20)
             
-            """.format(pyreq=self.pyreq))
+            """.format(pyreq=self.pyreq, pyreq_name=self.pyreq.name))
 
         ref = ConanFileReference.loads("lib/version@user/channel")
         self.t.save({"conanfile.py": conanfile})

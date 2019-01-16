@@ -417,7 +417,7 @@ class BinaryInstaller(object):
 
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
-        for python_require in conan_file.python_requires:
+        for name, python_require in conan_file.python_requires.items():
             complete_recipe_sources(self._remote_manager, self._cache,
                                     conan_file, python_require.ref)
 

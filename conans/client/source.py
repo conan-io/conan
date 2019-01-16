@@ -161,7 +161,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
 def _get_sources_from_exports(conanfile, src_folder, export_folder, export_source_folder, cache):
     # Files from python requires are obtained before the self files
     from conans.client.cmd.export import export_source
-    for python_require in conanfile.python_requires:
+    for name, python_require in conanfile.python_requires.items():
         src = cache.export_sources(python_require.ref)
         export_source(conanfile, src, src_folder)
 
