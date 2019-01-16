@@ -47,6 +47,9 @@ class EditableCppInfo(object):
         d = self._data
         data = d.get(pkg_name) or d.get(self.WILDCARD) or d.get(None) or {}
 
-        for key, items in data.items():
-            setattr(cpp_info, key, [self._work_on_item(item, settings, options)
-                                    for item in items])
+        try:
+            for key, items in data.items():
+                setattr(cpp_info, key, [self._work_on_item(item, settings, options)
+                                        for item in items])
+        except Exception as e:
+            raise ConanException("Error applying layout in '%s': %s" % (pkg_name, str(e)))

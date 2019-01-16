@@ -126,3 +126,37 @@ class LayoutTest(unittest.TestCase):
             cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % layout))
+
+    def test_parameterized_paths(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                pass
+            """)
+        layout_repo = textwrap.dedent("""
+            [includedirs]
+            include_{settings.build_type}
+            """)
+
+        client.save({"conanfile.py": conanfile,
+                     "layout": layout_repo})
+        client.run("link . mytool/0.1@user/testing -l=layout")
+        client2 = TestClient(client.base_folder)
+        consumer = textwrap.dedent("""
+            [requires]
+            mytool/0.1@user/testing
+            """)
+        client2.save({"conanfile.txt": consumer})
+        client2.run("install . -g cmake -s build_type=Debug", assert_error=True)
+        self.assertIn("ERROR: Error applying layout in 'mytool': "
+                      "'settings.build_type' doesn't exist", client2.out)
+
+        # Now add settings to conanfile
+        client.save({"conanfile.py": conanfile.replace("pass", 'settings = "build_type"')})
+        for setting in ("Debug", "Release"):
+            client2.run("install . -g cmake -s build_type=%s" % setting)
+            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
+            include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
+            self.assertTrue(include_dirs.endswith("include_%s" % setting))
