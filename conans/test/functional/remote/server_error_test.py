@@ -13,7 +13,8 @@ class Error200NoJson(unittest.TestCase):
                 pass
 
             def get(self, *args, **kwargs):
-                return namedtuple("Response", "status_code headers content")(200, {}, '<>')
+                # Response must be binary, it is decoded in RestClientCommon
+                return namedtuple("Response", "status_code headers content")(200, {}, b'<>')
 
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
