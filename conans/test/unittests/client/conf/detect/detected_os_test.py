@@ -9,7 +9,7 @@ from conans.client.conf.detect import detected_os
 from nose.plugins.attrib import attr
 
 
-class OSInfoTest(unittest.TestCase):
+class DetectedOSTest(unittest.TestCase):
     @attr('windows')
     @unittest.skipUnless(platform.system() == "Windows", "Requires windll module")
     def test_cygwin(self):
