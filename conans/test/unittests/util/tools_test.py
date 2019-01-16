@@ -1666,7 +1666,7 @@ class GitToolsTests(unittest.TestCase):
         git = Git(folder=self.folder)
         git.run("tag 0.0.0")
         tag = git.get_tag()
-        self.assertIn("0.0.0", tag)
+        self.assertEqual("0.0.0", tag)
 
     def test_in_branch_with_tag(self):
         """
@@ -1678,7 +1678,7 @@ class GitToolsTests(unittest.TestCase):
         git.run("add .")
         git.run("commit -m \"new file\"")
         tag = git.get_tag()
-        self.assertIsNone(tag, "0.0.0-1-\w{8}")
+        self.assertIsNone(tag)
 
 
 @attr("slow")
