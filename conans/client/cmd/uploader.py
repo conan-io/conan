@@ -95,7 +95,7 @@ class CmdUpload(object):
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
 
-        metadata = self._cache.load_metadata(ref)
+        metadata = self._cache.package_layout(ref).load_metadata()
         ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
 
@@ -179,8 +179,7 @@ class CmdUpload(object):
         except NotFoundException:
             return  # First time uploading this package
 
-        local_manifest = self._cache.load_manifest(ref)
-
+        local_manifest = self._cache.package_layout(ref).load_manifest()
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
             self._print_manifest_information(remote_recipe_manifest, local_manifest, ref, remote)

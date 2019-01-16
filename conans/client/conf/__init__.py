@@ -98,7 +98,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
-# cache_no_locks = True               # Disable locking mechanism of local cache
+# cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
@@ -170,6 +170,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
+               "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
@@ -320,7 +321,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def cache_no_locks(self):
         try:
-            return self.get_item("general.cache_no_locks")
+            return get_env("CONAN_CACHE_NO_LOCKS", False)
         except ConanException:
             return False
 

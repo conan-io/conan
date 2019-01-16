@@ -1,11 +1,15 @@
 # coding=utf-8
 
 import textwrap
+import os
+import shutil
 import unittest
 
 import six
 
 from conans.model.editable_cpp_info import EditableCppInfo
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 base_content = six.u(textwrap.dedent("""\
     [{namespace}includedirs]
@@ -32,10 +36,14 @@ class NoNamespaceFileTest(unittest.TestCase):
         base_content.format(namespace="libA:", path_prefix="libA/")
     ])
 
+    def setUp(self):
+        self.test_folder = temp_folder()
+        self.layout_filepath = os.path.join(self.test_folder, "layout")
+
     def test_read_empty_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(
-            content=base_content.format(namespace="libA:", path_prefix="libA/"),
-            require_namespace=False)
+        save(self.layout_filepath, base_content.format(namespace="libA:", path_prefix="libA/"))
+        editable_cpp_info = EditableCppInfo.load(filepath=self.layout_filepath,
+                                                 require_namespace=False)
         self.assertFalse(editable_cpp_info._uses_namespace)
 
         data = editable_cpp_info._data
@@ -46,26 +54,26 @@ class NoNamespaceFileTest(unittest.TestCase):
         self.assertFalse(len(data['bindirs']))
 
     def test_read_empty_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(
-            content=base_content.format(namespace="", path_prefix=""),
-            require_namespace=True)
+        save(self.layout_filepath, base_content.format(namespace="", path_prefix=""))
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, require_namespace=True)
         self.assertTrue(editable_cpp_info._uses_namespace)
         self.assertFalse(len(editable_cpp_info._data.keys()))
 
     def test_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(self.content, require_namespace=False)
+        save(self.layout_filepath, self.content)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, require_namespace=False)
         self.assertFalse(editable_cpp_info._uses_namespace)
 
         data = editable_cpp_info._data
-        self.assertListEqual(sorted(data.keys()),
-                             sorted(EditableCppInfo.cpp_info_dirs))
+        self.assertListEqual(sorted(data.keys()), sorted(EditableCppInfo.cpp_info_dirs))
         self.assertListEqual(list(data['includedirs']), ['dirs/includedirs', ])
         self.assertListEqual(list(data['libdirs']), ['dirs/libdirs', ])
         self.assertListEqual(list(data['resdirs']), ['dirs/resdirs', ])
         self.assertListEqual(list(data['bindirs']), [])
 
     def test_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(self.content, require_namespace=True)
+        save(self.layout_filepath, self.content)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, require_namespace=True)
         self.assertTrue(editable_cpp_info._uses_namespace)
 
         self.assertListEqual(sorted(editable_cpp_info._data.keys()), sorted(['*', 'libA', ]))
@@ -88,4 +96,5 @@ class NoNamespaceFileTest(unittest.TestCase):
         self.assertListEqual(list(data['resdirs']), ['libA/dirs/resdirs', ])
         self.assertListEqual(list(data['bindirs']), [])
 
-
+    def tearDown(self):
+        shutil.rmtree(self.test_folder)
