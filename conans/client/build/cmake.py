@@ -59,7 +59,8 @@ class CMake(object):
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
-        self.msbuild_verbosity = msbuild_verbosity or get_env("CONAN_MSBUILD_VERBOSITY", "minimal")
+        self.msbuild_verbosity = (os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity or
+                                  "minimal")
 
     @property
     def build_folder(self):
@@ -189,7 +190,8 @@ class CMake(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
         with tools.environment_append(pkg_env):
-            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program, arg_list)
+            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
+                                          arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._run(command)
