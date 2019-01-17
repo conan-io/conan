@@ -1186,3 +1186,48 @@ build_type: [ Release]
             cmake = CMake(conanfile, cmake_program="but_not_cmake_from_the_ctor", parallel=False)
             cmake.build()
             self.assertEqual("cmake_from_environment_has_priority --build %s" % CMakeTest.scape("."), conanfile.command)
+
+    def test_msbuild_verbosity(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "10"
+        settings.compiler.runtime = "MDd"
+        settings.arch = "x86"
+        settings.build_type = None
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        cmake.build()
+        self.assertIn("/verbosity:minimal", conan_file.command)
+
+        cmake = CMake(conan_file, msbuild_verbosity="quiet")
+        cmake.build()
+        self.assertIn("/verbosity:quiet", conan_file.command)
+
+        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
+            cmake = CMake(conan_file)
+            cmake.build()
+            self.assertIn("/verbosity:detailed", conan_file.command)
+
+    def test_ctest_variables(self):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, parallel=False, generator="NMake Makefiles")
+        cmake.test()
+        self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "0")
+        self.assertNotIn("CTEST_PARALLEL_LEVEL", conanfile.captured_env)
+
+        with tools.environment_append({"CONAN_CPU_COUNT": "666"}):
+            cmake = CMake(conanfile, parallel=True, generator="NMake Makefiles")
+            cmake.test(output_on_failure=True)
+            self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "1")
+            self.assertEquals(conanfile.captured_env["CTEST_PARALLEL_LEVEL"], "666")
+
