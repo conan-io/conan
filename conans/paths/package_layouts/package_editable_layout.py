@@ -37,6 +37,9 @@ class PackageEditableLayout(object):
     def source(self):
         raise RuntimeError("Operation not allowed on a package installed as editable")
 
+    def load_metadata(self):
+        raise RuntimeError("Operation not allowed on a package installed as editable")
+
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
@@ -45,5 +48,3 @@ class PackageEditableLayout(object):
     def package_metadata(self):
         # FIXME: I know that downstream there is an except for IOError
         raise IOError("Package metadata is not available for editable packages")
-
-
