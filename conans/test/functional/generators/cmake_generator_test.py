@@ -39,7 +39,7 @@ PROFILE = """
 [settings]
 os_build={os_build}
 compiler={compiler}
-compiler.version=7
+compiler.version=5
 compiler.libcxx=libstdc++
 """
 
