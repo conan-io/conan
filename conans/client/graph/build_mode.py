@@ -51,10 +51,9 @@ class BuildMode(object):
                                    "build_policy='always'")
             return True
 
-        ref = ref.name
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if fnmatch.fnmatch(ref, pattern) or repr(reference) == pattern:
+            if fnmatch.fnmatch(ref.name, pattern) or repr(ref) == pattern:
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
