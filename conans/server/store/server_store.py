@@ -211,7 +211,7 @@ class ServerStore(SimplePaths):
             pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
-                pref = pref.copy_with_revs(rev.revision, tmp.revision)
+                pref = pref.copy_with_revs(rev.revision, tmp)
             try:
                 folder = self.package(pref)
                 if self._storage_adapter.path_exists(folder):
