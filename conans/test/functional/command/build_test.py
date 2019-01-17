@@ -310,7 +310,20 @@ class AConan(ConanFile):
         client.run("install . --build missing")
         client.run("build .")
 
-    def build_full_reference_test(self):
+    def build_single_full_reference_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, CMake
+
+class FooConan(ConanFile):
+    name = "foo"
+    version = "1.0"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create --build foo/1.0@user/stable . user/stable")
+        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
+
+    def build_multiple_full_reference_test(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -334,4 +347,3 @@ class BarConan(ConanFile):
         client.run("create --build foo/1.0@user/stable --build bar/1.0@user/testing . user/testing")
         self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
         self.assertIn("bar/1.0@user/testing: WARN: Forced build from source", client.out)
-        self.assertNotIn("ERROR", client.out)
