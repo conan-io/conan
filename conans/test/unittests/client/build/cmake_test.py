@@ -1161,6 +1161,32 @@ build_type: [ Release]
             cmake.build()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
+    def test_cmake_program(self):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, parallel=False)
+        cmake.build()
+        self.assertEqual("cmake --build %s" % CMakeTest.scape("."), conanfile.command)
+
+        cmake = CMake(conanfile, cmake_program="use_another_cmake", parallel=False)
+        cmake.build()
+        self.assertEqual("use_another_cmake --build %s" % CMakeTest.scape("."), conanfile.command)
+
+        with tools.environment_append({"CONAN_CMAKE_PROGRAM": "my_custom_cmake"}):
+            cmake = CMake(conanfile, parallel=False)
+            cmake.build()
+            self.assertEqual("my_custom_cmake --build %s"  % CMakeTest.scape("."), conanfile.command)
+
+        with tools.environment_append({"CONAN_CMAKE_PROGRAM": "cmake_from_environment_has_priority"}):
+            cmake = CMake(conanfile, cmake_program="but_not_cmake_from_the_ctor", parallel=False)
+            cmake.build()
+            self.assertEqual("cmake_from_environment_has_priority --build %s" % CMakeTest.scape("."), conanfile.command)
+
     def test_msbuild_verbosity(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
@@ -1204,3 +1230,4 @@ build_type: [ Release]
             cmake.test(output_on_failure=True)
             self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "1")
             self.assertEquals(conanfile.captured_env["CTEST_PARALLEL_LEVEL"], "666")
+
