@@ -26,7 +26,8 @@ class BuildModeTest(unittest.TestCase):
         self.assertTrue(build_mode.never)
 
     def test_invalid_configuration(self):
-        with self.assertRaises(ConanException):
+        with self.assertRaisesRegexp(ConanException,
+                                     "--build=never not compatible with other options"):
             BuildMode(["outdated", "missing", "never"], self.output)
 
     def test_common_build_force(self):
@@ -66,8 +67,7 @@ class BuildModeTest(unittest.TestCase):
 
     def test_allowed(self):
         build_mode = BuildMode(["outdated", "missing"], self.output)
-        reference = ConanFileReference.loads("Bar/0.1@user/stable")
-        self.assertTrue(build_mode.allowed(self.conanfile, reference))
+        self.assertTrue(build_mode.allowed(self.conanfile))
 
         build_mode = BuildMode([], self.output)
-        self.assertFalse(build_mode.allowed(self.conanfile, reference))
+        self.assertFalse(build_mode.allowed(self.conanfile))

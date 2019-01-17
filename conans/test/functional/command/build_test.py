@@ -125,8 +125,8 @@ class AConan(ConanFile):
         client.run("build ./my_conanfile.py")
         pref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package(pref).replace("\\", "/")
-        self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.user_io.out)
-        self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
+        self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
+        self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
 
