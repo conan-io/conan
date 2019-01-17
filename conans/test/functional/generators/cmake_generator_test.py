@@ -62,7 +62,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             self.assertIn("Check for working CXX compiler", client.out)
             self.assertIn('cmake -G "{}"'.format(generator), client.out)
 
-    @unittest.skipUnless(tools.os_info.is_windows, "Compilation with real gcc needed")
+    @unittest.skipUnless(tools.os_info.is_linux, "Compilation with real gcc needed")
     def test_cmake_default_generator_linux(self):
         self._generator_test_helper("Linux", "gcc", "5", "Unix Makefiles")
 
@@ -72,4 +72,4 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     @unittest.skipUnless(tools.os_info.is_macos, "Compilation with real clang is needed")
     def test_cmake_default_generator_osx(self):
-        self._generator_test_helper("Macos", "apple-clang", "9.1" "Unix Makefiles")
+        self._generator_test_helper("Macos", "apple-clang", "9.1", "Unix Makefiles")
