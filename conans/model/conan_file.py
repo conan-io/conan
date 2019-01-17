@@ -270,7 +270,7 @@ class ConanFile(object):
 
     def package_id(self):
         """ modify the conans info, typically to narrow values
-        eg.: conaninfo.package_references = []
+        eg.: self.info.package_references = []
         """
 
     def test(self):
