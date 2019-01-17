@@ -1,3 +1,3 @@
 idna==2.6 # Solving conflict, somehow is installing 2.7 when requests require 2.6
 cryptography>=1.3.4, <2.4.0
-pyOpenSSL>=16.0.0, <18.0.0
+pyOpenSSL>=16.0.0, <19.0.0
