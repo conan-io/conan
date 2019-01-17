@@ -21,13 +21,13 @@ class Pkg(ConanFile):
 
         # Copy all packages
         client.run("copy Hello0/0.1@lasote/stable pepe/testing --all")
-        pkgdir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/testing"))
+        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/testing"))
         packages = os.listdir(pkgdir)
         self.assertEquals(len(packages), 3)
 
         # Copy just one
         client.run("copy Hello0/0.1@lasote/stable pepe/stable -p %s" % packages[0])
-        pkgdir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/stable"))
+        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/stable"))
         packages = os.listdir(pkgdir)
         self.assertEquals(len(packages), 1)
 
@@ -38,5 +38,5 @@ class Pkg(ConanFile):
 
         # Copy only recipe
         client.run("copy Hello0/0.1@lasote/stable pepe/alpha")
-        pkgdir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/alpha"))
+        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/alpha"))
         self.assertFalse(os.path.exists(pkgdir))

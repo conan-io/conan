@@ -37,6 +37,8 @@ def detected_architecture():
         return "ppc64le"
     elif "ppc64" in machine:
         return "ppc64"
+    elif "ppc" in machine:
+        return "ppc32"
     elif "mips64" in machine:
         return "mips64"
     elif "mips" in machine:
@@ -83,24 +85,21 @@ class OSInfo(object):
     """
 
     def __init__(self):
+        system = platform.system()
         self.os_version = None
         self.os_version_name = None
-        self.is_linux = platform.system() == "Linux"
+        self.is_linux = system == "Linux"
         self.linux_distro = None
-        self.is_windows = platform.system() == "Windows"
-        self.is_macos = platform.system() == "Darwin"
-        self.is_freebsd = platform.system() == "FreeBSD"
-        self.is_solaris = platform.system() == "SunOS"
+        self.is_msys = system.startswith("MING") or system.startswith("MSYS_NT")
+        self.is_cygwin = system.startswith("CYGWIN_NT")
+        self.is_windows = system == "Windows" or self.is_msys or self.is_cygwin
+        self.is_macos = system == "Darwin"
+        self.is_freebsd = system == "FreeBSD"
+        self.is_solaris = system == "SunOS"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
-            import distro
-            self.linux_distro = distro.id()
-            self.os_version = Version(distro.version())
-            version_name = distro.codename()
-            self.os_version_name = version_name if version_name != "n/a" else ""
-            if not self.os_version_name and self.linux_distro == "debian":
-                self.os_version_name = self.get_debian_version_name(self.os_version)
+            self._get_linux_distro_info()
         elif self.is_windows:
             self.os_version = self.get_win_os_version()
             self.os_version_name = self.get_win_version_name(self.os_version)
@@ -113,6 +112,15 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+
+    def _get_linux_distro_info(self):
+        import distro
+        self.linux_distro = distro.id()
+        self.os_version = Version(distro.version())
+        version_name = distro.codename()
+        self.os_version_name = version_name if version_name != "n/a" else ""
+        if not self.os_version_name and self.linux_distro == "debian":
+            self.os_version_name = self.get_debian_version_name(self.os_version)
 
     @property
     def with_apt(self):
@@ -141,7 +149,7 @@ class OSInfo(object):
         if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
             return True
         return False
-    
+
     @staticmethod
     def get_win_os_version():
         """
@@ -262,7 +270,7 @@ class OSInfo(object):
     @staticmethod
     def uname(options=None):
         options = " %s" % options if options else ""
-        if platform.system() != "Windows":
+        if not OSInfo().is_windows:
             raise ConanException("Command only for Windows operating system")
         custom_bash_path = OSInfo.bash_path()
         if not custom_bash_path:
@@ -289,7 +297,7 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-or")
+            output = OSInfo.uname("-r")
             if output.startswith("2"):
                 return MSYS2
             elif output.startswith("1"):
@@ -303,7 +311,6 @@ class OSInfo(object):
 
 
 def cross_building(settings, self_os=None, self_arch=None):
-
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
@@ -341,7 +348,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
     # Calculate the arch
     machine = {"x86": "i686" if os_ != "Linux" else "x86",
                "x86_64": "x86_64",
-               "armv8": "aarch64"}.get(arch, None)
+               "armv8": "aarch64",
+               "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
+               "armv8.3": "aarch64"
+               }.get(arch, None)
 
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
@@ -351,7 +361,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "powerpc64le"
         elif "ppc64" in arch:
             machine = "powerpc64"
-        elif "powerpc" in arch:
+        elif "ppc32" in arch:
             machine = "powerpc"
         elif "mips64" in arch:
             machine = "mips64"
@@ -385,10 +395,13 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "tvOS": "apple-darwin"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
-        if "arm" in arch and arch != "armv8":
+        if "arm" in arch and "armv8" not in arch:
             op_system += "eabi"
 
         if arch == "armv7hf" and os_ == "Linux":
             op_system += "hf"
+
+        if arch == "armv8_32" and os_ == "Linux":
+            op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)

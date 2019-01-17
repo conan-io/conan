@@ -26,9 +26,9 @@ class MyPkg(ConanFile):
         self.client = client
 
     def basic_test(self):
-        ref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
-                               NO_SETTINGS_PACKAGE_ID)
-        path = os.path.join(self.client.client_cache.package(ref), "myheader.h")
+        pref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
+                                NO_SETTINGS_PACKAGE_ID)
+        path = os.path.join(self.client.cache.package(pref), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
         os.chmod(path, 0o777)
@@ -51,9 +51,9 @@ class MyPkg(ConanFile):
         client = TestClient(servers={"default": self.test_server},
                             users={"default": [("lasote", "mypass")]})
         client.run("install Pkg/0.1@lasote/channel")
-        ref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
-                               NO_SETTINGS_PACKAGE_ID)
-        path = os.path.join(client.client_cache.package(ref), "myheader.h")
+        pref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
+                                NO_SETTINGS_PACKAGE_ID)
+        path = os.path.join(client.cache.package(pref), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
         os.chmod(path, 0o777)

@@ -40,24 +40,24 @@ class ConfigTest(unittest.TestCase):
 
     def define_test(self):
         self.client.run("config set general.fakeos=Linux")
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn("fakeos = Linux", conf_file)
 
         self.client.run('config set general.compiler="Other compiler"')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn('compiler = Other compiler', conf_file)
 
         self.client.run('config set general.compiler.version=123.4.5')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn('compiler.version = 123.4.5', conf_file)
         self.assertNotIn("14", conf_file)
 
         self.client.run('config set general.new_setting=mysetting ')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn('new_setting = mysetting', conf_file)
 
         self.client.run('config set proxies.https=myurl')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn("https = myurl", conf_file.splitlines())
 
     def set_with_weird_path_test(self):
@@ -69,18 +69,18 @@ class ConfigTest(unittest.TestCase):
     def remove_test(self):
         self.client.run('config set proxies.https=myurl')
         self.client.run('config rm proxies.https')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('myurl', conf_file)
 
     def remove_section_test(self):
         self.client.run('config rm proxies')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('[proxies]', conf_file)
 
     def remove_envvar_test(self):
         self.client.run('config set env.MY_VAR=MY_VALUE')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertIn('MY_VAR = MY_VALUE', conf_file)
         self.client.run('config rm env.MY_VAR')
-        conf_file = load(self.client.client_cache.conan_conf_path)
+        conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('MY_VAR', conf_file)

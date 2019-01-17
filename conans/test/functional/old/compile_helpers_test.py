@@ -169,4 +169,4 @@ class ProfilesEnvironmentTest(unittest.TestCase):
         profile._settings = settings or {}
         for varname, value in env.items():
             profile.env_values.add(varname, value)
-        save(os.path.join(self.client.client_cache.profiles_path, name), "include(default)\n" + profile.dumps())
+        save(os.path.join(self.client.cache.profiles_path, name), "include(default)\n" + profile.dumps())

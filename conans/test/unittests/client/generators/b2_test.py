@@ -81,6 +81,10 @@ rule project-define ( id )
         : constant-if call-in-project
         : $(id-mod)
         : constant-if call-in-project ;
+    if [ project.is-jamroot-module $(base-project-mod) ]
+    {
+        use-project /$(id) : $(id) ;
+    }
     return $(id-mod) ;
 }
 

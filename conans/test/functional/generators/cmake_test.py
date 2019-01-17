@@ -9,6 +9,32 @@ from conans.test.utils.tools import TestClient
 
 class CMakeGeneratorTest(unittest.TestCase):
 
+    def test_no_check_compiler(self):
+        # https://github.com/conan-io/conan/issues/4268
+        file_content = '''from conans import ConanFile, CMake
+
+class ConanFileToolsTest(ConanFile):
+    generators = "cmake"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+    '''
+
+        cmakelists = '''cmake_minimum_required(VERSION 2.8)
+PROJECT(conanzlib LANGUAGES NONE)
+set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+
+include(conanbuildinfo.cmake)
+CONAN_BASIC_SETUP()
+'''
+        client = TestClient()
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run('install .')
+        client.run('build .')
+
     @attr('slow')
     def no_output_test(self):
         client = TestClient()

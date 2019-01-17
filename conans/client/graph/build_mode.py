@@ -39,7 +39,7 @@ class BuildMode(object):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
-    def forced(self, conan_file, reference):
+    def forced(self, conan_file, ref):
         if self.never:
             return False
         if self.all:
@@ -50,7 +50,7 @@ class BuildMode(object):
                                    "build_policy='always'")
             return True
 
-        ref = reference.name
+        ref = ref.name
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
             if fnmatch.fnmatch(ref, pattern):

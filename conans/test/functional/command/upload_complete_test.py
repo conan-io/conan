@@ -72,12 +72,12 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" %
-                                                  DEFAULT_REVISION_V1)
-        reg_folder = self.client.client_cache.export(self.conan_ref)
+        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" %
+                                            DEFAULT_REVISION_V1)
+        reg_folder = self.client.cache.export(self.ref)
 
-        self.client.run('upload %s' % str(self.conan_ref), assert_error=True)
-        self.assertIn("There is no local conanfile exported as %s" % str(self.conan_ref),
+        self.client.run('upload %s' % str(self.ref), assert_error=True)
+        self.assertIn("There is no local conanfile exported as %s" % str(self.ref),
                       self.client.user_io.out)
 
         files = hello_source_files()
@@ -87,16 +87,16 @@ class UploadTest(unittest.TestCase):
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
-        mkdir(self.client.client_cache.export_sources(self.conan_ref))
+        mkdir(self.client.cache.export_sources(self.ref))
         manifest = FileTreeManifest.create(reg_folder)
         manifest.time = '123123123'
         manifest.save(reg_folder)
-        self.test_server.server_store.update_last_revision(self.conan_ref)
+        self.test_server.server_store.update_last_revision(self.ref)
 
-        self.package_ref = PackageReference(self.conan_ref, "myfakeid", DEFAULT_REVISION_V1)
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.pref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
-        package_folder = self.client.client_cache.package(self.package_ref)
+        package_folder = self.client.cache.package(self.pref)
         save(os.path.join(package_folder, "include", "lib1.h"), "//header")
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
@@ -104,17 +104,17 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
         save(os.path.join(package_folder, CONANINFO), """[recipe_hash]\n%s""" % manifest.summary_hash)
         FileTreeManifest.create(package_folder).save(package_folder)
-        self.test_server.server_store.update_last_package_revision(self.package_ref)
+        self.test_server.server_store.update_last_package_revision(self.pref)
 
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
-        package_path = self.client.client_cache.package(self.package_ref)
+        package_path = self.client.cache.package(self.pref)
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(package_folder)
 
-        self.server_reg_folder = self.test_server.server_store.export(self.conan_ref)
+        self.server_reg_folder = self.test_server.server_store.export(self.ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
@@ -123,7 +123,7 @@ class UploadTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        os.unlink(os.path.join(self.client.client_cache.export(ref), CONAN_MANIFEST))
+        os.unlink(os.path.join(self.client.cache.export(ref), CONAN_MANIFEST))
         with self.assertRaisesRegexp(Exception, "Command failed"):
             self.client.run("upload %s" % str(ref))
 
@@ -217,16 +217,16 @@ class UploadTest(unittest.TestCase):
 
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package
-        pack_path = self.client.client_cache.package(self.package_ref)
-        package_path = self.client.client_cache.package(self.package_ref)
+        pack_path = self.client.cache.package(self.pref)
+        package_path = self.client.cache.package(self.pref)
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(pack_path)
 
-        self.client.run("upload %s --all" % str(self.conan_ref))
+        self.client.run("upload %s --all" % str(self.ref))
         self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", str(self.client.user_io.out))
 
-        self.client.run("upload %s --all" % str(self.conan_ref))
+        self.client.run("upload %s --all" % str(self.ref))
         self.assertNotIn("Compressing recipe", self.client.user_io.out)
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
         self.assertIn("Package is up to date", str(self.client.user_io.out))
@@ -252,21 +252,21 @@ class TestConan(ConanFile):
         """ basic installation of a new conans
         """
         # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.conan_ref, str(self.package_ref.package_id)))
-        self.assertIn("Uploaded conan recipe '%s'" % str(self.conan_ref), self.client.out)
+        self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
+        self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
     def simple_test(self):
         """ basic installation of a new conans
         """
         # Upload conans
-        self.client.run('upload %s' % str(self.conan_ref))
+        self.client.run('upload %s' % str(self.ref))
         if not self.client.block_v2:
-            rev = self.client.get_revision(self.conan_ref)
-            self.conan_ref = self.conan_ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            rev = self.client.get_revision(self.ref)
+            self.ref = self.ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
-        self.server_reg_folder = self.test_server.server_store.export(self.conan_ref)
+        self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
         if self.client.block_v2:
@@ -274,9 +274,9 @@ class TestConan(ConanFile):
 
         # Upload package
         self.client.run('upload %s -p %s'
-                        % (str(self.conan_ref), str(self.package_ref.package_id)))
+                        % (str(self.ref), str(self.pref.id)))
 
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
@@ -303,7 +303,7 @@ class TestConan(ConanFile):
             else:
                 self.assertFalse(os.path.exists(os.path.join(tmp, f)))
 
-        folder = uncompress_packaged_files(self.test_server.server_store, self.package_ref)
+        folder = uncompress_packaged_files(self.test_server.server_store, self.pref)
 
         self.assertTrue(os.path.exists(os.path.join(folder,
                                                     "include",
@@ -324,7 +324,7 @@ class TestConan(ConanFile):
     def upload_all_test(self):
         '''Upload conans and package together'''
         # Try to upload all conans and packages
-        self.client.run('upload %s --all' % str(self.conan_ref))
+        self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable to remote 'default'",
@@ -337,13 +337,13 @@ class TestConan(ConanFile):
                                  "Uploading conan_package.tgz",
                                  ])
         if not self.client.block_v2:
-            rev = self.client.get_revision(self.conan_ref)
-            self.conan_ref = self.conan_ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            rev = self.client.get_revision(self.ref)
+            self.ref = self.ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
-        server_reg_folder = self.test_server.server_store.export(self.conan_ref)
-        server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        server_reg_folder = self.test_server.server_store.export(self.ref)
+        server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(server_reg_folder))
         self.assertTrue(os.path.exists(server_pack_folder))
@@ -351,35 +351,36 @@ class TestConan(ConanFile):
     def force_test(self):
         '''Tries to upload a conans exported after than remote version.'''
         # Upload all conans and packages
-        self.client.run('upload %s --all' % str(self.conan_ref))
+        self.client.run('upload %s --all' % str(self.ref))
 
         if not self.client.block_v2:
-            rev = self.client.get_revision(self.conan_ref)
-            self.conan_ref = self.conan_ref.copy_with_rev(rev)
-            prev = self.client.get_package_revision(self.package_ref)
-            self.package_ref = self.package_ref.copy_with_revs(rev, prev)
+            rev = self.client.get_revision(self.ref)
+            self.ref = self.ref.copy_with_rev(rev)
+            prev = self.client.get_package_revision(self.pref)
+            self.pref = self.pref.copy_with_revs(rev, prev)
 
-        self.server_reg_folder = self.test_server.server_store.export(self.conan_ref)
-        self.server_pack_folder = self.test_server.server_store.package(self.package_ref)
+        self.server_reg_folder = self.test_server.server_store.export(self.ref)
+        self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
         # Fake datetime from exported date and upload again
-        old_digest = self.client.client_cache.load_manifest(self.conan_ref)
+
+        old_digest = self.client.cache.package_layout(self.ref).load_manifest()
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
-        fake_digest.save(self.client.client_cache.export(self.conan_ref))
+        fake_digest.save(self.client.cache.export(self.ref))
 
-        self.client.run('upload %s' % str(self.conan_ref), assert_error=True)
+        self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("Remote recipe is newer than local recipe", self.client.user_io.out)
 
-        self.client.run('upload %s --force' % str(self.conan_ref))
-        self.assertIn("Uploading %s" % str(self.conan_ref),
+        self.client.run('upload %s --force' % str(self.ref))
+        self.assertIn("Uploading %s" % str(self.ref),
                       self.client.user_io.out)
 
         # Repeat transfer, to make sure it is uploading again
-        self.client.run('upload %s --force' % str(self.conan_ref))
+        self.client.run('upload %s --force' % str(self.ref))
         self.assertIn("Uploading conan_export.tgz", self.client.out)
         self.assertIn("Uploading conanfile.py", self.client.out)
 

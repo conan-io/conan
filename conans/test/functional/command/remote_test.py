@@ -131,7 +131,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_ref")
         self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
         self.assertIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.client_cache.registry_path)
+        registry = load(self.client.cache.registry_path)
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertIn("Hello/0.1@user/testing", registry)
 
@@ -143,7 +143,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_ref")
         self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
         self.assertNotIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.client_cache.registry_path)
+        registry = load(self.client.cache.registry_path)
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
@@ -262,7 +262,7 @@ class HelloConan(ConanFile):
         client.run("remote add my-remote2 http://someurl2 yes")
         client.run("remote add my-remote3 http://someurl3 FALse")
         client.run("remote add my-remote4 http://someurl4 No")
-        registry = load(client.client_cache.registry_path)
+        registry = load(client.cache.registry_path)
         data = json.loads(registry)
         self.assertEquals(data["remotes"][0]["name"], "my-remote")
         self.assertEquals(data["remotes"][0]["url"], "http://someurl")
@@ -286,7 +286,7 @@ class HelloConan(ConanFile):
 
         self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
                       client.user_io.out)
-        data = json.loads(load(client.client_cache.registry_path))
+        data = json.loads(load(client.cache.registry_path))
         self.assertEqual(data["remotes"], [])
         self.assertEqual(data["references"], {})
 
