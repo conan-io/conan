@@ -176,7 +176,8 @@ class OptionsValues(object):
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                package_values = self._reqs_options.setdefault(package.strip(), PackageOptionValues())
+                package_values = self._reqs_options.setdefault(package.strip(),
+                                                               PackageOptionValues())
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
@@ -367,7 +368,7 @@ class PackageOptions(object):
 
     @staticmethod
     def loads(text):
-        return PackageOptions(yaml.load(text) or {})
+        return PackageOptions(yaml.safe_load(text) or {})
 
     def get_safe(self, field):
         return self._data.get(field)
@@ -461,7 +462,8 @@ class PackageOptions(object):
                 modified_value, modified_ref = modified
                 raise ConanException("%s tried to change %s option %s to %s\n"
                                      "but it was already assigned to %s by %s"
-                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                                     % (down_ref, own_ref, name, value,
+                                        modified_value, modified_ref))
             else:
                 if name in pattern_options:  # If it is a pattern-matched option, should check field
                     if name in self._data:
