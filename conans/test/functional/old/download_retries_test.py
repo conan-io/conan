@@ -38,7 +38,7 @@ class MyConanfile(ConanFile):
             ok = None
             status_code = None
             charset = None
-            headers = {}
+            headers = {"Content-Type": "application/json"}
 
             def __init__(self, ok, status_code):
                 self.ok = ok
