@@ -12,11 +12,13 @@ class _VSSettings(object):
     def __init__(self, settings):
         toolset = msvs_toolset(settings)
         if toolset is None:
-            raise ConanException("Undefined Visual Studio version %s" % settings.get_safe("compiler.version"))
+            raise ConanException("Undefined Visual Studio version %s" %
+                                 settings.get_safe("compiler.version"))
 
         self._props = [("Configuration", settings.get_safe("build_type")),
-                       ("Platform", {'x86': 'Win32', 'x86_64': 'x64'}.get(settings.get_safe("arch"))),
-                       ("PlatformToolset", msvs_toolset(settings))]
+                       ("Platform", {'x86': 'Win32',
+                                     'x86_64': 'x64'}.get(settings.get_safe("arch"))),
+                       ("PlatformToolset", toolset)]
 
     @property
     def filename(self):

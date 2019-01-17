@@ -1,18 +1,13 @@
-import os
 import platform
 import unittest
 
 import mock
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client import tools
 from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockConanfile, MockSettings
-from conans.test.utils.visual_project_files import get_vs_project_files
 
 
 class MSBuildTest(unittest.TestCase):
@@ -141,12 +136,13 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("projecshould_flags_testt_file.sln", properties={"MyProp1": "MyValue1",
-                                                                      "MyProp2": "MyValue2"})
+        command = msbuild.get_command("project_should_flags_test_file.sln",
+                                      properties={"MyProp1": "MyValue1", "MyProp2": "MyValue2"})
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
-    @parameterized.expand([("15", "v141"),
+    @parameterized.expand([("16", "v141"),
+                           ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),
@@ -160,7 +156,7 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("projecshould_flags_testt_file.sln")
+        command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
     @parameterized.expand([("v141",),
@@ -177,10 +173,11 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("projecshould_flags_testt_file.sln", toolset=expected_toolset)
+        command = msbuild.get_command("project_should_flags_test_file.sln", toolset=expected_toolset)
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    @parameterized.expand([("15", "v141_xp"),
+    @parameterized.expand([("16", "v141_xp"),
+                           ("15", "v141_xp"),
                            ("14", "v140_xp"),
                            ("12", "v120_xp"),
                            ("11", "v110_xp")])
@@ -192,5 +189,5 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("projecshould_flags_testt_file.sln")
+        command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)

@@ -102,22 +102,18 @@ MSVS_DEFAULT_TOOLSETS = {"16": "v141",
                          "9": "v90",
                          "8": "v80"}
 
-MSVS_VERSIONS = sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int)
-
 
 def msvs_toolset(settings):
     toolset = settings.get_safe("compiler.toolset")
     if not toolset:
         vs_version = settings.get_safe("compiler.version")
-        try:
-            toolset = MSVS_DEFAULT_TOOLSETS[vs_version]
-        except KeyError:
-            return None
+        toolset = MSVS_DEFAULT_TOOLSETS.get(vs_version)
     return toolset
 
 
 def latest_visual_studio_version_installed(output):
-    for version in reversed(MSVS_VERSIONS):
+    msvc_sersions = reversed(sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int))
+    for version in msvc_sersions:
         vs = _visual_compiler(output, version)
         if vs:
             return vs[1]

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import platform
 import unittest
@@ -9,8 +8,6 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.client.conf import default_settings_yml
-from conans.model.settings import Settings
 from conans.test.utils.conanfile import MockSettings
 
 
@@ -18,7 +15,8 @@ from conans.test.utils.conanfile import MockSettings
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class MSVCToolsetTest(unittest.TestCase):
 
-    @parameterized.expand([("15", "v141"),
+    @parameterized.expand([("16", "v141"),
+                           ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),
@@ -26,20 +24,19 @@ class MSVCToolsetTest(unittest.TestCase):
                            ("9", "v90"),
                            ("8", "v80")])
     def test_default(self, compiler_version, expected_toolset):
-        settings = Settings.loads(default_settings_yml)
-        settings.compiler = 'Visual Studio'
-        settings.compiler.version = compiler_version
+        settings = MockSettings({"compiler": "Visual Studio",
+                                 "compiler.version": compiler_version})
         self.assertEqual(expected_toolset, tools.msvs_toolset(settings))
 
-    @parameterized.expand([("15", "v141_xp"),
+    @parameterized.expand([("16", "v141_xp"),
+                           ("15", "v141_xp"),
                            ("14", "v140_xp"),
                            ("12", "v120_xp"),
                            ("11", "v110_xp")])
     def test_custom(self, compiler_version, expected_toolset):
-        settings = Settings.loads(default_settings_yml)
-        settings.compiler = 'Visual Studio'
-        settings.compiler.version = compiler_version
-        settings.compiler.toolset = expected_toolset
+        settings = MockSettings({"compiler": "Visual Studio",
+                                 "compiler.version": compiler_version,
+                                 "compiler.toolset": expected_toolset})
         self.assertEqual(expected_toolset, tools.msvs_toolset(settings))
 
     def test_negative(self):
