@@ -7,6 +7,7 @@ from conans.test.utils.tools import TestClient
 resp = Response()
 resp._content = b'{"results": []}'
 resp.status_code = 200
+resp.headers = {"Content-Type": "application/json"}
 
 
 class RequesterMockTrue(object):
@@ -54,4 +55,3 @@ class VerifySSLTest(unittest.TestCase):
         self.client = TestClient(requester_class=RequesterMockFalse)
         self.client.run("remote add myremote https://localhost False")
         self.client.run("search op* -r myremote")
-
