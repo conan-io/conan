@@ -1680,6 +1680,14 @@ class GitToolsTests(unittest.TestCase):
         tag = git.get_tag()
         self.assertIsNone(tag)
 
+    def test_get_tag_no_git_repo(self):
+        """
+        Try to get tag out of a git repo
+        """
+        git = Git(folder=temp_folder())
+        with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
+            git.get_tag()
+
 
 @attr("slow")
 @attr('svn')
@@ -1877,6 +1885,10 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertIsNone(svn.get_branch())
 
+        svn = SVN(folder=self.gimme_tmp())
+        with self.assertRaisesRegexp(ConanException, "Unable to get svn branch"):
+            svn.get_branch()
+
     def test_tag(self):
         project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
                                                     'prj1/branches/my_feature/myfile': "",
@@ -1898,6 +1910,10 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
         self.assertEqual("v12.3.4", svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
+            svn.get_tag()
 
 
 @attr("slow")

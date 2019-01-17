@@ -180,7 +180,7 @@ class Git(SCMBase):
         self._check_git_repo()
         try:
             status = self.run("describe --exact-match --tags")
-            tag = status.splitlines()[0].strip()  # 1.11.2-42-g326d3942
+            tag = status.strip()
             return tag
         except Exception:
             return None
@@ -350,17 +350,13 @@ class SVN(SCMBase):
         return item.replace("tags/", "") if item else None
 
     def _get_item(self, pattern, item_name):
-        url = self._show_item('relative-url')
         try:
-            item = re.search(pattern, url)
-
-            if item is None:
-                return None
-            else:
-                return item.group(0)
+            url = self._show_item('relative-url')
         except Exception as e:
             raise ConanException("Unable to get svn %s from %s: %s"
                                  % (item_name, self.folder, str(e)))
+        item = re.search(pattern, url)
+        return item.group(0) if item else None
 
     def _check_svn_repo(self):
         try:
