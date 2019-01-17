@@ -191,3 +191,58 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
+
+    def definitions_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_WIN32_WINNT': "0x0501"})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_WIN32_WINNT=0x0501;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
+
+    def definitions_no_value_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_DEBUG': None})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_DEBUG;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
+
+    def verbosity_default_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("projecshould_flags_testt_file.sln")
+        self.assertIn('/verbosity:minimal', command)
+
+    def verbosity_env_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
+            conanfile = MockConanfile(settings)
+            msbuild = MSBuild(conanfile)
+            command = msbuild.get_command("projecshould_flags_testt_file.sln")
+            self.assertIn('/verbosity:detailed', command)
+
+    def verbosity_explicit_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
+        self.assertIn('/verbosity:quiet', command)
+

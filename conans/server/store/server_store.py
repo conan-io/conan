@@ -273,7 +273,7 @@ class ServerStore(SimplePaths):
                 rev_list.add_revision(DEFAULT_REVISION_V1)
                 self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                                  lock_file=rev_file_path + ".lock")
-                return DEFAULT_REVISION_V1
+                return rev_list.latest_revision()
             else:
                 return None
         return rev_list.latest_revision()

@@ -177,7 +177,7 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
     digest.save(exports_folder)
 
     revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
-    with cache.update_metadata(ref) as metadata:
+    with cache.package_layout(ref).update_metadata() as metadata:
         # Note that there is no time set, the time will come from the remote
         metadata.recipe.revision = revision
 
