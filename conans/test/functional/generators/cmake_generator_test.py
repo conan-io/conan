@@ -40,7 +40,7 @@ add_executable(dummy dummy.cpp)
 @attr("slow")
 class CMakeGeneratorTest(unittest.TestCase):
 
-    def _generator_test_helper(self, os_build):
+    def _generator_test_helper(self, os_build, makefile):
         try:
             client = TestClient()
             client.save({"conanfile.py": CONAN_RECIPE,
@@ -51,13 +51,14 @@ class CMakeGeneratorTest(unittest.TestCase):
             self.assertNotIn("TypeError: argument of type 'NoneType' is not iterable", client.user_io.out)
             self.assertNotIn("ERROR:", client.user_io.out)
             self.assertIn("Check for working CXX compiler", client.user_io.out)
+            self.assertIn('cmake -G "{}"'.format(makefile), client.user_io.out)
 
     def test_cmake_default_generator_linux(self):
-        self._generator_test_helper("Linux")
+        self._generator_test_helper("Linux", "Unix Makefiles")
 
     @unittest.skipUnless(tools.os_info.is_windows, "MinGW is only supported on Windows")
     def test_cmake_default_generator_windows(self):
-        self._generator_test_helper("Windows")
+        self._generator_test_helper("Windows", "MinGW Makefiles")
 
     def test_cmake_default_generator_osx(self):
-        self._generator_test_helper("Macos")
+        self._generator_test_helper("Macos", "Unix Makefiles")
