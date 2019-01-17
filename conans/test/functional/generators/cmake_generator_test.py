@@ -72,4 +72,4 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     @unittest.skipUnless(tools.os_info.is_macos, "Compilation with real clang is needed")
     def test_cmake_default_generator_osx(self):
-        self._generator_test_helper("Macos", "apple-clang", "9.1", "Unix Makefiles")
+        self._generator_test_helper("Macos", "apple-clang", "9.0", "Unix Makefiles")
