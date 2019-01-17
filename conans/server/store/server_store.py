@@ -211,7 +211,7 @@ class ServerStore(SimplePaths):
             pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
-                pref = pref.copy_with_revs(rev.revision, tmp)
+                pref = pref.copy_with_revs(rev.revision, tmp.revision)
             try:
                 folder = self.package(pref)
                 if self._storage_adapter.path_exists(folder):
@@ -273,7 +273,7 @@ class ServerStore(SimplePaths):
                 rev_list.add_revision(DEFAULT_REVISION_V1)
                 self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                                  lock_file=rev_file_path + ".lock")
-                return DEFAULT_REVISION_V1
+                return rev_list.latest_revision()
             else:
                 return None
         return rev_list.latest_revision()

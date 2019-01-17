@@ -61,5 +61,3 @@ class RevisionList(object):
 
     def __eq__(self, other):
         return self.dumps() == other.dumps()
-
-
