@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-import unittest
-import platform
 import os
+import unittest
+from mock import mock
+
 from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, remove_from_path
 from conans.errors import ConanException
-from mock import mock
-from nose.plugins.attrib import attr
 
 
 class OSInfoTest(unittest.TestCase):

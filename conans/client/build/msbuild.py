@@ -1,4 +1,5 @@
 import copy
+import os
 import re
 import subprocess
 
@@ -79,7 +80,8 @@ class MSBuild(object):
                                        targets=targets, upgrade_project=upgrade_project,
                                        build_type=build_type, arch=arch, parallel=parallel,
                                        toolset=toolset, platforms=platforms,
-                                       use_env=use_env, properties=properties, output_binary_log=output_binary_log,
+                                       use_env=use_env, properties=properties,
+                                       output_binary_log=output_binary_log,
                                        verbosity=verbosity)
             command = "%s && %s" % (vcvars, command)
             return self._conanfile.run(command)
@@ -99,7 +101,7 @@ class MSBuild(object):
 
         build_type = build_type or self._settings.get_safe("build_type")
         arch = arch or self._settings.get_safe("arch")
-        verbosity = verbosity or get_env("CONAN_MSBUILD_VERBOSITY", "minimal")
+        verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or verbosity or "minimal"
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
@@ -125,7 +127,8 @@ class MSBuild(object):
         else:
             config = "%s|%s" % (build_type, msvc_arch)
             if config not in "".join(lines):
-                self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
+                self._output.warn("***** The configuration %s does not exist in this solution *****"
+                                  % config)
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
@@ -173,7 +176,8 @@ class MSBuild(object):
         runtime_library = {"MT": "MultiThreaded",
                            "MTd": "MultiThreadedDebug",
                            "MD": "MultiThreadedDLL",
-                           "MDd": "MultiThreadedDebugDLL"}.get(self._settings.get_safe("compiler.runtime"), "")
+                           "MDd": "MultiThreadedDebugDLL"}.get(
+                               self._settings.get_safe("compiler.runtime"), "")
 
         if self.build_env:
             # Take the flags from the build env, the user was able to alter them if needed
@@ -216,7 +220,7 @@ class MSBuild(object):
         vcvars = vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
-            out, err = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
             version_line = decode_text(out).split("\n")[-1]
             prog = re.compile("(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()
