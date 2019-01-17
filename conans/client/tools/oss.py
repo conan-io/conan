@@ -291,7 +291,7 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-or")
+            output = OSInfo.uname("-r")
             if output.startswith("2"):
                 return MSYS2
             elif output.startswith("1"):
