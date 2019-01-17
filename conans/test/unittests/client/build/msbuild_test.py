@@ -5,6 +5,7 @@ import mock
 from parameterized import parameterized
 
 from conans.client.build.msbuild import MSBuild
+from conans.client import tools
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings
