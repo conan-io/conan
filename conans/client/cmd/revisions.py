@@ -4,20 +4,16 @@ from conans.errors import NotFoundException
 from conans.util.dates import from_timestamp_to_datetime
 
 
-def get_local_recipe_revisions(ref, cache):
+def get_local_recipe_revision(ref, cache):
     if not os.path.exists(cache.export(ref)):
         raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-    ret = {"reference": ref.full_repr(), "revisions": []}
     metadata = cache.load_metadata(ref)
     the_time = from_timestamp_to_datetime(metadata.recipe.time) \
         if metadata.recipe.time else None
-    ret["revisions"].append({"revision": metadata.recipe.revision,
-                             "time": the_time})
-    return ret
+    return metadata.recipe.revision, the_time
 
 
-def get_local_package_revisions(pref, cache):
-    ret = {"reference": pref.full_repr(), "revisions": []}
+def get_local_package_revision(pref, cache):
     if not os.path.exists(cache.export(pref.ref)) or \
             (pref.ref.revision and
              cache.load_metadata(pref.ref).recipe.revision != pref.ref.revision):
@@ -29,6 +25,5 @@ def get_local_package_revisions(pref, cache):
         tm = from_timestamp_to_datetime(metadata.packages[pref.id].time)
     else:
         tm = None
-    ret["revisions"].append({"revision": metadata.packages[pref.id].revision,
-                             "time": tm})
-    return ret
+
+    return metadata.packages[pref.id].revision, tm

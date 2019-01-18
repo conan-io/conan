@@ -4,8 +4,10 @@ import os
 import shutil
 import unittest
 from collections import OrderedDict
+from textwrap import dedent
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
@@ -1124,7 +1126,8 @@ class Test(ConanFile):
         json_path = os.path.join(client.current_folder, "search.json")
 
         # JSON output remote
-        client.run("search lib/1.0@user/testing -r default --revisions --json search.json")
+        client.run('search lib/1.0@user/testing -r default '
+                   '--revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
         self.assertEquals(j["reference"], "lib/1.0@user/testing")
         self.assertEquals(j["revisions"][0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
@@ -1134,7 +1137,7 @@ class Test(ConanFile):
         self.assertEquals(len(j["revisions"]), 2)
 
         # JSON output local
-        client.run("search lib/1.0@user/testing --revisions --json search.json")
+        client.run('search lib/1.0@user/testing --revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
         self.assertEquals(j["reference"], "lib/1.0@user/testing")
         self.assertEquals(j["revisions"][0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
@@ -1196,7 +1199,7 @@ class Test(ConanFile):
 
         # JSON output remote
         client.run("search %s -r default --revisions "
-                   "--json search.json" % full_ref.format(rrev=first_rrev))
+                   "--json \"%s\"" % (full_ref.format(rrev=first_rrev), json_path))
         j = json.loads(load(json_path))
         self.assertEquals(j["reference"], full_ref.format(rrev=first_rrev))
         self.assertEquals(j["revisions"][0]["revision"], first_prev)
@@ -1267,4 +1270,51 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
         self.assertIn("ERROR: The remote doesn't support revisions", client.out)
 
+    def test_invalid_references_test(self):
+        client = TestClient()
+        # Local errors
+        client.run("search missing/1.0@conan/stable#revision --revisions", assert_error=True)
+        self.assertIn("Cannot list the revisions of a specific revision", client.out)
 
+        client.run("search missing/1.0@conan/stable:pid#revision --revisions", assert_error=True)
+        self.assertIn("Specify a recipe reference with revision", client.out)
+
+        client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions",
+                   assert_error=True)
+        self.assertIn("Cannot list the revisions of a specific package revision", client.out)
+
+        # Remote errors
+        client.run("search missing/1.0@conan/stable#revision --revisions -r fake",
+                   assert_error=True)
+        self.assertIn("Cannot list the revisions of a specific revision", client.out)
+
+        client.run("search missing/1.0@conan/stable:pid#revision --revisions -r fake",
+                   assert_error=True)
+        self.assertIn("Specify a recipe reference with revision", client.out)
+
+        client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
+                   assert_error=True)
+        self.assertIn("Cannot list the revisions of a specific package revision", client.out)
+
+    def test_not_revisions_enabled_but_usage_of_search(self):
+
+        def create_local_revision(assert_error):
+            client = TestClient()
+            conanfile = dedent("""
+                        from conans import ConanFile
+                        class Test(ConanFile):
+                            pass
+                        """)
+            client.save({"conanfile.py": conanfile})
+            client.run("create . lib/1.0@conan/stable")
+            client.run("search lib/1.0@conan/stable --revisions", assert_error=assert_error)
+            return client
+
+        with environment_append({"CONAN_API_V2_BLOCKED": "1"}):
+            client = create_local_revision(assert_error=True)
+            # Cannot check easily the output from arg parse, but no conan output is printed
+            self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+        with environment_append({"CONAN_API_V2_BLOCKED": "0"}):
+            client = create_local_revision(assert_error=False)
+            self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)

@@ -15,7 +15,7 @@ from conans.client.cmd.export import cmd_export, export_alias, export_recipe, ex
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
-from conans.client.cmd.revisions import get_local_recipe_revisions, get_local_package_revisions
+from conans.client.cmd.revisions import get_local_recipe_revision, get_local_package_revision
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
@@ -933,24 +933,31 @@ class ConanAPIV1(object):
     @api_method
     def get_recipe_revisions(self, reference, remote_name=None):
         ref = ConanFileReference.loads(str(reference))
+        if ref.revision:
+            raise ConanException("Cannot list the revisions of a specific revision")
+
         if not remote_name:
-            return get_local_recipe_revisions(ref, self._cache)
+            rev, tm = get_local_recipe_revision(ref, self._cache)
+            return {"reference": ref.full_repr(),
+                    "revisions": [{"revision": rev, "time": tm}]}
         else:
             remote = self.get_remote_by_name(remote_name)
-            if ref.revision:
-                raise ConanException("Cannot list the revisions of a specific revision")
             return self._remote_manager.get_recipe_revisions(ref, remote=remote)
 
     @api_method
     def get_package_revisions(self, reference, remote_name=None):
         pref = PackageReference.loads(str(reference), validate=True)
+        if not pref.ref.revision:
+            raise ConanException("Specify a recipe reference with revision")
+        if pref.revision:
+            raise ConanException("Cannot list the revisions of a specific package revision")
+
         if not remote_name:
-            return get_local_package_revisions(pref, self._cache)
+            rev, tm = get_local_package_revision(pref, self._cache)
+            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+
         else:
             remote = self.get_remote_by_name(remote_name)
-            if not pref.ref.revision:
-                raise ConanException("Specify a recipe reference with revision")
-
             return self._remote_manager.get_package_revisions(pref, remote=remote)
 
     @api_method

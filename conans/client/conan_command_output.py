@@ -118,9 +118,9 @@ class CommandOutputer(object):
             printer.print_search_packages(search_info, reference, packages_query,
                                           outdated=outdated)
 
-    def print_revisions(self, ref, revisions, remote_name=None):
+    def print_revisions(self, reference, revisions, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
-        self.user_io.out.info("Revisions for '%s'%s:" % (ref, remote_test))
+        self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
 
         def dt_str(dt):
             if not dt:

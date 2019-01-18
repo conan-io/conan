@@ -30,8 +30,11 @@ class RevisionList(object):
         if index:
             self._data.pop(index)
 
-        now = time.time()
-        self._data.append(_RevisionEntry(revision_id, now))
+        self._data.append(_RevisionEntry(revision_id, self._now()))
+
+    @staticmethod
+    def _now():
+        return time.time()
 
     def latest_revision(self):
         if not self._data:
