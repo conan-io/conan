@@ -23,6 +23,7 @@ class LayoutTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "layout": ""})
         client.run("link . mytool/0.1@user/testing -l=layout")
+        self.assertIn("Using layout file:", client.out)
         client2 = TestClient(client.base_folder)
         consumer = textwrap.dedent("""
             [requires]
