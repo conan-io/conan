@@ -82,8 +82,7 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
 
-    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None,
-                cache=None,
+    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None, cache=None,
                 local_sources_path=conanfile_folder,
                 get_sources_from_exports=get_sources_from_exports)
 
@@ -131,14 +130,12 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
             merge_directories(export_source_folder, src_folder)
 
         _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                    cache, local_sources_path,
-                    get_sources_from_exports=get_sources_from_exports)
+                    cache, local_sources_path, get_sources_from_exports=get_sources_from_exports)
         clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                cache, local_sources_path,
-                get_sources_from_exports):
+def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache,
+                local_sources_path, get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
