@@ -212,3 +212,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
+
+    if cache:
+        # This is a bit weird. Why after a SCM should we remove files. Maybe check conan 2.0
+        _clean_source_folder(dest_dir)  # TODO: Why removing in the cache? There is no danger.

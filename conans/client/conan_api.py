@@ -11,7 +11,7 @@ from conans.client.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import cmd_profile_create, cmd_profile_delete_key, cmd_profile_get, \
     cmd_profile_list, cmd_profile_update
@@ -49,7 +49,7 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
@@ -661,11 +661,6 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        #conanfile_folder = os.path.dirname(conanfile_path)
-        #if conanfile_folder != source_folder:
-        #    conanfile.output.info("Executing exports to: %s" % source_folder)
-        #    export_recipe(conanfile, conanfile_folder, source_folder)
-        #    export_source(conanfile, conanfile_folder, source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self._hook_manager)
 
     @api_method
