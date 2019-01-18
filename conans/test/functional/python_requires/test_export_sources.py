@@ -20,8 +20,10 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
                 
                 def source(self):
                     self.output.info(">>>> PyReq::source")
-                    self.output.info(">>>> - source_folder: {}".format(self.source_folder))
-            """)
+                    self.output.info(">>>> - source_folder: {{}}".format(self.source_folder))
+                    self.output.info(self.python_requires)
+                    self.output.info(str(self.python_requires['{pyreq_name}'].ref))
+            """.format(pyreq_name=self.pyreq.name))
 
         self.t = TestClient()
         self.t.save({"conanfile.py": conanfile, "file.txt": str(self.pyreq)})
