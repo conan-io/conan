@@ -1,11 +1,12 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer,\
-    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
-from conans.paths import CONANFILE
 from parameterized import parameterized
+
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
 
 
 class PythonExtendTest(unittest.TestCase):
