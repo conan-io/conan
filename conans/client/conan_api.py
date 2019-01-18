@@ -661,11 +661,11 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        conanfile_folder = os.path.dirname(conanfile_path)
-        if conanfile_folder != source_folder:
-            conanfile.output.info("Executing exports to: %s" % source_folder)
-            export_recipe(conanfile, conanfile_folder, source_folder)
-            export_source(conanfile, conanfile_folder, source_folder)
+        #conanfile_folder = os.path.dirname(conanfile_path)
+        #if conanfile_folder != source_folder:
+        #    conanfile.output.info("Executing exports to: %s" % source_folder)
+        #    export_recipe(conanfile, conanfile_folder, source_folder)
+        #    export_source(conanfile, conanfile_folder, source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self._hook_manager)
 
     @api_method
