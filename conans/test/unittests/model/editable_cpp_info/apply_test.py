@@ -46,8 +46,8 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is maintained
-        self.assertListEqual(cpp_info.bindirs, ['bin'])
+        # The default defined by package_info() is removed
+        self.assertListEqual(cpp_info.bindirs, [])
 
     def test_require_namespace(self):
         content = '\n\n'.join([
@@ -61,13 +61,13 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['libA/dirs/resdirs'])
-        # The default defined by package_info() is maintained
-        self.assertListEqual(cpp_info.bindirs, ['bin'])
+        # The default defined by package_info() is removed
+        self.assertListEqual(cpp_info.bindirs, [])
 
         cpp_info = CppInfo(None)
         editable_cpp_info.apply_to('other', cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is maintained
-        self.assertListEqual(cpp_info.bindirs, ['bin'])
+        # The default defined by package_info() is removed
+        self.assertListEqual(cpp_info.bindirs, [])

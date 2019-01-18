@@ -27,10 +27,6 @@ class PackageEditableLayout(object):
         """
         return os.path.join(self.conan(), CONANFILE)
 
-    @property
-    def layout_file(self):
-        return self._layout_file
-
     def editable_cpp_info(self):
         if self._layout_file:
             if os.path.isfile(self._layout_file):

@@ -124,6 +124,34 @@ class LayoutTest(unittest.TestCase):
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % layout))
 
+    def test_recipe_paths(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "build_type"
+                def package_info(self):
+                    if not self.in_local_cache:
+                        d = "include_%s" % self.settings.build_type
+                        self.cpp_info.includedirs = [d.lower()]
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("link . mytool/0.1@user/testing")
+        client2 = TestClient(client.base_folder)
+        consumer = textwrap.dedent("""
+            [requires]
+            mytool/0.1@user/testing
+            """)
+        client2.save({"conanfile.txt": consumer})
+
+        for build_type in ("Debug", "Release"):
+            client2.run("install . -s build_type=%s -g cmake" % build_type)
+            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
+            include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
+            self.assertTrue(include_dirs.endswith("include_%s" % build_type.lower()))
+
     def test_parameterized_paths(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
