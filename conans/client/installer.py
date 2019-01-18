@@ -321,8 +321,6 @@ class BinaryInstaller(object):
         node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
-        print "NODE ", node, " EDITABLE ", editable_cpp_info
-        print "PACKAGE LAYOUT ", package_layout._layout_file
         if editable_cpp_info:
             editable_cpp_info.apply_to(node.conanfile.name,
                                        node.conanfile.cpp_info,
