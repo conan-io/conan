@@ -163,7 +163,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                 get_sources_from_exports()
 
                 if cache:
-                    _clean_source_folder(src_folder)  # TODO: Why in cache?
+                    _clean_source_folder(src_folder)  # TODO: Why is it needed in cache?
 
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
                     conanfile.source()
