@@ -5,7 +5,6 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
-from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE
 
 
 class LinkedPackageAsProject(unittest.TestCase):
@@ -33,7 +32,7 @@ class LinkedPackageAsProject(unittest.TestCase):
         self.t.save(files={'conanfile.py':
                            self.conanfile_base.format(
                                body='requires = "{}"'.format(self.ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+                           "mylayout": self.conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 

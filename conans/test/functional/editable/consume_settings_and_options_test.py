@@ -9,8 +9,7 @@ from parameterized import parameterized
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE,\
-    DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
+from conans.model.editable_cpp_info import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -68,7 +67,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
                  }
 
         if use_repo_file:
-            files[CONAN_PACKAGE_LAYOUT_FILE] = self.conan_package_layout.format(namespace="")
+            files["mylayout"] = self.conan_package_layout.format(namespace="")
         else:
             file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path,
@@ -89,7 +88,10 @@ class SettingsAndOptionsTest(unittest.TestCase):
         # Editable project
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   base_folder=base_folder)
-        client_editable.run("link . MyLib/0.1@user/editable")
+        if use_repo_file:
+            client_editable.run("link . MyLib/0.1@user/editable -l=mylayout")
+        else:
+            client_editable.run("link . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)

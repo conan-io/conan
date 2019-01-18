@@ -20,7 +20,6 @@ class EditedPackages(object):
                                  for r, d in edited_js.items()}
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}
-        self._editable_cpp_info = {}  # Lazy dict
 
     def save(self):
         d = {str(ref): d for ref, d in self._edited_refs.items()}

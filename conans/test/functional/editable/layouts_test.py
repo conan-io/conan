@@ -174,7 +174,7 @@ class LayoutTest(unittest.TestCase):
             """)
         client2.save({"conanfile.txt": consumer})
         client2.run("install . -g cmake -s build_type=Debug", assert_error=True)
-        self.assertIn("ERROR: Error applying layout in 'mytool': "
+        self.assertIn("ERROR: Error applying layout in 'mytool/0.1@user/testing': "
                       "'settings.build_type' doesn't exist", client2.out)
 
         # Now add settings to conanfile

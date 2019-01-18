@@ -5,7 +5,6 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
-from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE
 
 
 class ForbiddenRemoveTest(unittest.TestCase):
@@ -20,7 +19,7 @@ class ForbiddenRemoveTest(unittest.TestCase):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
         t.save(files={'conanfile.py': conanfile,
-                      CONAN_PACKAGE_LAYOUT_FILE: "", })
+                      "mylayout": "", })
         t.run("export . lib/version@user/name")
         t.run('link . {}'.format(ref))
         self.assertTrue(t.cache.installed_as_editable(ref))
@@ -44,7 +43,7 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.t.save(files={'conanfile.py': self.conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: "", })
+                           "mylayout": "", })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 

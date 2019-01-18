@@ -322,7 +322,7 @@ class BinaryInstaller(object):
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
         if editable_cpp_info:
-            editable_cpp_info.apply_to(node.conanfile.name,
+            editable_cpp_info.apply_to(node.ref,
                                        node.conanfile.cpp_info,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)

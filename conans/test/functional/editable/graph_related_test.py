@@ -7,7 +7,6 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
-from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE
 
 
 conanfile_base = textwrap.dedent("""\
@@ -64,7 +63,7 @@ class RelatedToGraphBehavior(object):
 
     def test_do_nothing(self):
         self.t.save(files={'conanfile.py': conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
+                           "mylayout": conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
@@ -81,7 +80,7 @@ class RelatedToGraphBehavior(object):
         # Create our project and link it
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
+                           "mylayout": conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
 
         # Install our project and check that everything is in place
@@ -106,7 +105,7 @@ class RelatedToGraphBehavior(object):
         path_to_lib = os.path.join(self.t.current_folder, 'lib')
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
+                           "mylayout": conan_package_layout, },
                     path=path_to_lib)
         self.t.run('link "{}" {}'.format(path_to_lib, self.ref))
 
