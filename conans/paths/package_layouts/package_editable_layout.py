@@ -6,7 +6,7 @@ from conans.errors import ConanException
 from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
-from conans.paths import CONANFILE, CONAN_PACKAGE_LAYOUT_FILE
+from conans.paths import CONANFILE
 
 
 class PackageEditableLayout(object):
@@ -32,10 +32,11 @@ class PackageEditableLayout(object):
         return self._layout_file
 
     def editable_cpp_info(self):
-        local_file = self._layout_file or CONAN_PACKAGE_LAYOUT_FILE
-        local_file = os.path.join(self.conan(), local_file)
-        if os.path.exists(local_file):
-            return EditableCppInfo.load(local_file)
+        if self._layout_file:
+            if os.path.isfile(self._layout_file):
+                return EditableCppInfo.load(self._layout_file)
+            else:
+                raise ConanException("Layout file not found: %s" % self._layout_file)
 
     def export(self):
         raise ConanException("Operation not allowed on a package installed as editable")

@@ -6,12 +6,11 @@ import tempfile
 import unittest
 from parameterized import parameterized
 
-from conans.client.edited import LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE
-from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
+from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE,\
+    DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -77,10 +76,6 @@ src/include/{{settings.build_type}}/{{options.shared}}
 
         self.save(files)
 
-    def make_editable(self, full_reference):
-        ref = ConanFileReference.loads(full_reference)
-        self.cache.edited_packages.link(ref, self.current_folder, None)
-
 
 class SettingsAndOptionsTest(unittest.TestCase):
 
@@ -94,7 +89,7 @@ class SettingsAndOptionsTest(unittest.TestCase):
         # Editable project
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   base_folder=base_folder)
-        client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
+        client_editable.run("link . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)

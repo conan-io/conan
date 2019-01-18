@@ -40,7 +40,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
     def test_require_no_namespace(self):
         content = base_content.format(namespace="", path_prefix="")
         save(self.layout_filepath, content)
-        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, allow_package_name=False)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath)
         cpp_info = CppInfo(None)
         editable_cpp_info.apply_to('libA', cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
@@ -55,7 +55,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
             base_content.format(namespace="libA:", path_prefix="libA/")
             ])
         save(self.layout_filepath, content)
-        editable_cpp_info = EditableCppInfo.load(self.layout_filepath, allow_package_name=True)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath)
         cpp_info = CppInfo(None)
         editable_cpp_info.apply_to('libA', cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])

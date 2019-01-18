@@ -26,20 +26,11 @@ class ParseTest(unittest.TestCase):
                             """)
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
-            _ = EditableCppInfo.load(self.layout_filepath, allow_package_name=False)
+            _ = EditableCppInfo.load(self.layout_filepath)
         content = textwrap.dedent("""
                             [*:includedrs]
                             something
                             """)
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
-            _ = EditableCppInfo.load(self.layout_filepath, allow_package_name=True)
-
-    def namespace_error_test(self):
-        content = textwrap.dedent("""
-                            [*:includedirs]
-                            something
-                            """)
-        save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Repository layout file doesn't allow pattern"):
-            _ = EditableCppInfo.load(self.layout_filepath, allow_package_name=False)
+            _ = EditableCppInfo.load(self.layout_filepath)

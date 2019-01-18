@@ -321,17 +321,13 @@ class BinaryInstaller(object):
         node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
-        layout_file = package_layout.layout_file
-        if not editable_cpp_info:
-            editable_cpp_info = self._cache.edited_packages.editable_cpp_info(layout_file)
-
+        print "NODE ", node, " EDITABLE ", editable_cpp_info
+        print "PACKAGE LAYOUT ", package_layout._layout_file
         if editable_cpp_info:
             editable_cpp_info.apply_to(node.conanfile.name,
                                        node.conanfile.cpp_info,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
-        elif layout_file:
-            raise ConanException("Layout file not found: %s" % layout_file)
 
     def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
         conan_file = node.conanfile

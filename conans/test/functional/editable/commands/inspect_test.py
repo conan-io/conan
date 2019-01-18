@@ -1,12 +1,11 @@
 # coding=utf-8
 
-import os
 import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient
+from conans.model.editable_cpp_info import CONAN_PACKAGE_LAYOUT_FILE
 
 
 class InspectCommandTest(unittest.TestCase):

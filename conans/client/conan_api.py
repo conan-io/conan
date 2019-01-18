@@ -56,6 +56,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.editable_cpp_info import get_editable_abs_path
 
 default_manifest_folder = '.conan_manifests'
 
@@ -934,6 +935,7 @@ class ConanAPIV1(object):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
+        # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
@@ -942,7 +944,10 @@ class ConanAPIV1(object):
                                  "conanfile.py ({}/{}) must match".
                                  format(ref, target_conanfile.name, target_conanfile.version))
 
-        self._cache.edited_packages.link(ref, os.path.dirname(target_path), layout)
+        layout_abs_path = get_editable_abs_path(layout, cwd, self._cache.conan_folder)
+        if layout_abs_path:
+            self._user_io.out.success("Using layout file: %s" % layout_abs_path)
+        self._cache.edited_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
 
     @api_method
     def unlink(self, reference):
