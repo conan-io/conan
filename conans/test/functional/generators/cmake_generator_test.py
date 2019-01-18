@@ -16,7 +16,7 @@ class FooConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self, generator="{}")
+        cmake = CMake(self)
         cmake.configure()
 """
 
@@ -40,7 +40,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def _check_build_generator(self, generator):
         client = TestClient()
-        client.save({"conanfile.py": CONAN_RECIPE.format(generator),
+        client.save({"conanfile.py": CONAN_RECIPE,
                      "CMakeLists.txt": CMAKE_RECIPE,
                      "dummy.cpp": CPP_CONTENT})
 
