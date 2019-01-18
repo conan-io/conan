@@ -14,13 +14,14 @@ from conans.model.version import Version
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
+from conans.util.env_reader import get_env
 
 
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False):
+                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -32,6 +33,8 @@ class CMake(object):
                 applies only to certain generators (e.g. Visual Studio)
         :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS, CMAKE_C_FLAGS, etc.
                it's vital to set for certain projects (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
+        :param msbuild_verbosity: verbosity level for MSBuild (in case of Visual Studio generator)
+        :param cmake_program: Path to the custom cmake executable
         """
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
@@ -39,6 +42,7 @@ class CMake(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
+        self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator = generator or get_generator(conanfile.settings)
         self.parallel = parallel
@@ -55,6 +59,8 @@ class CMake(object):
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
+        self.msbuild_verbosity = (os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity or
+                                  "minimal")
 
     @property
     def build_folder(self):
@@ -184,7 +190,8 @@ class CMake(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
         with tools.environment_append(pkg_env):
-            command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
+                                          arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._run(command)
@@ -202,8 +209,8 @@ class CMake(object):
         if target is not None:
             args = ["--target", target] + args
 
+        compiler_version = self._settings.get_safe("compiler.version")
         if self.generator and self.parallel:
-            compiler_version = self._settings.get_safe("compiler.version")
             if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
@@ -215,12 +222,19 @@ class CMake(object):
                 # Parallel for building projects in the solution
                 args.append("/m:%i" % cpu_count(output=self._conanfile.output))
 
+        if self.generator and self.msbuild_verbosity:
+            if "Visual Studio" in self.generator and \
+                    compiler_version and Version(compiler_version) >= "10":
+                if "--" not in args:
+                    args.append("--")
+                args.append("/verbosity:%s" % self.msbuild_verbosity)
+
         arg_list = join_arguments([
             args_to_string([build_dir]),
             self.build_config,
             args_to_string(args)
         ])
-        command = "cmake --build %s" % arg_list
+        command = "%s --build %s" % (self._cmake_program, arg_list)
         self._run(command)
 
     def install(self, args=None, build_dir=None):
@@ -233,12 +247,17 @@ class CMake(object):
                                  "defined" % cmake_install_prefix_var_name)
         self._build(args=args, build_dir=build_dir, target="install")
 
-    def test(self, args=None, build_dir=None, target=None):
+    def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
-        self._build(args=args, build_dir=build_dir, target=target)
+
+        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
+        if self.parallel:
+            env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
+        with tools.environment_append(env):
+            self._build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):

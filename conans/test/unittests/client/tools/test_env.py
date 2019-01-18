@@ -46,3 +46,9 @@ class ToolsEnvTest(unittest.TestCase):
                               'env_var2': 'value2'}),\
              env.environment_append({'env_var1': None}):
                 self.assertNotIn('env_var1', os.environ)
+
+    def test_environment_append_unsetting_non_existing_variables(self):
+        with mock.patch.dict('os.environ',
+                             {'env_var2': 'value2'}),\
+             env.environment_append({'env_var1': None}):
+                self.assertNotIn('env_var1', os.environ)

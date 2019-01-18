@@ -176,6 +176,15 @@ class Git(SCMBase):
         except Exception as e:
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
+    def get_tag(self):
+        self._check_git_repo()
+        try:
+            status = self.run("describe --exact-match --tags")
+            tag = status.strip()
+            return tag
+        except Exception:
+            return None
+
     def _check_git_repo(self):
         try:
             self.run("status")
@@ -333,17 +342,21 @@ class SVN(SCMBase):
             return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
-        url = self._show_item('relative-url')
+        item = self._get_item("branches/[^/]+|trunk", "branch")
+        return item.replace("branches/", "") if item else None
+
+    def get_tag(self):
+        item = self._get_item("tags/[^/]+", "tag")
+        return item.replace("tags/", "") if item else None
+
+    def _get_item(self, pattern, item_name):
         try:
-            pattern = "(tags|branches)/[^/]+|trunk"
-            branch = re.search(pattern, url)
-            
-            if branch is None:
-                return None
-            else:
-                return branch.group(0)
+            url = self._show_item('relative-url')
         except Exception as e:
-            raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
+            raise ConanException("Unable to get svn %s from %s: %s"
+                                 % (item_name, self.folder, str(e)))
+        item = re.search(pattern, url)
+        return item.group(0) if item else None
 
     def _check_svn_repo(self):
         try:
