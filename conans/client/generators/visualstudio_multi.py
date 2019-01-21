@@ -5,28 +5,20 @@ from conans.client.generators import VisualStudioGenerator
 from conans.errors import ConanException
 from conans.model import Generator
 from conans.util.files import load
+from conans.client.tools import msvs_toolset
 
 
 class _VSSettings(object):
     def __init__(self, settings):
-        self._props = [("Configuration", settings.get_safe("build_type")),
-                       ("Platform", {'x86': 'Win32', 'x86_64': 'x64'}.get(settings.get_safe("arch")))]
+        toolset = msvs_toolset(settings)
+        if toolset is None:
+            raise ConanException("Undefined Visual Studio version %s" %
+                                 settings.get_safe("compiler.version"))
 
-        toolset = settings.get_safe("compiler.toolset")
-        if not toolset:
-            default_toolset = {"15": "v141",
-                               "14": "v140",
-                               "12": "v120",
-                               "11": "v110",
-                               "10": "v100",
-                               "9": "v90",
-                               "8": "v80"}
-            try:
-                vs_version = settings.get_safe("compiler.version")
-                toolset = default_toolset[vs_version]
-            except KeyError:
-                raise ConanException("Undefined Visual Studio version %s" % vs_version)
-        self._props.append(("PlatformToolset", toolset))
+        self._props = [("Configuration", settings.get_safe("build_type")),
+                       ("Platform", {'x86': 'Win32',
+                                     'x86_64': 'x64'}.get(settings.get_safe("arch"))),
+                       ("PlatformToolset", toolset)]
 
     @property
     def filename(self):
