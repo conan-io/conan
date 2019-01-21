@@ -6,8 +6,9 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
-from conans.util.files import load, save_files
+from conans.util.files import load, save_files, save
 from conans.model.editable_cpp_info import LAYOUTS_FOLDER
+from conans.test.utils.test_files import temp_folder
 
 
 class LayoutTest(unittest.TestCase):
@@ -71,7 +72,7 @@ class LayoutTest(unittest.TestCase):
             """)
         client2.save({"conanfile.txt": consumer})
         client2.run("install . -g cmake")
-        self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+        self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
         cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
         include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
         self.assertTrue(include_dirs.endswith("include"))
@@ -80,7 +81,7 @@ class LayoutTest(unittest.TestCase):
         for layout in ("win", "linux", "win_cache", "linux_cache", "win_cache2", "linux_cache2"):
             client.run("link . mytool/0.1@user/testing -l=layout_%s" % layout)
             client2.run("install . -g cmake")
-            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
             cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % layout))
@@ -111,7 +112,7 @@ class LayoutTest(unittest.TestCase):
             """)
         client2.save({"conanfile.txt": consumer})
         client2.run("install . -g cmake")
-        self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+        self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
         cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
         include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
         self.assertTrue(include_dirs.endswith("include"))
@@ -120,7 +121,7 @@ class LayoutTest(unittest.TestCase):
         for layout in ("win/cache", "linux/cache", "layout/win", "layout/linux"):
             client.run("link . mytool/0.1@user/testing -l=%s" % layout)
             client2.run("install . -g cmake")
-            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
             cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % layout))
@@ -148,7 +149,7 @@ class LayoutTest(unittest.TestCase):
 
         for build_type in ("Debug", "Release"):
             client2.run("install . -s build_type=%s -g cmake" % build_type)
-            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
             cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % build_type.lower()))
@@ -182,7 +183,36 @@ class LayoutTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile.replace("pass", 'settings = "build_type"')})
         for setting in ("Debug", "Release"):
             client2.run("install . -g cmake -s build_type=%s" % setting)
-            self.assertIn("mytool/0.1@user/testing from local cache - Editable", client2.out)
+            self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
             cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % setting))
+
+    def test_absolute_paths(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                pass
+            """)
+        layoutabs = textwrap.dedent("""
+            [includedirs]
+            include_abs_path
+            """)
+
+        tmp_folder = temp_folder()
+        layout_path = os.path.join(tmp_folder, "layout")
+        save(layout_path, layoutabs)
+        client.save({"conanfile.py": conanfile})
+        client.run('link . mytool/0.1@user/testing -l="%s"' % layout_path)
+        client2 = TestClient(client.base_folder)
+        consumer = textwrap.dedent("""
+            [requires]
+            mytool/0.1@user/testing
+            """)
+        client2.save({"conanfile.txt": consumer})
+        client2.run("install . -g cmake")
+        self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
+        cmake = load(os.path.join(client2.current_folder, "conanbuildinfo.cmake"))
+        include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
+        self.assertTrue(include_dirs.endswith("include_abs_path"))

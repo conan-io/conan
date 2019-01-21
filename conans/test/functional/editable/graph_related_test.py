@@ -86,7 +86,7 @@ class RelatedToGraphBehavior(object):
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
         self.t.run('install {}{}'.format(self.ref, update))
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
         self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
@@ -121,7 +121,7 @@ class RelatedToGraphBehavior(object):
         child_remote = 'No remote' if update else 'Cache'
         self.assertIn("    child/version@lasote/channel from local cache - {}".format(child_remote),
                       self.t.out)
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
         self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
 

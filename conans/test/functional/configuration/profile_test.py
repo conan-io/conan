@@ -43,12 +43,22 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def test_profile_relative_cwd(self):
+        client = TestClient()
+        client.save({"conanfile.txt": "",
+                     "sub/sub/profile": ""})
+        client.current_folder = os.path.join(client.current_folder, "sub")
+        client.run("install .. -pr=sub/profile2", assert_error=True)
+        self.assertIn("ERROR: Profile not found: sub/profile2", client.out)
+        client.run("install .. -pr=sub/profile")
+        self.assertIn("conanfile.txt: Installing package", client.out)
+
     def base_profile_generated_test(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
         client = TestClient()
         client.save({CONANFILE: conanfile_scope_env,
-                          "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
+                     "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
         client.run("create . conan/testing --profile myprofile")
 
     def bad_syntax_test(self):
@@ -175,7 +185,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
-        self.client.cache.default_profile # Creates default
+        self.client.cache.default_profile  # Creates default
         tools.replace_in_file(self.client.cache.default_profile_path,
                               "compiler.libcxx", "#compiler.libcxx", strict=False,
                               output=self.client.out)
