@@ -947,12 +947,12 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self._cache.conan_folder)
         if layout_abs_path:
             self._user_io.out.success("Using layout file: %s" % layout_abs_path)
-        self._cache.edited_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
+        self._cache.editable_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
 
     @api_method
     def unlink(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
-        return self._cache.edited_packages.remove(ref)
+        return self._cache.editable_packages.remove(ref)
 
 
 Conan = ConanAPIV1

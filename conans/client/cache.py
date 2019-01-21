@@ -5,7 +5,7 @@ from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.edited import EditedPackages
+from conans.client.edited import EditablePackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
@@ -56,11 +56,11 @@ class ClientCache(SimplePaths):
         self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
-        self.edited_packages = EditedPackages(self.conan_folder)
+        self.editable_packages = EditablePackages(self.conan_folder)
 
     def package_layout(self, ref, short_paths=False):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        edited_ref = self.edited_packages.get(ref.copy_clear_rev())
+        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
             base_path = edited_ref["path"]
             layout_file = edited_ref["layout"]

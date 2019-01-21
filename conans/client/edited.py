@@ -6,13 +6,13 @@ from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
 
-EDITED_PACKAGES = 'edited_packages'
+EDITABLE_PACKAGES = 'editable_packages'
 
 
-class EditedPackages(object):
+class EditablePackages(object):
     def __init__(self, cache_folder):
         self._cache_folder = cache_folder
-        self._edited_file = normpath(join(cache_folder, EDITED_PACKAGES))
+        self._edited_file = normpath(join(cache_folder, EDITABLE_PACKAGES))
         if os.path.exists(self._edited_file):
             edited = load(self._edited_file)
             edited_js = json.loads(edited)
