@@ -81,3 +81,27 @@ Please keep in mind these points:
   - Backwards compatibility and not breaking users' packages is very important and it won't be done unless there are very good reasons.
 - You should not get bothered if you feel unattended, Conan is an Open Source project, not a commercial product. Try to explain what you
   really need and we will try to help you.
+
+Code style
+----------
+
+- In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/)
+- Limit all lines to a maximum of 101 characters (`Right margin` setting in PyCharm)
+- Start new files with [encoding declaration](https://www.python.org/dev/peps/pep-0263/):
+```
+# -*- coding: utf-8 -*-
+```
+- Specify imports in the following order: system, `blank line`, 3rd-party, `blank line`, own; all sorted alphabetically:
+```
+import os
+import platform
+import shutil
+
+from nose.plugins.attrib import attr
+from tqdm import tqdm
+
+from conans.client.tools import which
+from conans.errors import ConanException
+from conans.model.version import Version
+```
+- Write unit tests, if possible
