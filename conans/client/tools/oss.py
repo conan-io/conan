@@ -288,6 +288,12 @@ class OSInfo(object):
     @staticmethod
     def detect_windows_subsystem():
         from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
+        if OSInfo().is_linux:
+            try:
+                with open("/proc/sys/kernel/osrelease") as f:
+                    return WSL if f.read().endswith("Microsoft") else None
+            except FileNotFoundError:
+                return None
         try:
             output = OSInfo.uname()
         except ConanException:
