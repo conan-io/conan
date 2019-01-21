@@ -299,7 +299,7 @@ class ConanAPIV1(object):
         return result
 
     @api_method
-    def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
+    def test(self, path, reference, profile_names=None, settings=None, options=None, env=None,
              remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None):
 
         settings = settings or []
@@ -308,7 +308,7 @@ class ConanAPIV1(object):
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
-        graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
+        graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
@@ -320,7 +320,7 @@ class ConanAPIV1(object):
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
-               profile_name=None, settings=None,
+               profile_names=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
                keep_source=False, keep_build=False, verify=None,
@@ -359,7 +359,7 @@ class ConanAPIV1(object):
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
-            graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
                                         self._cache, self._user_io.out)
 
             manager = self._init_manager(recorder)
@@ -378,7 +378,7 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   package_folder=None, install_folder=None, profile_name=None, settings=None,
+                   package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None):
 
         settings = settings or []
@@ -407,7 +407,7 @@ class ConanAPIV1(object):
                                            default=os.path.dirname(conanfile_path))
 
             # Checks that no both settings and info files are specified
-            graph_info = get_graph_info(profile_name, settings, options, env, cwd, install_folder,
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
                                         self._cache, self._user_io.out)
 
             conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
@@ -446,7 +446,7 @@ class ConanAPIV1(object):
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
-                          manifests_interactive=None, build=None, profile_name=None,
+                          manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None):
 
         try:
@@ -457,7 +457,7 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
                                         self._cache, self._user_io.out)
 
             if not generators:  # We don't want the default txt
@@ -480,7 +480,7 @@ class ConanAPIV1(object):
     @api_method
     def install(self, path="", settings=None, options=None, env=None,
                 remote_name=None, verify=None, manifests=None,
-                manifests_interactive=None, build=None, profile_name=None,
+                manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
 
         try:
@@ -489,7 +489,7 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
                                         self._cache, self._user_io.out)
 
             wspath = _make_abs_path(path, cwd)
@@ -552,7 +552,7 @@ class ConanAPIV1(object):
         return configuration_install(path_or_url, self._cache, self._user_io.out, verify_ssl,
                                      requester=self._requester, config_type=config_type, args=args)
 
-    def _info_args(self, reference_or_path, install_folder, profile_name, settings, options, env):
+    def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
         cwd = get_cwd()
         try:
             ref = ConanFileReference.loads(reference_or_path)
@@ -567,16 +567,16 @@ class ConanAPIV1(object):
                 if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
                     install_folder = cwd
 
-        graph_info = get_graph_info(profile_name, settings, options, env, cwd, install_folder,
+        graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
                                     self._cache, self._user_io.out)
 
         return ref, graph_info
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
-                         profile_name=None, remote_name=None, build_order=None, check_updates=None,
+                         profile_names=None, remote_name=None, build_order=None, check_updates=None,
                          install_folder=None):
-        reference, graph_info = self._info_args(reference, install_folder, profile_name,
+        reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
@@ -586,9 +586,9 @@ class ConanAPIV1(object):
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_name=None, remote_name=None, check_updates=None,
+                            profile_names=None, remote_name=None, check_updates=None,
                             install_folder=None):
-        reference, graph_info = self._info_args(reference, install_folder, profile_name,
+        reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
@@ -600,8 +600,8 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_name=None, update=False, install_folder=None, build=None):
-        reference, graph_info = self._info_args(reference, install_folder, profile_name,
+             profile_names=None, update=False, install_folder=None, build=None):
+        reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
@@ -953,7 +953,7 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def get_graph_info(profile_name, settings, options, env, cwd, install_folder, cache, output):
+def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output):
     try:
         graph_info = GraphInfo.load(install_folder)
         graph_info.profile.process_settings(cache, preprocess=False)
@@ -963,7 +963,7 @@ def get_graph_info(profile_name, settings, options, env, cwd, install_folder, ca
                                  % install_folder)
         graph_info = None
 
-    if profile_name or settings or options or profile_name or env or not graph_info:
+    if profile_names or settings or options or profile_names or env or not graph_info:
         if graph_info:
             # FIXME: Convert to Exception in Conan 2.0
             output.warn("Settings, options, env or profile specified. "
@@ -971,7 +971,7 @@ def get_graph_info(profile_name, settings, options, env, cwd, install_folder, ca
                         "Don't pass settings, options or profile arguments if you want to reuse "
                         "the installed graph-info file."
                         % install_folder)
-        profile = profile_from_args(profile_name, settings, options, env, cwd, cache)
+        profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
         graph_info = GraphInfo(profile=profile)
         # Preprocess settings and convert to real settings
