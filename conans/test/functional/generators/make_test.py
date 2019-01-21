@@ -42,7 +42,7 @@ include conanbuildinfo.mak
 #     Make variables for a sample App
 #----------------------------------------
 
-INCLUDE_PATHS = \
+INCLUDE_DIRS = \
 ./include
 
 CXX_SRCS = \
@@ -66,9 +66,9 @@ CXXFLAGS += \
 
 CFLAGS              += $(CONAN_CFLAGS)
 CXXFLAGS            += $(CONAN_CXXFLAGS)
-CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -I, $(INCLUDE_DIRS) $(CONAN_INCLUDE_DIRS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
 LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
 SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 
@@ -174,9 +174,9 @@ EXELINKFLAGS += \
 
 CFLAGS              += $(CONAN_CFLAGS)
 CXXFLAGS            += $(CONAN_CXXFLAGS)
-CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
+CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
+LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
 LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
 EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
