@@ -110,6 +110,10 @@ class SCM(object):
         return url
 
     def get_local_path_to_url(self, url):
+        """ Compute the local path to the directory where the URL is pointing to (only make sense
+            for CVS where chunks of the repository can be checked out isolated). The argument
+            'url' should be contained inside the root url.
+        """
         src_root = self.get_repo_root()
         url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
         if url_root:
