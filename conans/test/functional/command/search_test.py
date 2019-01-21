@@ -1100,13 +1100,17 @@ from conans import ConanFile
 class Test(ConanFile):
     pass
 """
+        the_time = time.time()
+        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+
         client.save({"conanfile.py": conanfile})
         client.run("export . lib/1.0@user/testing")
-        client.run("upload lib/1.0@user/testing -c")
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload lib/1.0@user/testing -c")
 
         # List locally
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
 
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
@@ -1114,14 +1118,13 @@ class Test(ConanFile):
 
         client.run("search lib/1.0@user/testing --revisions")
         self.assertNotIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
-        self.assertIn("a94417fca6b55779c3b158f2ff50c40a (No time)", client.out)
+        self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         # List remote
-        the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
         client.run("search lib/1.0@user/testing -r default --revisions")
-        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a ({})".format(time_str), client.out)
         self.assertNotIn("(No time)", client.out)
@@ -1144,7 +1147,7 @@ class Test(ConanFile):
         j = json.loads(load(json_path))
         self.assertEquals(j["reference"], "lib/1.0@user/testing")
         self.assertEquals(j["revisions"][0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
-        self.assertIsNone(j["revisions"][0]["time"])
+        self.assertIsNotNone(j["revisions"][0]["time"])
         self.assertEquals(len(j["revisions"]), 1)
 
     def search_package_revisions_test(self):
@@ -1157,21 +1160,25 @@ from conans import ConanFile
 class Test(ConanFile):
     pass
 """
+        the_time = time.time()
+        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@user/testing")
-        client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         first_rrev = "bd761686d5c57b31f4cd85fd0329751f"
         first_prev = "e928490f2e24da2ab391f0b289dd73c1"
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
-        self.assertIn("%s (No time)" % first_prev, client.out)
+        self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
 
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
         client.run("create . lib/1.0@user/testing")
-        the_time = time.time()
+
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         client.run("search lib/1.0@user/testing --revisions")
@@ -1179,12 +1186,11 @@ class Test(ConanFile):
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
         second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
-
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
         self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)

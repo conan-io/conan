@@ -155,21 +155,21 @@ class CmdUpload(object):
         t1 = time.time()
         self._user_io.out.info(msg)
 
-        if pref.ref.revision:
-            # Read the revisions and build a correct package reference for the server
-            package_revision = metadata.packages[pref.id].revision
-            # Copy to not modify the original with the revisions
-            pref = pref.copy_with_revs(pref.ref.revision, package_revision)
-        else:
-            pref = pref.copy_clear_rev()
+        # Read the revisions and build a correct package reference for the server
+        package_revision = metadata.packages[pref.id].revision
+        # Copy to not modify the original with the revisions
+        new_pref = pref.copy_with_revs(pref.ref.revision, package_revision)
 
-        new_pref = self._remote_manager.upload_package(pref, p_remote, retry, retry_wait,
-                                                       integrity_check, policy)
+        assert (new_pref.revision is not None)
+        assert (new_pref.ref.revision is not None)
+
+        self._remote_manager.upload_package(new_pref, p_remote, retry, retry_wait, integrity_check,
+                                            policy)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
-        if (not cur_package_remote or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
-            self._registry.prefs.set(pref, p_remote.name)
+        cur_package_remote = self._registry.prefs.get(new_pref.copy_clear_rev())
+        if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
+            self._registry.prefs.set(new_pref, p_remote.name)
 
         return new_pref
 

@@ -35,4 +35,4 @@ class CacheTest(unittest.TestCase):
 
         self.assertTrue(cache.recipe_exists(ref2))
 
-
+    # TODO: test_package_exist

@@ -132,8 +132,7 @@ class ConanApiAuthManager(object):
 
     @input_credentials_if_unauthorized
     def upload_package(self, pref, the_files, retry, retry_wait, policy):
-        return self._rest_client.upload_package(pref, the_files, retry, retry_wait,
-                                                policy)
+        return self._rest_client.upload_package(pref, the_files, retry, retry_wait, policy)
 
     @input_credentials_if_unauthorized
     def get_conan_manifest(self, ref):
@@ -152,6 +151,10 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_recipe(ref, dest_folder)
 
     @input_credentials_if_unauthorized
+    def get_recipe_snapshot(self, ref):
+        return self._rest_client.get_recipe_snapshot(ref)
+
+    @input_credentials_if_unauthorized
     def get_recipe_sources(self, ref, dest_folder):
         return self._rest_client.get_recipe_sources(ref, dest_folder)
 
@@ -162,6 +165,10 @@ class ConanApiAuthManager(object):
     @input_credentials_if_unauthorized
     def get_package_info(self, pref):
         return self._rest_client.get_package_info(pref)
+
+    @input_credentials_if_unauthorized
+    def get_package_snapshot(self, pref):
+        return self._rest_client.get_package_snapshot(pref)
 
     @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):
