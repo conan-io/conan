@@ -87,9 +87,8 @@ Code style
 
 - In general, follow [pep8](https://www.python.org/dev/peps/pep-0008/)
 - Limit all lines to a maximum of 101 characters (`Right margin` setting in PyCharm)
-- Start new files with [shebang](https://en.wikipedia.org/wiki/Shebang_(Unix)) and [encoding declaration](https://www.python.org/dev/peps/pep-0263/):
+- Start new files with [encoding declaration](https://www.python.org/dev/peps/pep-0263/):
 ```
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ```
 - Specify imports in the following order: system, `blank line`, 3rd-party, `blank line`, own; all sorted alphabetically:
