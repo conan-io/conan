@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from conans.paths import SYSTEM_REQS_FOLDER
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
@@ -22,7 +24,6 @@ class TestSystemReqs(ConanFile):
 
 
 class SystemReqsTest(unittest.TestCase):
-
     def force_system_reqs_rerun_test(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
@@ -92,8 +93,10 @@ class SystemReqsTest(unittest.TestCase):
 
     def global_test(self):
         client = TestClient()
-        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%",
-                                                        "self.global_system_requirements=True")}
+        files = {
+            'conanfile.py': base_conanfile.replace("%GLOBAL%",
+                                                   "self.global_system_requirements=True")
+        }
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
@@ -128,8 +131,10 @@ class SystemReqsTest(unittest.TestCase):
 
     def wrong_output_test(self):
         client = TestClient()
-        files = {'conanfile.py':
-                 base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')}
+        files = {
+            'conanfile.py':
+            base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')
+        }
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
@@ -139,3 +144,39 @@ class SystemReqsTest(unittest.TestCase):
         pref = PackageReference(ref, "f0ba3ca2c218df4a877080ba99b65834b9413798")
         load_file = load(client.cache.system_reqs_package(pref))
         self.assertEqual('', load_file)
+
+    def remove_system_reqs_test(self):
+        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        client = TestClient()
+        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
+        client.save(files)
+        system_reqs_path = os.path.join(
+            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+
+        # create package to populate system_reqs folder
+        self.assertFalse(os.path.exists(system_reqs_path))
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # a new build must not remove or re-run
+        client.run("create . user/channel")
+        self.assertNotIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # error must not remove anything
+        with self.assertRaisesRegexp(
+                Exception, "ERROR: Please specify a valid package reference to be cleaned"):
+            client.run("remove --system-reqs")
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # remove system_reqs global
+        client.run("remove --system-reqs Test/0.1@user/channel")
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertFalse(os.path.exists(system_reqs_path))
+
+        # re-create system_reqs folder
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
