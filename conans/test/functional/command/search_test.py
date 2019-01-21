@@ -6,14 +6,18 @@ import unittest
 from collections import OrderedDict
 from textwrap import dedent
 
+import time
+from mock import patch
+
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.files import list_folder_subdirs, load
-from conans.util.dates import datetime_to_str
 
 conan_vars1 = '''
 [settings]
@@ -1113,15 +1117,14 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a (No time)", client.out)
 
         # List remote
-        client.run("upload lib/1.0@user/testing -c")
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload lib/1.0@user/testing -c")
         client.run("search lib/1.0@user/testing -r default --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
-        self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
+        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
+        self.assertIn("a94417fca6b55779c3b158f2ff50c40a ({})".format(time_str), client.out)
         self.assertNotIn("(No time)", client.out)
-        now = datetime.datetime.now()
-        # Checking at least the today's date appears in the test
-        today_str = "(%s" % datetime_to_str(now).split(" ")[0]
-        self.assertIn(today_str, client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")
 
@@ -1168,7 +1171,9 @@ class Test(ConanFile):
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
         client.run("create . lib/1.0@user/testing")
-        client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         client.run("search lib/1.0@user/testing --revisions")
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
@@ -1176,19 +1181,13 @@ class Test(ConanFile):
         second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
 
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
-        # Same package revision, but it changes because of the conaninfo containing the recipe hash
-        # for the outdated packages
-        self.assertIn("%s (No time)" % second_prev, client.out)
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-        self.assertIn(first_prev, client.out)
+        time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+        self.assertIn("{} ({})".format(first_prev, time_str), client.out)
         self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
-        now = datetime.datetime.now()
-        # Checking at least the today's date appears in the test
-        today_str = "(%s" % datetime_to_str(now).split(" ")[0]
-        self.assertIn(today_str, client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
         self.assertNotIn(first_prev, client.out)

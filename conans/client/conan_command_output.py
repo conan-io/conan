@@ -7,8 +7,8 @@ from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
+from conans.util.dates import iso8601_to_str
 from conans.util.files import save
-from conans.util.dates import datetime_to_str
 
 
 class CommandOutputer(object):
@@ -122,13 +122,13 @@ class CommandOutputer(object):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
         self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
 
-        def dt_str(dt):
+        def iso_str(dt):
             if not dt:
                 return "No time"
             else:
-                return datetime_to_str(dt)
+                return iso8601_to_str(dt)
 
-        lines = ["%s (%s)" % (r["revision"], dt_str(r["time"])) for r in revisions]
+        lines = ["%s (%s)" % (r["revision"], iso_str(r["time"])) for r in revisions]
         self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):

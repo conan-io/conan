@@ -151,7 +151,11 @@ class RemoteManager(object):
 
         # Update package revision with the rev_time (Created locally but with rev_time None)
         with self._cache.update_metadata(new_pref.ref) as metadata:
-            metadata.packages[new_pref.id].time = rev_time
+            if metadata.packages[new_pref.id].time is None:
+                # Only if we hadn't time locally update it, otherwise we are uploading
+                # the recipe to a different server, but in the upload never the registry
+                # is updated, so the time should be kept to the first upload
+                metadata.packages[new_pref.id].time = rev_time
 
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, remote)

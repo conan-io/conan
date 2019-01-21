@@ -200,9 +200,9 @@ class ServerStore(SimplePaths):
         if ref.revision:
             tmp = RevisionList()
             tmp.add_revision(ref.revision)
-            return tmp
+            return tmp.as_list()
         rev_file_path = self._recipe_revisions_file(ref)
-        revs = self._get_revisions(rev_file_path)
+        revs = self._get_revisions_list(rev_file_path).as_list()
         if not revs:
             return []
         return revs
@@ -210,11 +210,11 @@ class ServerStore(SimplePaths):
     def get_latest_package_reference(self, pref):
         assert(isinstance(pref, PackageReference))
         rev_file_path = self._recipe_revisions_file(pref.ref)
-        revs = self._get_revisions(rev_file_path)
+        revs = self._get_revisions_list(rev_file_path).as_list()
         if not revs:
             raise NotFoundException("Recipe not found: '%s'" % str(pref.ref))
 
-        for rev in revs.items():
+        for rev in revs:
             pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
             tmp = self.get_last_package_revision(pref)
             if tmp:
@@ -261,23 +261,23 @@ class ServerStore(SimplePaths):
         if pref.revision:
             tmp = RevisionList()
             tmp.add_revision(pref.revision)
-            return tmp
+            return tmp.as_list()
 
         tmp = self._package_revisions_file(pref)
-        ret = self._get_revisions(tmp)
+        ret = self._get_revisions_list(tmp).as_list()
         return ret
 
-    def _get_revisions(self, rev_file_path):
+    def _get_revisions_list(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
                                                        lock_file=rev_file_path + ".lock")
             rev_list = RevisionList.loads(rev_file)
             return rev_list
         else:
-            return None
+            return RevisionList()
 
     def _get_latest_revision(self, rev_file_path):
-        rev_list = self._get_revisions(rev_file_path)
+        rev_list = self._get_revisions_list(rev_file_path)
         if not rev_list:
             # FIXING BREAK MIGRATION NOT CREATING INDEXES
             # BOTH FOR RREV AND PREV THE FILE SHOULD BE CREATED WITH "0" REVISION

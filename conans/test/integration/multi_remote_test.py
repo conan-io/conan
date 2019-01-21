@@ -135,7 +135,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("upload %s -r=remote0 --all" % reference)
         self.client.run("upload %s -r=remote2 --all" % reference)
 
-        rev1 = self.client.get_revision(ConanFileReference.loads(reference))
+        rev1, _ = self.client.cache.recipe_revision(ConanFileReference.loads(reference))
 
         # Remove only binary from remote1 and everything in local
         self.client.run("remove -f %s -p -r remote0" % reference)

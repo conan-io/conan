@@ -185,21 +185,21 @@ class ConanService(object):
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, ref)
 
-        for rrev in self._server_store.get_recipe_revisions(ref).items():
+        for rrev in self._server_store.get_recipe_revisions(ref):
             self._server_store.remove_packages(ref.copy_with_rev(rrev.revision),
                                                package_ids_filter)
 
     def remove_package(self, pref):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
-        for rrev in self._server_store.get_recipe_revisions(pref.ref).items():
+        for rrev in self._server_store.get_recipe_revisions(pref.ref):
             new_pref = pref.copy_with_revs(rrev.revision, pref.revision)
-            for prev in self._server_store.get_package_revisions(new_pref).items():
+            for prev in self._server_store.get_package_revisions(new_pref):
                 full_pref = new_pref.copy_with_revs(rrev.revision, prev.revision)
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, ref):
-        for rrev in self._server_store.get_recipe_revisions(ref).items():
+        for rrev in self._server_store.get_recipe_revisions(ref):
             self._server_store.remove_all_packages(ref.copy_with_rev(rrev.revision))
 
     def remove_conanfile_files(self, ref, files):
@@ -277,7 +277,7 @@ def _get_local_infos_min(paths, ref, v2_compatibility_mode=False):
 
     result = {}
 
-    rrevs = paths.get_recipe_revisions(ref).items() if v2_compatibility_mode else [None]
+    rrevs = paths.get_recipe_revisions(ref) if v2_compatibility_mode else [None]
 
     for rrev in rrevs:
         new_ref = ref.copy_with_rev(rrev.revision) if rrev else ref

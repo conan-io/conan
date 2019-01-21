@@ -15,7 +15,6 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
-from conans.util.dates import from_iso8601_to_datetime
 
 
 class RestV2Methods(RestCommonMethods):
@@ -260,6 +259,6 @@ class RestV2Methods(RestCommonMethods):
     def _format_dates_in_revision_list(data):
         ret = {"reference": data["reference"],
                "revisions": [{"revision": r["revision"],
-                              "time": from_iso8601_to_datetime(r["time"])}
+                              "time": r["time"]}
                              for r in data["revisions"]]}
         return ret

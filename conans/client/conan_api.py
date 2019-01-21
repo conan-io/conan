@@ -15,7 +15,6 @@ from conans.client.cmd.export import cmd_export, export_alias, export_recipe, ex
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
-from conans.client.cmd.revisions import get_local_recipe_revision, get_local_package_revision
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
@@ -44,7 +43,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -937,7 +936,9 @@ class ConanAPIV1(object):
             raise ConanException("Cannot list the revisions of a specific revision")
 
         if not remote_name:
-            rev, tm = get_local_recipe_revision(ref, self._cache)
+            if not self._cache.recipe_exists(ref):
+                raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
+            rev, tm = self._cache.recipe_revision(ref)
             return {"reference": ref.full_repr(),
                     "revisions": [{"revision": rev, "time": tm}]}
         else:
@@ -953,9 +954,14 @@ class ConanAPIV1(object):
             raise ConanException("Cannot list the revisions of a specific package revision")
 
         if not remote_name:
-            rev, tm = get_local_package_revision(pref, self._cache)
-            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+            if not self._cache.recipe_exists(pref.ref):
+                raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
 
+            if not self._cache.package_exists(pref):
+                raise NotFoundException("Package not found: '%s'" % pref.full_repr())
+
+            rev, tm = self._cache.package_revision(pref)
+            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)

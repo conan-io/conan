@@ -319,6 +319,25 @@ class ClientCache(SimplePaths):
         readed_digest = FileTreeManifest.load(package_folder)
         return readed_digest.summary_hash
 
+    def recipe_exists(self, ref):
+        return os.path.exists(self.export(ref)) and \
+               (not ref.revision or self.recipe_revision(ref)[0] == ref.revision)
+
+    def package_exists(self, pref):
+        return self.recipe_exists(pref.ref) and \
+               os.path.exists(self.package(pref)) and \
+               (not pref.revision or self.package_revision(pref)[0] == pref.revision)
+
+    def recipe_revision(self, ref):
+        metadata = self.load_metadata(ref)
+        the_time = metadata.recipe.time if metadata.recipe.time else None
+        return metadata.recipe.revision, the_time
+
+    def package_revision(self, pref):
+        metadata = self.load_metadata(pref.ref)
+        tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
+        return metadata.packages[pref.id].revision, tm
+
     def install_as_editable(self, ref, target_path):
         linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
         save(linked_folder_sentinel, content=target_path)
