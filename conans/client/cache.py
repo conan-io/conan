@@ -19,8 +19,6 @@ from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
-from conans.util.log import logger
-
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
@@ -261,9 +259,7 @@ class ClientCache(SimplePaths):
 
     def remove_package_system_reqs(self, reference):
         conan_folder = self.conan(reference)
-        logger.debug("CONAN FOLDER: {}".format(conan_folder))
         system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        logger.debug("SYSTEM_REQS FOLDER: {}".format(system_reqs_folder))
         shutil.rmtree(system_reqs_folder, ignore_errors=True)
 
     def remove_locks(self):
