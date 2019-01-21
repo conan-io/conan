@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
+from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
@@ -345,17 +346,8 @@ class ConanInfo(object):
         if self.full_settings.compiler != "Visual Studio":
             return
 
-        toolsets_versions = {
-            "v141": "15",
-            "v140": "14",
-            "v120": "12",
-            "v110": "11",
-            "v100": "10",
-            "v90": "9",
-            "v80": "8"}
-
         toolset = str(self.full_settings.compiler.toolset)
-        version = toolsets_versions.get(toolset)
+        version = MSVS_DEFAULT_TOOLSETS_INVERSE.get(toolset)
         if version is not None:
             self.settings.compiler.version = version
             del self.settings.compiler.toolset

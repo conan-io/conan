@@ -101,6 +101,15 @@ MSVS_DEFAULT_TOOLSETS = {"15": "v141",
                          "9": "v90",
                          "8": "v80"}
 
+# inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
+MSVS_DEFAULT_TOOLSETS_INVERSE = {"v141": "15",
+                                 "v140": "14",
+                                 "v120": "12",
+                                 "v110": "11",
+                                 "v100": "10",
+                                 "v90": "9",
+                                 "v80": "8"}
+
 
 def msvs_toolset(settings):
     toolset = settings.get_safe("compiler.toolset")
