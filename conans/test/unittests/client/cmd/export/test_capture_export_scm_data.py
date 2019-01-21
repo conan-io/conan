@@ -51,7 +51,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             destination_folder="",
             output=output,
             paths=self.paths,
-            conan_ref=None)
+            ref=None)
 
         self.assertTrue(captured_revision)
         self.assertEquals(scm_data.url, url)
@@ -82,7 +82,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             destination_folder="",
             output=output,
             paths=self.paths,
-            conan_ref=None)
+            ref=None)
 
         self.assertTrue(captured_revision)
         self.assertEquals(scm_data.url, url)
@@ -112,7 +112,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             destination_folder="",
             output=output,
             paths=self.paths,
-            conan_ref=None)
+            ref=None)
 
         self.assertFalse(captured_revision)
         self.assertEquals(scm_data.url, url)
