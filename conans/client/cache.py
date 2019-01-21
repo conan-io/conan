@@ -283,12 +283,12 @@ class ClientCache(SimplePaths):
                (not pref.revision or self.package_revision(pref)[0] == pref.revision)
 
     def recipe_revision(self, ref):
-        metadata = self.load_metadata(ref)
+        metadata = self.package_layout(ref).load_metadata()
         the_time = metadata.recipe.time if metadata.recipe.time else None
         return metadata.recipe.revision, the_time
 
     def package_revision(self, pref):
-        metadata = self.load_metadata(pref.ref)
+        metadata = self.package_layout(pref.ref).load_metadata()
         tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
         return metadata.packages[pref.id].revision, tm
 
