@@ -17,8 +17,9 @@ class MakeGeneratorTest(unittest.TestCase):
         client.run("new myhello/1.0.0 --sources")
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         replace_in_file(conanfile_path, "{\"shared\": [True, False]}",
-                        "{\"shared\": [True, False], \"fPIC\": [True, False]}")
-        replace_in_file(conanfile_path, "\"shared=False\"", "\"shared=False\", \"fPIC=True\"")
+                        "{\"shared\": [True, False], \"fPIC\": [True, False]}", output=client.out)
+        replace_in_file(conanfile_path, "\"shared=False\"", "\"shared=False\", \"fPIC=True\"",
+                        output = client.out)
         client.run("create . danimtb/testing")
         hellowrapper_include = """
 #pragma once
@@ -64,7 +65,7 @@ CXXFLAGS += \
 #----------------------------------------
 
 CFLAGS              += $(CONAN_CFLAGS)
-CXXFLAGS            += $(CONAN_CPPFLAGS)
+CXXFLAGS            += $(CONAN_CXXFLAGS)
 CPPFLAGS            += $(addprefix -I, $(INCLUDE_PATHS) $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
@@ -172,7 +173,7 @@ EXELINKFLAGS += \
 #----------------------------------------
 
 CFLAGS              += $(CONAN_CFLAGS)
-CXXFLAGS            += $(CONAN_CPPFLAGS)
+CXXFLAGS            += $(CONAN_CXXFLAGS)
 CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_PATHS))
 CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
 LDFLAGS             += $(addprefix -L, $(CONAN_LIB_PATHS))
