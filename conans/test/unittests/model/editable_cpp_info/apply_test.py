@@ -54,7 +54,7 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
     def test_require_namespace(self):
         content = '\n\n'.join([
             base_content.format(namespace="", path_prefix=""),
-            base_content.format(namespace="libA:", path_prefix="libA/")
+            base_content.format(namespace="libA/0.1@user/channel:", path_prefix="libA/")
             ])
         save(self.layout_filepath, content)
         editable_cpp_info = EditableCppInfo.load(self.layout_filepath)
