@@ -93,8 +93,7 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
-MSVS_DEFAULT_TOOLSETS = {"16": "v141",
-                         "15": "v141",
+MSVS_DEFAULT_TOOLSETS = {"15": "v141",
                          "14": "v140",
                          "12": "v120",
                          "11": "v110",

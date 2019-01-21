@@ -142,8 +142,7 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
-    @parameterized.expand([("16", "v141"),
-                           ("15", "v141"),
+    @parameterized.expand([("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),

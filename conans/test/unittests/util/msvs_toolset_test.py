@@ -15,8 +15,7 @@ from conans.test.utils.conanfile import MockSettings
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class MSVCToolsetTest(unittest.TestCase):
 
-    @parameterized.expand([("16", "v141"),
-                           ("15", "v141"),
+    @parameterized.expand([("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),
@@ -28,8 +27,7 @@ class MSVCToolsetTest(unittest.TestCase):
                                  "compiler.version": compiler_version})
         self.assertEqual(expected_toolset, tools.msvs_toolset(settings))
 
-    @parameterized.expand([("16", "v141_xp"),
-                           ("15", "v141_xp"),
+    @parameterized.expand([("15", "v141_xp"),
                            ("14", "v140_xp"),
                            ("12", "v120_xp"),
                            ("11", "v110_xp")])
