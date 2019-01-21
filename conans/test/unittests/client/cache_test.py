@@ -30,7 +30,7 @@ class CacheTest(unittest.TestCase):
         self.assertFalse(cache.recipe_exists(ref2))
 
         # Fake the metadata and check again
-        with cache.update_metadata(ref) as metadata:
+        with cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = "revision"
 
         self.assertTrue(cache.recipe_exists(ref2))

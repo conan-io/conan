@@ -12,7 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
-from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
@@ -144,6 +144,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
+
+    remove(conanfile_path)
     save(conanfile_path, content)
 
 
@@ -177,7 +179,7 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
     digest.save(exports_folder)
 
     revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
-    with cache.update_metadata(ref) as metadata:
+    with cache.package_layout(ref).update_metadata() as metadata:
         # Note that there is no time set, the time will come from the remote
         metadata.recipe.revision = revision
 

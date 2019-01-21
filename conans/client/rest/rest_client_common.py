@@ -156,7 +156,16 @@ class RestCommonMethods(object):
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
 
-        result = json.loads(decode_text(response.content))
+        content = decode_text(response.content)
+        content_type = response.headers.get("Content-Type")
+        if content_type != 'application/json':
+            raise ConanException("%s\n\nResponse from remote is not json, but '%s'"
+                                 % (content, content_type))
+
+        try:  # This can fail, if some proxy returns 200 and an html message
+            result = json.loads(content)
+        except Exception:
+            raise ConanException("Remote responded with broken json: %s" % content)
         if not isinstance(result, dict):
             raise ConanException("Unexpected server response %s" % result)
         return result

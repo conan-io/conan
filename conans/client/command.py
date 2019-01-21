@@ -378,7 +378,7 @@ class Command(object):
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
-                                           build=args.build, profile_name=args.profile,
+                                           build=args.build, profile_names=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
@@ -389,7 +389,7 @@ class Command(object):
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=args.manifests_interactive,
-                                                     build=args.build, profile_name=args.profile,
+                                                     build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder)
@@ -505,7 +505,7 @@ class Command(object):
                                                settings=args.settings,
                                                options=args.options,
                                                env=args.env,
-                                               profile_name=args.profile,
+                                               profile_names=args.profile,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
@@ -523,7 +523,7 @@ class Command(object):
                                                        settings=args.settings,
                                                        options=args.options,
                                                        env=args.env,
-                                                       profile_name=args.profile,
+                                                       profile_names=args.profile,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
@@ -536,7 +536,7 @@ class Command(object):
                                     settings=args.settings,
                                     options=args.options,
                                     env=args.env,
-                                    profile_name=args.profile,
+                                    profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
@@ -744,7 +744,7 @@ class Command(object):
                             "will raise an error.")
         parser.add_argument("-o", "--options", nargs=1, action=Extender,
                             help='Define options values, e.g., -o pkg:with_qt=true')
-        parser.add_argument("-pr", "--profile", action=OnceArgument,
+        parser.add_argument("-pr", "--profile", action=Extender,
                             help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
@@ -771,7 +771,7 @@ class Command(object):
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
                                           install_folder=args.install_folder,
-                                          profile_name=args.profile,
+                                          profile_names=args.profile,
                                           env=args.env,
                                           settings=args.settings,
                                           options=args.options,
@@ -1567,7 +1567,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-e CXX=/usr/bin/clang++')
     parser.add_argument("-o", "--options", nargs=1, action=Extender,
                         help='Define options values, e.g., -o Pkg:with_qt=true')
-    parser.add_argument("-pr", "--profile", default=None, action=OnceArgument,
+    parser.add_argument("-pr", "--profile", default=None, action=Extender,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')

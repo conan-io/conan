@@ -2,11 +2,15 @@
 
 import os
 import platform
+from contextlib import contextmanager
 
+from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
+from conans.util.files import load, save
 
 
 def short_path(func):
@@ -80,3 +84,32 @@ class PackageCacheLayout(object):
 
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
+
+    def load_manifest(self):
+        return FileTreeManifest.load(self.export())
+
+    def package_manifests(self, package_reference):
+        package_folder = self.package(package_reference)
+        readed_manifest = FileTreeManifest.load(package_folder)
+        expected_manifest = FileTreeManifest.create(package_folder)
+        return readed_manifest, expected_manifest
+
+    # Metadata
+    def load_metadata(self):
+        try:
+            text = load(self.package_metadata())
+            return PackageMetadata.loads(text)
+        except IOError:
+            return PackageMetadata()
+
+    @contextmanager
+    def update_metadata(self):
+        metadata = self.load_metadata()
+        yield metadata
+        save(self.package_metadata(), metadata.dumps())
+
+    # Revisions
+    def package_summary_hash(self, pref):
+        package_folder = self.package(pref)
+        readed_manifest = FileTreeManifest.load(package_folder)
+        return readed_manifest.summary_hash

@@ -196,7 +196,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
     else:
         # In user space, if revision="auto", then copy
         captured = scm_data.capture_origin or scm_data.capture_revision
-    local_sources_path = local_sources_path if captured else None
+    local_sources_path = local_sources_path if captured and conanfile.develop else None
 
     if local_sources_path:
         excluded = SCM(scm_data, local_sources_path, output).excluded_files
