@@ -501,3 +501,29 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
         self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+
+    def profile_crazy_inheritance_test(self):
+        profile1 = dedent("""
+            [settings]
+            os=Windows
+            arch=x86_64
+            compiler=Visual Studio
+            compiler.version=15
+            """)
+
+        profile2 = dedent("""
+            include(profile1)
+            [settings]
+            os=Linux
+            """)
+
+        self.client.save({"profile1": profile1, "profile2": profile2})
+        self.client.run("create . lib/1.0@user/channel --profile profile2 -p profile1")
+        self.assertIn(dedent("""
+                             Configuration:
+                             [settings]
+                             arch=x86_64
+                             compiler=Visual Studio
+                             compiler.runtime=MD
+                             compiler.version=15
+                             os=Windows"""), self.client.out)
