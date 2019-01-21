@@ -51,8 +51,8 @@ class EditableCppInfo(object):
                                      % (cpp_info_dir, filepath))
             if ref:
                 try:
-                    ConanFileReference.loads(ref)
-                    if ref.revision:
+                    r = ConanFileReference.loads(ref)
+                    if r.revision:
                         raise ConanException
                 except ConanException:
                     raise ConanException("Wrong package reference '%s' in layout file: %s"
