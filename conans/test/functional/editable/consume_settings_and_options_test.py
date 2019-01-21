@@ -71,7 +71,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
         else:
             file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path,
-                 self.conan_package_layout.format(namespace="MyLib:"))
+                 self.conan_package_layout.format(namespace="MyLib/0.1@user/editable:"))
 
         self.save(files)
 

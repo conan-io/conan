@@ -60,7 +60,7 @@ class EditableCppInfo(object):
 
     def apply_to(self, ref, cpp_info, settings=None, options=None):
         d = self._data
-        data = d.get(str(ref)) or d.get(ref.name) or d.get(None) or {}
+        data = d.get(str(ref)) or d.get(None) or {}
 
         if data:  # Invalidate previously existing dirs
             for info_dir in self.cpp_info_dirs:

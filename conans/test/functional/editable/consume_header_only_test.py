@@ -51,7 +51,7 @@ class HeaderOnlyLibTestClient(TestClient):
         """)
 
     conan_cache_layout = textwrap.dedent("""\
-        [MyLib:includedirs]
+        [MyLib/0.1@user/editable:includedirs]
         src/include-cache
         """)
 
