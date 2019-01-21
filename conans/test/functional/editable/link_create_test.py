@@ -31,7 +31,7 @@ class CreateEditablePackageTest(unittest.TestCase):
     def test_install_ok(self):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile, "mylayout": ""})
+        t.save(files={'conanfile.py': self.conanfile})
         t.run('link . {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
 

@@ -5,6 +5,7 @@ from collections import OrderedDict
 from six.moves import configparser
 
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 
 DEFAULT_LAYOUT_FILE = "default"
 LAYOUTS_FOLDER = 'layouts'
@@ -40,15 +41,23 @@ class EditableCppInfo(object):
         parser.optionxform = str
         try:
             parser.read(filepath)
-        except configparser.Error:
-            raise ConanException("Error parsing layout file: %s" % filepath)
+        except configparser.Error as e:
+            raise ConanException("Error parsing layout file: %s\n%s" % (filepath, str(e)))
         data = OrderedDict()
         for section in parser.sections():
-            pkg, key = section.split(":", 1) if ':' in section else (None, section)
-            if key not in EditableCppInfo.cpp_info_dirs:
+            ref, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
+            if cpp_info_dir not in EditableCppInfo.cpp_info_dirs:
                 raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
-                                     % (key, filepath))
-            data.setdefault(pkg, {})[key] = [k for k, _ in parser.items(section)]
+                                     % (cpp_info_dir, filepath))
+            if ref:
+                try:
+                    ConanFileReference.loads(ref)
+                    if ref.revision:
+                        raise ConanException
+                except ConanException:
+                    raise ConanException("Wrong package reference '%s' in layout file: %s"
+                                         % (ref, filepath))
+            data.setdefault(ref, {})[cpp_info_dir] = [k for k, _ in parser.items(section)]
 
         return EditableCppInfo(data)
 

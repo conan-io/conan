@@ -34,3 +34,20 @@ class ParseTest(unittest.TestCase):
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
             _ = EditableCppInfo.load(self.layout_filepath)
+
+        content = textwrap.dedent("""
+                            [*:includedirs]
+                            something
+                            """)
+        save(self.layout_filepath, content)
+        with self.assertRaisesRegexp(ConanException, "Wrong package reference '\*' in layout file"):
+            _ = EditableCppInfo.load(self.layout_filepath)
+
+        content = textwrap.dedent("""
+                            [pkg/version@user/channel:revision:includedirs]
+                            something
+                            """)
+        save(self.layout_filepath, content)
+        with self.assertRaisesRegexp(ConanException, "Wrong package reference "
+                                     "'pkg/version@user/channel:revision' in layout file"):
+            _ = EditableCppInfo.load(self.layout_filepath)

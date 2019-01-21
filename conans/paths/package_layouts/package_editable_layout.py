@@ -49,6 +49,7 @@ class PackageEditableLayout(object):
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
+        raise ConanException("Operation not allowed on a package installed as editable")
 
     def package_metadata(self):
         # FIXME: I know that downstream there is an except for IOError

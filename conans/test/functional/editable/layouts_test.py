@@ -35,6 +35,8 @@ class LayoutTest(unittest.TestCase):
         client2.save({"conanfile.txt": consumer})
         client2.run("install .", assert_error=True)
         self.assertIn("ERROR: Error parsing layout file", client2.out)
+        self.assertIn("File contains no section headers.", client2.out)
+        self.assertIn("line: 1", client2.out)
 
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client2.run("install .", assert_error=True)
