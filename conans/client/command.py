@@ -832,7 +832,7 @@ class Command(object):
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
         parser.add_argument("-sr", "--system-reqs", default=False, action="store_true",
-                            help="Remove system_reqs.txt from cache")
+                            help="Remove system_reqs folders")
         args = parser.parse_args(*args)
 
         self._warn_python2()
