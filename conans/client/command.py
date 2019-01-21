@@ -831,6 +831,8 @@ class Command(object):
                             help='Remove source folders')
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
+        parser.add_argument("-sr", "--system-reqs", default=False, action="store_true",
+                            help="Remove system_reqs.txt from cache")
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -853,6 +855,12 @@ class Command(object):
                 raise ConanException("Specifying a pattern is not supported when removing locks")
             self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
+            return
+        elif args.system_reqs:
+            if not ref:
+                raise ConanException("Please specify a valid package reference to be cleaned")
+            self._cache.remove_package_system_reqs(ref)
+            self._user_io.out.info("Cache system_reqs from %s has been removed" % str(ref))
             return
         else:
             if not args.pattern_or_reference:
