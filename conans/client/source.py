@@ -202,11 +202,9 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
             scm_url = scm_data.url if scm_data.url != "auto" else \
                 scm.get_qualified_remote_url(remove_credentials=True)
 
-            if scm_url:  # If there is no remote (git), we cannot compute this block
-                src_path = scm.get_repo_root()
-                url_root = SCM(scm_data, src_path, output).get_remote_url(remove_credentials=True)
-                scm_url = SCM.clean_url(scm_url)  # Remove peg_revision (SVN), ....
-                local_sources_path = os.path.join(src_path, os.path.relpath(scm_url, url_root))
+            src_path = scm.get_local_path_to_url(url=scm_url)
+            if src_path:
+                local_sources_path = src_path
         else:
             local_sources_path = None
 

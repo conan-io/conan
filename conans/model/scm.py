@@ -1,4 +1,5 @@
 import json
+import os
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
@@ -107,3 +108,11 @@ class SCM(object):
             url, peg_revision = url.rsplit('@', 1)
             return url
         return url
+
+    def get_local_path_to_url(self, url):
+        src_root = self.get_repo_root()
+        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        if url_root:
+            url = self.clean_url(url)
+            src_path = os.path.join(src_root, os.path.relpath(url, url_root))
+            return src_path
