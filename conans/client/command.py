@@ -860,7 +860,7 @@ class Command(object):
             if not ref:
                 raise ConanException("Please specify a valid package reference to be cleaned")
             try:
-                self._cache.remove_package_system_reqs(ref)
+                self._cache.remove_package_system_reqs(ref, args.packages)
             except Exception as error:
                 raise ConanException("Could not remove system_reqs: %s" % error)
 

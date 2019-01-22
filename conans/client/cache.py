@@ -11,7 +11,7 @@ from conans.client.remote_registry import default_remotes, dump_registry, migrat
     RemoteRegistry
 from conans.errors import ConanException
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.simple_paths import SimplePaths
@@ -257,10 +257,16 @@ class ClientCache(SimplePaths):
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
 
-    def remove_package_system_reqs(self, reference):
+    def remove_package_system_reqs(self, reference, package_ids):
         conan_folder = self.conan(reference)
-        system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        shutil.rmtree(system_reqs_folder)
+        if not package_ids: # remove all system_reqs for file reference
+            system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
+            shutil.rmtree(system_reqs_folder)
+        else:
+            for package_id in package_ids:
+                package_reference = PackageReference(ref=reference, package_id=package_id)
+                reqs_path = self.system_reqs_package(pref=package_reference)
+                os.remove(reqs_path)
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
