@@ -53,8 +53,8 @@ class InfoCommandTest(unittest.TestCase):
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
         self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_no_args(self, use_local_path):
+    #@parameterized.expand([(True, ), (False, )])
+    def test_no_args(self, use_local_path=True):
         args = "." if use_local_path else self.ref_child
         project_name = "conanfile.py" if use_local_path else self.ref_child
 

@@ -99,7 +99,7 @@ class CommandOutputer(object):
             self.user_io.out.writeln("")
             self.user_io.out.info("JSON file created at '%s'" % json_output)
 
-    def _grab_info_data(self, deps_graph):
+    def _grab_info_data(self, deps_graph, grab_paths):
         """ Convert 'deps_graph' into consumible information for json and cli """
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
@@ -123,7 +123,7 @@ class CommandOutputer(object):
             item_data["build_id"] = build_id(conanfile)
 
             # Paths
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, ConanFileReference) and grab_paths:
                 item_data["export_folder"] = self.cache.export(ref)
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
                 if isinstance(self.cache, SimplePaths):
@@ -195,7 +195,7 @@ class CommandOutputer(object):
         return ret
 
     def info(self, deps_graph, only, package_filter, show_paths):
-        data = self._grab_info_data(deps_graph)
+        data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
                                              show_paths=show_paths)
 
@@ -212,8 +212,8 @@ class CommandOutputer(object):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
 
-    def json_info(self, deps_graph, json_output, cwd):
-        data = self._grab_info_data(deps_graph)
+    def json_info(self, deps_graph, json_output, cwd, show_paths):
+        data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         json_str = json.dumps(data)
 
         if json_output is True:

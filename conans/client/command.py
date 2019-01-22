@@ -558,7 +558,7 @@ class Command(object):
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             elif args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_info(deps_graph, json_arg, get_cwd())
+                self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
             else:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
