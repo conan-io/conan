@@ -260,7 +260,7 @@ class ClientCache(SimplePaths):
     def remove_package_system_reqs(self, reference):
         conan_folder = self.conan(reference)
         system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        shutil.rmtree(system_reqs_folder)
+        shutil.rmtree(system_reqs_folder, ignore_errors=True)
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)

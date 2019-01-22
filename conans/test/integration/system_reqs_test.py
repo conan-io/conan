@@ -171,9 +171,14 @@ class SystemReqsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # error must show exception message
-        with self.assertRaises(Exception) as error:
-            client.run("remove --system-reqs foo/bar@foo/bar")
-            self.assertIn("ERROR: Could not remove system_reqs: [Errno 2] No such file or directory:", error.exception)
+        client.run("remove --system-reqs foo/bar@foo/bar")
+        self.assertIn("Cache system_reqs from foo/bar@foo/bar has been removed", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # package is not supported with system_reqs
+        with self.assertRaisesRegexp(
+                Exception, "ERROR: '-t' and '-p' parameters can't be used at the same time"):
+            client.run("remove --system-reqs foo/bar@foo/bar -p f0ba3ca2c218df4a877080ba99b65834b9413798")
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # remove system_reqs global

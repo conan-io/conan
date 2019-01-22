@@ -859,11 +859,10 @@ class Command(object):
         elif args.system_reqs:
             if not ref:
                 raise ConanException("Please specify a valid package reference to be cleaned")
-            try:
-                self._cache.remove_package_system_reqs(ref)
-            except Exception as error:
-                raise ConanException("Could not remove system_reqs: %s" % error)
+            if args.packages:
+                raise ConanException("'-t' and '-p' parameters can't be used at the same time")
 
+            self._cache.remove_package_system_reqs(ref)
             self._user_io.out.info("Cache system_reqs from %s has been removed" % str(ref))
             return
         else:
