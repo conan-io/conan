@@ -78,6 +78,7 @@ def get_basic_requester(cache):
 def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
+        the_self.invalidate_caches()
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
@@ -235,6 +236,10 @@ class ConanAPIV1(object):
                                            self._remote_manager, self._loader, self._proxy,
                                            resolver)
         self._hook_manager = hook_manager
+
+    def invalidate_caches(self):
+        self._loader.invalidate_caches()
+        self._cache.invalidate()
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
