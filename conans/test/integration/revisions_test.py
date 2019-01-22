@@ -832,6 +832,22 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotEquals(rev, prev_rev)
         self.assertNotEquals(prev, prev_prev)
 
+        # If we do a create again, the time should be invalidated, when the revision change only
+        self.client.run("create . %s" % str(ref))
+        layout = self.client.cache.package_layout(ref)
+        _, trev = layout.recipe_revision()
+        _, tprev = layout.package_revision(pref)
+        self.assertIsNotNone(trev)  # Same revision, time kept
+        self.assertIsNotNone(tprev)  # Same revision, time kept
+
+        # Modify conanfile, the time should be cleared
+        self.client.save({"conanfile.py": conanfile + "#New revision\n\n"})
+        self.client.run("create . %s" % str(ref))
+        _, trev = layout.recipe_revision()
+        _, tprev = layout.package_revision(pref)
+        self.assertIsNone(trev)  # Other revision, time cleared
+        self.assertIsNone(tprev)  # Same revision, time kept
+
 
 @unittest.skipUnless(TestClient().revisions,
                      "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")

@@ -181,7 +181,9 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
     revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
     with cache.package_layout(ref).update_metadata() as metadata:
         # Note that there is no time set, the time will come from the remote
-        metadata.recipe.revision = revision
+        if metadata.recipe.revision != revision:
+            metadata.recipe.revision = revision
+            metadata.recipe.time = None
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = cache.source(ref, conanfile.short_paths)
