@@ -819,6 +819,8 @@ class Command(object):
                                   "specifying the package ID"))
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
+        parser.add_argument("-l", "--locks", default=False, action="store_true",
+                            help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. " \
                                  "This flag can only be used with a reference")
@@ -829,10 +831,8 @@ class Command(object):
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
-        parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
-        parser.add_argument("-sr", "--system-reqs", default=False, action="store_true",
-                            help="Remove system_reqs folders")
+        parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
+                            help='Remove system_reqs folders')
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -859,7 +859,11 @@ class Command(object):
         elif args.system_reqs:
             if not ref:
                 raise ConanException("Please specify a valid package reference to be cleaned")
-            self._cache.remove_package_system_reqs(ref)
+            try:
+                self._cache.remove_package_system_reqs(ref)
+            except Exception as error:
+                raise ConanException("Could not remove system_reqs: %s" % error)
+
             self._user_io.out.info("Cache system_reqs from %s has been removed" % str(ref))
             return
         else:

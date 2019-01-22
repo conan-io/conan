@@ -170,6 +170,12 @@ class SystemReqsTest(unittest.TestCase):
             client.run("remove --system-reqs")
         self.assertTrue(os.path.exists(system_reqs_path))
 
+        # error must show exception message
+        with self.assertRaises(Exception) as error:
+            client.run("remove --system-reqs foo/bar@foo/bar")
+            self.assertIn("ERROR: Could not remove system_reqs: [Errno 2] No such file or directory:", error.exception)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
         # remove system_reqs global
         client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
