@@ -24,7 +24,8 @@ class RevisionList(object):
         """The time field has been converted to ISO8601 from timestamp, so we keep compatibility
         by knowing how to read a file with timestamps.
         FIXME: This function could be removed in Conan 2.0"""
-        if valid_iso8601(the_time):
+
+        if not isinstance(the_time, float):
             return the_time
         else:
             return from_timestamp_to_iso8601(the_time)
